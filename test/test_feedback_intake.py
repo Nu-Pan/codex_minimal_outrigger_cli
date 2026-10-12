@@ -2,12 +2,16 @@
 
 from collections import Counter
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
+import commons.runtime_feedback_intake as intake
+import commons.runtime_feedback_state as feedback_state
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback_intake import (
     capture_high_watermark,
+    forget_observation_receipts,
     record_observation_receipt,
 )
 from commons.runtime_feedback_store import (
@@ -113,3 +117,155 @@ def test_new_receipt_rejects_raw_outside_observation_store(tmp_path):
             record_observation_receipt(tmp_path, outside)
     assert outside.is_file()
     assert not (feedback_root(tmp_path) / "intake.json").exists()
+
+
+@pytest.fixture
+def cleanup_receipts(tmp_path):
+    # 登録・durability は既存の intake・store test に残し、cleanup の固定入力だけ作る。
+    inputs = [_raw_input(tmp_path, "fbo_" + str(index) * 32) for index in (1, 2, 3)]
+    ledger = {
+        "schema_version": 1,
+        "high_watermark": 3,
+        "pending": {
+            path.stem: {"sequence": index, **reference}
+            for index, (path, reference) in enumerate(inputs, 1)
+        },
+    }
+    (feedback_root(tmp_path) / "intake.json").write_bytes(canonical_json_bytes(ledger))
+    return (
+        tmp_path,
+        [path for path, _ in inputs[:2]],
+        inputs[2][0],
+        [reference for _, reference in inputs[:2]],
+    )
+
+
+@pytest.fixture
+def published_cleanup(cleanup_receipts):
+    root, raws, late, references = cleanup_receipts
+    manifest = {
+        "publication": {
+            "cleanup": {
+                "observations": references,
+                "old_generation": [],
+                "work_artifacts": [],
+            }
+        }
+    }
+    manifest_path = feedback_root(root) / "work/completed/report_cut.json"
+    manifest_path.parent.mkdir(parents=True)
+    manifest_path.write_bytes(canonical_json_bytes(manifest))
+    # publication の検証は wave 統合 test に残し、ここでは削除と台帳更新を実行する。
+    state = feedback_state.ActiveState(
+        current=None,
+        generation_manifest=None,
+        issues={},
+        machine_aggregates={},
+        cleanup_manifest=manifest,
+        cleanup_manifest_path=manifest_path,
+    )
+    return root, raws, late, references, manifest_path, state
+
+
+def test_cleanup_batches_receipts_and_preserves_unconsumed_input(
+    published_cleanup, monkeypatch
+):
+    root, raws, late, references, manifest_path, state = published_cleanup
+    ledger_path = feedback_root(root) / "intake.json"
+    before = read_json_object(ledger_path)
+    read = Mock(wraps=intake._read_ledger)
+    write = Mock(wraps=intake._atomic_write_json)
+    monkeypatch.setattr(intake, "_read_ledger", read)
+    monkeypatch.setattr(intake, "_atomic_write_json", write)
+
+    assert feedback_state.cleanup_published_report(root, state)
+
+    read.assert_called_once_with(root)
+    assert write.call_count == 1
+    assert all(not raw.exists() for raw in raws)
+    assert not manifest_path.exists()
+    assert late.is_file()
+    assert read_json_object(ledger_path) == {
+        **before,
+        "pending": {late.stem: before["pending"][late.stem]},
+    }
+    # 削除済み・重複参照の再適用と空入力で、台帳の再保存や境界の更新をしない。
+    with observation_publication_lock(root):
+        forget_observation_receipts(root, references + references)
+        forget_observation_receipts(root, [])
+    assert read.call_count == 2
+    assert write.call_count == 1
+
+
+@pytest.mark.parametrize("fault", ["raw_unlink", "ledger_write", "raw_hash"])
+def test_cleanup_resumes_after_raw_deletion_before_receipt_update(
+    published_cleanup, monkeypatch, fault
+):
+    root, raws, late, references, manifest_path, state = published_cleanup
+    ledger_path = feedback_root(root) / "intake.json"
+    before = ledger_path.read_bytes()
+    manifest_before = manifest_path.read_bytes()
+    raw_before = raws[1].read_bytes()
+    with monkeypatch.context() as failure:
+        if fault == "raw_unlink":
+            unlink = feedback_state._durable_unlink
+
+            def fail_second(path):
+                if path == raws[1]:
+                    raise OSError("injected raw deletion failure")
+                unlink(path)
+
+            failure.setattr(feedback_state, "_durable_unlink", fail_second)
+        elif fault == "ledger_write":
+            failure.setattr(
+                intake,
+                "_atomic_write_json",
+                Mock(side_effect=OSError("injected receipt update failure")),
+            )
+        else:
+            raws[1].write_bytes(canonical_json_bytes({"changed": True}))
+        with pytest.raises(CmocError if fault == "raw_hash" else OSError):
+            feedback_state.cleanup_published_report(root, state)
+
+    assert not raws[0].exists()
+    assert raws[1].exists() == (fault != "ledger_write")
+    assert ledger_path.read_bytes() == before
+    assert manifest_path.read_bytes() == manifest_before
+    assert late.is_file()
+    if fault == "raw_hash":
+        raws[1].write_bytes(raw_before)
+
+    assert feedback_state.cleanup_published_report(root, state)
+    assert all(not raw.exists() for raw in raws)
+    assert not manifest_path.exists()
+    assert late.is_file()
+    ledger = read_json_object(ledger_path)
+    assert ledger["high_watermark"] == 3
+    assert set(ledger["pending"]) == {late.stem}
+
+
+@pytest.mark.parametrize("fault", ["shape", "path", "identity", "sha256", "hash"])
+def test_receipt_batch_rejects_invalid_reference_without_partial_update(
+    cleanup_receipts, fault
+):
+    root, raws, late, references = cleanup_receipts
+    invalid = dict(references[1])
+    if fault == "shape":
+        invalid.pop("sha256")
+    elif fault == "path":
+        invalid["path"] = raws[1].name
+    elif fault == "identity":
+        invalid["path"] = raws[1].with_name("invalid.json").relative_to(root).as_posix()
+    elif fault == "sha256":
+        invalid["sha256"] = "invalid"
+    else:
+        invalid["sha256"] = "0" * 64
+    ledger_path = feedback_root(root) / "intake.json"
+    before = ledger_path.read_bytes()
+
+    with observation_publication_lock(root), pytest.raises(CmocError):
+        forget_observation_receipts(root, [references[0], invalid])
+
+    assert ledger_path.read_bytes() == before
+    assert all(raw.is_file() for raw in raws)
+    assert late.is_file()

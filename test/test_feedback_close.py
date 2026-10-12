@@ -15,8 +15,6 @@ from test_feedback import (
     _store_agent_issue,
 )
 
-import commons.runtime_cli as runtime_cli
-import commons.runtime_doctor as runtime_doctor
 import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
 import sub_commands.feedback.close as close_module
@@ -26,7 +24,7 @@ from commons.runtime_errors import CmocError
 from commons.runtime_feedback_history import history_artifact
 from commons.runtime_feedback_intake import (
     capture_high_watermark,
-    forget_observation_receipt,
+    forget_observation_receipts,
 )
 from commons.runtime_feedback_store import (
     canonical_json_bytes,
@@ -43,18 +41,7 @@ from commons.runtime_ids import is_common_id
 from commons.runtime_logging import SubcommandLogger
 from main import app
 
-
-@pytest.fixture(autouse=True)
-def _isolate_feedback_transport(monkeypatch):
-    """直接保存した観測と fake 応答を使う close 検査では transport を起動しない。"""
-    # stdio・TCP の接続、受理・拒否・drain は test_feedback.py で検証する。
-    # ここでは report から close への状態・履歴・入力消費の結合を実装で確かめる。
-    monkeypatch.setattr(
-        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
-    )
-    monkeypatch.setattr(
-        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
-    )
+pytestmark = pytest.mark.usefixtures("feedback_without_transport")
 
 
 @pytest.fixture
@@ -188,7 +175,7 @@ def open_case(tmp_path, monkeypatch):
     )
     with observation_publication_lock(root):
         raw.unlink()
-        forget_observation_receipt(root, raw_reference)
+        forget_observation_receipts(root, [raw_reference])
     assert feedback_state.validate_feedback_state(root).issues == {identity: issue}
     monkeypatch.setattr(
         report_module,
@@ -223,6 +210,8 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
     result = _close(issue)
     assert result.exit_code == 0, result.output
     assert "closed" in result.output
+    assert "latest_state_summary: `ok`" in result.output
+    assert "remaining_cases: `0`" in result.output
     state = feedback_state.validate_feedback_state(root)
     assert state.current["result"] == "ok"
     assert state.issues == {}
@@ -244,6 +233,8 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
     repeated = _close(issue, "別の理由")
     assert repeated.exit_code == 0, repeated.output
     assert "already_closed" in repeated.output
+    assert "latest_state_summary: `ok`" in repeated.output
+    assert "remaining_cases: `0`" in repeated.output
     after = feedback_state.validate_feedback_state(root)
     assert canonical_json_bytes(after.current) == pointer
     assert after.history == history
@@ -336,6 +327,8 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
         (root / "README.md").write_text("state changed after publication\n")
     resumed = _close(issue)
     assert resumed.exit_code == 0, resumed.output
+    assert "latest_state_summary: `ok`" in resumed.output
+    assert "remaining_cases: `0`" in resumed.output
     assert terminal_primary_report(resumed) == target
     if saved is not None:
         assert target.read_bytes() == saved
@@ -459,6 +452,8 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monke
     )
     result = _close(issue)
     assert result.exit_code == 0, result.output
+    assert "latest_state_summary: `attention`" in result.output
+    assert "remaining_cases: `1`" in result.output
     after = feedback_state.validate_feedback_state(root)
     assert after.current["result"] == "attention"
     assert after.issues == {other_id: before.issues[other_id]}
@@ -596,6 +591,8 @@ def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(
     repeated = _close(first, "新しい理由")
     assert repeated.exit_code == 0, repeated.output
     assert "already_closed" in repeated.output
+    assert "latest_state_summary: `incomplete`" in repeated.output
+    assert "remaining_cases: `1`" in repeated.output
     assert feedback_state.load_active_state(root).issues[identity] == second
 
 

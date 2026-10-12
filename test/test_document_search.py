@@ -221,11 +221,23 @@ export async function getLlama() {
             "```md\n# 偽見出し\n````\n# 本物\n本文\n",
             ["```md\n# 偽見出し\n````\n", "# 本物\n本文\n"],
         ),
+        (
+            "> # *引用* [link][ref]\r\n> 本文\r\n\r\n[ref]: /target\r\n\r\n"
+            "## **次** `code`\r\n本文😀\r\n",
+            [
+                "> # *引用* [link][ref]\r\n> 本文\r\n\r\n[ref]: /target\r\n\r\n",
+                "## **次** `code`\r\n本文😀\r\n",
+            ],
+        ),
+        (
+            "冒頭😀\r\r*装飾* [link](url)\r======\r本文\r# 次\r末尾",
+            ["冒頭😀\r\r", "*装飾* [link](url)\r======\r本文\r", "# 次\r末尾"],
+        ),
         ("見出しなし\n本文\n", ["見出しなし\n本文\n"]),
     ],
 )
 def test_heading_ranges_follow_markdown_structure(body: str, parts: list[str]) -> None:
-    """階層・Setext・冒頭・コード fence を原文 offset で区切る。"""
+    """装飾・引用・改行形式を含む見出しを、コード fence と区別して原文で区切る。"""
     assert [body[start:end] for start, end in _heading_ranges(body)] == parts
 
 
@@ -527,15 +539,7 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-# stdin の復号と chunker は共通なので、受信条件ごとに一方の出力形式を検査する。
-@pytest.mark.parametrize(
-    ("operation", "fragment_size"),
-    [("chunk_stream", 1), ("chunk_embed", 65536)],
-    ids=["stream-bytewise", "batch-whole"],
-)
-def test_worker_preserves_text_across_utf8_input_fragments(
-    tmp_path: Path, operation: str, fragment_size: int
-) -> None:
+def test_worker_preserves_text_across_utf8_input_fragments(tmp_path: Path) -> None:
     """実 worker が受信境界をまたぐ文字と、その原文上の位置を保つ。"""
     _fake_node_model(tmp_path)
     entrypoint = tmp_path / "worker.mjs"
@@ -545,10 +549,9 @@ def test_worker_preserves_text_across_utf8_input_fragments(
         """import { readFileSync } from "node:fs";
 import { Readable } from "node:stream";
 const input = readFileSync(0);
-const size = Number(process.env.CMOC_TEST_FRAGMENT_SIZE);
 const fragments = [];
-for (let start = 0; start < input.length; start += size) {
-  fragments.push(input.subarray(start, start + size));
+for (let start = 0; start < input.length; start++) {
+  fragments.push(input.subarray(start, start + 1));
 }
 Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
 """
@@ -556,7 +559,7 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
     text = "# 日本語\néあ😀 と ASCII\n受信境界をまたいでも末尾まで保つ。\n"
     config = _tuning()
     request = NodeSearchWorker(tmp_path, config)._request(
-        operation,
+        "chunk_stream",
         {
             "documents": {"doc.md": text},
             "resume": {"doc.md": 0},
@@ -568,25 +571,19 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
         ["node", "--import", str(preload), str(entrypoint)],
         input=json.dumps(request, ensure_ascii=False).encode("utf-8"),
         cwd=tmp_path,
-        env={**os.environ, "CMOC_TEST_FRAGMENT_SIZE": str(fragment_size)},
         capture_output=True,
         timeout=10,
         check=False,
     )
     assert result.returncode == 0, result.stderr.decode("utf-8")
-    if operation == "chunk_stream":
-        events = [json.loads(line) for line in result.stdout.splitlines()]
-        chunks = [event for event in events if event["kind"] == "chunk"]
-        assert events[-2:] == [
-            {"kind": "document_complete", "path": "doc.md", "chunk_count": len(chunks)},
-            {"kind": "done"},
-        ]
-        assert [chunk["ordinal"] for chunk in chunks] == list(range(len(chunks)))
-        assert all(chunk["path"] == "doc.md" for chunk in chunks)
-    else:
-        response = json.loads(result.stdout)
-        assert response["status"] == "ok"
-        chunks = response["result"]["doc.md"]
+    events = [json.loads(line) for line in result.stdout.splitlines()]
+    chunks = [event for event in events if event["kind"] == "chunk"]
+    assert events[-2:] == [
+        {"kind": "document_complete", "path": "doc.md", "chunk_count": len(chunks)},
+        {"kind": "done"},
+    ]
+    assert [chunk["ordinal"] for chunk in chunks] == list(range(len(chunks)))
+    assert all(chunk["path"] == "doc.md" for chunk in chunks)
     inputs = [
         json.loads(line)
         for line in (tmp_path / "embedding-inputs.jsonl").read_text().splitlines()
@@ -689,9 +686,9 @@ def test_worker_reports_closed_output_pipe(tmp_path: Path, operation: str) -> No
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
-    """長い節の overlap が次の短い節へ越境せず、本文を落とさない。"""
+    """一括応答が Unicode の原文位置を保ち、overlap を節内に限る。"""
     _fake_node_model(tmp_path)
-    body = "冒頭\n# A\n" + "長い本文" * 8 + "\n## B\n短い本文\n"
+    body = "冒頭 éあ😀\n# A\n" + "長い本文" * 8 + "\n## B\n短い本文é😀\n"
     tuning = replace(_tuning(), chunk_tokens=12, chunk_overlap_tokens=3)
     request = NodeSearchWorker(tmp_path, tuning)._request(
         "chunk_embed", {"documents": {"doc.md": body}, "config": asdict(tuning)}
@@ -707,13 +704,22 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
         check=False,
     )
     assert process.returncode == 0, process.stderr
-    chunks = json.loads(process.stdout)["result"]["doc.md"]
+    response = json.loads(process.stdout)
+    assert response["status"] == "ok"
+    chunks = response["result"]["doc.md"]
+    inputs = [
+        json.loads(line)
+        for line in (tmp_path / "embedding-inputs.jsonl").read_text().splitlines()
+    ]
+    assert chunks[0]["start"] == 0 and chunks[-1]["end"] == len(body)
     sections = _heading_ranges(body)
-    for chunk in chunks:
+    for chunk, excerpt in zip(chunks, inputs, strict=True):
         assert any(
             start <= chunk["start"] < chunk["end"] <= end for start, end in sections
         )
-    assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文\n"
+        assert body[chunk["start"] : chunk["end"]] == excerpt
+        assert len(excerpt) <= tuning.chunk_tokens
+    assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文é😀\n"
     covered = {
         index for chunk in chunks for index in range(chunk["start"], chunk["end"])
     }
@@ -726,7 +732,7 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
 def test_changed_sections_and_moved_files_reuse_saved_embeddings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cli_repository: Path
 ) -> None:
-    """実 chunker で変更節だけを再推論し、現在位置と query cache を保つ。"""
+    """実 chunker で変更・重複・移動・削除後の再利用と現在位置を検査する。"""
     pytest.importorskip("sqlite_vec")
     from commons import runtime_document_search_worker as worker_module
 
@@ -757,11 +763,13 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
             return vector
 
     worker = QueryWorker()
+    events = []
     search = DocumentSearch(
         root,
         _tuning(),
         worker=worker,
         installation_root=root,
+        event_sink=lambda kind, payload: events.append({"event": kind, **payload}),
     )
 
     def model_inputs() -> list[str]:
@@ -770,42 +778,54 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
             for line in (runtime / "embedding-inputs.jsonl").read_text().splitlines()
         ]
 
-    def hit_lines(expected_document: Path = document) -> dict[str, int]:
+    def hit_lines() -> dict[str, dict[int, str]]:
         # 公開位置から現在原文を読み、移動前の位置や抜粋に依存しない。
         locations = {}
         for hit in search.search("sections")["hits"]:
-            assert hit["path"] == expected_document.relative_to(root).as_posix()
             lines = (root / hit["path"]).read_text().splitlines(keepends=True)
+            ranges = {}
             for location in hit["ranges"]:
                 start, end = location["start_line"], location["end_line"]
-                locations["".join(lines[start - 1 : end])] = start
+                ranges[start] = "".join(lines[start - 1 : end])
+            locations[hit["path"]] = ranges
         return locations
 
+    path = document.relative_to(root).as_posix()
     with closing(search):
         # 初回も検索の自動同期で生成数と現在位置を一緒に検査する。
-        assert hit_lines() == {a: 1, b: 3, c: 5}
+        assert hit_lines() == {path: {1: a, 3: b, 5: c}}
         assert search.sync_progress["persisted_chunks"] == 3
         assert model_inputs() == [a, b, c]
 
         edited_a = "# A\nalpha edited\nextra\n"
-        document.write_text(edited_a + b + c)
-        # 検索の自動同期で位置と推論数を一緒に検査し、直前の明示同期を重ねない。
-        assert hit_lines() == {edited_a: 1, b: 4, c: 6}
+        document.write_text(edited_a + b + c + edited_a)
+        # 元文書を先に処理し、文書内の初生成後と別文書での再利用を共に通す。
+        copy = document.with_name("z-copy.md")
+        copy.write_text(edited_a)
+        # 同期一回で、未保存の同一入力が文書内・別文書に現れる場合も検査する。
+        assert hit_lines() == {
+            path: {1: edited_a, 4: b, 6: c, 8: edited_a},
+            copy.relative_to(root).as_posix(): {1: edited_a},
+        }
         assert search.sync_progress["status"] == "updated"
-        assert search.sync_progress["reused_embeddings"] == 2
+        assert search.sync_progress["generated_embeddings"] == 1
+        assert search.sync_progress["persisted_embeddings"] == 1
+        assert search.sync_progress["reused_same_worktree"] == 4
+        assert search.sync_progress["reused_embeddings"] == 4
         assert search.sync_progress["persisted_chunks"] == 1
-        assert search.sync_progress["changed_document_count"] == 1
+        assert search.sync_progress["changed_document_count"] == 2
         assert model_inputs() == [a, b, c, edited_a]
 
         revised_heading = "## A revised\nalpha edited\nextra\n"
+        copy.unlink()
         document.write_text(revised_heading + b + c)
-        assert hit_lines() == {revised_heading: 1, b: 4, c: 6}
+        assert hit_lines() == {path: {1: revised_heading, 4: b, 6: c}}
         assert search.sync_progress["reused_embeddings"] == 2
         assert search.sync_progress["persisted_chunks"] == 1
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
 
         document.write_text(b + c + revised_heading)
-        assert hit_lines() == {b: 1, c: 3, revised_heading: 5}
+        assert hit_lines() == {path: {1: b, 3: c, 5: revised_heading}}
         assert search.sync_progress["status"] == "updated"
         assert search.sync_progress["reused_embeddings"] == 3
         assert search.sync_progress["persisted_chunks"] == 0
@@ -813,12 +833,27 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
 
         moved_file = document.with_name("moved.md")
         document.rename(moved_file)
-        assert hit_lines(moved_file) == {b: 1, c: 3, revised_heading: 5}
+        assert hit_lines() == {
+            moved_file.relative_to(root).as_posix(): {1: b, 3: c, 5: revised_heading}
+        }
         assert search.sync_progress["status"] == "updated"
         assert search.sync_progress["reused_embeddings"] == 3
         assert search.sync_progress["persisted_chunks"] == 0
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
+
+        # 全参照を失っても元の入力片を保持し、復元時に推論を重ねない。
+        moved_file.unlink()
+        assert hit_lines() == {}
+        document.write_text(a + b + c)
+        assert hit_lines() == {path: {1: a, 3: b, 5: c}}
+        assert search.sync_progress["reused_embeddings"] == 3
+        assert search.sync_progress["generated_embeddings"] == 0
+        assert model_inputs() == [a, b, c, edited_a, revised_heading]
         assert worker.operations == ["embed_query"]
+    finished = [
+        event for event in events if event["event"] == "document_search_sync_finished"
+    ]
+    assert finished[-1]["generated_embedding_unit"] == "document_input_piece"
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
@@ -1049,6 +1084,34 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
     assert "result" not in response
 
 
+@pytest.fixture
+def candidate_repository(tmp_path, monkeypatch):
+    """候補選択には検証済みの root・文書集合を渡し、Git 起動を省く。"""
+    from commons import runtime_document_search as module
+
+    root = tmp_path / "repo"
+    docs = root / "oracle/doc"
+    docs.mkdir(parents=True)
+    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
+
+    def repository_root(work_root):
+        assert work_root == root
+        return root
+
+    def enumerate_documents(work_root):
+        assert work_root == root
+        return sorted(docs.glob("*.md")), []
+
+    # Git 分類・root 解決・非追跡検査は実 repository の同期・再利用 test に残す。
+    # 本文・位置の再確認、embedding の保存、検索と MCP 応答は製品経路を通す。
+    monkeypatch.setattr(module, "repo_root", repository_root)
+    monkeypatch.setattr(module, "require_cmoc_ignored", lambda _root: None)
+    monkeypatch.setattr(
+        module, "enumerate_oracle_and_realization_files", enumerate_documents
+    )
+    return root
+
+
 class _CandidateWorker(_InferenceDouble):
     """候補位置と文書・query の embedding を制御し、製品経路で検証する。"""
 
@@ -1096,7 +1159,8 @@ class _CandidateWorker(_InferenceDouble):
     [
         # 上限を一件超える候補で切捨てを検出し、同じ検証のための余分な保存を省く。
         # 件数条件は負の同点候補で通し、類似度の境界を全上限と直積にしない。
-        (50, 51, [((-3, 4), -0.6)], [(None, 50), (20, 20), (50, 50)]),
+        # 引数の最大値 50 は設定上限 20 のケースで検査し、同じ 50 件の検索を重ねない。
+        (50, 51, [((-3, 4), -0.6)], [(None, 50), (20, 20)]),
         (20, 21, [((-3, 4), -0.6)], [(None, 20), (50, 20)]),
         # -1・0・1 は候補不足時に検査する。順位と件数による値の不変性は専用ケースで保つ。
         (50, 7, [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0)], [(None, 7)]),
@@ -1105,10 +1169,15 @@ class _CandidateWorker(_InferenceDouble):
     ids=["candidate-cap", "configured-cap", "similarity-boundaries", "empty"],
 )
 def test_mcp_success_schema_and_candidate_limits(
-    tmp_path, candidate_count, available, similarities, limit_cases
+    tmp_path,
+    candidate_repository,
+    candidate_count,
+    available,
+    similarities,
+    limit_cases,
 ):
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     (root / path).write_text("候補\n" * available)
@@ -1163,9 +1232,11 @@ def test_mcp_success_schema_and_candidate_limits(
             assert worker.operations == (["embed_query"] if expected else [])
 
 
-def test_mcp_aggregates_current_locations_without_excerpts(tmp_path):
+def test_mcp_aggregates_current_locations_without_excerpts(
+    tmp_path, candidate_repository
+):
     """重複・入れ子・連鎖する重なりの最大値を保ち、ファイルと範囲を類似度順に返す。"""
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     other = "oracle/doc/second.md"
     (root / other).write_text("別の原文\n")
@@ -1252,9 +1323,11 @@ def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
     }
 
 
-def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
+def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
+    tmp_path, candidate_repository
+):
     """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     # 異なる合法上限 20・21 と未採用候補一件で順位と値を検査する。50 の境界は別ケースで保つ。
     candidate_count = 21
@@ -1275,20 +1348,17 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
         )
     ) as search:
         tool = _listed_search_tool(search)
-        for limit, count in (
-            (None, candidate_count),
-            (20, 20),
-            (candidate_count, candidate_count),
-        ):
-            arguments = {"query": "候補"}
-            if limit is not None:
-                arguments["limit"] = limit
+        # 省略時の上限は件数境界のケースで検査し、ここでは異なる上限の値を比べる。
+        for limit in (20, candidate_count):
             response = _response(
                 {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "tools/call",
-                    "params": {"name": "search", "arguments": arguments},
+                    "params": {
+                        "name": "search",
+                        "arguments": {"query": "候補", "limit": limit},
+                    },
                 },
                 search,
             )
@@ -1296,7 +1366,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
             assert [hit["path"] for hit in result["hits"]] == [path]
             ranges = result["hits"][0]["ranges"]
             assert [location["start_line"] for location in ranges] == list(
-                range(available, available - count, -1)
+                range(available, available - limit, -1)
             )
             assert all(
                 location["start_line"] == location["end_line"]
@@ -1310,14 +1380,15 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(tmp_path):
                     for location in ranges
                 }
             )
-    default, limited, expanded = results
-    assert default == expanded
+    limited, expanded = results
     assert all(value == expanded[line] for line, value in limited.items())
 
 
-def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
+def test_mcp_candidate_limit_applies_before_range_merging(
+    tmp_path, candidate_repository
+):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     # 20・21 件の採用で統合前の上限違反を検出する。50 の境界は別ケースで保つ。
     candidate_count = 21
@@ -1336,7 +1407,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
         )
     ) as search:
         tool = _listed_search_tool(search)
-        # 上限だけを変える検査は同じ索引を使い、各要求では query 推論も通す。
+        # 同じ query の上限だけを変え、索引と query embedding を再利用する。
         for limit in (20, candidate_count):
             response = _response(
                 {
@@ -1345,7 +1416,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
                     "method": "tools/call",
                     "params": {
                         "name": "search",
-                        "arguments": {"query": f"候補 {limit}", "limit": limit},
+                        "arguments": {"query": "候補", "limit": limit},
                     },
                 },
                 search,
@@ -1368,12 +1439,12 @@ def test_mcp_candidate_limit_applies_before_range_merging(tmp_path):
 
 
 def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, candidate_repository
 ):
     """採用上限外へ隠れる異常値や演算失敗も、成功を併記せず MODEL_FAILURE にする。"""
     from commons import runtime_document_search as module
 
-    root = _repo_with_docs(tmp_path)
+    root = candidate_repository
     path = "oracle/doc/allowed.md"
     # 採用上限を満たす正常候補と、上限外にある異常候補一つを用意する。
     candidate_count = 20

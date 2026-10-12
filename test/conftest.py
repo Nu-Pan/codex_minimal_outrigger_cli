@@ -2,12 +2,13 @@
 
 import json
 import os
+from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from _git_support import init_repo, run_git
+from _git_support import SESSION_BRANCH, SESSION_ID, current_branch, init_repo, run_git
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.prompt_editor_input as prompt_editor_input_module
@@ -17,9 +18,13 @@ import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
 import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_feedback as runtime_feedback
+import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
+from commons.runtime_config import write_config
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+from commons.runtime_state import SessionPart, SessionState, state_path, write_state
+from config.cmoc_config import CmocConfig
 
 
 @pytest.fixture
@@ -41,8 +46,51 @@ def committed_repository(cli_repository: Path) -> Path:
 
 
 @pytest.fixture
+def ready_run_session(
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
+    # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
+    root = cli_repository
+    monkeypatch.chdir(root)
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
+        (root / relative).mkdir(parents=True, exist_ok=True)
+    # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
+    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
+    run_git(root, "commit", "-m", "session seed")
+    home_branch = current_branch(root)
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
+    path = state_path(root, SESSION_ID)
+    write_state(
+        path,
+        SessionState(
+            session=SessionPart(
+                session_home_branch=home_branch, session_fork_commit=fork_commit
+            )
+        ),
+    )
+    return root, SESSION_BRANCH, path
+
+
+@pytest.fixture
+def ready_content_session(
+    ready_run_session: tuple[Path, str, Path],
+) -> tuple[Path, str, Path]:
+    """run の検査に使う oracle と realization の初期内容を用意する。"""
+    root, _session_branch, _state_path = ready_run_session
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle" / "spec.md").write_text("# spec\n")
+    run_git(root, "add", "README.md", "oracle/spec.md")
+    run_git(root, "commit", "-m", "apply input")
+    return ready_run_session
+
+
+@pytest.fixture
 def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """表示・通知・前処理失敗の検査では Git 探索と collector 起動を外す。"""
+    """表示・通知・前処理失敗に不要な外部処理と永続採番を準備しない。"""
     # 実 Git の cwd・linked worktree 境界は test_runtime_cli.py で検証する。
     # collector の TCP 受付・保存・drain は test_feedback.py に残す。
     root = tmp_path / "repo"
@@ -52,6 +100,14 @@ def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> P
     monkeypatch.setattr(runtime_cli, "repo_root", lambda: root)
     monkeypatch.setattr(
         runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    # 永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py の
+    # test_subcommand_logger_keeps_one_file_per_execution に残し、ID の対応は実検査する。
+    ids = count()
+    monkeypatch.setattr(
+        runtime_logging,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
     )
     return root
 
@@ -224,10 +280,23 @@ def _isolate_document_search_materials(
     monkeypatch.setattr(runtime_doctor, "DocumentSearch", doctor_search)
 
 
+@pytest.fixture
+def feedback_without_transport(monkeypatch):
+    """保存済み観測と fake 応答による state 検査では TCP の準備を省く。"""
+    # stdio・TCP の受理・拒否・drain と linked worktree からの追加観測は
+    # test_feedback.py の transport・後続 wave 結合 test で検証する。
+    monkeypatch.setattr(
+        runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    monkeypatch.setattr(
+        runtime_doctor, "validate_feedback_reporter_availability", lambda: None
+    )
+
+
 @pytest.fixture(autouse=True)
 def real_stdio_reporter_probe(monkeypatch):
     """stdio 起動の検証を専用ケースへ集約し、実際の検査関数を渡す。"""
-    # schema・TCP collector の検査は各 CLI test でも実行する。
+    # schema・TCP collector の検査は、transport を使う CLI test でも実行する。
     # test_feedback.py の正常起動・不正応答のケースだけが実 stdio 検査を使う。
     probe = runtime_feedback._validate_stdio_reporter
     monkeypatch.setattr(

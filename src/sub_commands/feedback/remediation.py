@@ -730,6 +730,9 @@ def _remediate_issue(
 
 def _diff_hash(worktree: Path, before: str, after: str) -> str:
     """commit 間の binary を含む net 差分を監査用 hash にする。"""
+    # commit なしの checkpoint は同じ tree 同士なので Git の起動を要しない。
+    if before == after:
+        return sha256_bytes(b"")
     return sha256_bytes(
         run_git(
             ["diff", "--binary", "--no-ext-diff", before, after], worktree

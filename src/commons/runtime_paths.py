@@ -222,9 +222,15 @@ def ensure_work_directories(root: Path, *, create_missing: bool = True) -> None:
     for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
         path = root / relative
         try:
-            if create_missing:
+            # 既存 directory は一度の stat で検証し、不足時だけ作成する。
+            try:
+                mode = path.stat().st_mode
+            except FileNotFoundError:
+                if not create_missing:
+                    raise
                 path.mkdir(parents=True, exist_ok=True)
-            if not stat.S_ISDIR(path.stat().st_mode):
+                mode = path.stat().st_mode
+            if not stat.S_ISDIR(mode):
                 raise NotADirectoryError(f"not a directory: {path}")
         except OSError as exc:
             raise CmocError(

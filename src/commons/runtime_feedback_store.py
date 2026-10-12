@@ -213,12 +213,15 @@ def observation_path(repo: Path, observation_id: str, observed_at: str) -> Path:
 
 def _has_symlink_component(path: Path) -> bool:
     """path の lexical component に symlink が含まれるかを返す。"""
+    # resolve せず祖先を調べ、存在しない子の親 symlink も拒否する。
     current = path.absolute()
-    while current != current.parent:
+    while True:
+        parent = current.parent
+        if current == parent:
+            return False
         if current.is_symlink():
             return True
-        current = current.parent
-    return False
+        current = parent
 
 
 def _atomic_create(path: Path, content: bytes) -> bool:
@@ -228,56 +231,56 @@ def _atomic_create(path: Path, content: bytes) -> bool:
             "context_invalid", f"feedback storage path uses a symlink: {path}"
         )
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.parent / f".{path.name}.{secrets.token_hex(12)}.tmp"
+    directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
     try:
-        # 完成した inode だけを final name から観測できるよう先に fsync する。
-        with temporary.open("xb") as output:
-            output.write(content)
-            output.flush()
-            os.fsync(output.fileno())
-        directory_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            # 同じ保存 directory を使う collector process 間で存在確認と rename を
-            # 直列化し、既存 immutable record を上書きしない。
-            fcntl.flock(directory_fd, fcntl.LOCK_EX)
-            temporary_prefix = f".{path.name}."
-            sibling_temporaries = [
-                candidate
-                for candidate in path.parent.iterdir()
-                if candidate.name.startswith(temporary_prefix)
-                and candidate.name.endswith(".tmp")
-            ]
+        # staging も directory lock 内で行い、他の writer の未完成 file を読まない。
+        # 再保存は staging を省き、先行 rename 後の flush 失敗も回復できるようにする。
+        fcntl.flock(directory_fd, fcntl.LOCK_EX)
+        temporary_prefix = f".{path.name}."
+        sibling_temporaries = [
+            candidate
+            for candidate in path.parent.iterdir()
+            if candidate.name.startswith(temporary_prefix)
+            and candidate.name.endswith(".tmp")
+        ]
+        for candidate in sibling_temporaries:
+            if (
+                candidate.is_symlink()
+                or not candidate.is_file()
+                or candidate.read_bytes() != content
+            ):
+                raise FeedbackRejected(
+                    "context_invalid",
+                    f"feedback temporary record differs or is not regular: {candidate}",
+                )
+        if os.path.lexists(path):
+            if path.is_symlink() or not path.is_file():
+                raise FeedbackRejected(
+                    "context_invalid",
+                    f"feedback record path is not a regular file: {path}",
+                )
             for candidate in sibling_temporaries:
-                if (
-                    candidate.is_symlink()
-                    or not candidate.is_file()
-                    or candidate.read_bytes() != content
-                ):
-                    raise FeedbackRejected(
-                        "context_invalid",
-                        f"feedback temporary record differs or is not regular: {candidate}",
-                    )
-            if os.path.lexists(path):
-                if path.is_symlink() or not path.is_file():
-                    raise FeedbackRejected(
-                        "context_invalid",
-                        f"feedback record path is not a regular file: {path}",
-                    )
-                for candidate in sibling_temporaries:
-                    candidate.unlink(missing_ok=True)
-                os.fsync(directory_fd)
-                return False
+                candidate.unlink(missing_ok=True)
+            os.fsync(directory_fd)
+            return False
+
+        temporary = path.parent / f".{path.name}.{secrets.token_hex(12)}.tmp"
+        try:
+            # この writer の byte 列は再読せず、flush 後にだけ final name へ公開する。
+            with temporary.open("xb") as output:
+                output.write(content)
+                output.flush()
+                os.fsync(output.fileno())
             os.rename(temporary, path)
             for candidate in sibling_temporaries:
-                if candidate != temporary:
-                    candidate.unlink(missing_ok=True)
+                candidate.unlink(missing_ok=True)
             os.fsync(directory_fd)
         finally:
-            fcntl.flock(directory_fd, fcntl.LOCK_UN)
-            os.close(directory_fd)
+            temporary.unlink(missing_ok=True)
         return True
     finally:
-        temporary.unlink(missing_ok=True)
+        fcntl.flock(directory_fd, fcntl.LOCK_UN)
+        os.close(directory_fd)
 
 
 def write_immutable_bytes(path: Path, content: bytes) -> str:
@@ -413,7 +416,7 @@ def _store_observation(
                         )
                     record_observation_receipt(repo, existing)
                     return existing.resolve()
-                write_immutable_json(path, envelope)
+                write_immutable_bytes(path, content)
                 record_observation_receipt(repo, path)
                 return path.resolve()
             finally:

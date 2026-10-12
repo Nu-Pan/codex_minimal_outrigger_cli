@@ -210,19 +210,21 @@ def load_history(repo: Path, references: object) -> list[dict[str, Any]]:
         raise _corruption(
             "feedback history references が不正です。", feedback_root(repo)
         )
+    if not references:
+        return []
+    # repository だけを正規化し、history 以下の symlink 検査は各参照に残す。
+    repo = repo.resolve(strict=False)
+    history_root = feedback_root(repo) / "history"
     records = []
     paths: set[Path] = set()
     for reference in references:
         target, digest = _resolve_artifact_reference(
             repo,
             reference,
-            expected_root=feedback_root(repo) / "history",
+            expected_root=history_root,
             description="feedback history",
         )
-        if (
-            target in paths
-            or target.parent != (feedback_root(repo) / "history").resolve()
-        ):
+        if target in paths or target.parent != history_root:
             raise _corruption("feedback history path が重複または不正です。", target)
         paths.add(target)
         record = _read_canonical_object(

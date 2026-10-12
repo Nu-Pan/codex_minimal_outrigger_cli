@@ -31,6 +31,7 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
         for path in (*oracle_files, *realization_files)
     )
     files = {}
+    checked_parents: set[Path] = set()
     git_metadata_repositories: dict[Path, bool] = {}
     for name in sorted(set(names) - {""}):
         relative = Path(name)
@@ -45,8 +46,13 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
             continue
         path = worktree / relative
         # symlink の参照先や nested worktree を暗黙に読むことはしない。
-        if any(parent.is_symlink() for parent in path.parents[: len(parts) - 1]):
-            raise ValueError(f"feedback basis has a symlinked parent: {name}")
+        # 検証済みの親と祖先は、この収集内だけ共有し、次回は取り直す。
+        parent = path.parent
+        while parent != worktree and parent not in checked_parents:
+            if parent.is_symlink():
+                raise ValueError(f"feedback basis has a symlinked parent: {name}")
+            checked_parents.add(parent)
+            parent = parent.parent
         try:
             mode = path.lstat().st_mode
         except FileNotFoundError:

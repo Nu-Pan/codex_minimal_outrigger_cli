@@ -1,12 +1,27 @@
+from functools import cache
 from pathlib import Path
 
-from typer.testing import CliRunner, Result
+from click.testing import CliRunner, Result
+from typer.main import get_command
 
 from commons.runtime_config import write_config
 from commons.runtime_paths import pushd
 from config.cmoc_config import CmocConfig
 
-runner = CliRunner()
+
+class _CliRunner(CliRunner):
+    """不変な command tree の構築を共有し、Context は invocation ごとに作る。"""
+
+    def __init__(self):
+        super().__init__()
+        # 利用側は command 登録を変更せず、callback が読む handler だけを置換する。
+        self._command = cache(get_command)
+
+    def invoke(self, app, *args, **kwargs):
+        return super().invoke(self._command(app), *args, **kwargs)
+
+
+runner = _CliRunner()
 
 
 def seed_search_config(root: Path) -> None:

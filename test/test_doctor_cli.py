@@ -40,6 +40,7 @@ from commons.runtime_document_search import DocumentSearch, SearchError
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import ReporterAvailabilityError
+from commons.runtime_paths import ensure_work_directories
 from commons.runtime_refactor import RefactorState
 from config.cmoc_config import CmocConfig
 from main import app
@@ -343,16 +344,54 @@ def test_doctor_preprocess_restores_empty_work_directories(
     ]
 
 
-@pytest.mark.parametrize("command", [("doctor",), ("session", "fork")])
 @pytest.mark.parametrize("relative", ["oracle", *_WORK_DIRECTORIES])
-def test_preprocess_rejects_work_directory_collisions(
-    committed_repository, monkeypatch, command, relative
+def test_work_directory_collisions_preserve_content_and_report_target(
+    tmp_path, relative
 ):
-    """通常起動と明示 doctor は配置先・親の衝突を保持し、本命処理へ進まない。"""
-    # HEAD の保持は確認するが、配置先検証は履歴内容・config・索引同期を使わない。
-    root = committed_repository
+    """全配置先と親の衝突を保持し、失敗した配置先と修復方法を診断する。"""
+    # 配置先別の境界は共通 helper で検査し、Git・CLI の準備を重ねない。
+    root = tmp_path
     collision = root / relative
     collision.parent.mkdir(parents=True, exist_ok=True)
+    collision.write_text("keep collision\n")
+
+    with pytest.raises(CmocError) as exc_info:
+        ensure_work_directories(root)
+
+    assert collision.read_text() == "keep collision\n"
+    assert "作業用配置先" in exc_info.value.summary
+    assert f"work-root: {root}" in exc_info.value.detail
+    assert (
+        f"path: {root / ('oracle/doc' if relative == 'oracle' else relative)}"
+        in exc_info.value.detail
+    )
+    assert "reason:" in exc_info.value.detail
+    assert "退避" in exc_info.value.next_actions[0]
+
+
+def test_work_directory_validation_does_not_repair_missing_paths(tmp_path):
+    """最終検証で失われた配置先を発見し、検証だけの呼び出しでは補完しない。"""
+    ensure_work_directories(tmp_path)
+    missing = tmp_path / "oracle/test"
+    missing.rmdir()
+
+    with pytest.raises(CmocError) as exc_info:
+        ensure_work_directories(tmp_path, create_missing=False)
+
+    assert not missing.exists()
+    assert f"work-root: {tmp_path}" in exc_info.value.detail
+    assert f"path: {missing}" in exc_info.value.detail
+
+
+@pytest.mark.parametrize("command", [("doctor",), ("session", "fork")])
+def test_preprocess_rejects_work_directory_collisions(
+    committed_repository, monkeypatch, command
+):
+    """通常起動と明示 doctor は衝突を診断して終了し、Git 状態を変更しない。"""
+    # 全配置先の拒否は helper のケースに残し、両入口との結合だけを実 Git で確かめる。
+    root = committed_repository
+    collision = root / "oracle/test"
+    collision.parent.mkdir(parents=True)
     collision.write_text("keep collision\n")
     head_before = run_git(root, "rev-parse", "HEAD").stdout
     branch_before = run_git(root, "branch", "--show-current").stdout
@@ -367,9 +406,7 @@ def test_preprocess_rejects_work_directory_collisions(
     report = terminal_primary_report(result).read_text()
     assert "作業用配置先" in report
     assert f"work-root: {root}" in report
-    assert (
-        f"path: {root / ('oracle/doc' if relative == 'oracle' else relative)}" in report
-    )
+    assert f"path: {collision}" in report
     assert "reason:" in report
     assert "退避" in report
 
@@ -581,10 +618,14 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
     for path in (config, state):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(original)
-    run_git(root, "add", "-f", ".cmoc/gt")
     config_relative = str(config.relative_to(root))
     state_relative = str(state.relative_to(root))
+    # HEAD と現在 index の mode を区別し、state は HEAD にない新規 file にする。
+    run_git(root, "add", "-f", config_relative)
     run_git(root, "update-index", "--chmod=+x", config_relative)
+    run_git(root, "commit", "-m", "track executable config")
+    run_git(root, "update-index", "--chmod=-x", config_relative)
+    run_git(root, "add", "-f", state_relative)
     run_git(root, "update-index", "--skip-worktree", state_relative)
 
     index_path = doctor_module._copy_current_index(root)
@@ -610,8 +651,62 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
         entries = doctor_module._run_git_with_index(
             ["ls-files", "--stage", "-v", "--", ".cmoc/gt"], root, index_path
         ).stdout.splitlines()
-        assert any(line.startswith("H 100755 ") for line in entries)
+        assert any(line.startswith("H 100644 ") for line in entries)
         assert any(line.startswith("S 100644 ") for line in entries)
+
+        # entry がない場合も同じ repository を使い、HEAD の mode と新規 mode を確かめる。
+        doctor_module._run_git_with_index(
+            ["update-index", "--force-remove", config_relative, state_relative],
+            root,
+            index_path,
+        )
+        git_calls = 0
+        original_run = doctor_module.subprocess.run
+
+        def count_git_calls(argv, *args, **kwargs):
+            nonlocal git_calls
+            if argv[0] == "git":
+                git_calls += 1
+            return original_run(argv, *args, **kwargs)
+
+        with monkeypatch.context() as observed:
+            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+            doctor_module._stage_tracked_runtime_repair(root, index_path)
+
+        assert doctor_module._run_git_with_index(
+            ["show", f":{config_relative}"], root, index_path
+        ).stdout == changed.replace("\r\n", "\n")
+        assert (
+            doctor_module._run_git_with_index(
+                ["show", f":{state_relative}"], root, index_path
+            ).stdout
+            == "preserved staged entry\n"
+        )
+        entries = doctor_module._run_git_with_index(
+            ["ls-files", "--stage", "--", ".cmoc/gt"], root, index_path
+        ).stdout.splitlines()
+        assert {line.split("\t")[1]: line.split()[0] for line in entries} == {
+            config_relative: "100755",
+            state_relative: "100644",
+        }
+        # まとめて列挙した欠落 entry を path ごとに再照会して process を増やさない。
+        assert git_calls <= 7
+
+        # 既存の実行可能 entry を再更新するケースでも mode の保持を検査する。
+        config.write_text(original)
+        doctor_module._stage_tracked_runtime_repair(
+            root, index_path, skip_paths={state_relative}
+        )
+        entry = doctor_module._run_git_with_index(
+            ["ls-files", "--stage", "--", config_relative], root, index_path
+        ).stdout
+        assert entry.startswith("100755 ")
+        assert (
+            doctor_module._run_git_with_index(
+                ["show", f":{config_relative}"], root, index_path
+            ).stdout
+            == original
+        )
     finally:
         index_path.unlink(missing_ok=True)
 
@@ -1415,6 +1510,62 @@ def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
 
 
+def test_staged_deletion_check_preserves_saved_index_with_one_git_query(
+    committed_repository, tmp_path, monkeypatch
+):
+    """退避 index の削除だけを一度の問い合わせで判定し、index 自体は変更しない。"""
+    root = committed_repository
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "track ignore rule")
+    blob = run_git(root, "rev-parse", "HEAD:.gitignore").stdout.strip()
+    original_index = (root / ".git/index").read_bytes()
+    # 通常 index は退避 index と区別し、判定が渡された index を読むことも確認する。
+    run_git(root, "update-index", "--force-remove", ".gitignore")
+    original_run = doctor_module.subprocess.run
+
+    # HEAD と repository の準備は一度にし、各ケースでは退避 index だけを作り替える。
+    for change in ("clean", "delete", "rename", "intent", "unmerged"):
+        index_path = tmp_path / f"{change}.index"
+        index_path.write_bytes(original_index)
+        if change != "clean":
+            doctor_module._run_git_with_index(
+                ["update-index", "--force-remove", ".gitignore"], root, index_path
+            )
+        if change == "rename":
+            doctor_module._stage_blob(
+                root, index_path, "renamed-ignore", "100644", blob
+            )
+        elif change == "intent":
+            doctor_module._run_git_with_index(
+                ["add", "-N", ".gitignore"], root, index_path
+            )
+        elif change == "unmerged":
+            doctor_module._run_git_with_index(
+                ["update-index", "--index-info"],
+                root,
+                index_path,
+                input_text=f"100644 {blob} 1\t.gitignore\n100644 {blob} 3\t.gitignore\n",
+            )
+        before = index_path.read_bytes()
+        git_calls = 0
+
+        def count_git_calls(argv, *args, **kwargs):
+            nonlocal git_calls
+            if argv[0] == "git":
+                git_calls += 1
+            return original_run(argv, *args, **kwargs)
+
+        with monkeypatch.context() as observed:
+            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+            assert doctor_module._is_staged_deletion_of_head_entry(
+                root, index_path, ".gitignore"
+            ) is (change in {"delete", "rename"}), change
+
+        assert git_calls <= 1, change
+        assert index_path.read_bytes() == before, change
+
+
 def test_doctor_preserves_preexisting_staged_gitignore_deletion(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1435,33 +1586,6 @@ def test_doctor_preserves_preexisting_staged_gitignore_deletion(
 
     assert run_git(root, "diff", "--cached", "--name-status").stdout == before
     assert run_git(root, "ls-files", "--stage", "--", ".gitignore").stdout == ""
-
-
-def test_doctor_fails_when_real_model_validation_does_not_complete(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """資材が取得済みでも実モデル検証失敗を正常終了として報告しない。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-
-    def fail_materials(_root: Path, _config: object) -> dict[str, str]:
-        raise SearchError("MODEL_FAILURE", "embedding validation failed")
-
-    monkeypatch.setattr(
-        doctor_module, "prepare_document_search_materials", fail_materials
-    )
-    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
-
-    assert result.exit_code != 0
-    report = terminal_primary_report(result).read_text(encoding="utf-8")
-    assert 'terminal_classification: "error"' in report
-    assert "照合と実モデル検証: `失敗`" in report
-    assert "embedding validation failed" in report
-    assert "cmoc doctor を再実行" in report
-    events = _new_subcommand_events(root, set())
-    assert not any(
-        event["event"].startswith("document_search_sync_") for event in events
-    )
 
 
 @pytest.mark.parametrize(

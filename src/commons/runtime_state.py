@@ -75,9 +75,14 @@ class SessionState:
 def state_path(root: Path, session_id: str) -> Path:
     """session_id に対応する session state file の保存先を返す。"""
     _validate_session_id(session_id)
-    path = sessions_dir(root) / f"{session_id}.json"
+    path = _session_state_path(root, session_id)
     _inspect_state_path(path)
     return path
+
+
+def _session_state_path(root: Path, session_id: str) -> Path:
+    """パスだけを組み立て、読み込み時の検証は _read_state_data に集約する。"""
+    return sessions_dir(root) / f"{session_id}.json"
 
 
 def _contains_unrepresentable_characters(value: str) -> bool:
@@ -231,7 +236,7 @@ def load_state_for_branch(root: Path, branch: str) -> tuple[str, Path, SessionSt
             ["cmoc session branch または active run branch 上で再実行してください。"],
             f"current branch: {branch!r}",
         )
-    path = state_path(root, session_id)
+    path = _session_state_path(root, session_id)
     data = _read_state_data(path)
     return session_id, path, SessionState.from_dict(data, path)
 
@@ -244,7 +249,7 @@ def load_session_part_for_branch(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
     """
     session_id = branch_session_id(branch)
-    path = state_path(root, session_id)
+    path = _session_state_path(root, session_id)
     data = _read_state_data(path)
     _require_top_level_fields(data, path)
     session_data = _part_data(data, "session", SessionPart, path)
@@ -280,11 +285,10 @@ def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
     _validate_session_id(path.stem)
     _validate_state_file_path(path)
-    validated = SessionState.from_dict(state.to_dict(), path)
+    data = state.to_dict()
+    SessionState.from_dict(data, path)
     try:
-        serialized = (
-            json.dumps(validated.to_dict(), ensure_ascii=False, indent=2) + "\n"
-        )
+        serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     except (RecursionError, TypeError, UnicodeError, ValueError) as exc:
         raise _invalid_state(path, "state を JSON として保存できません。") from exc
     try:

@@ -18,7 +18,7 @@ import urllib.error
 import urllib.request
 from dataclasses import replace
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 import pytest
 from _cli_support import runner, terminal_primary_report
@@ -341,7 +341,7 @@ def test_redirect_failure_and_report_preserve_observed_counts(
 def test_doctor_reports_asset_success_separately_from_validation_failure(
     tmp_path, distribution, monkeypatch
 ):
-    """取得・公開成功を保持し、後続の動作検証失敗を doctor 成功にしない。"""
+    """取得・公開成功を保持し、検証失敗を報告して索引同期前に停止する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     # 資材準備から失敗 report までを通し、TCP 受付は test_feedback.py に残す。
@@ -360,13 +360,20 @@ def test_doctor_reports_asset_success_separately_from_validation_failure(
     result = runner.invoke(app, ["doctor"], catch_exceptions=False)
     assert result.exit_code != 0
     report = terminal_primary_report(result).read_text()
+    assert 'terminal_classification: "error"' in report
     assert "照合と実モデル検証: `失敗`" in report
     assert "資材取得の試行数: 1" in report
     assert "有効キャッシュの公開数: 1" in report
     assert "real-model validation failed" in report
+    assert "cmoc doctor を再実行" in report
     assert (
         cache_module.asset_cache_directory() / asset.key / "content"
     ).read_bytes() == distribution[1]["/model"]
+    [log_path] = (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert not any(
+        event["event"].startswith("document_search_sync_") for event in events
+    )
 
 
 def _tarball(name, dependencies=None, version="1.0.0"):
@@ -423,7 +430,7 @@ def _npm_fixture(base, distribution):
 def test_npm_build_reuses_all_dependencies_without_network(
     tmp_path, distribution, monkeypatch, asset_logger
 ):
-    """実 npm に推移的依存を渡し、別配置の cold build も通信なしで完了する。"""
+    """取得資材を照合し、別配置の cold build を実 npm で通信なしに完了する。"""
     if not shutil.which("node") or not shutil.which("npm"):
         pytest.skip("Node and npm are required for offline asset preparation")
     # Node の socket 境界で通信を禁止し、試行もファイルから検出する。
@@ -436,24 +443,45 @@ def test_npm_build_reuses_all_dependencies_without_network(
     )
     monkeypatch.setenv("NODE_OPTIONS", f"--require={guard}")
     monkeypatch.setenv("npm_config_registry", distribution[0])
-    for number in range(2):
-        root = tmp_path / f"cmoc-{number}"
-        base = root / "build"
-        original = _npm_fixture(base, distribution)
-        with (root / "lock").open("w") as descriptor:
-            with monkeypatch.context() as patch:
-                if number:
-                    patch.setattr(
-                        urllib.request.OpenerDirector, "open", _forbid_download
-                    )
-                try:
-                    setup._install_node_runtime(root, base, descriptor.fileno())
-                except subprocess.CalledProcessError as exc:
-                    pytest.fail(f"offline npm failed:\n{exc.stderr}\n{exc.stdout}")
-        assert (base / "node_modules/asset-a/index.js").is_file()
-        assert (base / "node_modules/asset-b/index.js").is_file()
-        assert (base / "package-lock.json").read_bytes() == original
-        assert not (base / ".assets").exists()
+
+    # 制約のない tarball の取得では Node を起動せず、実 platform は後段で検査する。
+    root = tmp_path / "cmoc-download"
+    base = root / "build"
+    original = _npm_fixture(base, distribution)
+    with monkeypatch.context() as acquisition:
+        acquisition.setattr(
+            assets,
+            "_npm_platform",
+            lambda: {"os": "linux", "cpu": "x64", "libc": "glibc"},
+        )
+        with assets.node_runtime_assets(root, base):
+            lock = json.loads((base / "package-lock.json").read_text())
+            for name, path in (("asset-a", "/a.tgz"), ("asset-b", "/b.tgz")):
+                resolved = urlsplit(
+                    lock["packages"]["node_modules/" + name]["resolved"]
+                )
+                assert resolved.scheme == "file"
+                assert (
+                    Path(unquote(resolved.path)).read_bytes() == distribution[1][path]
+                )
+    assert (base / "package-lock.json").read_bytes() == original
+    assert not (base / ".assets").exists()
+    assert all(event["source"] == "download" for event in _states(asset_logger))
+
+    # 同じ依存物の npm 構築は、全資材を再利用する別配置の cold build で一度通す。
+    root = tmp_path / "cmoc-cached"
+    base = root / "build"
+    original = _npm_fixture(base, distribution)
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
+    with (root / "lock").open("w") as descriptor:
+        try:
+            setup._install_node_runtime(root, base, descriptor.fileno())
+        except subprocess.CalledProcessError as exc:
+            pytest.fail(f"offline npm failed:\n{exc.stderr}\n{exc.stdout}")
+    assert (base / "node_modules/asset-a/index.js").is_file()
+    assert (base / "node_modules/asset-b/index.js").is_file()
+    assert (base / "package-lock.json").read_bytes() == original
+    assert not (base / ".assets").exists()
     assert not attempted.exists()
     assert distribution[2] == ["/a.tgz", "/b.tgz"]
     assert sum(event["download_count"] for event in _states(asset_logger)) == 2

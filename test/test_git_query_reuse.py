@@ -1,5 +1,6 @@
 """Git path の重複照会を避け、状態変更後の安全性検査を保つことを検証する。"""
 
+import shutil
 from collections import Counter
 from contextlib import nullcontext
 
@@ -31,12 +32,15 @@ def test_worktree_mutations_avoid_repeated_root_discovery(
         run_git(root, "worktree", "add", "-b", "linked-query", str(repository), "HEAD")
     target = root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID
     root_queries = 0
+    prune_calls = 0
     original_run = git_module.subprocess.run
 
     def record_query(argv, *args, **kwargs):
-        nonlocal root_queries
+        nonlocal root_queries, prune_calls
         if argv[0] == "git" and "--show-toplevel" in argv:
             root_queries += 1
+        if argv[:3] == ["git", "worktree", "prune"]:
+            prune_calls += 1
         return original_run(argv, *args, **kwargs)
 
     monkeypatch.setattr(git_module.subprocess, "run", record_query)
@@ -48,31 +52,51 @@ def test_worktree_mutations_avoid_repeated_root_discovery(
     root_queries = 0
     assert git_module.remove_worktree(repository, target).returncode == 0
     assert root_queries <= 1
+    assert prune_calls == 0
     assert not target.exists()
     assert str(target) not in run_git(root, "worktree", "list", "--porcelain").stdout
 
 
-def test_remove_worktree_rechecks_registration_before_fallback(
-    committed_repository, monkeypatch
+@pytest.mark.parametrize("state_after_failure", ["registered", "missing", "detached"])
+def test_remove_worktree_preserves_fallback_cleanup_and_rechecks_registration(
+    committed_repository, monkeypatch, state_after_failure
 ):
-    """Git 削除の失敗後に branch の登録が変わった実体を再帰削除しない。"""
+    """削除失敗時は残存登録を回収し、branch の登録が変わった実体は保護する。"""
     root = committed_repository
     target = root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID
     git_module.create_run_worktree(root, RUN_BRANCH, target)
     (target / "keep.txt").write_text("keep\n")
     original_run = git_module.run_git
+    prune_calls = 0
 
     def fail_removal(args, git_cwd, check=True):
+        nonlocal prune_calls
         if args[:2] == ["worktree", "remove"]:
-            run_git(target, "switch", "--detach")
+            if state_after_failure == "detached":
+                run_git(target, "switch", "--detach")
+            elif state_after_failure == "missing":
+                shutil.rmtree(target)
             return CommandResult(1, "", "simulated removal failure")
+        if args[:2] == ["worktree", "prune"]:
+            prune_calls += 1
         return original_run(args, git_cwd, check=check)
 
     monkeypatch.setattr(git_module, "run_git", fail_removal)
-    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
-        git_module.remove_worktree(root, target)
-    assert (target / "keep.txt").read_text() == "keep\n"
-    assert (target / ".git").is_file()
+    if state_after_failure == "detached":
+        with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+            git_module.remove_worktree(root, target)
+        assert prune_calls == 0
+        assert (target / "keep.txt").read_text() == "keep\n"
+        assert (target / ".git").is_file()
+    else:
+        result = git_module.remove_worktree(root, target)
+        assert result.returncode == 1
+        assert result.stderr == "simulated removal failure"
+        assert prune_calls == 1
+        assert not target.exists()
+        assert (
+            str(target) not in run_git(root, "worktree", "list", "--porcelain").stdout
+        )
 
 
 def test_git_query_reuse_keeps_worktrees_and_environment_separate(
@@ -176,6 +200,46 @@ def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
     global_ignore.rmdir()
     global_ignore.write_text("*.unused\n")
     ensure_prompt_editor_roots_ignored(root)
+
+
+def test_exclude_initialization_reuses_path_and_rechecks_state(
+    cli_repository, monkeypatch
+):
+    """exclude の保存先だけを再利用し、次回の内容変更と index 変更を検査する。"""
+    root = cli_repository
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git":
+            queries[tuple(argv[1:])] += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    exclude = root / ".git/info/exclude"
+    for content in (None, "existing.txt\n"):
+        if content is not None:
+            exclude.write_text(content)
+        queries.clear()
+
+        git_module.ensure_cmoc_ignored_in_exclude(root)
+
+        assert queries[("rev-parse", "--git-path", "info/exclude")] == 1
+        assert queries[("ls-files", "--", ".cmoc/gu")] == 1
+        assert queries[("check-ignore", "-q", git_module.CMOC_IGNORE_PROBE)] == 1
+        assert "/.cmoc/gu/" in exclude.read_text()
+        if content is not None:
+            assert exclude.read_text().startswith(content)
+        assert not (root / ".gitignore").exists()
+
+    # 同じ保存先でも、前回の非追跡判定は使い回さない。
+    tracked = root / ".cmoc/gu/input.txt"
+    tracked.parent.mkdir(parents=True)
+    tracked.write_text("preserve input\n")
+    run_git(root, "add", "-f", str(tracked.relative_to(root)))
+    with pytest.raises(CmocError, match="追跡対象外"):
+        git_module.ensure_cmoc_ignored_in_exclude(root)
+    assert tracked.read_text() == "preserve input\n"
 
 
 @pytest.mark.parametrize("interrupt", [False, True])

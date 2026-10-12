@@ -214,52 +214,63 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     }
 
 
+def _validate_json_toml_value(
+    item: Any, active_containers: set[int] | None
+) -> JsonTomlValue:
+    """呼び出しごとの巡回状態を使い、循環 container も拒否する。"""
+    # 関数は共有し、設定の各文字列を検証するたびに自己参照 closure を作らない。
+    if isinstance(item, str):
+        # TOML string は Unicode scalar value だけを受理する。
+        # ASCII には surrogate がないので、文字単位の走査を省ける。
+        if not item.isascii() and any(
+            0xD800 <= ord(character) <= 0xDFFF for character in item
+        ):
+            raise TypeError
+        return item
+    if isinstance(item, bool):
+        return item
+    if type(item) is int:
+        # TOML 1.0 の integer は signed 64 bit に限定される。
+        if not -(2**63) <= item < 2**63:
+            raise TypeError
+        return item
+    if isinstance(item, float):
+        # NaN と infinity は JSON value ではない。
+        if not math.isfinite(item):
+            raise TypeError
+        return item
+    if isinstance(item, (list, dict)):
+        # scalar の検証には巡回状態を用意せず、最初の container だけで作る。
+        if active_containers is None:
+            active_containers = set()
+        identity = id(item)
+        if identity in active_containers:
+            raise TypeError
+        active_containers.add(identity)
+        try:
+            if isinstance(item, list):
+                return [
+                    _validate_json_toml_value(element, active_containers)
+                    for element in item
+                ]
+            restored: dict[str, JsonTomlValue] = {}
+            for key, element in item.items():
+                if not isinstance(key, str):
+                    raise TypeError
+                _validate_json_toml_value(key, active_containers)
+                restored[key] = _validate_json_toml_value(element, active_containers)
+            return restored
+        finally:
+            active_containers.remove(identity)
+    raise TypeError
+
+
 def validate_json_toml_value(value: Any) -> JsonTomlValue:
     """JSON と TOML の双方へ意味を変えず保存できる値を検証する。"""
 
-    def _validate(item: Any, active_containers: set[int]) -> JsonTomlValue:
-        """循環 container も拒否しながら再帰的な値を検証する。"""
-        if isinstance(item, str):
-            # TOML string は Unicode scalar value だけを受理する。
-            # ASCII には surrogate がないので、文字単位の走査を省ける。
-            if not item.isascii() and any(
-                0xD800 <= ord(character) <= 0xDFFF for character in item
-            ):
-                raise TypeError
-            return item
-        if isinstance(item, bool):
-            return item
-        if type(item) is int:
-            # TOML 1.0 の integer は signed 64 bit に限定される。
-            if not -(2**63) <= item < 2**63:
-                raise TypeError
-            return item
-        if isinstance(item, float):
-            # NaN と infinity は JSON value ではない。
-            if not math.isfinite(item):
-                raise TypeError
-            return item
-        if isinstance(item, (list, dict)):
-            identity = id(item)
-            if identity in active_containers:
-                raise TypeError
-            active_containers.add(identity)
-            try:
-                if isinstance(item, list):
-                    return [_validate(element, active_containers) for element in item]
-                restored: dict[str, JsonTomlValue] = {}
-                for key, element in item.items():
-                    if not isinstance(key, str):
-                        raise TypeError
-                    _validate(key, active_containers)
-                    restored[key] = _validate(element, active_containers)
-                return restored
-            finally:
-                active_containers.remove(identity)
-        raise TypeError
-
+    # 巡回状態は値ごとに隔離し、深さエラーは設定エラーへ変換する。
     try:
-        return _validate(value, set())
+        return _validate_json_toml_value(value, None)
     except RecursionError as exc:
         # {{work-root}}/oracle/doc/app_spec/error_handling.md
         # 深すぎる provider-local container も設定エラーとして上位へ返す。
@@ -331,6 +342,17 @@ def _int_value(data: dict[str, Any], key: str, default: int) -> int:
 
 def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     """永続化 JSON object から、不足項目を既定値で補った config を復元する。"""
+    # 保存済み入力だけに必要な厳格な検証は load_config 側で行う。
+    return _config_from_dict(data)
+
+
+def _config_from_dict(
+    data: dict[str, Any],
+    *,
+    document_search: DocumentSearchConfig | None = None,
+) -> CmocConfig:
+    """保存内容の検証で復元済みの検索設定があれば、その結果を再利用する。"""
+    # Codex 側の省略補完と、値の不正時の診断を共用する。
     default = CmocConfig()
     try:
         if not isinstance(data, dict):
@@ -345,12 +367,13 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             codex_data.get("agent_calls", {}),
         )
 
-        search_config = _document_search_config(
-            data.get("document_search", default.document_search)
-        )
+        if document_search is None:
+            document_search = _document_search_config(
+                data.get("document_search", default.document_search)
+            )
         return CmocConfig(
             num_parallel=_int_value(data, "num_parallel", default.num_parallel),
-            document_search=search_config,
+            document_search=document_search,
             codex=CmocConfigCodex(
                 model_providers=model_providers,
                 agent_calls=agent_calls,
@@ -479,8 +502,9 @@ def _read_config_data(path: Path) -> dict[str, Any]:
     return data
 
 
-def _validate_saved_search_data(path: Path, data: dict[str, Any]) -> None:
-    """保存された検索設定を既定値の注入なしで検証する。"""
+def _saved_search_config(path: Path, data: dict[str, Any]) -> DocumentSearchConfig:
+    """保存された検索設定を既定値の注入なしで検証・復元する。"""
+    # 保存済み設定では document_search の欠落を補完しない。
     if "document_search" not in data:
         raise _search_config_failure(
             path,
@@ -488,13 +512,15 @@ def _validate_saved_search_data(path: Path, data: dict[str, Any]) -> None:
             missing=True,
         )
     try:
-        _document_search_data(data["document_search"])
+        return _document_search_config(data["document_search"])
     except SearchConfigIssue as exc:
         raise _search_config_failure(path, exc, missing=exc.missing) from exc
 
 
-def _validated_codex_data(path: Path, data: dict[str, Any]) -> CmocConfig:
-    """保存済み agent call 設定と provider 参照を確認し、復元した設定を返す。"""
+def _config_from_saved_data(path: Path, data: dict[str, Any]) -> CmocConfig:
+    """検索設定・agent call 設定・provider 参照を確認して保存内容を復元する。"""
+    # 検索設定の不備は Codex 設定の復元より先に診断する。
+    document_search = _saved_search_config(path, data)
     codex = data.get("codex")
     if not isinstance(codex, dict):
         field = "codex"
@@ -509,7 +535,7 @@ def _validated_codex_data(path: Path, data: dict[str, Any]) -> CmocConfig:
         if missing:
             field = f"codex.agent_calls.{sorted(missing)[0]}"
         else:
-            config = config_from_dict(data)
+            config = _config_from_dict(data, document_search=document_search)
             unknown = [
                 kind
                 for kind, call in config.codex.agent_calls.items()
@@ -529,8 +555,7 @@ def load_config(root: Path) -> CmocConfig:
     """保存済み JSON の検索設定を厳格に検証して config に復元する。"""
     path = config_path(root)
     data = _read_config_data(path)
-    _validate_saved_search_data(path, data)
-    return _validated_codex_data(path, data)
+    return _config_from_saved_data(path, data)
 
 
 def sync_config(
@@ -568,8 +593,7 @@ def sync_config(
     if on_candidate is not None:
         on_candidate(False, additions)
     candidate = {**data, "document_search": search}
-    _validate_saved_search_data(path, candidate)
-    config = _validated_codex_data(path, candidate)
+    config = _config_from_saved_data(path, candidate)
     if additions:
         write_config(path, config)
     return ConfigSyncResult(config, False, additions, bool(additions))

@@ -45,7 +45,6 @@ from .runtime_config import (
 )
 from .runtime_content import (
     file_sha256,
-    text_sha256,
     write_hashed_file,
 )
 from .runtime_doctor import run_doctor_preprocess
@@ -187,7 +186,6 @@ __all__ = (
     "stop_process_group",
     "subprocess",
     "sync_config",
-    "text_sha256",
     "time",
     "timestamp",
     "validate_codex_home",

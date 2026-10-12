@@ -68,7 +68,7 @@ def _prepared_repo(
     setup_codex_home(tmp_path, monkeypatch)
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    # 初期設定だけ用意し、doctor の呼び出しは検証対象の invocation に任せる。
+    # doctor 成功後の設定を用意し、実際の保存・読込は検証対象に残す。
     write_config(config_path(root), CmocConfig())
     return root
 
@@ -84,6 +84,7 @@ def _assert_exec_parameter(
     assert parameter.agent_call_cwd == root.resolve()
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 @pytest.mark.parametrize(
     ("first_changes", "failure_stage"),
     [
@@ -102,18 +103,16 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     """既存差分を保ち、初回成功時は変更の有無によらず同じ入力で再実行する。"""
     # 変更なしでも二回目へ進む条件は成功ケースで検証する。
     # 失敗処理は差分に分岐しないため、各回の編集後の失敗で差分保持も検証する。
+    # collector の受理・drain は test_feedback.py に残し、exec 制御と差分保持を検証する。
     root = _prepared_repo(tmp_path, monkeypatch)
     integrated_case = failure_stage is None and first_changes
     if not integrated_case:
-        # root 探索と collector の結合は edit-success と専用テストに残す。
+        # root 探索の結合は edit-success と専用テストに残す。
         # ここでも実 Git の staged/unstaged 差分、branch、session state は検証する。
         monkeypatch.setattr(
             path_model_module,
             "_resolve_git_worktree_roots",
             lambda _start_path=None: (root, root),
-        )
-        monkeypatch.setattr(
-            runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
         )
     active_run = RunPart(
         "running",
@@ -135,23 +134,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     events: list[str] = []
     notifications: list[tuple[str, Path, str]] = []
 
-    real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
-
-    def record_run_doctor_preprocess(
-        target_root: Path,
-        *,
-        sync_refactor_entries: bool = True,
-    ) -> None:
-        """doctor の呼び出しを記録し、代表ケースだけ実処理へ委譲する。"""
+    def record_run_doctor_preprocess(target_root: Path) -> None:
+        """doctor の呼び出し先と、編集開始前の実行順序を検証する。"""
+        # 修復・索引同期は test_doctor_cli.py、共通 CLI との実結合と既存差分保持は
+        # test_cli_tui.py の test_tui_runs_editor_and_launches_codex_directly に残す。
         assert target_root == root
         events.append("doctor")
-        # 同じ入力での修復・索引同期との結合は edit-success に集約する。
-        # 詳細は test_doctor_cli.py、呼び出し順序と編集結果は全ケースで検証する。
-        if integrated_case:
-            real_run_doctor_preprocess(
-                target_root,
-                sync_refactor_entries=sync_refactor_entries,
-            )
 
     real_ensure_prompt_editor_roots_ignored = (
         oracle_edit_module.ensure_prompt_editor_roots_ignored
@@ -459,8 +447,8 @@ def oracle_edit_failure_repository(
         "_resolve_git_worktree_roots",
         lambda _start_path=None: (root, root),
     )
-    # doctor・ignore の実処理は edit-success と専用 test に残し、呼び出し先と順序を検証する。
-    # ignore の境界・失敗は test_runtime_git_ignore.py、doctor の修復は test_doctor_cli.py にある。
+    # doctor との実結合は test_cli_tui.py、修復は test_doctor_cli.py に残す。
+    # ignore の実処理は edit-success、境界・失敗は test_runtime_git_ignore.py に残す。
     preparation_calls: list[tuple[str, Path]] = []
     monkeypatch.setattr(
         runtime_cli_module,

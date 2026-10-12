@@ -240,6 +240,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
             primary_report=report_path,
             primary_report_role="probe report",
             result="attention",
+            details=(
+                ("target", Path("input.json")),
+                ("count", 2),
+                ("changed", True),
+                ("unavailable", None),
+                ("detail", "first\n`日本語`\ud800"),
+            ),
             next_actions=("report を確認してください。",),
         )
 
@@ -257,7 +264,14 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
         f"- primary report (probe report): `{report_path.resolve()}`"
     )
     assert stdout_lines[2] == "- result: `attention`"
-    assert stdout_lines[3] == "- 次の操作: report を確認してください。"
+    assert stdout_lines[3:9] == [
+        f"- target: `{root / 'input.json'}`",
+        "- count: `2`",
+        "- changed: `True`",
+        "- unavailable: `None`",
+        "- detail: `first | '日本語'\\ud800`",
+        "- 次の操作: report を確認してください。",
+    ]
     assert captured.out.count("# 完了: cmoc probe") == 1
     assert captured.out.count(str(report_path.resolve())) == 1
     assert "cmoc probe を開始" in captured.err
@@ -269,6 +283,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["classification"] == "natural_completion"
     assert events[-1]["terminal_result"]["result"] == "attention"
+    assert events[-1]["terminal_result"]["details"] == [
+        {"name": "target", "value": str(root / "input.json")},
+        {"name": "count", "value": 2},
+        {"name": "changed", "value": True},
+        {"name": "unavailable", "value": None},
+        {"name": "detail", "value": "first\n`日本語`\\ud800"},
+    ]
     nested_steps = [
         event["step"]
         for event in events
@@ -282,43 +303,11 @@ def test_internal_failure_traceback_is_logged_but_not_printed(
     cli_terminal_directory: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """想定外障害の stack は診断ログだけに保存する。"""
+    """surrogate を含む内部障害も、stack を診断ログだけに保存して終了する。"""
     # {{work-root}}/oracle/doc/app_spec/error_handling.md
     root = cli_terminal_directory
 
     def fail() -> None:
-        raise ValueError("unexpected failure")
-
-    with pytest.raises(typer.Exit):
-        runtime_cli.run_cli_subcommand(
-            fail,
-            command_name="probe",
-            command_argv=["cmoc", "probe"],
-            doctor_preprocess=False,
-        )
-
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "# 失敗: cmoc probe" in captured.err
-    assert "unexpected failure" in captured.err
-    assert "Traceback" not in captured.err
-    [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
-    events = [json.loads(line) for line in log_path.read_text().splitlines()]
-    failure = events[-1]["failure"]
-    assert failure["classification"] == "internal_failure"
-    assert "Traceback" in failure["traceback"]
-    assert "ValueError: unexpected failure" in failure["traceback"]
-
-
-def test_internal_failure_with_surrogate_message_still_finishes_log(
-    cli_terminal_directory: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """異常メッセージの surrogate で terminal event を失わない。"""
-    root = cli_terminal_directory
-
-    def fail() -> None:
-        """UTF-8 の scalar value でない例外メッセージを再現する。"""
         raise ValueError("unexpected failure\ud800")
 
     with pytest.raises(typer.Exit):
@@ -332,12 +321,16 @@ def test_internal_failure_with_surrogate_message_still_finishes_log(
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "# 失敗: cmoc probe" in captured.err
+    assert "unexpected failure\\ud800" in captured.err
+    assert "Traceback" not in captured.err
     [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
     failure = events[-1]["failure"]
     assert failure["classification"] == "internal_failure"
-    assert "unexpected failure\\ud800" in failure["traceback"]
+    assert "Traceback" in failure["traceback"]
+    # UTF-8 の JSON Lines を decode した診断値には、元の surrogate を保持する。
+    assert "ValueError: unexpected failure\ud800" in failure["traceback"]
 
 
 def test_error_terminal_result_does_not_repeat_primary_report_path(
@@ -519,6 +512,10 @@ def test_cli_error_report_survives_failed_error_log_flush(
     [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
+    failure = events[-1]["failure"]
+    assert failure["classification"] == "internal_failure"
+    assert "Traceback" in failure["traceback"]
+    assert "ValueError: callback failed" in failure["traceback"]
 
 
 def test_cli_wrapper_does_not_convert_keyboard_interrupt_to_error_report(

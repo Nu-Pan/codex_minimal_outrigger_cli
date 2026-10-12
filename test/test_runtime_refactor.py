@@ -133,18 +133,18 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
 def test_refactor_target_classifiers_require_file_entries(
     committed_repository: Path,
 ) -> None:
-    """通常 file を受理し、directory・欠落 path・Gitlink を拒否する。"""
-    # blob と Gitlink を同じ tree に用意し、種類の検査で repository 準備を共有する。
+    """通常・削除済み file を受理し、directory・欠落 path・Gitlink を拒否する。"""
+    # 特殊文字 path の blob と Gitlink を同じ tree に用意し、履歴の準備を共有する。
     root = committed_repository
     (root / "oracle").mkdir()
     realization_directory = root / "src"
     realization_directory.mkdir()
-    realization_file = realization_directory / "module.py"
+    realization_file = realization_directory / "module[1].py"
     realization_file.write_text("VALUE = 1\n")
     gitlink = root / "module"
     gitlink.mkdir()
     commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    run_git(root, "add", "src/module.py")
+    run_git(root, "add", "src/module[1].py")
     run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{commit},module")
     run_git(root, "commit", "-m", "add classifier entries")
 
@@ -157,27 +157,30 @@ def test_refactor_target_classifiers_require_file_entries(
     assert gitlink.is_dir()
     assert not is_realization_file_path(root, gitlink, branch="HEAD")
 
+    realization_file.unlink()
+    assert not is_realization_file_path(root, realization_file)
+    assert is_realization_file_path(root, realization_file, branch="HEAD")
+
 
 def test_refactor_target_classifiers_reject_symlinked_parent(
-    cli_repository: Path, tmp_path: Path
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """classifier が symlink 親を通じて work-root 外の file を扱わない。"""
-    root = cli_repository
+    """symlink 親を通る path は、Git 問い合わせ前に work-root 外参照を拒否する。"""
+    # 実 branch からの file 分類は隣接 test に残し、親 path の拒否に Git を準備しない。
+    root = tmp_path / "repo"
+    root.mkdir()
     outside = tmp_path / "outside"
     outside.mkdir()
     source = root / "src"
-    source.mkdir()
-    (source / "module.py").write_text("inside\n")
-    (source / "deleted.py").write_text("deleted\n")
-    run_git(root, "add", "src/module.py", "src/deleted.py")
-    run_git(root, "commit", "-m", "add realization module")
     (outside / "module.py").write_text("outside\n")
-    (source / "module.py").unlink()
-    (source / "deleted.py").unlink()
-    source.rmdir()
     source.symlink_to(outside, target_is_directory=True)
     (root / "oracle").mkdir()
     (root / "oracle" / "linked").symlink_to(outside, target_is_directory=True)
+
+    def unexpected_git(*_args, **_kwargs):
+        pytest.fail("symlinked parents must be rejected before querying Git")
+
+    monkeypatch.setattr(git_module, "run_git", unexpected_git)
 
     assert not is_realization_file_path(root, root / "src" / "module.py", branch="HEAD")
     assert not is_realization_file_path(
@@ -227,20 +230,6 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     assert not is_realization_file_path(
         root, path, branch="HEAD", fallback_branch="unused-invalid-ref"
     )
-
-
-def test_refactor_target_classifier_accepts_special_path_from_branch(
-    cli_repository: Path,
-) -> None:
-    """削除された特殊文字 path も branch tree の realization と判定する。"""
-    root = cli_repository
-    realization_file = root / "module[1].py"
-    realization_file.write_text("VALUE = 1\n")
-    run_git(root, "add", "module[1].py")
-    run_git(root, "commit", "-m", "add special realization")
-    realization_file.unlink()
-
-    assert is_realization_file_path(root, realization_file, branch="HEAD")
 
 
 def test_refactor_state_sync_rejects_oracle_symlink(

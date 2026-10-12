@@ -107,7 +107,6 @@ def _save_editor_input(root: Path, input_path: Path, content: bytes) -> None:
             temporary_path = Path(temporary_file.name)
             temporary_file.write(content)
             temporary_file.flush()
-            os.fsync(temporary_file.fileno())
         validate_editor_input_file(root, input_path)
         os.replace(temporary_path, input_path)
     finally:

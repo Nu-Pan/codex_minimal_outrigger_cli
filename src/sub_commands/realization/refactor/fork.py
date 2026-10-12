@@ -796,7 +796,8 @@ def _commit_refactor_unit(
                     )
                 unresolved_before = dict(unresolved_findings)
                 try:
-                    # state だけを確定した単位には rename がなく、差分照会も不要。
+                    # state だけの単位や未解決所見のない単位では、rename の
+                    # 追跡に差分照会を使わない。report の net 差分は終了時に調べる。
                     committed_changes = (
                         tree_changes(
                             context.run_worktree,
@@ -804,6 +805,7 @@ def _commit_refactor_unit(
                             after_head,
                         )
                         if pending_realization_paths
+                        and (unresolved or unresolved_findings)
                         else []
                     )
                     rename_paths = {

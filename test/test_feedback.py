@@ -4,6 +4,9 @@ agent-facing reporter から raw store、intake wave、remediation、current poi
 までを同じ repository fixture で追跡する。publication 後に compact active state だけが
 残ることを外部境界として検証する。
 
+session fork と live collector の結合は後続 wave の test に残す。保存済み入力を使う
+publication・中断・破損検査は ready session fixture から始め、TCP を準備しない。
+
 対応する oracle file:
 
 - `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
@@ -2054,7 +2057,9 @@ def test_machine_detector_observation_id_is_idempotent(
     head_query.assert_not_called()
 
     invocation.detect_event(event, logger.path)
+    head_query.assert_called_once_with(root)
     invocation.detect_event(event, logger.path)
+    assert head_query.call_count == 2
 
     [path] = iter_observation_paths(root)
     observation = read_json_object(path)
@@ -2064,67 +2069,60 @@ def test_machine_detector_observation_id_is_idempotent(
     assert observation["context"]["subcommand_invocation_id"] == logger.execution_id
 
 
-def test_machine_detector_masks_secret_in_event_fields(
-    collector_directory: Path,
+def test_machine_detector_masks_secret_in_event_values_and_keys(
+    collector_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """detector payload の追加 field も raw publication 前に secret masking する。"""
+    """値だけ・キーだけの secret を、共通 collector の独立 event で検証する。"""
     root = collector_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
     secret = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
-    event = {
-        "event_schema_version": 1,
-        "event_id": "evt_machine_secret",
-        "event_type": "feedback.reporter_unavailable",
-        "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.execution_id,
-        "component": "collector",
-        "failure_code": "protocol_error",
-        "diagnostic": {"header": secret},
+    cases = {
+        "evt_machine_secret_value": (
+            {"header": secret},
+            {"header": "[REDACTED:authorization]"},
+            "a" * 40,
+        ),
+        "evt_machine_secret_key": (
+            {secret: "value"},
+            {"[REDACTED:authorization]": "value"},
+            "b" * 40,
+        ),
     }
-
-    invocation.detect_event(event, logger.path)
-
-    [path] = iter_observation_paths(root)
-    observation = read_json_object(path)
-    raw_text = path.read_text(encoding="utf-8")
-    assert secret not in raw_text
-    assert (
-        observation["payload"]["event_fields"]["diagnostic"]["header"]
-        == "[REDACTED:authorization]"
+    # 後続 event の HEAD も取り直すことを、追加の Git 準備や保存なしで検査する。
+    monkeypatch.setattr(
+        feedback_module,
+        "head_commit",
+        Mock(side_effect=[commit for _, _, commit in cases.values()]),
     )
-    assert validate_observation_envelope(observation) == []
+    for event_id, (diagnostic, _, _) in cases.items():
+        invocation.detect_event(
+            {
+                "event_schema_version": 1,
+                "event_id": event_id,
+                "event_type": "feedback.reporter_unavailable",
+                "occurred_at": rfc3339_now(),
+                "subcommand_invocation_id": logger.execution_id,
+                "component": "collector",
+                "failure_code": "protocol_error",
+                "diagnostic": diagnostic,
+            },
+            logger.path,
+        )
 
-
-def test_machine_detector_masks_secret_in_event_field_keys(
-    collector_directory: Path,
-) -> None:
-    """detector payload の object key に含まれる secret も raw に残さない。"""
-    root = collector_directory
-    logger = SubcommandLogger(root, "feedback test")
-    invocation = FeedbackInvocation(root, root, "feedback test", logger)
-    secret_key = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
-    event = {
-        "event_schema_version": 1,
-        "event_id": "evt_machine_secret_key",
-        "event_type": "feedback.reporter_unavailable",
-        "occurred_at": rfc3339_now(),
-        "subcommand_invocation_id": logger.execution_id,
-        "component": "collector",
-        "failure_code": "protocol_error",
-        "diagnostic": {secret_key: "value"},
-    }
-
-    invocation.detect_event(event, logger.path)
-
-    [path] = iter_observation_paths(root)
-    observation = read_json_object(path)
-    raw_text = path.read_text(encoding="utf-8")
-    assert secret_key not in raw_text
-    assert observation["payload"]["event_fields"]["diagnostic"] == {
-        "[REDACTED:authorization]": "value"
-    }
-    assert validate_observation_envelope(observation) == []
+    paths = iter_observation_paths(root)
+    assert len(paths) == len(cases)
+    for path in paths:
+        observation = read_json_object(path)
+        _, expected_diagnostic, expected_head = cases[
+            observation["source_event"]["event_id"]
+        ]
+        assert secret not in path.read_text(encoding="utf-8")
+        assert (
+            observation["payload"]["event_fields"]["diagnostic"] == expected_diagnostic
+        )
+        assert observation["context"]["head_commit"] == expected_head
+        assert validate_observation_envelope(observation) == []
 
 
 def test_completion_count_reports_only_pending_raw_observations(
@@ -2555,12 +2553,12 @@ def test_feedback_writer_lock_rejects_concurrent_writer(
                 pass
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_empty_report_publishes_current_generation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """candidate がなくても ok report と空 active generation を atomic publication する。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     log_dir = root / ".cmoc/gu/log/sub_command"
     previous_logs = set(log_dir.glob("*.jsonl"))
     monkeypatch.setattr(
@@ -2747,6 +2745,9 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
 
 # rollback 済み error の手動終了は、障害原因によらず同じ入力状態を扱う。
 # 各障害を検査し、error（rollback 済み／checkpoint 保存済み）と joinable で両操作を残す。
+# session 作成は共通 fixture で用意し、公開 session fork の結合は後続 wave に残す。
+# 保存済み入力と fake 応答だけを使うため、collector の起動・probe は準備しない。
+@pytest.mark.usefixtures("feedback_without_transport")
 @pytest.mark.parametrize(
     ("fault", "operation"),
     [
@@ -2760,12 +2761,14 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
     ],
 )
 def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str, operation: str
+    ready_content_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    fault: str,
+    operation: str,
 ) -> None:
     """未確定 issue の差分を戻し、明示終了で publication せず raw を保持する。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _, raw, identity = _store_agent_issue(root, session_id)
+    root, _session_branch, _state_path = ready_content_session
+    _, raw, identity = _store_agent_issue(root, SESSION_ID)
     initial = (root / "README.md").read_text()
 
     def fake_call(parameter: Any, **kwargs: Any) -> SimpleNamespace:
@@ -2819,12 +2822,12 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
     assert load_report_cut(root) is None
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_after_run_start_reports_retained_run(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """run 公開直後の中断でも joinable state と run identity を report する。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
+    root, _session_branch, session_path = ready_run_session
     original_start = remediation_module.start_editing_run
 
     def start_then_interrupt(kind: str) -> Any:
@@ -2836,9 +2839,7 @@ def test_feedback_interrupt_after_run_start_reports_retained_run(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    session_state = json.loads(
-        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
-    )
+    session_state = json.loads(session_path.read_text())
     assert session_state["run"]["state"] == "joinable"
     report_text = terminal_primary_report(result).read_text()
     assert 'terminal_classification: "user_interruption"' in report_text
@@ -2848,12 +2849,12 @@ def test_feedback_interrupt_after_run_start_reports_retained_run(
     assert "保持した feedback run" in result.output
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """manifest の atomic write 後に中断しても interrupted 状態を保存する。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
+    root, _session_branch, session_path = ready_run_session
     original_write = remediation_module.write_report_cut_manifest
 
     def write_then_interrupt(repository: Path, manifest: dict[str, Any]) -> NoReturn:
@@ -2867,9 +2868,7 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    session_state = json.loads(
-        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
-    )
+    session_state = json.loads(session_path.read_text())
     assert session_state["run"]["state"] == "joinable"
     manifest, _ = load_report_cut(root)
     assert manifest["processing"]["status"] == "interrupted"
@@ -2878,13 +2877,13 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
     )
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """中断 cleanup の失敗を user interruption へ変換せず error にする。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _store_agent_issue(root, session_id)
+    root, _session_branch, session_path = ready_content_session
+    _store_agent_issue(root, SESSION_ID)
 
     def interrupting_agent(parameter: Any, **_kwargs: Any) -> NoReturn:
         """差分を作成した issue 処理単位の中断を再現する。"""
@@ -2900,9 +2899,7 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 1, result.output
-    session_state = json.loads(
-        (root / ".cmoc" / "gu" / "session" / f"{session_id}.json").read_text()
-    )
+    session_state = json.loads(session_path.read_text())
     assert session_state["run"]["state"] == "error"
     report_text = terminal_primary_report(result).read_text()
     assert 'terminal_classification: "error"' in report_text
@@ -2912,6 +2909,8 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     assert manifest["processing"]["status"] == "failed"
 
 
+# 復旧は固定済み artifact を使い、transport の結合は後続 wave の検査に残す。
+@pytest.mark.usefixtures("feedback_without_transport")
 @pytest.mark.parametrize(
     "fault",
     [
@@ -2923,15 +2922,16 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     ],
 )
 def test_feedback_recovers_after_auto_join_without_new_calls(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str
+    ready_content_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    fault: str,
 ) -> None:
     """自動 join 後の失敗は修復 commit と公開入力を保持して同じ run を完了する。"""
     import commons.runtime_feedback_run_state as run_state_module
     import sub_commands.feedback.recovery as recovery_module
 
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _, raw, identity = _store_agent_issue(root, session_id)
+    root, _session_branch, _state_path = ready_content_session
+    _, raw, identity = _store_agent_issue(root, SESSION_ID)
 
     def fake_call(parameter: Any, **_kwargs: Any) -> SimpleNamespace:
         (parameter.agent_call_cwd / "README.md").write_text("joined repair\n")
@@ -2961,6 +2961,17 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
     assert result.exit_code == 1, result.output
     assert (root / "README.md").read_text() == "joined repair\n"
+    report_text = terminal_primary_report(result).read_text()
+    publication_status = (
+        "completed" if fault in {"raw_cleanup", "cleanup"} else "not_completed"
+    )
+    for field, label, expected in (
+        ("normal_publication_status", "正常 publication", publication_status),
+        ("incomplete_diagnostic_status", "incomplete 診断", "not_completed"),
+        ("current_pointer_update_status", "current pointer 更新", publication_status),
+    ):
+        assert f'{field}: "{expected}"' in report_text
+        assert f"- {label}: `{expected}`" in report_text
     joined_head = run_git(root, "rev-parse", "HEAD").stdout
     saved_report = None
     if fault in {"raw_cleanup", "cleanup"}:
@@ -2972,7 +2983,6 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert feedback_completion_counts(root)[0] == 0
         if fault == "raw_cleanup":
             assert raw.exists()
-        report_text = terminal_primary_report(result).read_text()
         assert "publication_established: true" in report_text
     # 手動操作の拒否は merge 記録（参照回復を含む）と finalization journal の両経路で検査する。
     # completion/publication の障害種別や raw cleanup の進捗は、この拒否条件を変えない。
@@ -3005,14 +3015,14 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert (root / "README.md").read_text() == "changed after publication\n"
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """両方の終了判定で active と一覧から除き、各案件の履歴を残す。"""
     # 異なる subject の案件を同時に用意し、Git/session と二回の publication を共有する。
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
+    root, _session_branch, _state_path = ready_content_session
     cases = {}
     for terminal_verdict, kind, reference_path in (
         ("already_resolved", "file", "README.md"),
@@ -3020,7 +3030,7 @@ def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
     ):
         accepted, raw_path = store_agent_observation(
             root,
-            _context(root, session_id=session_id),
+            _context(root, session_id=SESSION_ID),
             _payload(kind=kind, path=reference_path),
         )
         identity = issue_id(f"agent\0{accepted['observation_id']}")
@@ -3178,13 +3188,13 @@ def test_machine_threshold_counts_distinct_scopes_within_one_day(
         assert feedback_report_module._machine_threshold_met(aggregate) == (index == 1)
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_machine_issue_lifecycle_keeps_threshold_state_after_window_expires(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """閾値未満・案件化・全件失効の公開 state と、失効の両分岐を検証する。"""
     # 案件化までの Git/session と publication を、期限切れ検査の準備にも使う。
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+    root, _session_branch, _state_path = ready_content_session
     context = _context(root)
     base = datetime.now(timezone.utc).replace(microsecond=0)
     cut_at = base.isoformat().replace("+00:00", "Z")
@@ -3330,12 +3340,12 @@ def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
     assert aggregate is None
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_invalid_raw_observation_blocks_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path],
 ) -> None:
     """validation 不通過 raw を処理済みにせず、正常 report を publication しない。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     observation_id = "fbo_000099_2026-08-01_00-00"
     raw_path = observation_path(root, observation_id, "2030-01-02T00:00:00Z")
     raw_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3354,12 +3364,12 @@ def test_invalid_raw_observation_blocks_publication(
     assert 'terminal_classification: "error"' in invocation_report.read_text()
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_undefined_raw_json_artifact_blocks_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_run_session: tuple[Path, str, Path],
 ) -> None:
     """raw store の observation 命名外 JSON を無視して正常 publication しない。"""
-    root = make_repo(tmp_path)
-    _active_session(root, monkeypatch)
+    root, _session_branch, _state_path = ready_run_session
     unknown = feedback_root(root) / "observation" / "v1" / "unknown.json"
     unknown.parent.mkdir(parents=True, exist_ok=True)
     unknown.write_text("{}\n")
@@ -3371,13 +3381,13 @@ def test_undefined_raw_json_artifact_blocks_publication(
     assert not (feedback_root(root) / "active" / "current.json").exists()
 
 
+@pytest.mark.usefixtures("feedback_without_transport")
 def test_cleanup_corruption_is_a_required_recovery_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """publication 後の state corruption は warning ではなく終了コード 1 にする。"""
-    root = make_repo(tmp_path)
-    session_id = _active_session(root, monkeypatch)
-    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, session_id)
+    root, _session_branch, _state_path = ready_content_session
+    _observation_id, _raw_path, candidate_id = _store_agent_issue(root, SESSION_ID)
     _install_codex_outputs(
         monkeypatch, _remediation_output(candidate_id, "human_required")
     )

@@ -914,12 +914,18 @@ def _stage_tracked_runtime_repair(
                 algorithm = "sha1" if len(blob) == 40 else "sha256"
                 if hashlib.new(algorithm, header + encoded).hexdigest() == blob:
                     continue
+        # entry の欠落も一括列挙で確認済みなので、同じ index の mode を再照会しない。
+        if existing is not None:
+            mode = existing[0]
+        else:
+            head_entry = _head_entry(root, relative)
+            mode = head_entry[0] if head_entry is not None else "100644"
         _stage_text(
             root,
             index_path,
             relative,
             content,
-            mode=existing[0] if existing is not None else None,
+            mode=mode,
         )
 
 
@@ -929,13 +935,24 @@ def _is_staged_deletion_of_head_entry(
     path: str,
 ) -> bool:
     """元 index が HEAD の tracked path を staged deletion にしているか返す。"""
-    if _head_entry(root, path) is None:
-        return False
-    return not _run_git_with_index(
-        ["ls-files", "--stage", "--", path],
-        root,
-        index_path,
-    ).stdout.strip()
+    # HEAD と退避 index の削除差分を一度に調べる。rename の元は削除とし、
+    # intent-to-add や conflict の entry が残る path は削除扱いにしない。
+    return bool(
+        _run_git_with_index(
+            [
+                "diff",
+                "--cached",
+                "--no-renames",
+                "--ita-visible-in-index",
+                "--diff-filter=D",
+                "--name-only",
+                "--",
+                path,
+            ],
+            root,
+            index_path,
+        ).stdout.strip()
+    )
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:

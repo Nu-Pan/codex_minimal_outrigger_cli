@@ -39,7 +39,6 @@ import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.abandon as run_abandon_module
 import sub_commands.run.join as run_join_command_module
 from basic.acp import AgentCallParameter, FileAccessMode
-from commons.runtime_config import write_config
 from commons.runtime_content import file_sha256
 from commons.runtime_doctor import run_doctor_preprocess
 from commons.runtime_errors import CmocError
@@ -63,10 +62,18 @@ from commons.runtime_run_lifecycle import (
     start_editing_run,
     worktree_change_paths,
 )
-from commons.runtime_state import RunPart, SessionPart, SessionState, write_state
-from commons.runtime_state import state_path as session_state_path
-from config.cmoc_config import CmocConfig
+from commons.runtime_state import (
+    RunPart,
+    SessionPart,
+    SessionState,
+    state_path,
+    write_state,
+)
 from main import app
+
+# agent 応答は差し替え、観測を送信しないため、collector の起動・probe を準備しない。
+# TCP/stdio の受理・拒否・drain と CLI との結合は test_feedback.py に残す。
+pytestmark = pytest.mark.usefixtures("feedback_without_transport")
 
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
@@ -88,42 +95,13 @@ def _start_session(
     return root, branch, state_path
 
 
-@pytest.fixture
-def ready_run_session(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[Path, str, Path]:
-    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
-    # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
-    root = cli_repository
-    monkeypatch.chdir(root)
-    (root / ".gitignore").write_text("/.cmoc/gu/\n")
-    for relative in _WORK_DIRECTORIES:
-        (root / relative).mkdir(parents=True, exist_ok=True)
-    # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
-    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
-    run_git(root, "commit", "-m", "session seed")
-    home_branch = current_branch(root)
-    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    run_git(root, "switch", "-c", SESSION_BRANCH, fork_commit)
-    path = session_state_path(root, SESSION_ID)
-    write_state(
-        path,
-        SessionState(
-            session=SessionPart(
-                session_home_branch=home_branch, session_fork_commit=fork_commit
-            )
-        ),
-    )
-    return root, SESSION_BRANCH, path
-
-
-def _prepare_apply_run(
+def _prepare_run(
     session: tuple[Path, str, Path],
     *,
+    kind: str = "realization_apply",
     run_state: str = "joinable",
 ) -> EditingRunContext:
-    """terminal 処理用に実 Git の資源と保存済み active run state を用意する。"""
+    """状態・復旧の検査用に実 Git の資源と保存済み active run state を用意する。"""
     # fork と state 遷移は専用 test に任せ、lifecycle が読む前提だけ直接構築する。
     root, session_branch, path = session
     state = SessionState.from_dict(_state(path))
@@ -132,7 +110,7 @@ def _prepare_apply_run(
     run_git(root, "worktree", "add", "-b", RUN_BRANCH, str(run_worktree), fork_commit)
     state.run = RunPart(
         state=run_state,
-        kind="realization_apply",
+        kind=kind,
         branch=RUN_BRANCH,
         fork_commit=fork_commit,
     )
@@ -144,7 +122,7 @@ def _prepare_apply_run(
         state_path=path,
         session_branch=session_branch,
         session_fork_commit=state.session.session_fork_commit,
-        kind="realization_apply",
+        kind=kind,
         run_branch=RUN_BRANCH,
         run_fork_commit=fork_commit,
         run_worktree=run_worktree,
@@ -158,22 +136,9 @@ def ready_abandon_run(
     request: pytest.FixtureRequest,
 ) -> EditingRunContext:
     """abandon の検査で使う run state を param から選ぶ。"""
-    return _prepare_apply_run(
+    return _prepare_run(
         ready_run_session, run_state=getattr(request, "param", "joinable")
     )
-
-
-@pytest.fixture
-def ready_content_session(
-    ready_run_session: tuple[Path, str, Path],
-) -> tuple[Path, str, Path]:
-    """apply と refactor の検査に使う oracle と realization の初期内容を用意する。"""
-    root, _session_branch, _state_path = ready_run_session
-    (root / "README.md").write_text("# repo\n")
-    (root / "oracle" / "spec.md").write_text("# spec\n")
-    run_git(root, "add", "README.md", "oracle/spec.md")
-    run_git(root, "commit", "-m", "apply input")
-    return ready_run_session
 
 
 @pytest.fixture
@@ -220,6 +185,21 @@ def _stop_after_cycles(monkeypatch: pytest.MonkeyPatch, cycles: int = 1) -> None
         return initialize(context, **kwargs)
 
     monkeypatch.setattr(refactor_module, "_initialize_cycle", initialize_or_interrupt)
+
+
+@pytest.fixture
+def refactor_unit_diff_queries(monkeypatch):
+    """終了 report とは別の、処理単位ごとの rename 照会を観測する。"""
+    queries = []
+    inspect = refactor_module.tree_changes
+
+    def record_diff(worktree, base, end="HEAD"):
+        if end != "HEAD":
+            queries.append((base, end))
+        return inspect(worktree, base, end)
+
+    monkeypatch.setattr(refactor_module, "tree_changes", record_diff)
+    return queries
 
 
 def test_fork_report_change_paths_exclude_deletions_and_rename_sources() -> None:
@@ -356,11 +336,12 @@ def test_worktree_change_paths_returns_normalized_relative_paths(
 
 
 def test_apply_rolls_back_unexpected_oracle_change(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """run branch の想定外差分を commit 後に rollback する。"""
-    root, _session_branch, state_path = ready_content_session
+    """agent が追加した想定外 oracle file を commit 前に rollback する。"""
+    # 追加 file の除去を検査するため、内容比較用の初期 file・commit は準備しない。
+    root, _session_branch, state_path = ready_run_session
 
     def fake_apply(
         parameter: AgentCallParameter,
@@ -432,35 +413,53 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
     [
         ("realization_apply", True),
         ("realization_refactor", False),
+        ("feedback_report", False),
     ],
 )
 def test_run_join_doctor_sync_depends_on_active_run_kind(
-    ready_run_session: tuple[Path, str, Path],
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     kind: str,
     expected_sync: bool,
 ) -> None:
     """run kind に応じて join 前 doctor の refactor state 同期を切り替える。"""
-    _root, _session_branch, state_path = ready_run_session
-    # 同期の選択は保存済み kind だけを読み、run branch/worktree の作成は不要。
-    state = SessionState.from_dict(_state(state_path))
-    state.run = RunPart(
-        state="running",
-        kind=kind,
-        branch=RUN_BRANCH,
-        fork_commit=state.session.session_fork_commit,
+    # kind は実際の保存済み state から読み、履歴・checkout の準備は省く。
+    # 実 Git の root 解決と doctor の結合は run worktree 起点の join test に残す。
+    write_state(
+        state_path(tmp_path, SESSION_ID),
+        SessionState(
+            session=SessionPart(
+                session_home_branch="main", session_fork_commit="session-fork"
+            ),
+            run=RunPart(
+                state="running",
+                kind=kind,
+                branch=RUN_BRANCH,
+                fork_commit="run-fork",
+            ),
+        ),
     )
-    write_state(state_path, state)
-    calls: list[bool] = []
+    monkeypatch.setattr(run_join_module, "work_root", lambda: tmp_path)
+    monkeypatch.setattr(run_join_module, "repo_root", lambda _root: tmp_path)
+    monkeypatch.setattr(run_join_module, "current_branch", lambda _root: SESSION_BRANCH)
+    calls: list[tuple[Path, bool]] = []
     monkeypatch.setattr(
         run_join_module,
         "run_doctor_preprocess",
-        lambda _root, *, sync_refactor_entries: calls.append(sync_refactor_entries),
+        lambda root, *, sync_refactor_entries: calls.append(
+            (root, sync_refactor_entries)
+        ),
     )
+
+    def unused_history_query(*_args, **_kwargs):
+        pytest.fail("doctor without repair-path reporting must not query history")
+
+    monkeypatch.setattr(run_join_module, "head_commit", unused_history_query)
+    monkeypatch.setattr(run_join_module, "tree_changes", unused_history_query)
 
     run_join_module.doctor_preprocess_for_join()
 
-    assert calls == [expected_sync]
+    assert calls == [(tmp_path, expected_sync)]
 
 
 @pytest.mark.parametrize("has_repair_record", [False, True], ids=["absent", "empty"])
@@ -831,7 +830,7 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
     (root / "oracle" / "spec.md").write_text("pending oracle change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "pending oracle change")
-    context = _prepare_apply_run(ready_content_session, run_state=run_state)
+    context = _prepare_run(ready_content_session, run_state=run_state)
     if has_run_change:
         (context.run_worktree / "README.md").write_text("realized\n")
         commit_work_unit(context.run_worktree, "run change")
@@ -865,13 +864,12 @@ def test_apply_join_updates_diff_base_only_for_joinable_run(
 
 
 def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 前に report を保存し、実 cleanup の停止 warning と結果で更新する。"""
-    context = _prepare_apply_run(ready_content_session)
-    (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
+    # 内容の取り込みは fork→join test に任せ、実資源の cleanup と保存順序を検査する。
+    context = _prepare_run(ready_run_session)
     events: list[str] = []
     saved_reports: list[Path] = []
     original_write_report = run_join_command_module.write_lifecycle_report
@@ -919,7 +917,6 @@ def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
     rendered = report_path.read_text()
     assert 'cleanup: "completed"' in rendered
     assert "run child process already stopped: 789" in rendered
-    assert (context.repo / "README.md").read_text() == "realized\n"
     assert not context.run_worktree.exists()
 
 
@@ -1153,18 +1150,17 @@ def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
     assert warnings == ["removal failed"]
 
 
-def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
+def test_run_abandon_preserves_resources_and_reports_stop_on_cleanup_retries(
     ready_abandon_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """worktree cleanup失敗時に再試行用のrun branchを保持する。"""
+    """cleanup の失敗と例外後も、同じ run で資源保持と停止結果を検証する。"""
     context = ready_abandon_run
     root, state_path = context.repo, context.state_path
+    run_before = _state(state_path)["run"]
     branch_calls: list[str] = []
     monkeypatch.setattr(
-        run_abandon_module,
-        "_remove_run_worktree",
-        lambda _context, _warnings: False,
+        run_abandon_module, "_stop_joinable_run", lambda *_args: "stopped"
     )
     monkeypatch.setattr(
         run_abandon_module,
@@ -1172,41 +1168,31 @@ def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
         lambda _context, _warnings: branch_calls.append("deleted") or True,
     )
 
-    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
-
-    assert result.exit_code == 1
-    assert branch_calls == []
-    assert _state(state_path)["run"]["state"] == "joinable"
-    assert context.run_worktree.exists()
-    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
-
-
-def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
-    ready_abandon_run: EditingRunContext,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """停止済み process を、その後の cleanup 失敗 report にも残す。"""
-    context = ready_abandon_run
-    state_path = context.state_path
-    monkeypatch.setattr(
-        run_abandon_module, "_stop_joinable_run", lambda *_args: "stopped"
-    )
-
     def fail_worktree_cleanup(*_args: object) -> NoReturn:
         """停止後の worktree cleanup failure を再現する。"""
         raise RuntimeError("cleanup failed after process stop")
 
-    monkeypatch.setattr(
-        run_abandon_module, "_remove_run_worktree", fail_worktree_cleanup
-    )
+    # どちらも資源を保持する経路なので、同じ run への再試行で準備を共有する。
+    # cleanup と report は公開 CLI から各失敗経路を個別に通して検査する。
+    reports: set[Path] = set()
+    for cleanup, error_message in (
+        (lambda _context, _warnings: False, "active run の cleanup を完了できません"),
+        (fail_worktree_cleanup, "cleanup failed after process stop"),
+    ):
+        monkeypatch.setattr(run_abandon_module, "_remove_run_worktree", cleanup)
 
-    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+        result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
 
-    assert result.exit_code == 1, result.output
-    report = terminal_primary_report(result).read_text(encoding="utf-8")
-    assert 'process_stop: "stopped"' in report
-    assert _state(state_path)["run"]["state"] == "joinable"
-    assert context.run_worktree.exists()
+        assert result.exit_code == 1, result.output
+        assert error_message in result.output
+        assert branch_calls == []
+        assert _state(state_path)["run"] == run_before
+        assert context.run_worktree.exists()
+        assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+        report_path = terminal_primary_report(result)
+        assert report_path not in reports
+        reports.add(report_path)
+        assert 'process_stop: "stopped"' in report_path.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("late_path", [None, "late-realization.md", "oracle/spec.md"])
@@ -1282,84 +1268,13 @@ def test_apply_fork_checks_stopped_children_before_commit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
-def test_refactor_fork_stops_children_before_commits_and_reports_warnings(
-    ready_content_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """各レビューの child 停止を commit 前に確認し、warning を report に残す。"""
-    # 停止順序と warning 保存は同じ fork で検査し、巡回の重複を避ける。
-    root, _session_branch, state_path = ready_content_session
-    events: list[str] = []
-    cleanup_warning = "run child process already stopped: 789"
-    original_commit = refactor_module.commit_work_unit
-
-    def record_stop(*_args: object) -> list[str]:
-        """tracked child の停止位置を記録する。"""
-        events.append("stop")
-        return [cleanup_warning]
-
-    def record_commit(
-        worktree: Path,
-        message: str,
-        **kwargs: object,
-    ) -> str | None:
-        """処理単位 commit の位置を記録して本来の commit を実行する。"""
-        events.append("commit")
-        return original_commit(worktree, message, **kwargs)
-
-    def fake_refactor(
-        _parameter: AgentCallParameter,
-        **_kwargs: object,
-    ) -> SimpleNamespace:
-        """file review の固定 Structured Output を返す。"""
-        events.append("review")
-        return SimpleNamespace(
-            returncode=0,
-            output_json={
-                "findings": [],
-                "verification": {
-                    "status": "passed",
-                    "summary": "fake full quality gate passed",
-                },
-            },
-        )
-
-    monkeypatch.setattr(refactor_module, "stop_tracked_codex_children", record_stop)
-    monkeypatch.setattr(refactor_module, "commit_work_unit", record_commit)
-    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
-    _stop_after_cycles(monkeypatch)
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0, result.output
-    assert _state(state_path)["run"]["state"] == "joinable"
-    review_positions = [
-        index for index, event in enumerate(events) if event == "review"
-    ]
-    assert len(review_positions) > 1
-    assert all(
-        events[index + 1 : index + 3] == ["stop", "commit"]
-        for index in review_positions
-    )
-    reports = list(
-        (root / ".cmoc" / "gu" / "report" / "realization" / "refactor" / "fork").glob(
-            "*.md"
-        )
-    )
-    assert len(reports) == 1
-    assert cleanup_warning in reports[0].read_text()
-
-
 def test_refactor_fork_stops_tracked_codex_children_before_joinable(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor は joinable 公開前に残存 Codex child を停止する。"""
-    _root, _session_branch, state_path = ready_content_session
+    # 巡の初期化前に中断するため、内容検査用の追加 file・commit は準備しない。
+    _root, _session_branch, state_path = ready_run_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -2078,16 +1993,45 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
     assert f'completion_reason: "{expected_reason}"' in report_text
 
 
-def test_apply_failure_stops_tracked_codex_children_before_rollback(
-    ready_run_session: tuple[Path, str, Path],
+def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """apply error cleanup が追跡中 Codex child を rollback 前に停止する。"""
-    _root, _session_branch, state_path = ready_run_session
+    """中断後に child を停止して遅延 commit を戻し、差分検査失敗も report する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    # child 停止→rollback と、その後の差分取得失敗は同じ cleanup で検証する。
+    # 中断・遅延 commit 除去・report 保存に個別の session/run を準備しない。
+    root, _session_branch, state_path = ready_content_session
+    run_worktree: Path | None = None
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     events: list[str] = []
+    original_rollback = apply_module.rollback_work_unit
 
+    def fail_apply(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> NoReturn:
+        """本命 agent の中断後に error cleanup へ進む状態を再現する。"""
+        nonlocal run_worktree
+        run_worktree = parameter.agent_call_cwd
+        raise KeyboardInterrupt("agent interrupted")
+
+    def delayed_agent_commit(process: object) -> None:
+        """停止処理の直前に agent child が commit した状態を再現する。"""
+        assert process is child
+        events.append("stop")
+        assert run_worktree is not None
+        (run_worktree / "README.md").write_text("delayed agent commit\n")
+        run_git(run_worktree, "add", "README.md")
+        run_git(run_worktree, "commit", "-m", "delayed agent commit")
+
+    def record_rollback(worktree: Path) -> None:
+        """child 停止後に本来の rollback が実行されることを確認する。"""
+        events.append("rollback")
+        original_rollback(worktree)
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_apply)
     monkeypatch.setattr(
         runtime_run_module,
         "read_run_process_id",
@@ -2096,67 +2040,9 @@ def test_apply_failure_stops_tracked_codex_children_before_rollback(
     monkeypatch.setattr(
         runtime_run_module,
         "stop_child_process_group",
-        lambda _process: events.append("stop"),
-    )
-    original_rollback = apply_module.rollback_work_unit
-
-    def record_rollback(worktree: Path) -> None:
-        """rollback の順序を確認してから本来の cleanup を実行する。"""
-        events.append("rollback")
-        original_rollback(worktree)
-
-    monkeypatch.setattr(apply_module, "rollback_work_unit", record_rollback)
-    monkeypatch.setattr(
-        apply_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
-    )
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    assert events == ["stop", "rollback"]
-    assert _state(state_path)["run"]["state"] == "error"
-
-
-def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
-    ready_content_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """遅延 commit を戻し、差分検査に失敗しても error state と report を保存する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    # 最終 report の差分検査は rollback 後なので、同じ error cleanup で検証する。
-    # 専用の session・worktree は作らず、commit 除去の実 Git 検査も維持する。
-    root, _session_branch, state_path = ready_content_session
-    run_worktree: Path | None = None
-
-    def fail_apply(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> NoReturn:
-        """本命 agent の失敗後に error cleanup へ進む状態を再現する。"""
-        nonlocal run_worktree
-        run_worktree = parameter.agent_call_cwd
-        raise RuntimeError("agent failed")
-
-    def delayed_agent_commit(_root: Path, _session_id: str) -> list[str]:
-        """停止処理の直前に agent child が commit した状態を再現する。"""
-        assert run_worktree is not None
-        (run_worktree / "README.md").write_text("delayed agent commit\n")
-        run_git(run_worktree, "add", "README.md")
-        run_git(run_worktree, "commit", "-m", "delayed agent commit")
-        return []
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fail_apply)
-    monkeypatch.setattr(
-        apply_module,
-        "stop_tracked_codex_children",
         delayed_agent_commit,
     )
+    monkeypatch.setattr(apply_module, "rollback_work_unit", record_rollback)
     monkeypatch.setattr(
         apply_module,
         "tree_changes",
@@ -2172,6 +2058,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     )
 
     assert result.exit_code == 1
+    assert events == ["stop", "rollback"]
     assert _state(state_path)["run"]["state"] == "error"
     assert run_worktree is not None
     assert (run_worktree / "README.md").read_text() == "# repo\n"
@@ -2190,7 +2077,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     assert 'state_after: "error"' in report_text
     assert 'completion_reason: "error"' in report_text
     assert "exit_code: 1" in report_text
-    assert "agent failed" in report_text
+    assert "KeyboardInterrupt('agent interrupted')" in report_text
     assert "agent commit cleanup failed" in report_text
     assert "change inspection failed" in report_text
     assert "git diff unavailable" in report_text
@@ -2249,7 +2136,7 @@ def test_apply_start_failure_does_not_recover_existing_error_run(
 ) -> None:
     """新しい apply fork の事前条件失敗で既存 error run を変更しない。"""
     root, _session_branch, state_path = ready_content_session
-    context = _prepare_apply_run(ready_content_session, run_state="error")
+    context = _prepare_run(ready_content_session, run_state="error")
     (context.run_worktree / "README.md").write_text("existing error run\n")
 
     result = runner.invoke(
@@ -2269,8 +2156,9 @@ def test_refactor_start_failure_does_not_recover_existing_error_run(
 ) -> None:
     """新しい refactor fork の事前条件失敗で既存 error run を変更しない。"""
     root, _session_branch, state_path = ready_content_session
-    context = start_editing_run("realization_refactor")
-    set_run_state(context, "error")
+    context = _prepare_run(
+        ready_content_session, kind="realization_refactor", run_state="error"
+    )
     (context.run_worktree / "README.md").write_text("existing error run\n")
 
     result = runner.invoke(
@@ -2357,7 +2245,13 @@ def test_recover_started_run_rejects_run_owned_by_other_process(
 ) -> None:
     """別 process の tracking を持つ active run を recovery 対象にしない。"""
     _root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_refactor")
+    context = _prepare_run(
+        ready_run_session, kind="realization_refactor", run_state="running"
+    )
+    # tracking 自体は存在させ、未作成を理由に recovery が拒否されるケースと分ける。
+    runtime_run_module.write_run_process_id(
+        context.repo, context.session_id, os.getpid()
+    )
     tracked = SimpleNamespace(
         process_id=os.getpid() + 1,
         start_time=None,
@@ -2375,10 +2269,13 @@ def test_recover_started_run_rejects_unreadable_process_tracking(
 ) -> None:
     """壊れた tracking を未作成として別 process の run recovery に使わない。"""
     root, session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_refactor")
+    context = _prepare_run(
+        ready_run_session, kind="realization_refactor", run_state="running"
+    )
     tracking_path = run_process_id_path(
         root, session_branch.removeprefix("cmoc/session/")
     )
+    tracking_path.parent.mkdir(parents=True)
     tracking_path.write_text("not a process identity\n")
 
     assert lifecycle_module.recover_started_run("realization_refactor") is None
@@ -2392,7 +2289,7 @@ def test_run_join_allows_oracle_change_on_session_branch(
     """session branch の oracle change を run join が保持する。"""
     root, _session_branch, state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "oracle/spec.md")
-    context = _prepare_apply_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     (root / "oracle" / "spec.md").write_text("session oracle change\n")
@@ -2419,7 +2316,7 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
     """run worktree からの join でも doctor state 同期を許可する。"""
     root, _session_branch, _state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "README.md")
-    context = _prepare_apply_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     monkeypatch.chdir(context.run_worktree)
@@ -2441,7 +2338,7 @@ def test_run_join_from_run_worktree_tracks_main_doctor_repairs(
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "create stale cmoc ignore")
 
-    context = _prepare_apply_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
     monkeypatch.chdir(context.run_worktree)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2456,7 +2353,7 @@ def test_run_join_from_run_worktree_preserves_prior_session_doctor_path_change(
 ) -> None:
     """doctor と同じ path の先行 session 差分も統合する。"""
     root, _session_branch, state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
     gitignore = root / ".gitignore"
     gitignore.write_text("user session change\n")
     run_git(root, "add", ".gitignore")
@@ -2481,7 +2378,7 @@ def test_run_join_preserves_existing_non_search_config_shape(
     config.write_text(json.dumps(config_data, indent=2) + "\n")
     run_git(root, "add", ".cmoc/gt/config.json")
     run_git(root, "commit", "-m", "create stale doctor config")
-    _prepare_apply_run(ready_join_session)
+    _prepare_run(ready_join_session)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
@@ -2492,12 +2389,13 @@ def test_run_join_preserves_existing_non_search_config_shape(
 
 @pytest.mark.parametrize("change", ["rename", "delete"])
 def test_run_join_accepts_realization_rename_and_delete(
-    ready_join_session: tuple[Path, str, Path],
+    ready_content_session: tuple[Path, str, Path],
     change: str,
 ) -> None:
     """run join が fork 時点の realization path の rename と削除を許可する。"""
-    root, _session_branch, _state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
+    # 開始前の HEAD 固定は不要なので、doctor の修復は join 本体に任せる。
+    root, _session_branch, _state_path = ready_content_session
+    context = _prepare_run(ready_content_session)
     readme = context.run_worktree / "README.md"
     if change == "rename":
         readme.rename(context.run_worktree / "renamed.md")
@@ -2512,14 +2410,63 @@ def test_run_join_accepts_realization_rename_and_delete(
     assert (root / "renamed.md").exists() is (change == "rename")
 
 
+def test_ready_session_reuses_root_queries_but_refreshes_conditions(
+    ready_run_session, monkeypatch
+):
+    """開始条件の root 探索を共有し、次回の branch・state・差分は再検査する。"""
+    root, session_branch, state_path = ready_run_session
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git":
+            queries[tuple(argv[1:])] += 1
+        return original_run(argv, *args, **kwargs)
+
+    def inspect():
+        queries.clear()
+        with monkeypatch.context() as probe:
+            probe.setattr(git_module.subprocess, "run", record_query)
+            ready = lifecycle_module.require_ready_session()
+        assert ready[:4] == (root, root, SESSION_ID, state_path)
+        assert ready[4].run.state == "ready"
+        assert queries and max(queries.values()) == 1
+        assert (
+            sum(count for argv, count in queries.items() if "--show-toplevel" in argv)
+            == 1
+        )
+
+    inspect()
+    dirty = root / "uncommitted.txt"
+    dirty.write_text("uncommitted\n")
+    with pytest.raises(CmocError, match="未コミット差分"):
+        inspect()
+    dirty.unlink()
+    inspect()
+
+    before = state_path.read_bytes()
+    state = _state(state_path)
+    state["session"]["state"] = "joined"
+    state_path.write_text(json.dumps(state))
+    with pytest.raises(CmocError, match="session state ではありません"):
+        inspect()
+    state_path.write_bytes(before)
+    inspect()
+
+    run_git(root, "switch", "--detach")
+    with pytest.raises(CmocError, match="detached HEAD"):
+        inspect()
+    run_git(root, "switch", session_branch)
+    inspect()
+
+
 def test_resolve_active_run_reuses_placement_queries_but_refreshes_state_and_worktrees(
     ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """配置の重複照会を避け、解決ごとの state と worktree の再検査を保つ。"""
     root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
+    context = _prepare_run(ready_run_session)
     queries = Counter()
     original_run = git_module.subprocess.run
 
@@ -2600,8 +2547,7 @@ def test_set_run_state_rejects_overwriting_terminal_state(
 ) -> None:
     """公開済み terminal state を遅延 cleanup が別 state へ変更しない。"""
     _root, _session_branch, state_path = ready_run_session
-    context = start_editing_run("realization_apply")
-    set_run_state(context, "joinable")
+    context = _prepare_run(ready_run_session)
 
     with pytest.raises(CmocError, match="state が実行中に変更されました"):
         set_run_state(context, "error")
@@ -2618,7 +2564,7 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
 ) -> None:
     """force-resolve が run branch の想定外 path だけを戻すことを確認する。"""
     root, _session_branch, state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("allowed\n")
     (context.run_worktree / unexpected_path).write_text("unexpected\n")
     commit_work_unit(context.run_worktree, "mixed run changes")
@@ -2650,7 +2596,7 @@ def test_run_join_force_resolve_restores_realization_source_of_rename(
     """force-resolve が想定外 rename の realization 側を失わせないことを確認する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     root, _session_branch, _state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
     destination = context.run_worktree / "oracle" / "unexpected.md"
     destination.parent.mkdir(exist_ok=True)
     (context.run_worktree / "README.md").rename(destination)
@@ -2849,7 +2795,7 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
 ) -> None:
     """post-join 同期失敗時は確定済み merge と run 資源を保持する。"""
     root, _session_branch, state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
@@ -2886,7 +2832,7 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     # joinable/error による hook の違いは test_apply_join_hook_selects_diff_base と
     # 公開 CLI の代表例で検査する。
     root, _session_branch, state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("run change\n")
     commit_work_unit(context.run_worktree, "run change")
     (root / "README.md").write_text("session change\n")
@@ -2964,12 +2910,13 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
 
 
 def test_run_join_keeps_completed_merge_when_final_report_update_fails(
-    ready_join_session: tuple[Path, str, Path],
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 後の report 更新失敗でも保存済み report と merge を保持する。"""
-    root, _session_branch, state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
+    # cleanup 後の結果を検査するため、doctor 済み HEAD の事前固定は不要。
+    root, _session_branch, state_path = ready_content_session
+    context = _prepare_run(ready_content_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     original_write_report = run_join_module.write_lifecycle_report
@@ -3011,12 +2958,12 @@ def test_run_join_keeps_completed_merge_when_final_report_update_fails(
 
 
 def test_run_join_preserves_active_state_when_cleanup_fails(
-    ready_join_session: tuple[Path, str, Path],
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 失敗時も残存 resource を abandon で回収できる状態を保つ。"""
-    root, _session_branch, state_path = ready_join_session
-    context = _prepare_apply_run(ready_join_session)
+    root, _session_branch, state_path = ready_content_session
+    context = _prepare_run(ready_content_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     monkeypatch.setattr(
@@ -3052,12 +2999,29 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """所見なしへの正規化と unresolved の保留を、一巡の確定結果で検証する。"""
-    # target ごとの結果を同じ巡に混在させ、session/run 作成と全対象巡回を共有する。
+    """各結果の停止・確定順序と、正規化・unresolved・warning の保存を検証する。"""
+    # 変更のない一巡を共有し、停止順序・警告保存のためだけの巡回を重複させない。
     root, _session_branch, state_path = ready_content_session
     reviewed: list[str] = []
+    events: list[str] = []
+    cleanup_warning = "run child process already stopped: 789"
+    original_commit = refactor_module.commit_work_unit
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
+
+    def record_stop(*_args: object) -> list[str]:
+        """tracked child の停止位置を記録する。"""
+        events.append("stop")
+        return [cleanup_warning]
+
+    def record_commit(
+        worktree: Path,
+        message: str,
+        **kwargs: object,
+    ) -> str | None:
+        """処理単位 commit の位置を記録して本来の commit を実行する。"""
+        events.append("commit")
+        return original_commit(worktree, message, **kwargs)
 
     def fake_refactor(
         _parameter: AgentCallParameter,
@@ -3067,6 +3031,7 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
         purpose = str(kwargs["purpose"])
         target = purpose.removeprefix("realization refactor: ")
         reviewed.append(target)
+        events.append("review")
         if target == ".gitignore":
             findings = [
                 {
@@ -3103,6 +3068,8 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
             },
         )
 
+    monkeypatch.setattr(refactor_module, "stop_tracked_codex_children", record_stop)
+    monkeypatch.setattr(refactor_module, "commit_work_unit", record_commit)
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
     _stop_after_cycles(monkeypatch)
 
@@ -3112,9 +3079,17 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
         catch_exceptions=False,
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     state = _state(state_path)
     assert state["run"]["state"] == "joinable"
+    review_positions = [
+        index for index, event in enumerate(events) if event == "review"
+    ]
+    assert len(review_positions) > 1
+    assert all(
+        events[index + 1 : index + 3] == ["stop", "commit"]
+        for index in review_positions
+    )
     parts = state["run"]["branch"].split("/")
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     refactor_state = load_refactor_state(worktree)
@@ -3135,7 +3110,9 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `1`" in result.output
     report = terminal_primary_report(result)
+    assert list(report.parent.glob("*.md")) == [report]
     report_text = report.read_text()
+    assert cleanup_warning in report_text
     assert "- `.gitignore`: 0 finding(s)" in report_text
     assert "- `oracle/spec.md`: 0 finding(s)" in report_text
     assert "- `README.md`: 1 finding(s)" in report_text
@@ -3154,11 +3131,12 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 公開直後の中断を joinable state として report する。"""
-    _root, _session_branch, state_path = ready_content_session
+    # 巡の開始前に中断するため、レビュー対象の初期内容は不要。
+    _root, _session_branch, state_path = ready_run_session
     original_start = refactor_module.start_editing_run
 
     def interrupt_after_start(kind: str) -> EditingRunContext:
@@ -3333,11 +3311,11 @@ def test_start_run_interrupt_after_state_write_restores_ready_state(
 
 
 def test_refactor_start_failure_after_run_publish_is_reported(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 公開後の初期化失敗を error report として保存する。"""
-    _root, _session_branch, state_path = ready_content_session
+    _root, _session_branch, state_path = ready_run_session
     original_start = refactor_module.start_editing_run
 
     def fail_after_start(kind: str) -> EditingRunContext:
@@ -3361,10 +3339,10 @@ def test_refactor_start_failure_after_run_publish_is_reported(
 
 
 def test_refactor_start_interruption_with_broken_tracking_reports_existing_run(
-    ready_content_session, monkeypatch
+    ready_run_session, monkeypatch
 ):
     """成立済み run の追跡失敗を「run 未成立」とせず、資源を残して error にする。"""
-    root, session_branch, state_path = ready_content_session
+    root, session_branch, state_path = ready_run_session
     session_id = session_branch.removeprefix("cmoc/session/")
     tracking = run_process_id_path(root, session_id)
 
@@ -3447,12 +3425,12 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
 
 
 def test_refactor_interrupt_before_run_creation_is_normal_completion(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 作成前の fork lifecycle 中断も正常終了として記録する。"""
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = ready_run_session
     original_step = refactor_module.start_subcommand_step
 
     def interrupt_before_run(
@@ -3611,11 +3589,12 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
 
 
 def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断時に追跡中 Codex child を停止してから rollback する。"""
-    _root, _session_branch, state_path = ready_content_session
+    # 既存の .gitignore を対象に agent を中断し、実 Git の run と rollback 経路は保つ。
+    _root, _session_branch, state_path = ready_run_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -3647,11 +3626,11 @@ def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
 
 
 def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断時 cleanup 失敗を error state と report に反映する。"""
-    _root, _session_branch, state_path = ready_content_session
+    _root, _session_branch, state_path = ready_run_session
     monkeypatch.setattr(
         refactor_module,
         "run_codex_exec",
@@ -3678,11 +3657,11 @@ def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
 
 
 def test_refactor_interrupt_during_completion_is_joinable(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """completion 中の中断を joinable state と user interruption report にする。"""
-    _root, _session_branch, state_path = ready_content_session
+    _root, _session_branch, state_path = ready_run_session
     monkeypatch.setattr(
         refactor_module,
         "_initialize_cycle",
@@ -3752,7 +3731,7 @@ def test_refactor_with_no_targets_keeps_synchronizing(
 
 
 def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
-    ready_content_session, monkeypatch
+    ready_content_session, monkeypatch, refactor_unit_diff_queries
 ):
     """削除は成果に含め、後の巡で戻した変更は net 成果へ数えない。"""
     root, _, state_path = ready_content_session
@@ -3796,6 +3775,7 @@ def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
+    assert refactor_unit_diff_queries == []
     run = _state(state_path)["run"]
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     report = terminal_primary_report(result).read_text()
@@ -3860,22 +3840,15 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
 
 @pytest.mark.parametrize("interrupt_next_cycle_start", [False, True])
 def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
-    ready_join_session, monkeypatch, interrupt_next_cycle_start
+    ready_join_session,
+    monkeypatch,
+    interrupt_next_cycle_start,
+    refactor_unit_diff_queries,
 ):
     """旧履歴を調査機会にせず、未解決を次巡で再検討して全対象を公平に処理する。"""
     root, _, state_path = ready_join_session
     _mark_refactor_target_no_findings(root, "README.md")
     reviewed = []
-    unit_diff_queries = []
-    inspect = refactor_module.tree_changes
-
-    def record_unit_diff(worktree, base, end="HEAD"):
-        # report の net 差分は調べるが、state のみの単位には rename 照会が不要。
-        if end != "HEAD":
-            unit_diff_queries.append((base, end))
-        return inspect(worktree, base, end)
-
-    monkeypatch.setattr(refactor_module, "tree_changes", record_unit_diff)
     if interrupt_next_cycle_start:
         commit = refactor_module.commit_work_unit
         cycles = 0
@@ -3924,7 +3897,7 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
-    assert unit_diff_queries == []
+    assert refactor_unit_diff_queries == []
     run = _state(state_path)["run"]
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     state = load_refactor_state(worktree)
@@ -3949,7 +3922,7 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
 
 
 def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
-    ready_content_session, monkeypatch
+    ready_content_session, monkeypatch, refactor_unit_diff_queries
 ):
     """関連 file の変更を調査実績へ数えず、追加 file は次巡に公平に処理する。"""
     _root, _, _state_path = ready_content_session
@@ -3984,6 +3957,7 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
         app, ["realization", "refactor", "fork"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
+    assert refactor_unit_diff_queries == []
     assert reviewed == [
         ".gitignore",
         "README.md",

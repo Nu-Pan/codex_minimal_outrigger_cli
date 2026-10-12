@@ -14,7 +14,6 @@ from pathlib import Path
 from threading import Event
 
 import pytest
-from _command_support import write_python_executable
 
 import commons.runtime_windows_toast as runtime_windows_toast
 
@@ -447,17 +446,19 @@ def test_tui_callback_commands_run_as_standalone_scripts(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorded_toast = tmp_path / "toast.jsonl"
-    write_python_executable(
-        bin_dir / "powershell.exe",
-        [
-            "import pathlib, sys",
-            f"with pathlib.Path({str(recorded_toast)!r}).open('a') as output:",
-            "    output.write(sys.stdin.read() + '\\n')",
-        ],
+    # 一行の ASCII JSON の記録には shell builtin だけを使い、Python を起動しない。
+    powershell = bin_dir / "powershell.exe"
+    powershell.write_text(
+        "#!/bin/sh\n"
+        "IFS= read -r payload\n"
+        'printf \'%s\\n\' "$payload" >> "$CMOC_TEST_TOAST_LOG"\n',
+        encoding="utf-8",
     )
+    powershell.chmod(0o755)
     environment = {
         **os.environ,
         "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+        "CMOC_TEST_TOAST_LOG": str(recorded_toast),
     }
 
     try:

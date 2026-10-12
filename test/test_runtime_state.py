@@ -358,14 +358,23 @@ def test_session_state_rejects_unrepresentable_payload(value: str) -> None:
     assert "保存できない文字" in exc_info.value.detail
 
 
-def test_write_state_rejects_invalid_session_identity(tmp_path: Path) -> None:
-    """不完全な session state を file へ書き込まない。"""
+@pytest.mark.parametrize("existing", [False, True])
+def test_write_state_rejects_invalid_session_identity(
+    tmp_path: Path, existing: bool
+) -> None:
+    """不完全な session state で新規作成・既存 file の上書きをしない。"""
     path = state_path(tmp_path, SESSION_ID)
+    if existing:
+        path.parent.mkdir(parents=True)
+        path.write_text("original\n")
 
     with pytest.raises(CmocError):
         write_state(path, SessionState())
 
-    assert not path.exists()
+    if existing:
+        assert path.read_text() == "original\n"
+    else:
+        assert not path.exists()
 
 
 @pytest.mark.parametrize("location", ["file", "parent", "ancestor"])
@@ -395,6 +404,8 @@ def test_session_state_rejects_symlinked_path_without_writing_target(
     with pytest.raises(CmocError, match="session state path"):
         load_state_for_branch(tmp_path, SESSION_BRANCH)
     with pytest.raises(CmocError, match="session state path"):
+        load_session_part_for_branch(tmp_path, SESSION_BRANCH)
+    with pytest.raises(CmocError, match="session state path"):
         active_session_for_home(tmp_path, "main")
 
     if target == "existing":
@@ -417,6 +428,8 @@ def test_state_operations_reject_non_regular_path(tmp_path: Path, kind: str) -> 
         write_state(path, _valid_state())
     with pytest.raises(CmocError, match="通常の file"):
         load_state_for_branch(tmp_path, SESSION_BRANCH)
+    with pytest.raises(CmocError, match="通常の file"):
+        load_session_part_for_branch(tmp_path, SESSION_BRANCH)
 
 
 @pytest.mark.parametrize("location", ["parent", "ancestor"])
@@ -435,6 +448,8 @@ def test_state_operations_reject_non_directory_parent(
         write_state(path, _valid_state())
     with pytest.raises(CmocError, match="通常の directory"):
         load_state_for_branch(tmp_path, SESSION_BRANCH)
+    with pytest.raises(CmocError, match="通常の directory"):
+        load_session_part_for_branch(tmp_path, SESSION_BRANCH)
     with pytest.raises(CmocError, match="通常の directory"):
         active_session_for_home(tmp_path, "main")
 

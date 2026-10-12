@@ -473,6 +473,13 @@ def test_user_interruption_saves_feedback_invocation_summary(
     assert "# 中断完了: cmoc feedback report" in captured.out
     assert 'terminal_classification: "user_interruption"' in rendered
     assert "feedback publication または active state ではありません" in rendered
+    for field, label in (
+        ("normal_publication_status", "正常 publication"),
+        ("incomplete_diagnostic_status", "incomplete 診断"),
+        ("current_pointer_update_status", "current pointer 更新"),
+    ):
+        assert f'{field}: "not_completed"' in rendered
+        assert f"- {label}: `not_completed`" in rendered
 
     assert "中断理由: `report cut を固定する前に停止しました。`" in rendered
     assert "## checkpoint と部分結果" in rendered
@@ -563,9 +570,11 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
             "literal": r"\n",
             "json_text": '{"x":1}',
             "quoted": 'say "hi" \\ slash',
+            "line\nkey": "first\n\nlast\n",
+            "surrogate": "\ud800",
             "empty": "",
             "nothing": None,
-            "items": [True, 0, 1.25, [], {}],
+            "items": [True, False, 0, 1.25, [], {}],
         }
     }
     output.write_text(json.dumps(source, ensure_ascii=True), encoding="utf-8")
@@ -596,10 +605,12 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
     assert r'"literal": "\\n"' in report
     assert r'"json_text": "{\"x\":1}"' in report
     assert r'"quoted": "say \"hi\" \\ slash"' in report
+    assert '"line\nkey": "first\n\nlast\n"' in report
+    assert r'"surrogate": "\ud800"' in report
     assert '"empty": ""' in report
     assert '"nothing": null' in report
     assert (
-        '"items": [\n      true,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
+        '"items": [\n      true,\n      false,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
         in report
     )
     assert '"literal": "\n"' not in report
@@ -711,14 +722,27 @@ def test_existing_primary_report_survives_update_failure(
     assert not list(tmp_path.glob(".report.md.*"))
 
 
-def test_unsaved_report_path_becomes_internal_failure_without_path_display(
+@pytest.mark.parametrize(
+    "invalid_kind", ["missing", "empty", "directory", "symlink", "dangling_symlink"]
+)
+def test_invalid_report_path_becomes_internal_failure_without_path_display(
     primary_report_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    invalid_kind: str,
 ) -> None:
     """保存を確認できない path を隠し、report 基盤の internal failure にする。"""
     root = primary_report_directory
     unsaved_path = root / "must-not-be-displayed.md"
+    linked_target = root / "linked-report.md"
+    if invalid_kind == "empty":
+        unsaved_path.touch()
+    elif invalid_kind == "directory":
+        unsaved_path.mkdir()
+    elif invalid_kind in {"symlink", "dangling_symlink"}:
+        if invalid_kind == "symlink":
+            linked_target.write_text("protected report\n", encoding="utf-8")
+        unsaved_path.symlink_to(linked_target)
     opened: list[Path] = []
     monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", opened.append)
 
@@ -742,7 +766,10 @@ def test_unsaved_report_path_becomes_internal_failure_without_path_display(
     assert "primary report の保存を確認できませんでした。" in captured.err
     assert str(unsaved_path) not in captured.err
     assert "- primary report (" not in captured.err
-    assert not unsaved_path.exists()
+    if invalid_kind == "missing":
+        assert not unsaved_path.exists()
+    elif invalid_kind == "symlink":
+        assert linked_target.read_text(encoding="utf-8") == "protected report\n"
     assert opened == []
     log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
     [log_path] = log_directory.glob("*.jsonl")

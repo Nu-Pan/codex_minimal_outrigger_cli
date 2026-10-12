@@ -2,9 +2,11 @@
 
 import json
 import subprocess
+from itertools import count
 from pathlib import Path
 from unittest.mock import Mock
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
 from _codex_support import (
@@ -24,6 +26,28 @@ from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_results import StructuredOutputValidationIssue
 from config.cmoc_config import CmocConfig
+
+
+@pytest.fixture
+def failure_control_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """応答・回復制御の検査では Git 探索と永続採番を準備しない。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_overrides(monkeypatch)
+    # cwd・linked worktree と process 間の採番は test_codex_runtime_paths.py、
+    # 採番の永続性は test_runtime_ids.py、probe の実結合は quota_retry に残す。
+    # snapshot・補正・復元のケースは実 Git の cli_repository を使う。
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
+    )
+    ids = count()
+    monkeypatch.setattr(
+        runtime_codex_exec,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+    )
+    return root
 
 
 def test_run_codex_exec_corrects_schema_output_in_same_session(
@@ -205,7 +229,7 @@ def test_structured_output_parse_failure_stops_before_schema_and_postcondition(
     schema_validator = Mock()
     postcondition = Mock()
 
-    output, issues = runtime_codex_exec._validate_structured_output(
+    _text, output, issues = runtime_codex_exec._validate_structured_output(
         output_path, schema_validator, postcondition, frozenset()
     )
 
@@ -371,6 +395,16 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
         ],
         on_call=change_artifacts,
     )
+    # 事後条件なしの開始前読み取りを拒否し、補正前の状態取得と復元は実行する。
+    capture_snapshot = runtime_codex_exec.capture_worktree_snapshot
+
+    def capture_after_initial_call(work_root):
+        assert calls, "no postcondition needs a pre-call artifact snapshot"
+        return capture_snapshot(work_root)
+
+    monkeypatch.setattr(
+        runtime_codex_exec, "capture_worktree_snapshot", capture_after_initial_call
+    )
     schema = tmp_path / "artifact_change_schema.json"
     schema.write_text(
         json.dumps(
@@ -412,15 +446,12 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
 
 
 def test_run_codex_exec_logs_keyboard_interrupt(
-    cli_repository: Path,
-    tmp_path: Path,
+    failure_control_root: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """KeyboardInterrupt を failed call event として記録し、例外を伝播する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = failure_control_root
 
     def interrupt(*_args: object, **_kwargs: object) -> object:
         """Codex subprocess 呼び出しを KeyboardInterrupt で中断する fake。"""
@@ -463,6 +494,16 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
 ) -> None:
     """parse failure を同じ session で補正し、元の出力と診断を保持する。"""
     root = cli_repository
+    # 検証済み本文の再読み取りを検出し、補正・保存の既存ケースで I/O 回帰も守る。
+    output_reads: list[Path] = []
+    original_open = Path.open
+
+    def record_output_read(path, mode="r", *args, **kwargs):
+        if path.name.endswith("_output.json") and "r" in mode:
+            output_reads.append(path)
+        return original_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", record_output_read)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
     # parse と補正・ログ保存を検証し、process の受け渡しは schema 補正の結合に残す。
@@ -471,7 +512,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     )
     calls = script_codex_calls(
         monkeypatch,
-        [(0, stdout, "NaN"), (0, stdout, "1")],
+        [(0, stdout, "NaN"), (0, stdout, " 1 \n")],
     )
     schema = tmp_path / "parse_failure_schema.json"
     schema.write_text(json.dumps({"type": "number"}))
@@ -493,7 +534,8 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     )
 
     assert result.output_json == 1
-    assert result.output_text == "1"
+    assert result.output_text == " 1 \n"
+    assert output_reads.count(result.output_path) == 1
     assert len(calls) == 2
     call_logs = [
         json.loads(path.read_text())
@@ -504,7 +546,7 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     assert call_logs[1]["argv"][resume_index + 1] == "session-1"
     assert [Path(log["output_path"]).read_text() for log in call_logs] == [
         "NaN",
-        "1",
+        " 1 \n",
     ]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
@@ -519,15 +561,13 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
     "schema_bytes", [b"{", b'{"$schema": 1}', b'{"minimum": NaN}', b"\xff"]
 )
 def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
-    cli_repository: Path,
+    failure_control_root: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     schema_bytes: bytes,
 ) -> None:
     """不正な Structured Output schema は Codex 呼び出し前に失敗させる。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = failure_control_root
     schema = tmp_path / "invalid_schema.json"
     schema.write_bytes(schema_bytes)
     calls = 0
@@ -616,16 +656,13 @@ def test_run_codex_exec_rechecks_schema_source_and_each_output(
 )
 @pytest.mark.parametrize("failure_returncode", [0, 1])
 def test_run_codex_exec_logs_capacity_recovery_calls(
-    cli_repository: Path,
-    tmp_path: Path,
+    failure_control_root: Path,
     monkeypatch: pytest.MonkeyPatch,
     failure_event: dict[str, object],
     failure_returncode: int,
 ) -> None:
     """capacity 診断と終了 code の組合せごとに、待機・probe・再実行を記録する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = failure_control_root
     # JSONL 分類と log は実処理し、process 受け渡しは既存の結合テストへ委ねる。
     prompts = []
 
@@ -683,16 +720,14 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
 )
 @pytest.mark.parametrize("structured_output", [False, True])
 def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
-    cli_repository: Path,
+    failure_control_root: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     event: dict[str, object],
     structured_output: bool,
 ) -> None:
     """未知の JSONL error は終了コード 0 でも即時失敗させ、再試行しない。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = failure_control_root
     # JSONL の読み取り・分類と log は実処理し、process 起動は結合テストに残す。
     calls = script_codex_calls(
         monkeypatch, [(0, json.dumps(event) + "\n", '{"ok": true}')]
@@ -727,13 +762,10 @@ def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
 
 
 def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    failure_control_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """capacity 回復待ち を挟んでも Codex が作った agent diff を保持する。"""
-    # 初回 call が作る未追跡 file の保持を検証するため、初期 commit は不要。
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = failure_control_root
     blocked = root / "src" / "blocked.py"
 
     def retain_artifact(index, _call):
@@ -780,15 +812,12 @@ def test_run_codex_exec_keeps_agent_diff_after_capacity_recovery(
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
-    cli_repository: Path,
-    tmp_path: Path,
+    failure_control_root: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout JSONL 外の error marker を retry 判定に使わず、直接失敗させる。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = failure_control_root
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",

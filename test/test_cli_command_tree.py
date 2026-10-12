@@ -18,6 +18,8 @@ import inspect
 
 import click
 import pytest
+import typer
+from _cli_support import _CliRunner
 from click.testing import CliRunner
 from typer.main import get_command
 
@@ -90,6 +92,40 @@ def test_help_renders_without_typer_click_compatibility_error(
     for command_path in (("oracle", "edit"), ("run", "join")):
         result = runner.invoke(cli_command, [*command_path, "--help"])
         assert result.exit_code == 0, result.output
+
+
+def test_shared_cli_runner_reuses_tree_with_independent_invocations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """tree の再構築を省いても、引数・環境・Context を次の実行に持ち越さない。"""
+    import _cli_support as cli_support
+
+    probe = typer.Typer()
+    contexts = []
+
+    @probe.command()
+    def echo(value: str = typer.Option(..., envvar="CMOC_TEST_VALUE")) -> None:
+        contexts.append(click.get_current_context())
+        typer.echo(value)
+
+    builds = []
+
+    def build(app):
+        builds.append(app)
+        return get_command(app)
+
+    monkeypatch.setattr(cli_support, "get_command", build)
+    runner = _CliRunner()
+    explicit = runner.invoke(probe, ["--value", "argument"])
+    environment = runner.invoke(probe, [], env={"CMOC_TEST_VALUE": "environment"})
+    missing = runner.invoke(probe, [], env={"CMOC_TEST_VALUE": None})
+
+    assert (explicit.exit_code, explicit.output) == (0, "argument\n")
+    assert (environment.exit_code, environment.output) == (0, "environment\n")
+    assert missing.exit_code == 2
+    assert "Missing option" in missing.output
+    assert contexts[0] is not contexts[1]
+    assert builds == [probe]
 
 
 def test_click_option_metavar_accepts_contextless_help_call() -> None:

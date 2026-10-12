@@ -461,7 +461,7 @@ def test_config_rejects_invalid_codex_agent_call_settings(
     field: str,
     value: object,
 ) -> None:
-    """直接設定の必須文字列が不正な config を拒否する。"""
+    """不正な必須文字列を拒否し、surrogate の診断も UTF-8 出力できる。"""
     call_config: dict[str, object] = {
         "model_provider": "openai",
         "model": "gpt-model",
@@ -472,28 +472,10 @@ def test_config_rejects_invalid_codex_agent_call_settings(
         config_from_dict({"codex": {"agent_calls": {"custom_call": call_config}}})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
-
-
-def test_invalid_config_error_report_escapes_surrogate() -> None:
-    """不正な surrogate を含む設定でも error report を UTF-8 出力できる。"""
-    with pytest.raises(CmocError) as exc_info:
-        config_from_dict(
-            {
-                "codex": {
-                    "agent_calls": {
-                        "custom_call": {
-                            "model_provider": "openai",
-                            "model": "\ud800",
-                            "reasoning_effort": "high",
-                        }
-                    }
-                }
-            }
-        )
-
-    report = render_error(exc_info.value)
-    report.encode("utf-8")
-    assert "\\ud800" in report
+    if value == "\ud800":
+        report = render_error(exc_info.value)
+        report.encode("utf-8")
+        assert "\\ud800" in report
 
 
 @pytest.mark.parametrize("field", ["model_providers", "agent_calls"])
@@ -550,12 +532,14 @@ def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
 
 def test_config_preserves_generic_model_provider_settings() -> None:
     """任意 ID と再帰的な JSON/TOML 共通値を読み込みと JSON 化で保持する。"""
+    # 同じ container の再出現を循環と誤判定せず、値として保存できる。
+    shared = {"answer": 42}
     settings: dict[str, JsonTomlValue] = {
         "name.with.dot": "local provider",
         "enabled": True,
         "retries": 2,
         "ratio": 0.5,
-        "nested": ["value", {"answer": 42}],
+        "nested": ["value", shared, shared],
         "unicode": "\ud7ff\ue000\U0010ffff",
     }
     config = config_from_dict(
@@ -629,6 +613,30 @@ def test_config_rejects_excessively_nested_provider_setting() -> None:
     assert exc_info.value.summary == "cmoc config が不正です。"
     assert "provider" in exc_info.value.detail
     assert "nested" in exc_info.value.detail
+    render_error(exc_info.value).encode("utf-8")
+
+
+@pytest.mark.parametrize("container_kind", ["list", "dict"])
+def test_config_rejects_cyclic_provider_setting(container_kind: str) -> None:
+    """循環値も設定エラーへ変換し、診断を UTF-8 出力できる。"""
+    if container_kind == "list":
+        setting = []
+        setting.append(setting)
+    else:
+        setting = {}
+        setting["self"] = setting
+
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(
+            {
+                "codex": {
+                    "model_providers": {"provider": {"settings": {"cycle": setting}}}
+                }
+            }
+        )
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+    assert "cycle" in exc_info.value.detail
     render_error(exc_info.value).encode("utf-8")
 
 

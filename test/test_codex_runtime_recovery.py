@@ -22,12 +22,12 @@ from _codex_support import (
     script_codex_calls,
     setup_codex_home,
 )
-from _git_support import init_repo
 
 from commons import runtime_codex_exec as runtime
 from commons import runtime_codex_recovery as recovery
 from commons.runtime_codex_profile import classify_codex_call
 from commons.runtime_errors import CmocError
+from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_logging import SubcommandLogger
 from config.cmoc_config import CmocConfig, CodexCallConfig, CodexModelProviderConfig
 
@@ -352,10 +352,15 @@ def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
 
 
 @pytest.fixture
-def structured_recovery_case(recovery_case):
+def structured_recovery_case(recovery_case, monkeypatch):
     root, parameter, config, logger = recovery_case
-    # 補正前後の成果物 snapshot は実 Git の列挙を使う。
-    init_repo(root)
+    # 成果物の列挙・補正中の変動検出・復元は test_codex_runtime_retry.py に残す。
+    # ここでは成果物が変わらない前提で、回復と補正予算・診断の結合を検証する。
+    monkeypatch.setattr(
+        runtime,
+        "capture_worktree_snapshot",
+        lambda work_root: WorktreeSnapshot(work_root, ()),
+    )
     schema = root / "schema.json"
     schema.write_text(
         json.dumps(

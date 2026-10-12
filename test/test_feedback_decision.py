@@ -1,5 +1,6 @@
 """feedback の判定根拠に依存設定を含め、機械生成物を除くことを検証する。"""
 
+from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -164,6 +165,48 @@ def test_basis_rejects_git_output_path_outside_worktree(tmp_path, monkeypatch):
     assert outside.read_text() == "must not be read\n"
 
 
+def test_basis_checks_shared_parents_once_without_reusing_file_contents(
+    tmp_path, monkeypatch
+):
+    paths = [
+        "inputs/package/first.py",
+        "inputs/package/second.py",
+        "inputs/other/third.py",
+    ]
+    for name in paths:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(name)
+    monkeypatch.setattr(
+        decision,
+        "run_git",
+        lambda *_args, **_kwargs: SimpleNamespace(stdout="\0".join(paths) + "\0"),
+    )
+    monkeypatch.setattr(
+        decision, "enumerate_oracle_and_realization_files", lambda _root: ([], [])
+    )
+    checks = Counter()
+    original = Path.is_symlink
+
+    def check_parent(path):
+        checks[path] += 1
+        return original(path)
+
+    monkeypatch.setattr(Path, "is_symlink", check_parent)
+    before = decision.worktree_inputs(tmp_path)
+    assert set(before) == set(paths)
+    expected = Counter(
+        {tmp_path / name: 1 for name in ("inputs", "inputs/package", "inputs/other")}
+    )
+    assert checks == expected
+
+    (tmp_path / paths[1]).write_text("changed\n")
+    checks.clear()
+    after = decision.worktree_inputs(tmp_path)
+    assert checks == expected
+    assert {name for name in paths if before[name] != after[name]} == {paths[1]}
+
+
 @pytest.mark.parametrize("link_parent", ["inputs", "inputs/package"])
 def test_basis_rejects_symlinked_parent_without_reading_target(
     tmp_path, monkeypatch, link_parent
@@ -175,8 +218,9 @@ def test_basis_rejects_symlinked_parent_without_reading_target(
     target.parent.mkdir(parents=True)
     target.write_text("must not be read\n")
     link = worktree / link_parent
-    link.parent.mkdir(parents=True)
-    link.symlink_to(outside, target_is_directory=True)
+    source = worktree / relative
+    source.parent.mkdir(parents=True)
+    source.write_text("source\n")
     monkeypatch.setattr(
         decision,
         "run_git",
@@ -185,6 +229,11 @@ def test_basis_rejects_symlinked_parent_without_reading_target(
     monkeypatch.setattr(
         decision, "enumerate_oracle_and_realization_files", lambda _root: ([], [])
     )
+
+    assert set(decision.worktree_inputs(worktree)) == {relative.as_posix()}
+    # 前回確認した親を symlink へ置換し、収集間で検証結果を持ち越さない。
+    link.rename(tmp_path / "previous-inputs")
+    link.symlink_to(outside, target_is_directory=True)
 
     def fail_read(_path):
         pytest.fail("symlink targets must not be read")

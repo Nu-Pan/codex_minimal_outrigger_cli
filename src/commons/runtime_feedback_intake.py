@@ -140,28 +140,35 @@ def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, 
         )
 
 
-def forget_observation_receipt(repo: Path, reference: dict[str, Any]) -> None:
-    """publication が指定した raw の receipt だけを削除する。排他は呼び出し側が保持する。"""
-    if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
-        raise _corruption(
-            "cleanup receipt reference が不正です。", observation_root(repo)
-        )
-    target = _resolve_reference_path(
-        repo, reference["path"], observation_root(repo), "intake receipt"
-    )
-    identity = target.stem
-    if not is_observation_id(identity) or target.name != f"{identity}.json":
-        raise _corruption("cleanup receipt の observation ID が不正です。", target)
-    digest = reference["sha256"]
-    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
-        raise _corruption("cleanup receipt の SHA256 が不正です。", target)
-    ledger = _read_ledger(repo)
-    receipt = ledger["pending"].get(identity)
-    if receipt is None:
+def forget_observation_receipts(repo: Path, references: list[dict[str, Any]]) -> None:
+    """publication が指定した receipt だけを一括削除する。排他は呼び出し側が保持する。"""
+    # 空の cleanup では台帳を作らず、同じ排他内の削除は一回の読込・保存にまとめる。
+    if not references:
         return
-    if {key: receipt[key] for key in ("path", "sha256")} != reference:
-        raise _corruption(
-            "cleanup receipt hash が一致しません。", repo / reference["path"]
+    ledger = _read_ledger(repo)
+    changed = False
+    for reference in references:
+        if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
+            raise _corruption(
+                "cleanup receipt reference が不正です。", observation_root(repo)
+            )
+        target = _resolve_reference_path(
+            repo, reference["path"], observation_root(repo), "intake receipt"
         )
-    del ledger["pending"][identity]
-    _atomic_write_json(feedback_root(repo) / "intake.json", ledger)
+        identity = target.stem
+        if not is_observation_id(identity) or target.name != f"{identity}.json":
+            raise _corruption("cleanup receipt の observation ID が不正です。", target)
+        digest = reference["sha256"]
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            raise _corruption("cleanup receipt の SHA256 が不正です。", target)
+        receipt = ledger["pending"].get(identity)
+        if receipt is None:
+            continue
+        if {key: receipt[key] for key in ("path", "sha256")} != reference:
+            raise _corruption(
+                "cleanup receipt hash が一致しません。", repo / reference["path"]
+            )
+        del ledger["pending"][identity]
+        changed = True
+    if changed:
+        _atomic_write_json(feedback_root(repo) / "intake.json", ledger)

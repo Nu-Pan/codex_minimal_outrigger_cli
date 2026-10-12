@@ -247,7 +247,7 @@ def _finish_from_journal(
                     raise _failure(
                         "feedback finalization の cleanup 対象が一致しません。"
                     )
-                cleanup_published_report(repo)
+                cleanup_published_report(repo, state)
             # work artifact の cleanup が完了してから state と隔離資源を回収する。
             _, _, session = load_state_for_branch(repo, context.session_branch)
             session.run = RunPart()
