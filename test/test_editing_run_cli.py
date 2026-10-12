@@ -432,6 +432,7 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
     [
         ("realization_apply", True),
         ("realization_refactor", False),
+        ("feedback_report", False),
     ],
 )
 def test_run_join_doctor_sync_depends_on_active_run_kind(
@@ -457,6 +458,12 @@ def test_run_join_doctor_sync_depends_on_active_run_kind(
         "run_doctor_preprocess",
         lambda _root, *, sync_refactor_entries: calls.append(sync_refactor_entries),
     )
+
+    def unused_history_query(*_args, **_kwargs):
+        pytest.fail("doctor without repair-path reporting must not query history")
+
+    monkeypatch.setattr(run_join_module, "head_commit", unused_history_query)
+    monkeypatch.setattr(run_join_module, "tree_changes", unused_history_query)
 
     run_join_module.doctor_preprocess_for_join()
 

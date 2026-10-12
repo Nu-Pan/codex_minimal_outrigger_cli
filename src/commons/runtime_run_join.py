@@ -36,25 +36,12 @@ from .runtime_state import SessionState, load_state_for_branch
 
 def doctor_preprocess_changes_for_join() -> dict[Path, tuple[str, set[str]]]:
     """join 前 doctor の修復 path を修復した worktree ごとに返す。"""
-    # join 前の state を確認し、workload が更新する state の二重同期を避ける。
+    # 修復 path の記録が必要な明示 join だけで、doctor 前後の HEAD を照会する。
     root = work_root().resolve()
     main_root = repo_root(root).resolve()
     repair_roots = (main_root,) if main_root == root else (main_root, root)
     before = {repair_root: head_commit(repair_root) for repair_root in repair_roots}
-    sync_refactor_entries = True
-    try:
-        branch = current_branch(root)
-        _, _, state = load_state_for_branch(repo_root(root), branch)
-    except CmocError:
-        # active run の詳細な事前条件は doctor 後の resolve_active_run で報告する。
-        pass
-    else:
-        # merge 前の entry 同期は refactor state を更新する run で遅延する。
-        sync_refactor_entries = state.run.kind not in {
-            "realization_refactor",
-            "feedback_report",
-        }
-    run_doctor_preprocess(root, sync_refactor_entries=sync_refactor_entries)
+    _run_join_doctor(root, main_root)
     # doctor は linked run 起点でも main worktree と current worktree の両方を修復
     # する。修復 path を一つの集合へ潰すと、session 側の commit を run 側の修復
     # と誤って扱うため、各 worktree の HEAD 差分を所有 root ごとに保持する。
@@ -95,10 +82,30 @@ def doctor_paths_for_join(
     return set(doctor_paths).difference(preexisting_paths)
 
 
-def doctor_preprocess_for_join() -> set[str]:
-    """current worktree の join 前 doctor 修復差分を返す。"""
-    repair = doctor_preprocess_changes_for_join().get(work_root().resolve())
-    return set() if repair is None else set(repair[1])
+def doctor_preprocess_for_join() -> None:
+    """修復 path の記録が不要な workload の join 前 doctor を実行する。"""
+    # feedback は修復差分を除外しないため、HEAD と変更 path の取得を省く。
+    root = work_root().resolve()
+    _run_join_doctor(root, repo_root(root))
+
+
+def _run_join_doctor(root: Path, main_root: Path) -> None:
+    """active run の kind に合わせて、doctor の entry 同期時点を選ぶ。"""
+    # join 前の state を確認し、workload が更新する state の二重同期を避ける。
+    sync_refactor_entries = True
+    try:
+        branch = current_branch(root)
+        _, _, state = load_state_for_branch(main_root, branch)
+    except CmocError:
+        # active run の詳細な事前条件は doctor 後の resolve_active_run で報告する。
+        pass
+    else:
+        # merge 前の entry 同期は refactor state を更新する run で遅延する。
+        sync_refactor_entries = state.run.kind not in {
+            "realization_refactor",
+            "feedback_report",
+        }
+    run_doctor_preprocess(root, sync_refactor_entries=sync_refactor_entries)
 
 
 def validate_run_join(

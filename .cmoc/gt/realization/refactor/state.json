@@ -1022,8 +1022,8 @@
   "src/commons/runtime_run_join.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "4afbc74d7ef8483ce6358ea5f2d484ec84dd47d029ba29791c51365c7c8021a7",
-    "last_investigated_at": "2026-10-10_14-54-40_764"
+    "last_investigated_sha256": "0578d815f4c28c53b811c201185f90e22747548a547bcad198cef8b69dadc80a",
+    "last_investigated_at": "2026-10-12_12-07-42_216"
   },
   "src/commons/runtime_run_lifecycle.py": {
     "investigation_required": true,
