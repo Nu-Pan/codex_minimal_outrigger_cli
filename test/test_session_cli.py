@@ -219,7 +219,9 @@ def test_session_fork_creates_session_branch_and_state(
 
 
 def test_session_fork_uses_captured_head_when_home_advances_before_branch_creation(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_preprocess: list[Path],
 ) -> None:
     """HEAD取得後にhome branchが進んでも、その時点のcommitからforkする。
 
@@ -227,7 +229,6 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
     """
     root = committed_repository
     monkeypatch.chdir(root)
-    seed_search_config(root)
     original_run_git = session_fork_module.run_git
     captured_head = ""
     advanced = False
@@ -238,7 +239,7 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
         """session branch作成直前のhome branch更新を再現する。"""
         nonlocal advanced, captured_head
         if not advanced and args[:2] == ["switch", "-c"]:
-            # fork 自身の doctor 後の HEAD を観測し、準備用 doctor の再実行を省く。
+            # branch 作成直前に実 HEAD を観測し、移動前の分岐元を特定する。
             captured_head = original_run_git(["rev-parse", "HEAD"], work).stdout.strip()
             # 分岐元の識別には異なる commit だけが必要で、tree の変更は使わない。
             original_run_git(
@@ -251,6 +252,7 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
 
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
 
+    assert session_preprocess == [root]
     assert result.exit_code == 0
     assert advanced
     session_branch = current_branch(root)
@@ -261,7 +263,9 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
 
 
 def test_session_fork_rechecks_branch_after_lifecycle_lock(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    session_preprocess: list[Path],
 ) -> None:
     """lock 待ち中に branch が切り替わっても state と分岐元を一致させる。
 
@@ -270,11 +274,9 @@ def test_session_fork_rechecks_branch_after_lifecycle_lock(
     """
     root = committed_repository
     monkeypatch.chdir(root)
-    _seed_session_management_files(root)
     original_home = current_branch(root)
     alternate = "alternate-home"
-    run_git(root, "branch", alternate)
-    run_git(root, "switch", alternate)
+    run_git(root, "switch", "-c", alternate)
     run_git(root, "commit", "--allow-empty", "-m", "advance alternate home")
     alternate_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "switch", original_home)
@@ -294,6 +296,7 @@ def test_session_fork_rechecks_branch_after_lifecycle_lock(
 
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
 
+    assert session_preprocess == [root]
     assert result.exit_code == 0, result.output
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
@@ -1004,7 +1007,7 @@ def test_session_completion_rejects_missing_state_fields(
 @pytest.fixture
 def session_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
     """session 固有の検査では共通サービスを省き、doctor 呼び出しを記録する。"""
-    # fork の失敗検査は HEAD と pre-log の実 exclude 修復だけを使い、設定を準備しない。
+    # fork の競合・失敗検査は実 Git と pre-log の exclude 修復を使い、設定を準備しない。
     # fork→abandon/join の結合と doctor の修復・順序は正常系・linked worktree と
     # test_doctor_cli.py、collector の受付・保存・drain は test_feedback.py に残す。
     roots: list[Path] = []
