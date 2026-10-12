@@ -315,11 +315,12 @@ def test_worktree_change_paths_returns_normalized_relative_paths(
 
 
 def test_apply_rolls_back_unexpected_oracle_change(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """run branch の想定外差分を commit 後に rollback する。"""
-    root, _session_branch, state_path = ready_content_session
+    """agent が追加した想定外 oracle file を commit 前に rollback する。"""
+    # 追加 file の除去を検査するため、内容比較用の初期 file・commit は準備しない。
+    root, _session_branch, state_path = ready_run_session
 
     def fake_apply(
         parameter: AgentCallParameter,
@@ -3177,11 +3178,12 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 公開直後の中断を joinable state として report する。"""
-    _root, _session_branch, state_path = ready_content_session
+    # 巡の開始前に中断するため、レビュー対象の初期内容は不要。
+    _root, _session_branch, state_path = ready_run_session
     original_start = refactor_module.start_editing_run
 
     def interrupt_after_start(kind: str) -> EditingRunContext:
@@ -3356,11 +3358,11 @@ def test_start_run_interrupt_after_state_write_restores_ready_state(
 
 
 def test_refactor_start_failure_after_run_publish_is_reported(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 公開後の初期化失敗を error report として保存する。"""
-    _root, _session_branch, state_path = ready_content_session
+    _root, _session_branch, state_path = ready_run_session
     original_start = refactor_module.start_editing_run
 
     def fail_after_start(kind: str) -> EditingRunContext:
@@ -3384,10 +3386,10 @@ def test_refactor_start_failure_after_run_publish_is_reported(
 
 
 def test_refactor_start_interruption_with_broken_tracking_reports_existing_run(
-    ready_content_session, monkeypatch
+    ready_run_session, monkeypatch
 ):
     """成立済み run の追跡失敗を「run 未成立」とせず、資源を残して error にする。"""
-    root, session_branch, state_path = ready_content_session
+    root, session_branch, state_path = ready_run_session
     session_id = session_branch.removeprefix("cmoc/session/")
     tracking = run_process_id_path(root, session_id)
 
@@ -3470,12 +3472,12 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
 
 
 def test_refactor_interrupt_before_run_creation_is_normal_completion(
-    ready_content_session: tuple[Path, str, Path],
+    ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 作成前の fork lifecycle 中断も正常終了として記録する。"""
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = ready_run_session
     original_step = refactor_module.start_subcommand_step
 
     def interrupt_before_run(
