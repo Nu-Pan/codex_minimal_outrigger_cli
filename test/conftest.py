@@ -2,6 +2,7 @@
 
 import json
 import os
+from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -17,6 +18,7 @@ import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
 import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_feedback as runtime_feedback
+import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
@@ -42,7 +44,7 @@ def committed_repository(cli_repository: Path) -> Path:
 
 @pytest.fixture
 def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """表示・通知・前処理失敗の検査では Git 探索と collector 起動を外す。"""
+    """表示・通知・前処理失敗に不要な外部処理と永続採番を準備しない。"""
     # 実 Git の cwd・linked worktree 境界は test_runtime_cli.py で検証する。
     # collector の TCP 受付・保存・drain は test_feedback.py に残す。
     root = tmp_path / "repo"
@@ -52,6 +54,14 @@ def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> P
     monkeypatch.setattr(runtime_cli, "repo_root", lambda: root)
     monkeypatch.setattr(
         runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    # 永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py の
+    # test_subcommand_logger_keeps_one_file_per_execution に残し、ID の対応は実検査する。
+    ids = count()
+    monkeypatch.setattr(
+        runtime_logging,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
     )
     return root
 
