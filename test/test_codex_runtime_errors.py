@@ -7,6 +7,7 @@
 
 import json
 import subprocess
+from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -16,6 +17,7 @@ from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrid
 
 import cmoc_runtime
 import commons.runtime_codex_exec as exec_module
+import commons.runtime_logging as logging_module
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import (
@@ -33,7 +35,7 @@ from config.cmoc_config import CmocConfig
 
 @pytest.fixture
 def codex_error_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """応答と起動失敗の検証では、Git context を解決済みとして扱う。"""
+    """応答と起動失敗に不要な Git 探索と永続採番を省く。"""
     # 実 Git の cwd・worktree 境界は test_codex_runtime_paths.py に残す。
     root = tmp_path / "repo"
     root.mkdir()
@@ -46,6 +48,16 @@ def codex_error_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
             agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
         ),
     )
+    # 採番の永続性は test_runtime_ids.py、実 logger との結合は
+    # test_runtime_cli.py と test_codex_runtime_paths.py で検証する。
+    ids = count()
+
+    def next_id(_root: Path, prefix: str) -> str:
+        """エラー検査に必要な異なる識別子を、DB 書き込みなしで供給する。"""
+        return f"{prefix}_{next(ids):06d}_2000-01-01_00-00"
+
+    monkeypatch.setattr(exec_module, "new_id", next_id)
+    monkeypatch.setattr(logging_module, "new_id", next_id)
     return root
 
 
