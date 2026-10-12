@@ -393,13 +393,19 @@ def test_run_codex_tui_logs_successful_call(
     """正常終了時に call log とサブコマンドイベントだけを残す。"""
     root = tui_log_directory
     stub_codex_overrides(monkeypatch)
-    # 成功 process との実結合は prompt 起動ケースに残し、ここではログを検査する。
-    monkeypatch.setattr(
-        runtime_codex_tui,
-        "run_codex_subprocess",
-        lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0),
-    )
     logger = SubcommandLogger(root, "test")
+
+    def launch(argv, **kwargs):
+        # 起動前に prompt と context が保存済みであることを、process 境界で観測する。
+        events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+        prepared = next(e for e in events if e["event"] == "tui_process_prepared")
+        assert prepared["process_state"] == "prepared"
+        assert Path(prepared["prompt_log_path"]).read_text() == "prompt"
+        assert Path(prepared["call_log_path"]).is_file()
+        kwargs["process_started_callback"]()
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", launch)
     token = set_current_subcommand_logger(logger)
     try:
         result = run_codex_tui(
@@ -420,6 +426,36 @@ def test_run_codex_tui_logs_successful_call(
     assert codex_events[0]["status"] == "succeeded"
     assert codex_events[0]["returncode"] == 0
     assert codex_events[0]["call_log_path"] == str(call_logs[0])
+    process_events = [
+        event for event in events if event["event"].startswith("tui_process_")
+    ]
+    assert [event["process_state"] for event in process_events] == [
+        "prepared",
+        "started",
+        "exited",
+    ]
+    call = json.loads(call_logs[0].read_text())
+    for event in process_events:
+        assert event["tui_record_version"] == 1
+        assert event["conversation_state"] == "unverified"
+        assert event["codex_session_id"] is None
+        for field in (
+            "execution_id",
+            "agent_call_id",
+            "agent_call_kind",
+            "codex_call_id",
+            "subcommand",
+            "sub_command_log_path",
+            "file_access_mode",
+            "cwd",
+            "work_root",
+            "repo_root",
+            "codex_home",
+            "call_log_path",
+            "prompt_log_path",
+        ):
+            assert event[field] == call[field]
+    assert process_events[-1]["returncode"] == 0
 
 
 def test_run_codex_tui_keeps_call_logs_on_same_timestamp(
@@ -495,17 +531,21 @@ def test_run_codex_tui_logs_missing_cli_failure(
     assert "Codex CLI が見つかりません" in codex_events[0]["error"]
 
 
+@pytest.mark.parametrize("process_started", [False, True])
 def test_run_codex_tui_logs_keyboard_interrupt(
     tui_log_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    process_started: bool,
 ) -> None:
     """KeyboardInterrupt を再送出しつつ、未起動扱いの call log とイベントを残すことを確認する。"""
     root = tui_log_directory
     stub_codex_overrides(monkeypatch)
 
     def interrupt(*_args: object, **_kwargs: object) -> object:
-        """Codex subprocess が KeyboardInterrupt を送出する状態を作る fake。"""
+        """起動確認の有無を制御し、終了を確認できない中断を作る fake。"""
+        if process_started:
+            _kwargs["process_started_callback"]()
         raise KeyboardInterrupt
 
     monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", interrupt)
@@ -533,6 +573,25 @@ def test_run_codex_tui_logs_keyboard_interrupt(
     assert codex_events[0]["returncode"] is None
     assert codex_events[0]["call_log_path"] == str(call_logs[0])
     assert codex_events[0]["error"] == "KeyboardInterrupt()"
+    finished = next(e for e in events if e["event"] == "tui_process_finished")
+    assert finished["process_state"] == (
+        "unknown" if process_started else "not_started"
+    )
+    assert finished["returncode"] is None
+    assert finished["codex_session_id"] is None
+    assert finished["conversation_state"] == "unverified"
+
+
+def test_run_codex_tui_rejects_resume_without_verified_lifecycle(tmp_path):
+    """要求された会話 ID を確認済み ID とみなして TUI を誤起動しない。"""
+    parameter = replace(
+        codex_parameter(agent_call_cwd=tmp_path),
+        prompt=None,
+        tui_resume_session_id="saved-session-id",
+    )
+    with pytest.raises(CmocError, match="会話追跡を確認できません"):
+        run_codex_tui(parameter, root=tmp_path)
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(

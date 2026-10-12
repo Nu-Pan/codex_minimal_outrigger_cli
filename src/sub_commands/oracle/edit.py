@@ -51,6 +51,7 @@ def _cmoc_oracle_edit_body() -> None:
     complete_prompt_skeleton = build_oracle_edit_main_launch_exec_parameter(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
+    assert complete_prompt_skeleton is not None
     # skeleton の構築に成功した後でだけ editor input file を予約する。
     input_path = reserve_prompt_editor_input(repository)
 

@@ -7,13 +7,16 @@ from pathlib import Path
 
 import oracle.other.path_model as path_model_module
 import pytest
+from oracle.acp_builder.oracle.investigation.launch_tui import (
+    build_oracle_investigation_launch_tui_parameter,
+)
 from oracle.acp_builder.tui.launch_tui import (
     build_tui_launch_tui_parameter as build_canonical_tui_launch_tui_parameter,
 )
 
 import acp.builder.tui.launch_tui as tui_launch_module
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
-from basic.acp import FileAccessMode
+from basic.acp import FileAccessMode, TuiResumeTarget
 
 
 @pytest.mark.parametrize(
@@ -100,3 +103,33 @@ def test_tui_launch_module_exports_only_builder() -> None:
         "build_tui_launch_tui_parameter"
     }
     assert build_tui_launch_tui_parameter is build_canonical_tui_launch_tui_parameter
+
+
+@pytest.mark.parametrize(
+    "builder",
+    [build_tui_launch_tui_parameter, build_oracle_investigation_launch_tui_parameter],
+)
+def test_resume_builder_keeps_workload_without_initial_input(
+    cli_repository, tmp_path, monkeypatch, builder
+):
+    """現在の cwd や過去の prompt を使わず、保存 cwd と元の workload を保つ。"""
+    monkeypatch.chdir(cli_repository)
+    fresh = builder("original instruction")
+    other = tmp_path / "unrelated_directory"
+    other.mkdir()
+    monkeypatch.chdir(other)
+
+    resumed = builder(resume=TuiResumeTarget("exact-session-id", cli_repository))
+
+    assert resumed.prompt is None
+    assert resumed.tui_resume_session_id == "exact-session-id"
+    assert resumed.agent_call_cwd == cli_repository.resolve()
+    for field in (
+        "agent_call_kind",
+        "file_access_mode",
+        "structured_output_schema_path",
+        "enable_editor_input_handoff_mcp",
+        "enable_document_search_mcp",
+        "enable_feedback_reporting",
+    ):
+        assert getattr(resumed, field) == getattr(fresh, field)

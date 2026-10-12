@@ -54,6 +54,7 @@ def _cmoc_tui_body(
     complete_prompt_skeleton = build_tui_launch_tui_parameter(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
+    assert complete_prompt_skeleton is not None
 
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     start_subcommand_step(3, "オリジナルプロンプトを入力", "edit original prompt")

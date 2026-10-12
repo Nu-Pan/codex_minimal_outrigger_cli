@@ -49,6 +49,7 @@ def _cmoc_oracle_investigation_body() -> None:
     complete_prompt_skeleton = build_oracle_investigation_launch_tui_parameter(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
+    assert complete_prompt_skeleton is not None
 
     start_subcommand_step(3, "oracle 調査指示を入力", "edit investigation")
     edit_prompt_editor_input(
