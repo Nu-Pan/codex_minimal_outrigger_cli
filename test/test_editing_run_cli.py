@@ -2555,18 +2555,17 @@ def test_set_run_state_rejects_overwriting_terminal_state(
     assert _state(state_path)["run"]["state"] == "joinable"
 
 
-@pytest.mark.parametrize(
-    "unexpected_path", ["oracle/unexpected.md", "oracle/unexpected[1].md"]
-)
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     ready_join_session: tuple[Path, str, Path],
-    unexpected_path: str,
 ) -> None:
     """force-resolve が run branch の想定外 path だけを戻すことを確認する。"""
+    # 通常名と glob 文字を含む名前を同じ run で検査し、Git 準備と join を共有する。
+    unexpected_paths = ("oracle/unexpected.md", "oracle/unexpected[1].md")
     root, _session_branch, state_path = ready_join_session
     context = _prepare_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("allowed\n")
-    (context.run_worktree / unexpected_path).write_text("unexpected\n")
+    for unexpected_path in unexpected_paths:
+        (context.run_worktree / unexpected_path).write_text("unexpected\n")
     commit_work_unit(context.run_worktree, "mixed run changes")
 
     rejected = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2574,6 +2573,8 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     assert rejected.exit_code == 1
     assert "run branch に想定外差分があります" in rejected.output
     assert _state(state_path)["run"]["state"] == "joinable"
+    rejected_report = terminal_primary_report(rejected).read_text()
+    assert all(path in rejected_report for path in unexpected_paths)
 
     joined = runner.invoke(
         app,
@@ -2583,7 +2584,7 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
 
     assert joined.exit_code == 0
     assert (root / "README.md").read_text() == "allowed\n"
-    assert not (root / unexpected_path).exists()
+    assert all(not (root / path).exists() for path in unexpected_paths)
     assert (
         "--force-resolve reverted unexpected run paths"
         in terminal_primary_report(joined).read_text()
