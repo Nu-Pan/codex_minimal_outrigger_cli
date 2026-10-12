@@ -1150,18 +1150,17 @@ def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
     assert warnings == ["removal failed"]
 
 
-def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
+def test_run_abandon_preserves_resources_and_reports_stop_on_cleanup_retries(
     ready_abandon_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """worktree cleanup失敗時に再試行用のrun branchを保持する。"""
+    """cleanup の失敗と例外後も、同じ run で資源保持と停止結果を検証する。"""
     context = ready_abandon_run
     root, state_path = context.repo, context.state_path
+    run_before = _state(state_path)["run"]
     branch_calls: list[str] = []
     monkeypatch.setattr(
-        run_abandon_module,
-        "_remove_run_worktree",
-        lambda _context, _warnings: False,
+        run_abandon_module, "_stop_joinable_run", lambda *_args: "stopped"
     )
     monkeypatch.setattr(
         run_abandon_module,
@@ -1169,41 +1168,31 @@ def test_run_abandon_preserves_branch_when_worktree_cleanup_fails(
         lambda _context, _warnings: branch_calls.append("deleted") or True,
     )
 
-    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
-
-    assert result.exit_code == 1
-    assert branch_calls == []
-    assert _state(state_path)["run"]["state"] == "joinable"
-    assert context.run_worktree.exists()
-    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
-
-
-def test_run_abandon_reports_process_stop_before_later_cleanup_failure(
-    ready_abandon_run: EditingRunContext,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """停止済み process を、その後の cleanup 失敗 report にも残す。"""
-    context = ready_abandon_run
-    state_path = context.state_path
-    monkeypatch.setattr(
-        run_abandon_module, "_stop_joinable_run", lambda *_args: "stopped"
-    )
-
     def fail_worktree_cleanup(*_args: object) -> NoReturn:
         """停止後の worktree cleanup failure を再現する。"""
         raise RuntimeError("cleanup failed after process stop")
 
-    monkeypatch.setattr(
-        run_abandon_module, "_remove_run_worktree", fail_worktree_cleanup
-    )
+    # どちらも資源を保持する経路なので、同じ run への再試行で準備を共有する。
+    # cleanup と report は公開 CLI から各失敗経路を個別に通して検査する。
+    reports: set[Path] = set()
+    for cleanup, error_message in (
+        (lambda _context, _warnings: False, "active run の cleanup を完了できません"),
+        (fail_worktree_cleanup, "cleanup failed after process stop"),
+    ):
+        monkeypatch.setattr(run_abandon_module, "_remove_run_worktree", cleanup)
 
-    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+        result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
 
-    assert result.exit_code == 1, result.output
-    report = terminal_primary_report(result).read_text(encoding="utf-8")
-    assert 'process_stop: "stopped"' in report
-    assert _state(state_path)["run"]["state"] == "joinable"
-    assert context.run_worktree.exists()
+        assert result.exit_code == 1, result.output
+        assert error_message in result.output
+        assert branch_calls == []
+        assert _state(state_path)["run"] == run_before
+        assert context.run_worktree.exists()
+        assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+        report_path = terminal_primary_report(result)
+        assert report_path not in reports
+        reports.add(report_path)
+        assert 'process_stop: "stopped"' in report_path.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("late_path", [None, "late-realization.md", "oracle/spec.md"])
