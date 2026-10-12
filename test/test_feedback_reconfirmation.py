@@ -98,14 +98,18 @@ def feedback_run(tmp_path, monkeypatch):
         handler=lambda issue: _remediation_output(issue["issue_id"], "not_actionable"),
     )
 
+    def input_paths():
+        return [path for path in worktree.iterdir() if path.is_file()]
+
     def contents():
-        return {p.name: p.read_bytes() for p in worktree.iterdir() if p.is_file()}
+        return {path.name: path.read_bytes() for path in input_paths()}
 
     harness.committed = contents()
+    # path を返す境界では本文を読まず、根拠収集と差分検査に必要な読み込みだけ残す。
     monkeypatch.setattr(
         decision,
         "enumerate_oracle_and_realization_files",
-        lambda root: ([], [root / name for name in contents()]),
+        lambda root: ([], [root / path.name for path in input_paths()]),
     )
 
     def changed(*_args, **_kwargs):
@@ -135,7 +139,8 @@ def feedback_run(tmp_path, monkeypatch):
         decision,
         "run_git",
         lambda *_args, **_kwargs: SimpleNamespace(
-            stdout="\0".join(sorted(contents())) + "\0", returncode=0
+            stdout="\0".join(sorted(path.name for path in input_paths())) + "\0",
+            returncode=0,
         ),
     )
     monkeypatch.setattr(

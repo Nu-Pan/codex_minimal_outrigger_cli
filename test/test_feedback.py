@@ -3121,27 +3121,35 @@ def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
 
 
 def test_feedback_basis_includes_oracle_changes_but_ignores_refactor_state(
-    tmp_path: Path,
+    cli_repository: Path,
 ) -> None:
     """oracle file の変更を根拠へ含め、管理 state だけを除外する。"""
-    root = make_repo(tmp_path)
+    # 判定根拠は履歴を参照しないため、実 Git の index だけを用意する。
+    root = cli_repository
     document = root / "oracle/notes.md"
+    spec = root / "oracle/spec.md"
     state = root / ".cmoc/gt/realization/refactor/state.json"
+    document.parent.mkdir()
     state.parent.mkdir(parents=True)
     document.write_text("first document\n")
+    spec.write_text("# spec\n")
     state.write_text("{}\n")
-    run_git(root, "add", "oracle/notes.md", ".cmoc/gt/realization/refactor/state.json")
+    run_git(root, "add", "oracle", ".cmoc/gt/realization/refactor/state.json")
     baseline = decision_module.worktree_inputs(root)
+    assert set(baseline) == {"oracle/notes.md", "oracle/spec.md"}
 
     document.write_text("updated document\n")
     state.write_text('{"entry": {}}\n')
     after_document = decision_module.worktree_inputs(root)
-    assert after_document != baseline
+    assert after_document["oracle/notes.md"] != baseline["oracle/notes.md"]
+    assert after_document["oracle/spec.md"] == baseline["oracle/spec.md"]
     state.write_text('{"another": {}}\n')
     assert decision_module.worktree_inputs(root) == after_document
 
-    (root / "oracle/spec.md").write_text("# updated spec\n")
-    assert decision_module.worktree_inputs(root) != baseline
+    spec.write_text("# updated spec\n")
+    after_spec = decision_module.worktree_inputs(root)
+    assert after_spec["oracle/spec.md"] != after_document["oracle/spec.md"]
+    assert after_spec["oracle/notes.md"] == after_document["oracle/notes.md"]
 
 
 def _reporter_unavailable_observation(root, context, index, occurred_at):
