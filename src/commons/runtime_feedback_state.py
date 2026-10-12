@@ -2331,24 +2331,24 @@ def _validate_report_cut_checkpoint(
         from .runtime_feedback_run_state import validate_remediation_checkpoint
 
         validate_remediation_checkpoint(checkpoint, path)
-    else:
-        try:
-            valid_output = _normalization_output_matches_schema(output)
-        except (
-            OSError,
-            UnicodeError,
-            json.JSONDecodeError,
-            SchemaError,
-            TypeError,
-            ValueError,
-        ) as exc:
-            raise _corruption(
-                "normalization checkpoint schema を検証できません。", path
-            ) from exc
-        if not valid_output:
-            raise _corruption(
-                "normalization checkpoint output が schema に適合しません。", path
-            )
+        return  # 専用 validator が input・output hash と audit まで検査済み。
+    try:
+        valid_output = _normalization_output_matches_schema(output)
+    except (
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        SchemaError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise _corruption(
+            "normalization checkpoint schema を検証できません。", path
+        ) from exc
+    if not valid_output:
+        raise _corruption(
+            "normalization checkpoint output が schema に適合しません。", path
+        )
     for name in ("input_sha256", "builder_sha256", "schema_sha256", "output_sha256"):
         value = checkpoint.get(name)
         if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:

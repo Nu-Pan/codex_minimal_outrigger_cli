@@ -534,7 +534,7 @@ def test_normalization_checkpoint_rejects_schema_invalid_output(tmp_path):
 
 
 def test_remediation_checkpoint_rejects_malformed_fields(feedback_run):
-    """hash 欠落と不正な audit 参照を、型由来の例外ではなく corruption として扱う。"""
+    """report cut の検査は専用 validator へ委譲した hash・audit・開始時状態も拒否する。"""
     harness = feedback_run
     _add_candidate(harness, "a")
     _run(harness)
@@ -542,15 +542,44 @@ def test_remediation_checkpoint_rejects_malformed_fields(feedback_run):
     [reference] = loaded["processing"]["remediation_checkpoints"]
     checkpoint = read_json_object(harness.context.repo / reference["path"])
     path = harness.context.repo / reference["path"]
-    validate_remediation_checkpoint(checkpoint, path)
+
+    def validate(value):
+        _validate_report_cut_checkpoint(
+            value,
+            path,
+            expected_kind="remediation",
+            expected_report_cut_id=checkpoint["report_cut_id"],
+            expected_candidate_id=checkpoint["candidate_id"],
+        )
+
+    validate(checkpoint)
     # 同じ正式 checkpoint の準備を共有し、各破損は独立した copy へ加える。
     missing_hash = copy.deepcopy(checkpoint)
     missing_hash.pop("input_sha256")
     invalid_wave = copy.deepcopy(checkpoint)
     invalid_wave["audit"]["wave"] = None
-    for invalid, reason in ((missing_hash, "field set"), (invalid_wave, "wave")):
+    invalid_output_hash = copy.deepcopy(checkpoint)
+    invalid_output_hash["output_sha256"] = "0" * 64
+    invalid_input_state = copy.deepcopy(checkpoint)
+    input_value = invalid_input_state["input"]
+    input_value["decision_state"]["files"] = {"../outside": "0" * 64}
+    input_value["issue"]["decision_state_sha256"] = sha256_bytes(
+        canonical_json_bytes(input_value["decision_state"])
+    )
+    invalid_input_state["input_sha256"] = sha256_bytes(
+        canonical_json_bytes(input_value)
+    )
+    invalid_result_state = copy.deepcopy(checkpoint)
+    invalid_result_state["audit"]["decision_basis"]["state"]["evidence_sha256"] = None
+    for invalid, reason in (
+        (missing_hash, "field set"),
+        (invalid_wave, "wave"),
+        (invalid_output_hash, "output hash"),
+        (invalid_input_state, "path"),
+        (invalid_result_state, "hash"),
+    ):
         with pytest.raises(CmocError, match=reason):
-            validate_remediation_checkpoint(invalid, path)
+            validate(invalid)
 
 
 def test_remediation_state_validation_rechecks_schema_and_value(

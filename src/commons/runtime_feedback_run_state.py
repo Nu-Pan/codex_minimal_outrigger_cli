@@ -142,6 +142,31 @@ def _remediation_schema_matches(
     )
 
 
+def _validate_decision_state(value: object, path: Path) -> None:
+    """call 開始時と検証後の file・evidence 条件を同じ基準で検査する。"""
+    # 判定結果の共通項目と切り離し、異なる二つの state をそれぞれ検査する。
+    state = _require_exact_fields(
+        value, {"files", "evidence_sha256"}, path, "decision state"
+    )
+    if not isinstance(state["files"], dict):
+        raise _corruption("feedback 判定根拠の file 集合が不正です。", path)
+    for name in state["files"]:
+        if not isinstance(name, str) or not name:
+            raise _corruption("feedback 判定根拠の path が不正です。", path)
+        relative = Path(name)
+        if (
+            relative.is_absolute()
+            or ".." in relative.parts
+            or relative.as_posix() != name
+        ):
+            raise _corruption("feedback 判定根拠の path が不正です。", path)
+    if any(
+        not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+        for digest in (*state["files"].values(), state["evidence_sha256"])
+    ):
+        raise _corruption("feedback 判定根拠の hash が不正です。", path)
+
+
 def validate_decision_basis(
     value: object, path: Path, *, compact: bool = False
 ) -> None:
@@ -155,29 +180,13 @@ def validate_decision_basis(
     )
     if basis["scope"] != "repository-inputs-v1":
         raise _corruption("feedback 判定根拠の scope が不正です。", path)
-    digests = []
-    if compact:
-        digests.append(basis["state_sha256"])
-    else:
-        state = _require_exact_fields(
-            basis["state"], {"files", "evidence_sha256"}, path, "decision state"
-        )
-        if not isinstance(state["files"], dict):
-            raise _corruption("feedback 判定根拠の file 集合が不正です。", path)
-        for name in state["files"]:
-            if (
-                not isinstance(name, str)
-                or not name
-                or Path(name).is_absolute()
-                or ".." in Path(name).parts
-                or Path(name).as_posix() != name
-            ):
-                raise _corruption("feedback 判定根拠の path が不正です。", path)
-        digests.extend(state["files"].values())
-        digests.append(state["evidence_sha256"])
+    if not compact:
+        _validate_decision_state(basis["state"], path)
     if not isinstance(basis["cycle_states"], list):
         raise _corruption("feedback 循環診断の状態集合が不正です。", path)
-    digests.extend(basis["cycle_states"])
+    digests = basis["cycle_states"]
+    if compact:
+        digests = [basis["state_sha256"], *digests]
     if any(
         not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None
         for value in digests
@@ -588,7 +597,7 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
         "decision_state_sha256"
     ) != sha256_bytes(canonical_json_bytes(input_value["decision_state"])):
         raise _corruption("feedback call の開始時判定条件がありません。", path)
-    validate_decision_basis({**basis, "state": input_value["decision_state"]}, path)
+    _validate_decision_state(input_value["decision_state"], path)
     recheck = issue.get("reconfirmation")
     if recheck is not None:
         recheck = _require_exact_fields(
