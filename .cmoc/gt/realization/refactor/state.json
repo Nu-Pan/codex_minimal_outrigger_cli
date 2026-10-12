@@ -1106,8 +1106,8 @@
   "src/sub_commands/feedback/remediation.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "f7db7d27b79ec7b617bd75da0c80aefdcf9780805032e7fa90730bc84af655b7",
-    "last_investigated_at": "2026-10-10_17-45-06_826"
+    "last_investigated_sha256": "fe0f4874c06186652a1df8220cdfe7d5b7756296372e6df62b5f81ee9afdf312",
+    "last_investigated_at": "2026-10-12_14-51-51_025"
   },
   "src/sub_commands/feedback/report.py": {
     "investigation_required": true,

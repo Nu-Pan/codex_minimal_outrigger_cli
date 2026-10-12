@@ -714,6 +714,8 @@ def published_feedback(publication_feedback):
 def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch):
     """全結果分類の再確認を同じ run で検査し、wave と publication の準備を共有する。"""
     h = feedback_run
+    git = Mock(wraps=remediation.run_git)
+    monkeypatch.setattr(remediation, "run_git", git)
     *prior_issues, repairing_issue = sorted(
         _add_candidate(h, letter) for letter in "abcdef"
     )
@@ -777,10 +779,17 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
         assert audit["commit"] is None
         assert audit["before_commit"] == audit["after_commit"] == h.head
         assert audit["changed_paths"] == []
+        assert audit["diff_sha256"] == sha256_bytes(b"")
     result = _join_and_publish(h, monkeypatch)
     assert result.result == "ok"
     assert load_active_state(h.context.repo).issues == {}
     assert "remediation_issue_count: 6" in result.primary_report.read_text()
+    # checkpoint 保存と join 後の監査で、空差分の Git 起動を増やさない。
+    audit_diffs = [
+        call.args[0] for call in git.call_args_list if "--binary" in call.args[0]
+    ]
+    assert audit_diffs
+    assert all(args[-2] != args[-1] for args in audit_diffs)
 
 
 @pytest.mark.parametrize("fault", ["head", "forbidden_path"])
