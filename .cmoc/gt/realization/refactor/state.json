@@ -1404,10 +1404,10 @@
     "last_investigated_at": "2026-10-13_07-19-25_049"
   },
   "test/test_editor_input_handoff_mcp.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "324e2c9283c84c5918c32dff6230e9f78e1541476591746b69917688824bbf6f",
-    "last_investigated_at": "2026-10-11_02-50-44_146"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "039ae2a019d29c65e88052bf4964c4986a47054e414f07b9447528ebc7180a35",
+    "last_investigated_at": "2026-10-13_07-21-57_559"
   },
   "test/test_feedback.py": {
     "investigation_required": true,
