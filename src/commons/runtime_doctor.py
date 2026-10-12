@@ -914,12 +914,18 @@ def _stage_tracked_runtime_repair(
                 algorithm = "sha1" if len(blob) == 40 else "sha256"
                 if hashlib.new(algorithm, header + encoded).hexdigest() == blob:
                     continue
+        # entry の欠落も一括列挙で確認済みなので、同じ index の mode を再照会しない。
+        if existing is not None:
+            mode = existing[0]
+        else:
+            head_entry = _head_entry(root, relative)
+            mode = head_entry[0] if head_entry is not None else "100644"
         _stage_text(
             root,
             index_path,
             relative,
             content,
-            mode=existing[0] if existing is not None else None,
+            mode=mode,
         )
 
 

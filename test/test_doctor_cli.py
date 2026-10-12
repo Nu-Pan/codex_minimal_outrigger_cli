@@ -618,10 +618,14 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
     for path in (config, state):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(original)
-    run_git(root, "add", "-f", ".cmoc/gt")
     config_relative = str(config.relative_to(root))
     state_relative = str(state.relative_to(root))
+    # HEAD と現在 index の mode を区別し、state は HEAD にない新規 file にする。
+    run_git(root, "add", "-f", config_relative)
     run_git(root, "update-index", "--chmod=+x", config_relative)
+    run_git(root, "commit", "-m", "track executable config")
+    run_git(root, "update-index", "--chmod=-x", config_relative)
+    run_git(root, "add", "-f", state_relative)
     run_git(root, "update-index", "--skip-worktree", state_relative)
 
     index_path = doctor_module._copy_current_index(root)
@@ -647,8 +651,62 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
         entries = doctor_module._run_git_with_index(
             ["ls-files", "--stage", "-v", "--", ".cmoc/gt"], root, index_path
         ).stdout.splitlines()
-        assert any(line.startswith("H 100755 ") for line in entries)
+        assert any(line.startswith("H 100644 ") for line in entries)
         assert any(line.startswith("S 100644 ") for line in entries)
+
+        # entry がない場合も同じ repository を使い、HEAD の mode と新規 mode を確かめる。
+        doctor_module._run_git_with_index(
+            ["update-index", "--force-remove", config_relative, state_relative],
+            root,
+            index_path,
+        )
+        git_calls = 0
+        original_run = doctor_module.subprocess.run
+
+        def count_git_calls(argv, *args, **kwargs):
+            nonlocal git_calls
+            if argv[0] == "git":
+                git_calls += 1
+            return original_run(argv, *args, **kwargs)
+
+        with monkeypatch.context() as observed:
+            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+            doctor_module._stage_tracked_runtime_repair(root, index_path)
+
+        assert doctor_module._run_git_with_index(
+            ["show", f":{config_relative}"], root, index_path
+        ).stdout == changed.replace("\r\n", "\n")
+        assert (
+            doctor_module._run_git_with_index(
+                ["show", f":{state_relative}"], root, index_path
+            ).stdout
+            == "preserved staged entry\n"
+        )
+        entries = doctor_module._run_git_with_index(
+            ["ls-files", "--stage", "--", ".cmoc/gt"], root, index_path
+        ).stdout.splitlines()
+        assert {line.split("\t")[1]: line.split()[0] for line in entries} == {
+            config_relative: "100755",
+            state_relative: "100644",
+        }
+        # まとめて列挙した欠落 entry を path ごとに再照会して process を増やさない。
+        assert git_calls <= 7
+
+        # 既存の実行可能 entry を再更新するケースでも mode の保持を検査する。
+        config.write_text(original)
+        doctor_module._stage_tracked_runtime_repair(
+            root, index_path, skip_paths={state_relative}
+        )
+        entry = doctor_module._run_git_with_index(
+            ["ls-files", "--stage", "--", config_relative], root, index_path
+        ).stdout
+        assert entry.startswith("100755 ")
+        assert (
+            doctor_module._run_git_with_index(
+                ["show", f":{config_relative}"], root, index_path
+            ).stdout
+            == original
+        )
     finally:
         index_path.unlink(missing_ok=True)
 
