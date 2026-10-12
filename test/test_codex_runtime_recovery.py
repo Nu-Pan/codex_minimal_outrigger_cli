@@ -25,6 +25,7 @@ from _codex_support import (
 
 from commons import runtime_codex_exec as runtime
 from commons import runtime_codex_recovery as recovery
+from commons import runtime_logging
 from commons.runtime_codex_profile import classify_codex_call
 from commons.runtime_errors import CmocError
 from commons.runtime_git import WorktreeSnapshot
@@ -124,14 +125,16 @@ def recovery_case(tmp_path, monkeypatch):
             prompt="recovery probe",
         ),
     )
-    # ID の区別・引継ぎは観測し、永続採番の検証は test_runtime_ids.py と
-    # 実採番を使う test_codex_runtime_quota_retry.py に残す。
+    # ID の区別・引継ぎとログ保存は観測し、永続採番は test_runtime_ids.py、
+    # logger の実採番との結合は test_runtime_cli.py の
+    # test_subcommand_logger_keeps_one_file_per_execution と quota_retry に残す。
     ids = count()
-    monkeypatch.setattr(
-        runtime,
-        "new_id",
-        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
-    )
+    for id_consumer in (runtime, runtime_logging):
+        monkeypatch.setattr(
+            id_consumer,
+            "new_id",
+            lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+        )
     return (
         root,
         codex_parameter(agent_call_cwd=root),
