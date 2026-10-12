@@ -210,6 +210,8 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
     result = _close(issue)
     assert result.exit_code == 0, result.output
     assert "closed" in result.output
+    assert "latest_state_summary: `ok`" in result.output
+    assert "remaining_cases: `0`" in result.output
     state = feedback_state.validate_feedback_state(root)
     assert state.current["result"] == "ok"
     assert state.issues == {}
@@ -231,6 +233,8 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
     repeated = _close(issue, "別の理由")
     assert repeated.exit_code == 0, repeated.output
     assert "already_closed" in repeated.output
+    assert "latest_state_summary: `ok`" in repeated.output
+    assert "remaining_cases: `0`" in repeated.output
     after = feedback_state.validate_feedback_state(root)
     assert canonical_json_bytes(after.current) == pointer
     assert after.history == history
@@ -323,6 +327,8 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
         (root / "README.md").write_text("state changed after publication\n")
     resumed = _close(issue)
     assert resumed.exit_code == 0, resumed.output
+    assert "latest_state_summary: `ok`" in resumed.output
+    assert "remaining_cases: `0`" in resumed.output
     assert terminal_primary_report(resumed) == target
     if saved is not None:
         assert target.read_bytes() == saved
@@ -446,6 +452,8 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(tmp_path, monke
     )
     result = _close(issue)
     assert result.exit_code == 0, result.output
+    assert "latest_state_summary: `attention`" in result.output
+    assert "remaining_cases: `1`" in result.output
     after = feedback_state.validate_feedback_state(root)
     assert after.current["result"] == "attention"
     assert after.issues == {other_id: before.issues[other_id]}
@@ -583,6 +591,8 @@ def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(
     repeated = _close(first, "新しい理由")
     assert repeated.exit_code == 0, repeated.output
     assert "already_closed" in repeated.output
+    assert "latest_state_summary: `incomplete`" in repeated.output
+    assert "remaining_cases: `1`" in repeated.output
     assert feedback_state.load_active_state(root).issues[identity] == second
 
 

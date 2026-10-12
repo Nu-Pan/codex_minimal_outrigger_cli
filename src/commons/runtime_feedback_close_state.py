@@ -7,6 +7,7 @@ from typing import Any
 from .runtime_errors import CmocError
 from .runtime_feedback_history import validate_history_record
 from .runtime_feedback_state import (
+    ActiveState,
     _corruption,
     _durable_unlink,
     _has_symlink_component,
@@ -225,8 +226,8 @@ def require_no_pending_close(repo: Path) -> None:
         )
 
 
-def complete_close(repo: Path, record: dict[str, Any]) -> Path:
-    """固定 artifact を公開し、確定後の旧 generation cleanup だけを再開する。"""
+def complete_close(repo: Path, record: dict[str, Any]) -> tuple[Path, ActiveState]:
+    """固定 artifact の publication と cleanup を完了し、検証済み状態を返す。"""
     # Publication point を通過していたら終了操作を再適用しない。
     path = close_work_path(repo)
     if load_close_work(repo) != record:
@@ -307,4 +308,4 @@ def complete_close(repo: Path, record: dict[str, Any]) -> Path:
         raise _corruption("feedback close report hash が不正です。", report_path)
     _durable_unlink(path)
     _prune_empty_directories(path.parent, path.parent)
-    return report_path
+    return report_path, state
