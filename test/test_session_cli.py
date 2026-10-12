@@ -1322,10 +1322,13 @@ def test_session_join_checks_staged_text_conflict_markers(
     assert error.value.detail == relative
 
 
-def test_session_join_uses_linked_worktree_branch(
+def test_session_join_repairs_linked_worktree_before_failure_and_completion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree上のsession joinが対応home branchを使うことを検証する。"""
+    """linked worktree の修復・失敗時の停止・正常終了を同じ session で検証する。"""
+    # repository・linked worktree・公開 fork の準備を共有し、前処理と join を検査する。
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     _seed_session_management_files(root)
@@ -1338,6 +1341,31 @@ def test_session_join_uses_linked_worktree_branch(
     )
     session_branch = current_branch(linked)
     home_branch = session_home_branch(root, session_branch)
+    home_commit = run_git(linked, "rev-parse", home_branch).stdout.strip()
+
+    # home branch がなくても先に管理物を修復し、session branch で停止する。
+    gitignore = break_preprocess_invariants(linked)
+    run_git(root, "branch", "-D", home_branch)
+
+    failed = runner.invoke(app, ["session", "join"])
+
+    assert failed.exit_code != 0
+    assert current_branch(root) == root_branch
+    assert current_branch(linked) == session_branch
+    assert "git コマンドが失敗しました。" in failed.stderr
+    assert "git コマンドが失敗しました。" not in failed.stdout
+    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
+    assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == []
+    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert run_git(linked, "status", "--short").stdout.strip() == ""
+    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert state["session"]["state"] == "active"
+
+    # 元の home branch を復元し、session の内容・state・report・cleanup を検査する。
+    run_git(root, "branch", home_branch, home_commit)
     (linked / "README.md").write_text("linked session change\n")
     run_git(linked, "add", "README.md")
     run_git(linked, "commit", "-m", "linked session change")
@@ -1362,44 +1390,6 @@ def test_session_join_uses_linked_worktree_branch(
     assert "- conflict 解消用 agent call: `未実行（conflict なし）`" in rendered_report
     assert "- session state: `active` -> `joined`" in rendered_report
     assert "- cleanup: `completed`" in rendered_report
-
-
-def test_session_join_preprocesses_linked_worktree_before_preconditions(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree の join が固有の事前条件より先に preprocess することを検証する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-    {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    """
-
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _seed_session_management_files(root)
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
-    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
-    monkeypatch.chdir(linked)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(linked)
-    home_branch = session_home_branch(root, session_branch)
-    gitignore = break_preprocess_invariants(linked)
-    run_git(root, "branch", "-D", home_branch)
-
-    result = runner.invoke(app, ["session", "join"])
-
-    assert result.exit_code != 0
-    assert current_branch(linked) == session_branch
-    assert "git コマンドが失敗しました。" in result.stderr
-    assert "git コマンドが失敗しました。" not in result.stdout
-    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
-    assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == []
-    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
-        ".agents/.gitkeep"
-    ]
-    assert run_git(linked, "status", "--short").stdout.strip() == ""
 
 
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
