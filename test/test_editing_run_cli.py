@@ -1247,78 +1247,6 @@ def test_apply_fork_checks_stopped_children_before_commit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
-def test_refactor_fork_stops_children_before_commits_and_reports_warnings(
-    ready_content_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """各レビューの child 停止を commit 前に確認し、warning を report に残す。"""
-    # 停止順序と warning 保存は同じ fork で検査し、巡回の重複を避ける。
-    root, _session_branch, state_path = ready_content_session
-    events: list[str] = []
-    cleanup_warning = "run child process already stopped: 789"
-    original_commit = refactor_module.commit_work_unit
-
-    def record_stop(*_args: object) -> list[str]:
-        """tracked child の停止位置を記録する。"""
-        events.append("stop")
-        return [cleanup_warning]
-
-    def record_commit(
-        worktree: Path,
-        message: str,
-        **kwargs: object,
-    ) -> str | None:
-        """処理単位 commit の位置を記録して本来の commit を実行する。"""
-        events.append("commit")
-        return original_commit(worktree, message, **kwargs)
-
-    def fake_refactor(
-        _parameter: AgentCallParameter,
-        **_kwargs: object,
-    ) -> SimpleNamespace:
-        """file review の固定 Structured Output を返す。"""
-        events.append("review")
-        return SimpleNamespace(
-            returncode=0,
-            output_json={
-                "findings": [],
-                "verification": {
-                    "status": "passed",
-                    "summary": "fake full quality gate passed",
-                },
-            },
-        )
-
-    monkeypatch.setattr(refactor_module, "stop_tracked_codex_children", record_stop)
-    monkeypatch.setattr(refactor_module, "commit_work_unit", record_commit)
-    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
-    _stop_after_cycles(monkeypatch)
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0, result.output
-    assert _state(state_path)["run"]["state"] == "joinable"
-    review_positions = [
-        index for index, event in enumerate(events) if event == "review"
-    ]
-    assert len(review_positions) > 1
-    assert all(
-        events[index + 1 : index + 3] == ["stop", "commit"]
-        for index in review_positions
-    )
-    reports = list(
-        (root / ".cmoc" / "gu" / "report" / "realization" / "refactor" / "fork").glob(
-            "*.md"
-        )
-    )
-    assert len(reports) == 1
-    assert cleanup_warning in reports[0].read_text()
-
-
 def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
@@ -3048,12 +2976,29 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """所見なしへの正規化と unresolved の保留を、一巡の確定結果で検証する。"""
-    # target ごとの結果を同じ巡に混在させ、session/run 作成と全対象巡回を共有する。
+    """各結果の停止・確定順序と、正規化・unresolved・warning の保存を検証する。"""
+    # 変更のない一巡を共有し、停止順序・警告保存のためだけの巡回を重複させない。
     root, _session_branch, state_path = ready_content_session
     reviewed: list[str] = []
+    events: list[str] = []
+    cleanup_warning = "run child process already stopped: 789"
+    original_commit = refactor_module.commit_work_unit
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
+
+    def record_stop(*_args: object) -> list[str]:
+        """tracked child の停止位置を記録する。"""
+        events.append("stop")
+        return [cleanup_warning]
+
+    def record_commit(
+        worktree: Path,
+        message: str,
+        **kwargs: object,
+    ) -> str | None:
+        """処理単位 commit の位置を記録して本来の commit を実行する。"""
+        events.append("commit")
+        return original_commit(worktree, message, **kwargs)
 
     def fake_refactor(
         _parameter: AgentCallParameter,
@@ -3063,6 +3008,7 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
         purpose = str(kwargs["purpose"])
         target = purpose.removeprefix("realization refactor: ")
         reviewed.append(target)
+        events.append("review")
         if target == ".gitignore":
             findings = [
                 {
@@ -3099,6 +3045,8 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
             },
         )
 
+    monkeypatch.setattr(refactor_module, "stop_tracked_codex_children", record_stop)
+    monkeypatch.setattr(refactor_module, "commit_work_unit", record_commit)
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
     _stop_after_cycles(monkeypatch)
 
@@ -3108,9 +3056,17 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
         catch_exceptions=False,
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     state = _state(state_path)
     assert state["run"]["state"] == "joinable"
+    review_positions = [
+        index for index, event in enumerate(events) if event == "review"
+    ]
+    assert len(review_positions) > 1
+    assert all(
+        events[index + 1 : index + 3] == ["stop", "commit"]
+        for index in review_positions
+    )
     parts = state["run"]["branch"].split("/")
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     refactor_state = load_refactor_state(worktree)
@@ -3131,7 +3087,9 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `1`" in result.output
     report = terminal_primary_report(result)
+    assert list(report.parent.glob("*.md")) == [report]
     report_text = report.read_text()
+    assert cleanup_warning in report_text
     assert "- `.gitignore`: 0 finding(s)" in report_text
     assert "- `oracle/spec.md`: 0 finding(s)" in report_text
     assert "- `README.md`: 1 finding(s)" in report_text
