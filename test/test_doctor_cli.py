@@ -967,26 +967,20 @@ def test_doctor_repairs_missing_index_without_dropping_tracked_files(
     assert run_git(root, "status", "--short").stdout == ""
 
 
-@pytest.mark.parametrize("index_flag", ["--assume-unchanged", "--skip-worktree"])
-def test_doctor_preserves_preexisting_index_flags(
+def test_doctor_preserves_preexisting_index_flags_and_intent_to_add(
     tmp_path: Path,
-    index_flag: str,
 ) -> None:
-    """doctor が内容以外の Git index flag も保持する。"""
+    """doctor が二種類の index flag と intent-to-add をそれぞれ保持する。"""
 
+    # 同じ index の退避・復元を検査するため、各状態を別 file に置き修復を一度にする。
     root = make_repo(tmp_path)
-    run_git(root, "update-index", index_flag, "README.md")
-    before = run_git(root, "ls-files", "-v", "README.md").stdout
-
-    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
-
-    assert run_git(root, "ls-files", "-v", "README.md").stdout == before
-
-
-def test_doctor_preserves_preexisting_intent_to_add_index_file(tmp_path: Path) -> None:
-    """doctor が intent-to-add の通常 file を未追跡へ戻さない。"""
-
-    root = make_repo(tmp_path)
+    flagged_paths = {
+        "README.md": "--assume-unchanged",
+        "oracle/spec.md": "--skip-worktree",
+    }
+    for relative, flag in flagged_paths.items():
+        run_git(root, "update-index", flag, relative)
+    before_flags = run_git(root, "ls-files", "-v", "--", *flagged_paths).stdout
     path = root / "new.txt"
     path.write_text("new\n")
     run_git(root, "add", "-N", "new.txt")
@@ -995,6 +989,7 @@ def test_doctor_preserves_preexisting_intent_to_add_index_file(tmp_path: Path) -
 
     doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
+    assert run_git(root, "ls-files", "-v", "--", *flagged_paths).stdout == before_flags
     assert run_git(root, "ls-files", "--stage", "new.txt").stdout == before_entry
     assert run_git(root, "status", "--short").stdout == before_status
 
