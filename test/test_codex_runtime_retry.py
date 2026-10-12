@@ -21,6 +21,7 @@ from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
+import commons.runtime_logging as runtime_logging
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_exec
@@ -43,11 +44,14 @@ def failure_control_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
         path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
     ids = count()
-    monkeypatch.setattr(
-        runtime_codex_exec,
-        "new_id",
-        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
-    )
+
+    def in_memory_id(_root: Path, prefix: str) -> str:
+        return f"{prefix}_{next(ids):06d}_2000-01-01_00-00"
+
+    # exec ID は logger・current_execution_id 経由でも発行される。
+    # logger と実採番の結合は test_runtime_cli.py に残し、ログの検証は維持する。
+    for module in (runtime_codex_exec, runtime_logging):
+        monkeypatch.setattr(module, "new_id", in_memory_id)
     return root
 
 

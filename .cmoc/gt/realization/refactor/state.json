@@ -1340,8 +1340,8 @@
   "test/test_codex_runtime_retry.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "17fce5f0cf0a5e6375e18d449de696c231af2308b72ad5d1882da9ec421ef93e",
-    "last_investigated_at": "2026-10-11_00-45-31_791"
+    "last_investigated_sha256": "cc217e8eb8f30d1bfbef3592f00a25b5ee202afbd85fd7597382522305df5397",
+    "last_investigated_at": "2026-10-13_05-48-00_497"
   },
   "test/test_codex_runtime_subprocess.py": {
     "investigation_required": true,
