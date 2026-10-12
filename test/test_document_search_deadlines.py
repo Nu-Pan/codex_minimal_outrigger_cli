@@ -15,7 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 from oracle.other.cmoc_config import DocumentSearchConfig
-from test_document_search import _InferenceDouble, _tuning
+from test_document_search import _InferenceDouble, _test_node_runtime, _tuning
 
 from commons import runtime_document_search as search_module
 from commons import runtime_document_search_observation as observation_module
@@ -417,6 +417,7 @@ def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
 def test_deadline_keeps_locks_until_worker_and_descendant_stop(tmp_path, monkeypatch):
     base = tmp_path / "worker"
     base.mkdir()
+    _test_node_runtime(base)
     (base / "worker.mjs").write_text(
         r"""
 import { spawn } from "node:child_process";

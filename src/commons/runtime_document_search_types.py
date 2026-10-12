@@ -1,9 +1,11 @@
 """検索用コンポーネントと MCP 返却値を実装内で扱う型。"""
 
+import json
 from dataclasses import dataclass
+from importlib import resources
 from typing import Any, Literal, TypedDict
 
-from oracle.other.document_search import INITIAL_SEARCH_MATERIALS, SearchErrorCode
+from oracle.other.document_search import EMBEDDING_MODEL, SearchErrorCode
 
 
 @dataclass(frozen=True)
@@ -25,17 +27,34 @@ class SearchMaterials:
 
     node_version: str
     node_llama_cpp_version: str
+    llama_cpp_release: str
     llama_cpp_revision: str
     sqlite_vec_version: str
+    document_embedding_contract: str
     embedding: ModelArtifact
     embedding_dimensions: int
 
 
 def _initial_materials() -> SearchMaterials:
-    # 正本の固定データを、実装で共用する dataclass へ変換する。
-    values: dict[str, Any] = dict(INITIAL_SEARCH_MATERIALS)
-    values["embedding"] = ModelArtifact(**values["embedding"])
-    return SearchMaterials(**values)
+    # 採用記録は配布 package、モデルの詳細は正本から取り込む。
+    package = json.loads(
+        resources.files("commons.document_search_worker")
+        .joinpath("package.json")
+        .read_text(encoding="utf-8")
+    )
+    adopted = package["cmoc"]
+    model: dict[str, Any] = dict(EMBEDDING_MODEL)
+    dimensions = model.pop("embedding_dimensions")
+    return SearchMaterials(
+        node_version=package["engines"]["node"],
+        node_llama_cpp_version=package["dependencies"]["node-llama-cpp"],
+        llama_cpp_release=adopted["llama_cpp_release"],
+        llama_cpp_revision=adopted["llama_cpp_revision"],
+        sqlite_vec_version=adopted["sqlite_vec_version"],
+        document_embedding_contract=adopted["document_embedding_contract"],
+        embedding=ModelArtifact(**model),
+        embedding_dimensions=dimensions,
+    )
 
 
 SEARCH_MATERIALS = _initial_materials()

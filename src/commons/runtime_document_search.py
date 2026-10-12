@@ -380,13 +380,12 @@ def _worktree_identity(root: Path) -> str:
 
 
 def _embedding_identity(config: DocumentSearchConfig) -> str:
-    # 分割・索引形式・query・期限は文書入力片の推論条件ではない。
-    materials = asdict(SEARCH_MATERIALS)
-    materials.pop("sqlite_vec_version")
+    # 版や分割条件ではなく、文書埋め込みの値・解釈に影響する条件で共有する。
+    # tokenizer・special token・pooling・数値表現を変えた採用時は contract を更新する。
     payload = {
-        "materials": materials,
-        # 文書入力の整形や pooling を変える場合はこの契約も更新する。
-        "input_contract": "raw-document-text-last-v1",
+        "model": asdict(SEARCH_MATERIALS.embedding),
+        "dimensions": SEARCH_MATERIALS.embedding_dimensions,
+        "input_contract": SEARCH_MATERIALS.document_embedding_contract,
         "context_tokens": config.embedding_context_tokens,
         "batch_tokens": config.batch_tokens,
         "threads": config.threads,

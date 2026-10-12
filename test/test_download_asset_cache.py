@@ -17,6 +17,7 @@ import tarfile
 import urllib.error
 import urllib.request
 from dataclasses import replace
+from importlib import resources
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -397,6 +398,52 @@ def _tarball(name, dependencies=None, version="1.0.0"):
     return gzip.compress(output.getvalue(), mtime=0)
 
 
+def test_node_preparation_uses_adopted_distribution_without_system_node(
+    tmp_path, distribution, monkeypatch
+):
+    """固定配布物の初回取得、別配置での再利用、cache 消失後のローカル再利用を通す。"""
+    package = json.loads(
+        resources.files("commons.document_search_worker")
+        .joinpath("package.json")
+        .read_text()
+    )
+    adopted = package["cmoc"]["node_distribution"]
+    filename = adopted["filename"]
+    directory = filename.removesuffix(".tar.xz")
+    output = io.BytesIO()
+    with tarfile.open(fileobj=output, mode="w:xz") as archive:
+        for name in ("bin/node", "lib/node_modules/npm/bin/npm-cli.js"):
+            body = name.encode()
+            info = tarfile.TarInfo(f"{directory}/{name}")
+            info.size, info.mode = len(body), 0o755
+            archive.addfile(info, io.BytesIO(body))
+    body = output.getvalue()
+    distribution[1]["/node.tar.xz"] = body
+    adopted.update(
+        url=distribution[0] + "/node.tar.xz",
+        size_bytes=len(body),
+        sha256=hashlib.sha256(body).hexdigest(),
+    )
+    monkeypatch.setenv("PATH", "")
+
+    def prepare(name, previous):
+        root = tmp_path / name
+        root.mkdir()
+        (root / "package.json").write_text(json.dumps(package))
+        assets.prepare_node_runtime(root, previous, root)
+        assert (root / "node/bin/node").read_bytes() == b"bin/node"
+        assert (root / "node/lib/node_modules/npm/bin/npm-cli.js").is_file()
+        return root
+
+    first = prepare("first", tmp_path / "missing")
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
+    prepare("second", tmp_path / "missing")
+    shutil.rmtree(cache_module.asset_cache_directory())
+    prepare("local", first)
+    assert distribution[2] == ["/node.tar.xz"]
+    assert not cache_module.asset_cache_directory().exists()
+
+
 def _npm_fixture(base, distribution):
     base.mkdir(parents=True)
     url, bodies, _requests = distribution
@@ -424,6 +471,12 @@ def _npm_fixture(base, distribution):
         "packages": packages,
     }
     (base / "package-lock.json").write_text(json.dumps(lock))
+    node = base / "node/bin/node"
+    node.parent.mkdir(parents=True)
+    node.symlink_to(shutil.which("node"))
+    npm = base / "node/lib/node_modules/npm"
+    npm.parent.mkdir(parents=True)
+    npm.symlink_to(Path(shutil.which("npm")).resolve().parent.parent)
     return (base / "package-lock.json").read_bytes()
 
 
@@ -452,7 +505,7 @@ def test_npm_build_reuses_all_dependencies_without_network(
         acquisition.setattr(
             assets,
             "_npm_platform",
-            lambda: {"os": "linux", "cpu": "x64", "libc": "glibc"},
+            lambda _base: {"os": "linux", "cpu": "x64", "libc": "glibc"},
         )
         with assets.node_runtime_assets(root, base):
             lock = json.loads((base / "package-lock.json").read_text())
@@ -495,7 +548,9 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
     """同一資材を共有し、同名の別版と異なる OS/CPU の optional 資材を区別する。"""
     # platform の実取得と npm への受け渡しは、通信禁止の実 npm test で通す。
     monkeypatch.setattr(
-        assets, "_npm_platform", lambda: {"os": "linux", "cpu": "x64", "libc": "glibc"}
+        assets,
+        "_npm_platform",
+        lambda _base: {"os": "linux", "cpu": "x64", "libc": "glibc"},
     )
     root = tmp_path / "cmoc"
     base = root / "build"

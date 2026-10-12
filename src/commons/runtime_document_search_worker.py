@@ -63,25 +63,28 @@ def _sha256(path: Path) -> str:
 
 
 def _runtime_tree_hash(base: Path) -> str:
-    """npm が設置した runtime 全体の内容と symlink 構造を識別する。"""
-    root = base / "node_modules"
-    if root.is_symlink() or not root.is_dir():
-        raise ValueError("node runtime is unavailable")
+    """Node 配布物と npm 依存物の内容・symlink 構造を識別する。"""
     digest = hashlib.sha256()
-    for path in sorted(root.rglob("*")):
-        mode = path.lstat().st_mode
-        if stat.S_ISDIR(mode):
-            continue
-        relative = path.relative_to(root).as_posix()
-        if stat.S_ISLNK(mode):
-            if not path.resolve(strict=True).is_relative_to(root.resolve()):
-                raise ValueError("node runtime contains an external symlink")
-            value = "link:" + os.readlink(path)
-        elif stat.S_ISREG(mode):
-            value = "file:" + _sha256(path)
-        else:
-            raise ValueError("node runtime contains a special file")
-        digest.update(relative.encode("utf-8") + b"\0" + value.encode("utf-8") + b"\0")
+    for name in ("node", "node_modules"):
+        root = base / name
+        if root.is_symlink() or not root.is_dir():
+            raise ValueError("node runtime is unavailable")
+        for path in sorted(root.rglob("*")):
+            mode = path.lstat().st_mode
+            if stat.S_ISDIR(mode):
+                continue
+            relative = path.relative_to(base).as_posix()
+            if stat.S_ISLNK(mode):
+                if not path.resolve(strict=True).is_relative_to(root.resolve()):
+                    raise ValueError("node runtime contains an external symlink")
+                value = "link:" + os.readlink(path)
+            elif stat.S_ISREG(mode):
+                value = "file:" + _sha256(path)
+            else:
+                raise ValueError("node runtime contains a special file")
+            digest.update(
+                relative.encode("utf-8") + b"\0" + value.encode("utf-8") + b"\0"
+            )
     return digest.hexdigest()
 
 
@@ -136,6 +139,17 @@ def _verify_lock(base: Path) -> None:
         or not (base / "node_modules/@node-llama-cpp/linux-x64").is_dir()
     ):
         raise ValueError("CPU native runtime is unavailable")
+    metadata = json.loads(
+        (
+            base
+            / "node_modules/@node-llama-cpp/linux-x64/bins/linux-x64/_nlcBuildMetadata.json"
+        ).read_text(encoding="utf-8")
+    )
+    if metadata["buildOptions"]["llamaCpp"] != {
+        "repo": "ggml-org/llama.cpp",
+        "release": SEARCH_MATERIALS.llama_cpp_release,
+    }:
+        raise ValueError("llama.cpp revision mismatch")
 
 
 def verify_search_materials(
@@ -177,16 +191,7 @@ def verify_search_materials(
             "package_sha256": expected_package_hash,
             "lock_sha256": expected_lock_hash,
             "runtime_tree_sha256": runtime_tree_hash,
-            "materials": {
-                "node_version": SEARCH_MATERIALS.node_version,
-                "node_llama_cpp_version": SEARCH_MATERIALS.node_llama_cpp_version,
-                "llama_cpp_revision": SEARCH_MATERIALS.llama_cpp_revision,
-                "sqlite_vec_version": SEARCH_MATERIALS.sqlite_vec_version,
-                "embedding_sha256": SEARCH_MATERIALS.embedding.sha256,
-                "embedding_tokenizer_sha256": SEARCH_MATERIALS.embedding.tokenizer_metadata_sha256,
-                "embedding_pooling": SEARCH_MATERIALS.embedding.pooling,
-                "embedding_dimensions": SEARCH_MATERIALS.embedding_dimensions,
-            },
+            "materials": asdict(SEARCH_MATERIALS),
         }
         if not isinstance(data, dict) or any(
             data.get(key) != value for key, value in expected.items()
@@ -221,7 +226,7 @@ def verify_search_materials(
             )
         node_version = (
             subprocess.run(
-                ["node", "--version"],
+                [str(base / "node/bin/node"), "--version"],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -352,7 +357,7 @@ class NodeSearchWorker:
         request = self._request(operation, payload)
         try:
             process = subprocess.Popen(
-                ["node", str(self.base / "worker.mjs")],
+                [str(self.base / "node/bin/node"), str(self.base / "worker.mjs")],
                 cwd=self.base,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -444,7 +449,7 @@ class NodeSearchWorker:
         )
         try:
             process = subprocess.Popen(
-                ["node", str(self.base / "worker.mjs")],
+                [str(self.base / "node/bin/node"), str(self.base / "worker.mjs")],
                 cwd=self.base,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,

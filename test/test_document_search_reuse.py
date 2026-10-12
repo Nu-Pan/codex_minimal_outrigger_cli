@@ -20,6 +20,7 @@ from commons.runtime_document_search import (
     SearchError,
 )
 from commons.runtime_document_search_observation import SearchObservation
+from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_git import remove_worktree
 
 
@@ -166,9 +167,11 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_s
     assert inputs() == [original]
 
 
-@pytest.mark.parametrize("change", ["partition", "inference"])
+@pytest.mark.parametrize(
+    "change", ["partition", "inference", "runtime", "contract", "model"]
+)
 def test_reuse_compatibility_is_independent_of_partition(
-    tmp_path, cache_search, change
+    tmp_path, cache_search, monkeypatch, change
 ):
     """入力片を固定し、分割条件と推論条件による cache の互換性だけを検査する。"""
     create, inputs = cache_search
@@ -179,15 +182,37 @@ def test_reuse_compatibility_is_independent_of_partition(
     config = _tuning()
     if change == "partition":
         config = replace(config, chunk_tokens=64, chunk_overlap_tokens=1)
-    else:
+    elif change == "inference":
         config = replace(config, embedding_context_tokens=256)
+    else:
+        from commons import runtime_document_search as module
+
+        if change == "runtime":
+            materials = replace(
+                SEARCH_MATERIALS,
+                node_version="different-node",
+                node_llama_cpp_version="different-library",
+                llama_cpp_release="different-release",
+                llama_cpp_revision="different-revision",
+            )
+        elif change == "contract":
+            materials = replace(
+                SEARCH_MATERIALS, document_embedding_contract="changed-input"
+            )
+        else:
+            materials = replace(
+                SEARCH_MATERIALS,
+                embedding=replace(SEARCH_MATERIALS.embedding, sha256="different-model"),
+            )
+        monkeypatch.setattr(module, "SEARCH_MATERIALS", materials)
+    incompatible = change in ("inference", "contract", "model")
     with closing(create(root, config)) as search:
         second = search.synchronize()
         assert first.identity != second.identity
         assert search.sync_progress["generated_embeddings"] == (
-            1 if change == "inference" else 0
+            1 if incompatible else 0
         )
-    assert inputs() == [original] * (2 if change == "inference" else 1)
+    assert inputs() == [original] * (2 if incompatible else 1)
 
 
 @pytest.mark.parametrize(

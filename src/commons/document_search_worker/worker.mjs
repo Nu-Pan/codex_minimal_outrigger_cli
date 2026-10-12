@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 
 function writeOutput(text) {
   // pipe の部分書込みは stream に任せ、全データの送信完了を待つ。
-  // https://nodejs.org/docs/latest-v22.x/api/stream.html#writablewritechunk-encoding-callback
+  // https://nodejs.org/docs/latest-v24.x/api/stream.html#writablewritechunk-encoding-callback
   return new Promise((resolve, reject) => {
     process.stdout.once("error", reject);
     process.stdout.write(text, (error) => {
@@ -97,8 +97,9 @@ function checkedVector(value, dimensions) {
 }
 
 function checkedEmbeddingInput(model, text, contextSize) {
-  // 3.20.0 checks the tokenized text before adding BOS/EOS. Reserve both slots.
-  if (model.tokenize(text, false).length + 2 > contextSize) {
+  // BOS/EOS の最大二枠も確保し、追加後の入力が context size 未満であることを保つ。
+  // https://github.com/withcatai/node-llama-cpp/blob/v3.22.1/src/evaluator/LlamaEmbeddingContext.ts
+  if (model.tokenize(text, false).length + 2 >= contextSize) {
     fail("embedding context is insufficient");
   }
   return text;
