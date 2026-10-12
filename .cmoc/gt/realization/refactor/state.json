@@ -944,8 +944,8 @@
   "src/commons/runtime_feedback_store.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "5b907a2233e3abade39189e8d1a6815a86978ea64de84b516201f06b6281592d",
-    "last_investigated_at": "2026-10-10_12-44-03_535"
+    "last_investigated_sha256": "b3352e6664c6c15320574976a864c5682d4275d3af465515df28e06863bb89e7",
+    "last_investigated_at": "2026-10-12_09-49-51_070"
   },
   "src/commons/runtime_git.py": {
     "investigation_required": true,
@@ -1438,6 +1438,12 @@
     "last_investigation_result": "findings",
     "last_investigated_sha256": "682848276d7ebc14af467b1b96ad935bdd39aca562e046a41bde36afda82f831",
     "last_investigated_at": "2026-10-11_03-25-01_813"
+  },
+  "test/test_feedback_store.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "test/test_file_inventory.py": {
     "investigation_required": true,
