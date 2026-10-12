@@ -510,7 +510,7 @@ def _feedback_invocation_body(
     fields: dict[str, object],
 ) -> list[str]:
     """feedback publication と混同しない invocation summary を描画する。"""
-    statuses = feedback_statuses(logger)
+    # front matter と同じ確定済み publication 状態を本文にも使う。
     return [
         "# cmoc feedback report invocation summary",
         _outcome_sentence(classification),
@@ -518,9 +518,9 @@ def _feedback_invocation_body(
         "## 実行段階",
         *_step_lines(logger, classification),
         "## 確定済みの部分結果",
-        f"- 正常 publication: `{statuses['normal_publication_status']}`",
-        f"- incomplete 診断: `{statuses['incomplete_diagnostic_status']}`",
-        f"- current pointer 更新: `{statuses['current_pointer_update_status']}`",
+        f"- 正常 publication: `{fields['normal_publication_status']}`",
+        f"- incomplete 診断: `{fields['incomplete_diagnostic_status']}`",
+        f"- current pointer 更新: `{fields['current_pointer_update_status']}`",
         "## checkpoint と部分結果",
         f"- report cut: `{_field_status(fields.get('report_cut_id'))}`",
         "- normalization checkpoint: "

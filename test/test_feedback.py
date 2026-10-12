@@ -2957,6 +2957,17 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
     assert result.exit_code == 1, result.output
     assert (root / "README.md").read_text() == "joined repair\n"
+    report_text = terminal_primary_report(result).read_text()
+    publication_status = (
+        "completed" if fault in {"raw_cleanup", "cleanup"} else "not_completed"
+    )
+    for field, label, expected in (
+        ("normal_publication_status", "正常 publication", publication_status),
+        ("incomplete_diagnostic_status", "incomplete 診断", "not_completed"),
+        ("current_pointer_update_status", "current pointer 更新", publication_status),
+    ):
+        assert f'{field}: "{expected}"' in report_text
+        assert f"- {label}: `{expected}`" in report_text
     joined_head = run_git(root, "rev-parse", "HEAD").stdout
     saved_report = None
     if fault in {"raw_cleanup", "cleanup"}:
@@ -2968,7 +2979,6 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert feedback_completion_counts(root)[0] == 0
         if fault == "raw_cleanup":
             assert raw.exists()
-        report_text = terminal_primary_report(result).read_text()
         assert "publication_established: true" in report_text
     # 手動操作の拒否は merge 記録（参照回復を含む）と finalization journal の両経路で検査する。
     # completion/publication の障害種別や raw cleanup の進捗は、この拒否条件を変えない。

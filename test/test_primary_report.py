@@ -473,6 +473,13 @@ def test_user_interruption_saves_feedback_invocation_summary(
     assert "# 中断完了: cmoc feedback report" in captured.out
     assert 'terminal_classification: "user_interruption"' in rendered
     assert "feedback publication または active state ではありません" in rendered
+    for field, label in (
+        ("normal_publication_status", "正常 publication"),
+        ("incomplete_diagnostic_status", "incomplete 診断"),
+        ("current_pointer_update_status", "current pointer 更新"),
+    ):
+        assert f'{field}: "not_completed"' in rendered
+        assert f"- {label}: `not_completed`" in rendered
 
     assert "中断理由: `report cut を固定する前に停止しました。`" in rendered
     assert "## checkpoint と部分結果" in rendered
