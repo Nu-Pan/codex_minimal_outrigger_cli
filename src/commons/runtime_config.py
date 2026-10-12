@@ -214,52 +214,58 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     }
 
 
+def _validate_json_toml_value(item: Any, active_containers: set[int]) -> JsonTomlValue:
+    """呼び出しごとの巡回状態を使い、循環 container も拒否する。"""
+    # 関数は共有し、設定の各文字列を検証するたびに自己参照 closure を作らない。
+    if isinstance(item, str):
+        # TOML string は Unicode scalar value だけを受理する。
+        # ASCII には surrogate がないので、文字単位の走査を省ける。
+        if not item.isascii() and any(
+            0xD800 <= ord(character) <= 0xDFFF for character in item
+        ):
+            raise TypeError
+        return item
+    if isinstance(item, bool):
+        return item
+    if type(item) is int:
+        # TOML 1.0 の integer は signed 64 bit に限定される。
+        if not -(2**63) <= item < 2**63:
+            raise TypeError
+        return item
+    if isinstance(item, float):
+        # NaN と infinity は JSON value ではない。
+        if not math.isfinite(item):
+            raise TypeError
+        return item
+    if isinstance(item, (list, dict)):
+        identity = id(item)
+        if identity in active_containers:
+            raise TypeError
+        active_containers.add(identity)
+        try:
+            if isinstance(item, list):
+                return [
+                    _validate_json_toml_value(element, active_containers)
+                    for element in item
+                ]
+            restored: dict[str, JsonTomlValue] = {}
+            for key, element in item.items():
+                if not isinstance(key, str):
+                    raise TypeError
+                _validate_json_toml_value(key, active_containers)
+                restored[key] = _validate_json_toml_value(element, active_containers)
+            return restored
+        finally:
+            active_containers.remove(identity)
+    raise TypeError
+
+
 def validate_json_toml_value(value: Any) -> JsonTomlValue:
     """JSON と TOML の双方へ意味を変えず保存できる値を検証する。"""
 
-    def _validate(item: Any, active_containers: set[int]) -> JsonTomlValue:
-        """循環 container も拒否しながら再帰的な値を検証する。"""
-        if isinstance(item, str):
-            # TOML string は Unicode scalar value だけを受理する。
-            # ASCII には surrogate がないので、文字単位の走査を省ける。
-            if not item.isascii() and any(
-                0xD800 <= ord(character) <= 0xDFFF for character in item
-            ):
-                raise TypeError
-            return item
-        if isinstance(item, bool):
-            return item
-        if type(item) is int:
-            # TOML 1.0 の integer は signed 64 bit に限定される。
-            if not -(2**63) <= item < 2**63:
-                raise TypeError
-            return item
-        if isinstance(item, float):
-            # NaN と infinity は JSON value ではない。
-            if not math.isfinite(item):
-                raise TypeError
-            return item
-        if isinstance(item, (list, dict)):
-            identity = id(item)
-            if identity in active_containers:
-                raise TypeError
-            active_containers.add(identity)
-            try:
-                if isinstance(item, list):
-                    return [_validate(element, active_containers) for element in item]
-                restored: dict[str, JsonTomlValue] = {}
-                for key, element in item.items():
-                    if not isinstance(key, str):
-                        raise TypeError
-                    _validate(key, active_containers)
-                    restored[key] = _validate(element, active_containers)
-                return restored
-            finally:
-                active_containers.remove(identity)
-        raise TypeError
-
+    # 巡回状態は値ごとに隔離し、深さエラーは設定エラーへ変換する。
     try:
-        return _validate(value, set())
+        return _validate_json_toml_value(value, set())
     except RecursionError as exc:
         # {{work-root}}/oracle/doc/app_spec/error_handling.md
         # 深すぎる provider-local container も設定エラーとして上位へ返す。
