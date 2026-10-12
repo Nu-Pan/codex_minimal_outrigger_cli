@@ -1266,10 +1266,10 @@
     "last_investigated_at": "2026-10-13_03-58-41_581"
   },
   "test/test_acp_builder_editing_run_parameters.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f857f213e70d2ede7c3c6fdb514b86b6657e4f905405fc65305f65e7f2be9e09",
-    "last_investigated_at": "2026-10-10_22-45-36_342"
+    "last_investigated_at": "2026-10-13_04-01-37_047"
   },
   "test/test_acp_builder_session_join_parameters.py": {
     "investigation_required": true,
