@@ -23,13 +23,10 @@ _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
 def append_log_record(path: Path, record: dict[str, Any]) -> None:
     """親と MCP process の JSON Lines 追記を調停して即時 flush する。"""
     # process 間でも一つの record を分断せず、既存ログだけへ追記する。
+    # close が flush 後に lock を解放するため、追記ごとの明示操作を重ねない。
     with path.open("a", encoding="utf-8") as stream:
         fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
-        try:
-            stream.write(json.dumps(record, ensure_ascii=True) + "\n")
-            stream.flush()
-        finally:
-            fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+        stream.write(json.dumps(record, ensure_ascii=True) + "\n")
 
 
 @dataclass
