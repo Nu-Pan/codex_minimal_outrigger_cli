@@ -143,6 +143,36 @@ def _isolate_download_asset_cache(request, monkeypatch):
 
 
 @pytest.fixture
+def document_repository(tmp_path, monkeypatch):
+    """Git 検査以外の検索契約に、検証済みの root・文書集合を渡す。"""
+    root = tmp_path / "repo"
+    docs = root / "oracle/doc"
+    docs.mkdir(parents=True)
+    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
+
+    def repository_root(work_root):
+        assert work_root == root
+        return root
+
+    def enumerate_documents(work_root):
+        assert work_root == root
+        return sorted(docs.glob("*.md")), []
+
+    # Git 分類・root 解決・非追跡検査は実 repository の同期・再利用 test に残す。
+    # 本文・位置の再確認、索引 identity・lease・保存・検索と MCP 応答は製品経路を通す。
+    monkeypatch.setattr(runtime_document_search, "repo_root", repository_root)
+    monkeypatch.setattr(
+        runtime_document_search, "require_cmoc_ignored", lambda _root: None
+    )
+    monkeypatch.setattr(
+        runtime_document_search,
+        "enumerate_oracle_and_realization_files",
+        enumerate_documents,
+    )
+    return root
+
+
+@pytest.fixture
 def document_search_clock(monkeypatch):
     """検索の時計だけを操作し、process の停止待ちには実時間を使う。"""
 

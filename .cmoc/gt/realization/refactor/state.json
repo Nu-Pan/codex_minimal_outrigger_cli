@@ -1370,8 +1370,8 @@
   "test/test_document_search_deadlines.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "5806e0cf3e0f7c6815660e15013b1aa1e4592d64ad917a7abdb06fae25bb6f8f",
-    "last_investigated_at": "2026-10-11_01-55-57_069"
+    "last_investigated_sha256": "91a8f3f1a496bdbb9c4bdaf1e7df9d388c0618eab23d1cad4fe1c5c23dfb4013",
+    "last_investigated_at": "2026-10-13_06-38-48_499"
   },
   "test/test_document_search_materials.py": {
     "investigation_required": true,

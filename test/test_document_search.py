@@ -173,34 +173,6 @@ def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     return root
 
 
-@pytest.fixture
-def document_repository(tmp_path, monkeypatch):
-    """Git 検査以外の検索契約に、検証済みの root・文書集合を渡す。"""
-    from commons import runtime_document_search as module
-
-    root = tmp_path / "repo"
-    docs = root / "oracle/doc"
-    docs.mkdir(parents=True)
-    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
-
-    def repository_root(work_root):
-        assert work_root == root
-        return root
-
-    def enumerate_documents(work_root):
-        assert work_root == root
-        return sorted(docs.glob("*.md")), []
-
-    # Git 分類・root 解決・非追跡検査は実 repository の同期・再利用 test に残す。
-    # 本文・位置の再確認、索引 identity・lease・保存・検索と MCP 応答は製品経路を通す。
-    monkeypatch.setattr(module, "repo_root", repository_root)
-    monkeypatch.setattr(module, "require_cmoc_ignored", lambda _root: None)
-    monkeypatch.setattr(
-        module, "enumerate_oracle_and_realization_files", enumerate_documents
-    )
-    return root
-
-
 def _test_node_runtime(base: Path) -> None:
     """worker の隔離配置から、テスト用の実 Node を起動できるようにする。"""
     node = base / "node/bin/node"
