@@ -38,7 +38,7 @@ def failure_control_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     stub_codex_overrides(monkeypatch)
     # cwd・linked worktree と process 間の採番は test_codex_runtime_paths.py、
     # 採番の永続性は test_runtime_ids.py、probe の実結合は quota_retry に残す。
-    # snapshot・補正・復元のケースは実 Git の cli_repository を使う。
+    # 成果物の差分取得・復元を検査するケースは実 Git の cli_repository を使う。
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
@@ -49,6 +49,21 @@ def failure_control_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
         lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
     )
     return root
+
+
+@pytest.fixture
+def output_only_root(
+    failure_control_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """成果物を操作しない出力検証では、snapshot を空の状態として扱う。"""
+    # 実 Git の差分取得・補正時の復元は corrects_declared_postcondition と
+    # restores_artifacts_changed_by_correction に残す。
+    monkeypatch.setattr(
+        runtime_codex_exec,
+        "capture_worktree_snapshot",
+        lambda work_root: WorktreeSnapshot(work_root, ()),
+    )
+    return failure_control_root
 
 
 def test_run_codex_exec_corrects_schema_output_in_same_session(
@@ -318,12 +333,10 @@ def test_run_codex_exec_corrects_declared_postcondition(
 
 
 def test_run_codex_exec_does_not_replace_missing_correction_session(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    output_only_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """session ID を取得できない出力契約違反を新しい session で代替しない。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = output_only_root
     # process の入出力は corrects_schema_output_in_same_session に残す。
     calls = script_codex_calls(
         monkeypatch, [(0, '{"type":"turn.completed"}\n', '{"bad": true}')]
@@ -489,12 +502,12 @@ def test_run_codex_exec_logs_keyboard_interrupt(
 
 
 def test_run_codex_exec_corrects_structured_output_parse_failure(
-    cli_repository: Path,
+    output_only_root: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """parse failure を同じ session で補正し、元の出力と診断を保持する。"""
-    root = cli_repository
+    root = output_only_root
     # 検証済み本文の再読み取りを検出し、補正・保存の既存ケースで I/O 回帰も守る。
     output_reads: list[Path] = []
     original_open = Path.open
@@ -505,8 +518,6 @@ def test_run_codex_exec_corrects_structured_output_parse_failure(
         return original_open(path, mode, *args, **kwargs)
 
     monkeypatch.setattr(Path, "open", record_output_read)
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
     # parse と補正・ログ保存を検証し、process の受け渡しは schema 補正の結合に残す。
     stdout = (
         '{"type":"thread.started","thread_id":"session-1"}\n{"type":"turn.completed"}\n'
@@ -598,17 +609,10 @@ def test_run_codex_exec_rejects_invalid_schema_before_codex_call(
 
 
 def test_run_codex_exec_rechecks_schema_source_and_each_output(
-    failure_control_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    output_only_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """検証器を再利用しても、別 call の不正出力と source の更新・破損を検出する。"""
-    root = failure_control_root
-    # このケースは成果物を変更しない。実 Git の差分取得・補正時の復元は
-    # corrects_declared_postcondition と restores_artifacts_changed_by_correction に残す。
-    monkeypatch.setattr(
-        runtime_codex_exec,
-        "capture_worktree_snapshot",
-        lambda work_root: WorktreeSnapshot(work_root, ()),
-    )
+    root = output_only_root
     schema = tmp_path / "schema.json"
     schema_text = oracle_schema_path("feedback", "normalize_issue.json").read_text(
         encoding="utf-8"
@@ -865,12 +869,10 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
 
 
 def test_run_codex_exec_stops_after_output_correction_limit(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    output_only_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """補正を 2 回で終え、正式出力の受理失敗を元の call と対応付ける。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    root = output_only_root
     sleep_calls: list[float] = []
     monkeypatch.setattr(
         runtime_codex_exec.time, "sleep", lambda seconds: sleep_calls.append(seconds)
