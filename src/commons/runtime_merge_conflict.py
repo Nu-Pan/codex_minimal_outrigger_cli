@@ -196,21 +196,15 @@ def _check_conflict_markers(root: Path) -> None:
         if path.is_symlink() or not path.is_file():
             continue
         try:
-            lines = path.read_text(encoding="utf-8").splitlines()
+            text = path.read_text(encoding="utf-8")
         except UnicodeError:
             continue
-        if _has_conflict_marker_block("\n".join(lines)):
+        if _has_conflict_marker_block(text):
             raise CmocError("conflict marker が残っています。", [], relative)
 
 
 def _has_conflict_marker_block(text: str) -> bool:
-    """Markdown の bare separator と Git conflict marker を区別する。"""
-    state = 0
-    for line in text.splitlines():
-        if line.startswith("<<<<<<<"):
-            state = 1
-        elif line.startswith(("|||||||", ">>>>>>>")):
-            return True
-        elif state == 1 and len(line) >= 7 and set(line) == {"="}:
-            state = 2
-    return state != 0
+    """行頭の Git marker を検出し、Markdown の bare separator を許す。"""
+    return any(
+        line.startswith(("<<<<<<<", "|||||||", ">>>>>>>")) for line in text.splitlines()
+    )

@@ -1288,17 +1288,50 @@ def test_session_join_reads_unmerged_paths_with_newlines(
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
+        ("", False),
         ("Title\n=======\n", False),
+        ("inline <<<<<<< HEAD\ninline ||||||| base\ninline >>>>>>> branch\n", False),
         ("<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n", True),
         ("<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n", True),
         ("<<<<<<< HEAD\nhome\n", True),
         ("||||||| base\n", True),
         (">>>>>>> branch\n", True),
+        ("prefix\r<<<<<<< HEAD\rhome\r", True),
+        ("prefix\u2028>>>>>>> branch\u2028", True),
     ],
 )
 def test_session_join_conflict_marker_detection(text: str, expected: bool) -> None:
     """未解決 marker block の検出は bare Markdown separator を許す。"""
     assert merge_conflict_module._has_conflict_marker_block(text) is expected
+
+
+def test_session_join_checks_staged_text_conflict_markers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """通常 text だけを検査し、改行を含む付随 path の残存 marker を報告する。"""
+    (tmp_path / "directory.md").mkdir()
+    (tmp_path / "binary.dat").write_bytes(b"<<<<<<< HEAD\n\xff")
+    target = tmp_path / "target.md"
+    target.write_text("<<<<<<< HEAD\n")
+    (tmp_path / "link.md").symlink_to(target)
+    (tmp_path / "plain.md").write_text("Title\n=======\ninline <<<<<<< HEAD\n")
+    staged = ["deleted.md", "directory.md", "binary.dat", "link.md", "plain.md"]
+
+    def fake_git(_args: list[str], _root: Path) -> cmoc_runtime.CommandResult:
+        return cmoc_runtime.CommandResult(0, "\0".join(staged) + "\0", "")
+
+    monkeypatch.setattr(merge_conflict_module, "run_git", fake_git)
+    merge_conflict_module._check_conflict_markers(tmp_path)
+
+    relative = "src/line\nbreak.txt"
+    marker = tmp_path / relative
+    marker.parent.mkdir()
+    marker.write_text("prefix\u2028<<<<<<< HEAD\nhome\n")
+    staged.append(relative)
+
+    with pytest.raises(CmocError, match="conflict marker が残っています。") as error:
+        merge_conflict_module._check_conflict_markers(tmp_path)
+    assert error.value.detail == relative
 
 
 def test_session_join_uses_linked_worktree_branch(
