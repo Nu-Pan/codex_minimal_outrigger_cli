@@ -1046,8 +1046,8 @@
   "src/commons/runtime_windows_toast.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "ec2ff9d13fb19e614e1d22b439fa0d5470ba01bdaeddf51c7c37a9bba7130fde",
-    "last_investigated_at": "2026-10-10_15-47-17_470"
+    "last_investigated_sha256": "658d2691f6dcf9ec08f5ab5bfb0b3ec5b1e5c04e7228ac2a4607be6f5d85e5e5",
+    "last_investigated_at": "2026-10-12_12-58-47_083"
   },
   "src/config/__init__.py": {
     "investigation_required": true,
