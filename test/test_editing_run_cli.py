@@ -2044,16 +2044,45 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
     assert f'completion_reason: "{expected_reason}"' in report_text
 
 
-def test_apply_failure_stops_tracked_codex_children_before_rollback(
-    ready_run_session: tuple[Path, str, Path],
+def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """apply error cleanup が追跡中 Codex child を rollback 前に停止する。"""
-    _root, _session_branch, state_path = ready_run_session
+    """中断後に child を停止して遅延 commit を戻し、差分検査失敗も report する。"""
+    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    # child 停止→rollback と、その後の差分取得失敗は同じ cleanup で検証する。
+    # 中断・遅延 commit 除去・report 保存に個別の session/run を準備しない。
+    root, _session_branch, state_path = ready_content_session
+    run_worktree: Path | None = None
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     events: list[str] = []
+    original_rollback = apply_module.rollback_work_unit
 
+    def fail_apply(
+        parameter: AgentCallParameter,
+        **kwargs: object,
+    ) -> NoReturn:
+        """本命 agent の中断後に error cleanup へ進む状態を再現する。"""
+        nonlocal run_worktree
+        run_worktree = parameter.agent_call_cwd
+        raise KeyboardInterrupt("agent interrupted")
+
+    def delayed_agent_commit(process: object) -> None:
+        """停止処理の直前に agent child が commit した状態を再現する。"""
+        assert process is child
+        events.append("stop")
+        assert run_worktree is not None
+        (run_worktree / "README.md").write_text("delayed agent commit\n")
+        run_git(run_worktree, "add", "README.md")
+        run_git(run_worktree, "commit", "-m", "delayed agent commit")
+
+    def record_rollback(worktree: Path) -> None:
+        """child 停止後に本来の rollback が実行されることを確認する。"""
+        events.append("rollback")
+        original_rollback(worktree)
+
+    monkeypatch.setattr(apply_module, "run_codex_exec", fail_apply)
     monkeypatch.setattr(
         runtime_run_module,
         "read_run_process_id",
@@ -2062,67 +2091,9 @@ def test_apply_failure_stops_tracked_codex_children_before_rollback(
     monkeypatch.setattr(
         runtime_run_module,
         "stop_child_process_group",
-        lambda _process: events.append("stop"),
-    )
-    original_rollback = apply_module.rollback_work_unit
-
-    def record_rollback(worktree: Path) -> None:
-        """rollback の順序を確認してから本来の cleanup を実行する。"""
-        events.append("rollback")
-        original_rollback(worktree)
-
-    monkeypatch.setattr(apply_module, "rollback_work_unit", record_rollback)
-    monkeypatch.setattr(
-        apply_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
-    )
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    assert events == ["stop", "rollback"]
-    assert _state(state_path)["run"]["state"] == "error"
-
-
-def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
-    ready_content_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """遅延 commit を戻し、差分検査に失敗しても error state と report を保存する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    # 最終 report の差分検査は rollback 後なので、同じ error cleanup で検証する。
-    # 専用の session・worktree は作らず、commit 除去の実 Git 検査も維持する。
-    root, _session_branch, state_path = ready_content_session
-    run_worktree: Path | None = None
-
-    def fail_apply(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> NoReturn:
-        """本命 agent の失敗後に error cleanup へ進む状態を再現する。"""
-        nonlocal run_worktree
-        run_worktree = parameter.agent_call_cwd
-        raise RuntimeError("agent failed")
-
-    def delayed_agent_commit(_root: Path, _session_id: str) -> list[str]:
-        """停止処理の直前に agent child が commit した状態を再現する。"""
-        assert run_worktree is not None
-        (run_worktree / "README.md").write_text("delayed agent commit\n")
-        run_git(run_worktree, "add", "README.md")
-        run_git(run_worktree, "commit", "-m", "delayed agent commit")
-        return []
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fail_apply)
-    monkeypatch.setattr(
-        apply_module,
-        "stop_tracked_codex_children",
         delayed_agent_commit,
     )
+    monkeypatch.setattr(apply_module, "rollback_work_unit", record_rollback)
     monkeypatch.setattr(
         apply_module,
         "tree_changes",
@@ -2138,6 +2109,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     )
 
     assert result.exit_code == 1
+    assert events == ["stop", "rollback"]
     assert _state(state_path)["run"]["state"] == "error"
     assert run_worktree is not None
     assert (run_worktree / "README.md").read_text() == "# repo\n"
@@ -2156,7 +2128,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     assert 'state_after: "error"' in report_text
     assert 'completion_reason: "error"' in report_text
     assert "exit_code: 1" in report_text
-    assert "agent failed" in report_text
+    assert "KeyboardInterrupt('agent interrupted')" in report_text
     assert "agent commit cleanup failed" in report_text
     assert "change inspection failed" in report_text
     assert "git diff unavailable" in report_text
