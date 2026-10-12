@@ -40,6 +40,7 @@ from commons.runtime_document_search import DocumentSearch, SearchError
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import ReporterAvailabilityError
+from commons.runtime_paths import ensure_work_directories
 from commons.runtime_refactor import RefactorState
 from config.cmoc_config import CmocConfig
 from main import app
@@ -343,16 +344,54 @@ def test_doctor_preprocess_restores_empty_work_directories(
     ]
 
 
-@pytest.mark.parametrize("command", [("doctor",), ("session", "fork")])
 @pytest.mark.parametrize("relative", ["oracle", *_WORK_DIRECTORIES])
-def test_preprocess_rejects_work_directory_collisions(
-    committed_repository, monkeypatch, command, relative
+def test_work_directory_collisions_preserve_content_and_report_target(
+    tmp_path, relative
 ):
-    """通常起動と明示 doctor は配置先・親の衝突を保持し、本命処理へ進まない。"""
-    # HEAD の保持は確認するが、配置先検証は履歴内容・config・索引同期を使わない。
-    root = committed_repository
+    """全配置先と親の衝突を保持し、失敗した配置先と修復方法を診断する。"""
+    # 配置先別の境界は共通 helper で検査し、Git・CLI の準備を重ねない。
+    root = tmp_path
     collision = root / relative
     collision.parent.mkdir(parents=True, exist_ok=True)
+    collision.write_text("keep collision\n")
+
+    with pytest.raises(CmocError) as exc_info:
+        ensure_work_directories(root)
+
+    assert collision.read_text() == "keep collision\n"
+    assert "作業用配置先" in exc_info.value.summary
+    assert f"work-root: {root}" in exc_info.value.detail
+    assert (
+        f"path: {root / ('oracle/doc' if relative == 'oracle' else relative)}"
+        in exc_info.value.detail
+    )
+    assert "reason:" in exc_info.value.detail
+    assert "退避" in exc_info.value.next_actions[0]
+
+
+def test_work_directory_validation_does_not_repair_missing_paths(tmp_path):
+    """最終検証で失われた配置先を発見し、検証だけの呼び出しでは補完しない。"""
+    ensure_work_directories(tmp_path)
+    missing = tmp_path / "oracle/test"
+    missing.rmdir()
+
+    with pytest.raises(CmocError) as exc_info:
+        ensure_work_directories(tmp_path, create_missing=False)
+
+    assert not missing.exists()
+    assert f"work-root: {tmp_path}" in exc_info.value.detail
+    assert f"path: {missing}" in exc_info.value.detail
+
+
+@pytest.mark.parametrize("command", [("doctor",), ("session", "fork")])
+def test_preprocess_rejects_work_directory_collisions(
+    committed_repository, monkeypatch, command
+):
+    """通常起動と明示 doctor は衝突を診断して終了し、Git 状態を変更しない。"""
+    # 全配置先の拒否は helper のケースに残し、両入口との結合だけを実 Git で確かめる。
+    root = committed_repository
+    collision = root / "oracle/test"
+    collision.parent.mkdir(parents=True)
     collision.write_text("keep collision\n")
     head_before = run_git(root, "rev-parse", "HEAD").stdout
     branch_before = run_git(root, "branch", "--show-current").stdout
@@ -367,9 +406,7 @@ def test_preprocess_rejects_work_directory_collisions(
     report = terminal_primary_report(result).read_text()
     assert "作業用配置先" in report
     assert f"work-root: {root}" in report
-    assert (
-        f"path: {root / ('oracle/doc' if relative == 'oracle' else relative)}" in report
-    )
+    assert f"path: {collision}" in report
     assert "reason:" in report
     assert "退避" in report
 
