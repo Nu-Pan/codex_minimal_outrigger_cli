@@ -173,6 +173,34 @@ def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     return root
 
 
+@pytest.fixture
+def document_repository(tmp_path, monkeypatch):
+    """Git 検査以外の検索契約に、検証済みの root・文書集合を渡す。"""
+    from commons import runtime_document_search as module
+
+    root = tmp_path / "repo"
+    docs = root / "oracle/doc"
+    docs.mkdir(parents=True)
+    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
+
+    def repository_root(work_root):
+        assert work_root == root
+        return root
+
+    def enumerate_documents(work_root):
+        assert work_root == root
+        return sorted(docs.glob("*.md")), []
+
+    # Git 分類・root 解決・非追跡検査は実 repository の同期・再利用 test に残す。
+    # 本文・位置の再確認、索引 identity・lease・保存・検索と MCP 応答は製品経路を通す。
+    monkeypatch.setattr(module, "repo_root", repository_root)
+    monkeypatch.setattr(module, "require_cmoc_ignored", lambda _root: None)
+    monkeypatch.setattr(
+        module, "enumerate_oracle_and_realization_files", enumerate_documents
+    )
+    return root
+
+
 def _test_node_runtime(base: Path) -> None:
     """worker の隔離配置から、テスト用の実 Node を起動できるようにする。"""
     node = base / "node/bin/node"
@@ -923,10 +951,12 @@ def test_database_symlink_cannot_redirect_index_writes(tmp_path: Path) -> None:
     assert not outside.exists()
 
 
-def test_config_change_reclaims_only_inactive_index(tmp_path: Path) -> None:
+def test_config_change_reclaims_only_inactive_index(
+    tmp_path: Path, document_repository: Path
+) -> None:
     """互換条件の変更後は旧索引を再利用せず、未参照なら回収する。"""
     pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     with (
         closing(
             DocumentSearch(
@@ -957,10 +987,12 @@ def test_config_change_reclaims_only_inactive_index(tmp_path: Path) -> None:
         assert not old_index.exists()
 
 
-def test_config_change_preserves_index_while_request_uses_it(tmp_path: Path) -> None:
+def test_config_change_preserves_index_while_request_uses_it(
+    tmp_path: Path, document_repository: Path
+) -> None:
     """旧設定の要求が推論中なら、接続を閉じてもその索引を回収しない。"""
     pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     started = threading.Event()
     release = threading.Event()
 
@@ -1093,34 +1125,6 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
     assert "result" not in response
 
 
-@pytest.fixture
-def candidate_repository(tmp_path, monkeypatch):
-    """候補選択には検証済みの root・文書集合を渡し、Git 起動を省く。"""
-    from commons import runtime_document_search as module
-
-    root = tmp_path / "repo"
-    docs = root / "oracle/doc"
-    docs.mkdir(parents=True)
-    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
-
-    def repository_root(work_root):
-        assert work_root == root
-        return root
-
-    def enumerate_documents(work_root):
-        assert work_root == root
-        return sorted(docs.glob("*.md")), []
-
-    # Git 分類・root 解決・非追跡検査は実 repository の同期・再利用 test に残す。
-    # 本文・位置の再確認、embedding の保存、検索と MCP 応答は製品経路を通す。
-    monkeypatch.setattr(module, "repo_root", repository_root)
-    monkeypatch.setattr(module, "require_cmoc_ignored", lambda _root: None)
-    monkeypatch.setattr(
-        module, "enumerate_oracle_and_realization_files", enumerate_documents
-    )
-    return root
-
-
 class _CandidateWorker(_InferenceDouble):
     """候補位置と文書・query の embedding を制御し、製品経路で検証する。"""
 
@@ -1179,14 +1183,14 @@ class _CandidateWorker(_InferenceDouble):
 )
 def test_mcp_success_schema_and_candidate_limits(
     tmp_path,
-    candidate_repository,
+    document_repository,
     candidate_count,
     available,
     similarities,
     limit_cases,
 ):
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
-    root = candidate_repository
+    root = document_repository
     path = "oracle/doc/allowed.md"
     # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     (root / path).write_text("候補\n" * available)
@@ -1242,10 +1246,10 @@ def test_mcp_success_schema_and_candidate_limits(
 
 
 def test_mcp_aggregates_current_locations_without_excerpts(
-    tmp_path, candidate_repository
+    tmp_path, document_repository
 ):
     """重複・入れ子・連鎖する重なりの最大値を保ち、ファイルと範囲を類似度順に返す。"""
-    root = candidate_repository
+    root = document_repository
     path = "oracle/doc/allowed.md"
     other = "oracle/doc/second.md"
     (root / other).write_text("別の原文\n")
@@ -1333,10 +1337,10 @@ def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
 
 
 def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
-    tmp_path, candidate_repository
+    tmp_path, document_repository
 ):
     """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
-    root = candidate_repository
+    root = document_repository
     path = "oracle/doc/allowed.md"
     # 異なる合法上限 20・21 と未採用候補一件で順位と値を検査する。50 の境界は別ケースで保つ。
     candidate_count = 21
@@ -1394,10 +1398,10 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
 
 
 def test_mcp_candidate_limit_applies_before_range_merging(
-    tmp_path, candidate_repository
+    tmp_path, document_repository
 ):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
-    root = candidate_repository
+    root = document_repository
     path = "oracle/doc/allowed.md"
     # 20・21 件の採用で統合前の上限違反を検出する。50 の境界は別ケースで保つ。
     candidate_count = 21
@@ -1448,12 +1452,12 @@ def test_mcp_candidate_limit_applies_before_range_merging(
 
 
 def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
-    tmp_path, monkeypatch, candidate_repository
+    tmp_path, monkeypatch, document_repository
 ):
     """採用上限外へ隠れる異常値や演算失敗も、成功を併記せず MODEL_FAILURE にする。"""
     from commons import runtime_document_search as module
 
-    root = candidate_repository
+    root = document_repository
     path = "oracle/doc/allowed.md"
     # 採用上限を満たす正常候補と、上限外にある異常候補一つを用意する。
     candidate_count = 20
@@ -1580,12 +1584,12 @@ def test_output_schema_rejects_malformed_results(value):
 
 
 def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document_repository: Path
 ) -> None:
     """分割実装の変更では索引を再構築し、互換な同一入力片を引き継ぐ。"""
     from commons import runtime_document_search as module
 
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     package = tmp_path / "worker-source"
     package.mkdir()
     original_files = resources.files
@@ -1622,9 +1626,11 @@ def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(
     assert second.reused_embeddings == second.chunk_count
 
 
-def test_search_rechecks_saved_config_for_each_request(tmp_path: Path) -> None:
+def test_search_rechecks_saved_config_for_each_request(
+    tmp_path: Path, document_repository: Path
+) -> None:
     """起動後の有効な変更は新索引を使い、不備は旧設定へ戻さず拒否する。"""
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     path = root / ".cmoc/gt/config.json"
     write_config(path, CmocConfig())
     search = DocumentSearch(
