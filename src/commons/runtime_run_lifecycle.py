@@ -83,8 +83,10 @@ class GitChange:
     paths: tuple[str, ...]
 
 
+@reuse_git_path_queries()
 def require_ready_session() -> tuple[Path, Path, str, Path, SessionState, str]:
     """fork の共通事前条件を検査し、session 情報を返す。"""
+    # 同じ起点の両 root を共有し、branch・state・未確定差分は呼び出すたび検査する。
     repository = repo_root()
     session_worktree = work_root()
     branch = current_branch(session_worktree)
