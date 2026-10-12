@@ -37,8 +37,8 @@ def quota_prompt_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """prompt・parameter の検査では root 探索結果だけを置換する。"""
     root = tmp_path / "repo"
     root.mkdir()
-    # 実 Git の root 導出は test_basic_runtime.py と polls_and_resumes、
-    # 相対 HOME のケースに残し、context と正本 probe builder は実物を使う。
+    # 実 Git の root 導出は test_basic_runtime.py と polls_and_resumes に残し、
+    # context と正本 probe builder は実物を使う。
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
@@ -53,7 +53,7 @@ def quota_control_root(
     root = quota_prompt_root
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    # 実採番の結合は polls_and_resumes と相対 HOME のケースに残す。
+    # 実採番の結合は polls_and_resumes に残す。
     # 永続性・process 間の採番は test_runtime_ids.py と test_codex_runtime_paths.py で検証する。
     ids = count()
     monkeypatch.setattr(
@@ -100,9 +100,12 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """quota 枯渇後に代表 probe を実行し、元 session を resume する。"""
+    """相対 HOME と cwd を保持して代表 probe・元 session の resume を実行する。"""
     root = cli_repository
     codex_home = setup_codex_home(tmp_path, monkeypatch)
+    # 初回・probe・resume の相対 HOME も、この代表起動で検査する。
+    relative_codex_home = "../codex_home"
+    monkeypatch.setenv("CODEX_HOME", relative_codex_home)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     timestamps = iter(
         [
@@ -124,7 +127,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
             f"calls = pathlib.Path({str(calls)!r})",
             "args = sys.argv[1:]",
             "stdin = sys.stdin.read()",
-            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}) + '\\n')",
+            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin, 'cwd': os.getcwd(), 'codex_home': os.environ['CODEX_HOME'], 'resolved_home': str(pathlib.Path(os.environ['CODEX_HOME']).resolve())}) + '\\n')",
             "if 'resume' in args:",
             "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "    output.write_text(json.dumps({'ok': True}))",
@@ -143,7 +146,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         "build_realization_apply_fork_launch_exec_parameter",
-        FileAccessMode.READONLY,
+        FileAccessMode.PURE_ORACLE_READ,
         "prompt",
         None,
         root,
@@ -167,7 +170,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     argv_calls = [record["args"] for record in call_records]
     assert all(args.count("--no-daemon") == 1 for args in argv_calls)
     assert argv_calls[0][-1] == "-"
-    assert all(record["codex_home"] == str(codex_home) for record in call_records)
+    for record in call_records:
+        assert record["cwd"] == str(root)
+        assert codex_arg_value(record["args"], "--cd") == str(root)
+        assert record["codex_home"] == relative_codex_home
+        assert Path(record["resolved_home"]) == codex_home
     assert call_records[1]["stdin"] == probe_prompt
     assert argv_calls[1][:3] == [
         "--ask-for-approval",
@@ -233,6 +240,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         assert log["model_provider"] == base_call_config.model_provider
         assert log["model"] == base_call_config.model
         assert log["reasoning_effort"] == base_call_config.reasoning_effort
+        assert log["file_access_mode"] == "pure_oracle_read"
     initial_log = next(log for log in main_logs if "resume" not in log["argv"])
     resume_log = next(log for log in main_logs if "resume" in log["argv"])
     resume_entry = next((path, log) for path, log in main_entries if log is resume_log)
@@ -388,94 +396,6 @@ def test_quota_probe_uses_canonical_complete_prompt(
     assert probe.structured_output_schema_path is None
     assert probe.enable_document_search_mcp is False
     assert probe.agent_call_cwd == base.agent_call_cwd
-
-
-def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """probe も Codex cwd 基準で相対 CODEX_HOME を解決する。"""
-    root = cli_repository
-    initial_codex_home = root / "relative_codex_home"
-    probe_codex_home = root / "relative_codex_home"
-    for codex_home in {initial_codex_home, probe_codex_home}:
-        codex_home.mkdir()
-    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
-    stub_codex_overrides(monkeypatch)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = quota_probe_prompt(root)
-    records: list[tuple[str, Path, Path, Path, Path]] = []
-
-    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
-    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        """初回、probe、resume の cwd と CODEX_HOME を記録する。"""
-        stdin = cast(TextIO, kwargs["stdin"]).read()
-        codex_process_cwd = Path(cast(str, kwargs["cwd"]))
-        kind = (
-            "resume"
-            if "resume" in argv
-            else "probe"
-            if stdin == probe_prompt
-            else "initial"
-        )
-        home = Path(cast(dict[str, str], kwargs["env"])["CODEX_HOME"])
-        records.append(
-            (
-                kind,
-                codex_process_cwd,
-                home,
-                codex_process_cwd / home,
-                Path(argv[argv.index("--cd") + 1]),
-            )
-        )
-        if kind == "initial":
-            return subprocess.CompletedProcess(
-                argv,
-                1,
-                '{"type":"thread.started","thread_id":"sess-1"}\n'
-                '{"type":"error","message":"Quota exceeded"}\n',
-                "",
-            )
-        output = Path(argv[argv.index("--output-last-message") + 1])
-        output.write_text(json.dumps({"ok": kind}))
-        return subprocess.CompletedProcess(argv, 0, '{"type": "turn.completed"}\n', "")
-
-    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.PURE_ORACLE_READ,
-        "prompt",
-        None,
-        root,
-    )
-
-    run_codex_exec(
-        parameter,
-        root=root,
-        quota_poll_interval_sec=0,
-        config=CmocConfig(),
-    )
-
-    expected = [
-        (
-            "initial",
-            root,
-            Path("relative_codex_home"),
-            initial_codex_home,
-            root,
-        ),
-        ("probe", root, Path("relative_codex_home"), probe_codex_home, root),
-        (
-            "resume",
-            root,
-            Path("relative_codex_home"),
-            initial_codex_home,
-            root,
-        ),
-    ]
-    assert records == [
-        (kind, expected_codex_cwd, home, resolved_home, codex_cd)
-        for kind, expected_codex_cwd, home, resolved_home, codex_cd in expected
-    ]
 
 
 def test_run_codex_exec_reruns_after_quota_without_session_id(
