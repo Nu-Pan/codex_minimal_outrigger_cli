@@ -1388,8 +1388,8 @@
   "test/test_download_asset_cache.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "95dad398e92697b18557012a2c6ae8ff5dd1769324d75763b99e2dd3e280c059",
-    "last_investigated_at": "2026-10-11_02-23-00_063"
+    "last_investigated_sha256": "33c6833cb05da2e22ea3b73f24b0e79534e0b1486dc5097434680236cc56f08b",
+    "last_investigated_at": "2026-10-13_07-03-42_682"
   },
   "test/test_editing_run_cli.py": {
     "investigation_required": true,

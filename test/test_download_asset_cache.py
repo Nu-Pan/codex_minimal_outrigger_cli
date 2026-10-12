@@ -411,7 +411,8 @@ def test_node_preparation_uses_adopted_distribution_without_system_node(
     filename = adopted["filename"]
     directory = filename.removesuffix(".tar.xz")
     output = io.BytesIO()
-    with tarfile.open(fileobj=output, mode="w:xz") as archive:
+    # 内容照合・展開の検査用なので、fixture の圧縮には最小 preset を使う。
+    with tarfile.open(fileobj=output, mode="w:xz", preset=0) as archive:
         for name in ("bin/node", "lib/node_modules/npm/bin/npm-cli.js"):
             body = name.encode()
             info = tarfile.TarInfo(f"{directory}/{name}")
@@ -471,12 +472,6 @@ def _npm_fixture(base, distribution):
         "packages": packages,
     }
     (base / "package-lock.json").write_text(json.dumps(lock))
-    node = base / "node/bin/node"
-    node.parent.mkdir(parents=True)
-    node.symlink_to(shutil.which("node"))
-    npm = base / "node/lib/node_modules/npm"
-    npm.parent.mkdir(parents=True)
-    npm.symlink_to(Path(shutil.which("npm")).resolve().parent.parent)
     return (base / "package-lock.json").read_bytes()
 
 
@@ -484,7 +479,8 @@ def test_npm_build_reuses_all_dependencies_without_network(
     tmp_path, distribution, monkeypatch, asset_logger
 ):
     """取得資材を照合し、別配置の cold build を実 npm で通信なしに完了する。"""
-    if not shutil.which("node") or not shutil.which("npm"):
+    system_node, system_npm = shutil.which("node"), shutil.which("npm")
+    if not system_node or not system_npm:
         pytest.skip("Node and npm are required for offline asset preparation")
     # Node の socket 境界で通信を禁止し、試行もファイルから検出する。
     attempted = tmp_path / "network-attempts"
@@ -525,6 +521,13 @@ def test_npm_build_reuses_all_dependencies_without_network(
     root = tmp_path / "cmoc-cached"
     base = root / "build"
     original = _npm_fixture(base, distribution)
+    # 実 Node/npm は、この cold build でだけ用意する。
+    node = base / "node/bin/node"
+    node.parent.mkdir(parents=True)
+    node.symlink_to(system_node)
+    npm = base / "node/lib/node_modules/npm"
+    npm.parent.mkdir(parents=True)
+    npm.symlink_to(Path(system_npm).resolve().parent.parent)
     monkeypatch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
     with (root / "lock").open("w") as descriptor:
         try:
@@ -547,6 +550,7 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
 ):
     """同一資材を共有し、同名の別版と異なる OS/CPU の optional 資材を区別する。"""
     # platform の実取得と npm への受け渡しは、通信禁止の実 npm test で通す。
+    monkeypatch.setenv("PATH", "")
     monkeypatch.setattr(
         assets,
         "_npm_platform",
