@@ -599,23 +599,22 @@ def test_session_abandon_switches_home_and_marks_state(
 
 
 def test_session_abandon_uses_linked_worktree_branch(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree上のsession abandonが対応home branchを使うことを検証する。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     monkeypatch.chdir(root)
     _seed_session_management_files(root)
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(linked)
+    # linked fork の state 生成は専用ケース、fork→abandon の結合は通常 worktree に残す。
+    session_branch, home_branch = _seed_session_in_worktree(root, linked)
     state_path = session_state_path(root, session_branch)
-    home_branch = session_home_branch(root, session_branch)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
+    # session 固有 commit があっても home branch に取り込まないことを検査する。
+    run_git(linked, "commit", "--allow-empty", "-m", "session-only change")
 
     result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
 
@@ -927,29 +926,19 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
     run_git(root, "switch", session_branch)
 
     original_run_git = session_module.run_git
-    original_branch_exists = session_module.branch_exists
     original_delete_branch = session_module.delete_branch
-    recreated = False
     raced = False
 
-    def record_recreated_branch(
+    def remove_branch_after_recreation(
         args: list[str], git_cwd: Path, check: bool = True
     ) -> cmoc_runtime.CommandResult:
-        """rollbackのbranch復元を検出する。"""
-        nonlocal recreated
+        """復元成功と切替の間に local ref が消える競合を再現する。"""
+        nonlocal raced
         result = original_run_git(args, git_cwd, check)
         if args == ["branch", session_branch, session_commit]:
-            recreated = True
-        return result
-
-    def remove_recreated_branch(repository: Path, branch: str) -> bool:
-        """branch存在確認とcheckoutの間にlocal refが消える競合を再現する。"""
-        nonlocal raced
-        exists = original_branch_exists(repository, branch)
-        if branch == session_branch and recreated and exists and not raced:
-            original_run_git(["branch", "-D", branch], repository)
+            original_run_git(["branch", "-D", session_branch], git_cwd)
             raced = True
-        return exists
+        return result
 
     def delete_then_interrupt(
         repository: Path, branch: str, force: bool = False
@@ -959,8 +948,7 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
         assert result.returncode == 0
         raise KeyboardInterrupt()
 
-    monkeypatch.setattr(session_module, "run_git", record_recreated_branch)
-    monkeypatch.setattr(session_module, "branch_exists", remove_recreated_branch)
+    monkeypatch.setattr(session_module, "run_git", remove_branch_after_recreation)
     monkeypatch.setattr(session_module, "delete_branch", delete_then_interrupt)
 
     result = runner.invoke(app, ["session", "abandon"])
@@ -968,6 +956,7 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
     assert session_preprocess == [root]
     assert result.exit_code != 0
     assert raced
+    assert "branch rollback failed:" in result.stderr
     assert current_branch(root) == home_branch
     assert json.loads(state_path.read_text())["session"]["state"] == "active"
     assert (
