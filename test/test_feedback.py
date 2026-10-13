@@ -144,6 +144,21 @@ def feedback_prompt_directory(
     return feedback_directory
 
 
+@pytest.fixture
+def feedback_publication_session(
+    ready_join_session: tuple[Path, str, Path],
+    feedback_without_transport: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    """案件の publication 検査には、修復不要の session を用意する。"""
+    # doctor の修復・設定検査は test_doctor_cli.py、feedback との結合は
+    # repairs_sequential_waves_and_preserves_late_intake に残す。
+    # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
+    monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", lambda: None)
+    root, _session_branch, _state_path = ready_join_session
+    return root
+
+
 def _payload(
     *,
     text: str = "README の内容から反復する問題を確認した。",
@@ -3105,14 +3120,13 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert (root / "README.md").read_text() == "changed after publication\n"
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
 def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
-    ready_content_session: tuple[Path, str, Path],
+    feedback_publication_session: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """両方の終了判定で active と一覧から除き、各案件の履歴を残す。"""
     # 異なる subject の案件を同時に用意し、Git/session と二回の publication を共有する。
-    root, _session_branch, _state_path = ready_content_session
+    root = feedback_publication_session
     cases = {}
     for terminal_verdict, kind, reference_path in (
         ("already_resolved", "file", "README.md"),
@@ -3286,13 +3300,12 @@ def test_machine_threshold_counts_distinct_scopes_within_one_day(
         assert feedback_report_module._machine_threshold_met(aggregate) == (index == 1)
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
 def test_machine_issue_lifecycle_keeps_threshold_state_after_window_expires(
-    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
+    feedback_publication_session: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """閾値未満・案件化・全件失効の公開 state と、失効の両分岐を検証する。"""
     # 案件化までの Git/session と publication を、期限切れ検査の準備にも使う。
-    root, _session_branch, _state_path = ready_content_session
+    root = feedback_publication_session
     context = _context(root)
     base = datetime.now(timezone.utc).replace(microsecond=0)
     cut_at = base.isoformat().replace("+00:00", "Z")
