@@ -1584,10 +1584,10 @@
     "last_investigated_at": "2026-10-13_10-56-11_585"
   },
   "test/test_skill_metadata.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "bf735875997b038795c375af2a689094f308e7a286145efe3996c3ce9cd796d8",
-    "last_investigated_at": "2026-10-11_06-53-03_408"
+    "last_investigated_at": "2026-10-13_10-59-05_908"
   },
   "test/test_struct_doc_rendering.py": {
     "investigation_required": true,
