@@ -152,11 +152,12 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     assert override_config["approvals_reviewer"] == "auto_review"
     notification_command = override_config["notify"]
     assert isinstance(notification_command, list)
-    assert notification_command[0] == sys.executable
-    assert Path(notification_command[1]).name == "runtime_windows_toast.py"
-    assert notification_command[2] == "codex-tui-callback"
-    callback_state_root = Path(notification_command[3])
-    assert notification_command[4:] == ["codex tui", root.name]
+    notification_launcher = notification_command[:-4]
+    assert notification_launcher[0] == sys.executable
+    assert Path(notification_launcher[-1]).name == "runtime_windows_toast.py"
+    assert notification_command[-4] == "codex-tui-callback"
+    callback_state_root = Path(notification_command[-3])
+    assert notification_command[-2:] == ["codex tui", root.name]
     assert "features" not in override_config
     assert record["args"][record["args"].index("--enable") + 1] == "hooks"
     hooks = override_config["hooks"]
@@ -170,10 +171,9 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     assert session_handler["timeout"] == 10
     assert session_handler["async"] is False
     session_start_command = shlex.split(session_handler["command"])
-    assert session_start_command[0] == sys.executable
-    assert Path(session_start_command[1]).name == "runtime_windows_toast.py"
-    assert session_start_command[2] == "codex-tui-session-start-hook"
-    assert Path(session_start_command[3]) == callback_state_root
+    assert session_start_command[:-2] == notification_launcher
+    assert session_start_command[-2] == "codex-tui-session-start-hook"
+    assert Path(session_start_command[-1]) == callback_state_root
     assert not callback_state_root.exists()
     hook_state = hooks["state"]
     assert list(hook_state) == ["/<session-flags>/config.toml:session_start:0:0"]

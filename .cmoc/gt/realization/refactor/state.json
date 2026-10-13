@@ -50,8 +50,8 @@
   "oracle/doc/app_spec/console_and_file_log.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "4206e446464a7bdb7b3e75ad25e197deaf8567a942f98222794b690abfbe55ee",
-    "last_investigated_at": "2026-10-11_08-37-49_575"
+    "last_investigated_sha256": "9e782d4ae54ea765e88d06ccc9ff30da8a6cf2f5a970a0a9fa6df78639f348c2",
+    "last_investigated_at": "2026-10-13_13-27-27_042"
   },
   "oracle/doc/app_spec/doctor_preprocess.md": {
     "investigation_required": true,

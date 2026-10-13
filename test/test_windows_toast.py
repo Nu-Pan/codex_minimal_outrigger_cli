@@ -265,15 +265,15 @@ def test_tui_callback_state_is_invocation_local(tmp_path: Path, toast_clock) -> 
     )
 
     assert callback is not None
-    assert callback.command[0] == sys.executable
-    assert Path(callback.command[1]) == Path(runtime_windows_toast.__file__).resolve()
-    assert callback.command[2] == "codex-tui-callback"
-    state_root = Path(callback.command[3])
+    launcher = callback.command[:-4]
+    assert launcher[0] == sys.executable
+    assert Path(launcher[-1]) == Path(runtime_windows_toast.__file__).resolve()
+    assert callback.command[-4] == "codex-tui-callback"
+    state_root = Path(callback.command[-3])
     assert state_root.is_dir()
-    assert callback.command[4:] == ["tui", "repository"]
+    assert callback.command[-2:] == ["tui", "repository"]
     assert callback.session_start_command == [
-        sys.executable,
-        str(Path(runtime_windows_toast.__file__).resolve()),
+        *launcher,
         "codex-tui-session-start-hook",
         str(state_root),
     ]
@@ -301,7 +301,7 @@ def test_tui_callback_close_drains_running_callback(
         tmp_path / "repository",
     )
     assert callback is not None
-    state_root = Path(callback.command[3])
+    state_root = Path(callback.command[-3])
     session_arguments = ["codex-tui-session-start-hook", str(state_root)]
     assert (
         runtime_windows_toast._run_codex_tui_session_start_hook(
@@ -444,7 +444,7 @@ def test_tui_callback_commands_run_as_standalone_scripts(
             "turn-id": "turn-1",
         }
     )
-    state_root = Path(callback.command[3])
+    state_root = Path(callback.command[-3])
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorded_toast = tmp_path / "toast.jsonl"
@@ -461,7 +461,14 @@ def test_tui_callback_commands_run_as_standalone_scripts(
         **os.environ,
         "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
         "CMOC_TEST_TOAST_LOG": str(recorded_toast),
+        "PYTHONPATH": str(bin_dir),
     }
+    # 標準ライブラリだけの helper に、site 初期化や外部 package の準備は不要。
+    # 起動時に site を読み込む回帰は、二つの既存 process の stderr で検出する。
+    (bin_dir / "sitecustomize.py").write_text(
+        "raise RuntimeError('notification helper initialized site')\n",
+        encoding="utf-8",
+    )
 
     try:
         result = subprocess.run(
@@ -497,7 +504,7 @@ def test_tui_callback_commands_run_as_standalone_scripts(
                 duplicate_notifications.append((title, message)) or True
             ),
         )
-        assert runtime_windows_toast.main([*callback.command[2:], turn_payload]) == 0
+        assert runtime_windows_toast.main([*callback.command[-4:], turn_payload]) == 0
         assert duplicate_notifications == []
         captured = capsys.readouterr()
         assert captured.out == ""

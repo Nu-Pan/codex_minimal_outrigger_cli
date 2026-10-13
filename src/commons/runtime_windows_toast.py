@@ -121,16 +121,15 @@ def create_tui_notification_callback(
         state_directory = TemporaryDirectory(prefix="cmoc-toast-")
     except OSError:
         return None
-    script = str(Path(__file__).resolve())
+    # 両 helper は標準ライブラリだけを使うため、起動ごとの site 初期化を省く。
+    launcher = [sys.executable, "-S", str(Path(__file__).resolve())]
     session_start_command = [
-        sys.executable,
-        script,
+        *launcher,
         "codex-tui-session-start-hook",
         state_directory.name,
     ]
     command = [
-        sys.executable,
-        script,
+        *launcher,
         "codex-tui-callback",
         state_directory.name,
         _short_text(command_name, "command"),
