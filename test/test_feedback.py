@@ -144,21 +144,6 @@ def feedback_prompt_directory(
     return feedback_directory
 
 
-@pytest.fixture
-def feedback_publication_session(
-    ready_join_session: tuple[Path, str, Path],
-    feedback_without_transport: None,
-    monkeypatch: pytest.MonkeyPatch,
-) -> Path:
-    """案件の publication 検査には、修復不要の session を用意する。"""
-    # doctor の修復・設定検査は test_doctor_cli.py、feedback との結合は
-    # repairs_sequential_waves_and_preserves_late_intake に残す。
-    # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
-    monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", lambda: None)
-    root, _session_branch, _state_path = ready_join_session
-    return root
-
-
 def _payload(
     *,
     text: str = "README の内容から反復する問題を確認した。",

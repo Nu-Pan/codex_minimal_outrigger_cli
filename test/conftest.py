@@ -20,6 +20,7 @@ import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
+import sub_commands.feedback.remediation as remediation_module
 from commons.runtime_config import write_config
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
@@ -117,6 +118,21 @@ def ready_join_session(
     return _prepare_run_session(
         cli_repository, monkeypatch, with_content=True, with_managed_files=True
     )
+
+
+@pytest.fixture
+def feedback_publication_session(
+    ready_join_session: tuple[Path, str, Path],
+    feedback_without_transport: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    """案件の publication 検査には、修復不要の session を用意する。"""
+    # doctor の修復・設定検査は test_doctor_cli.py、feedback との結合は
+    # test_feedback.py の repairs_sequential_waves_and_preserves_late_intake に残す。
+    # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
+    monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", lambda: None)
+    root, _session_branch, _state_path = ready_join_session
+    return root
 
 
 @pytest.fixture

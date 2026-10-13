@@ -104,6 +104,15 @@ def close_repository(tmp_path, monkeypatch):
     return root
 
 
+@pytest.fixture
+def case_report_session(feedback_publication_session, monkeypatch):
+    """案件の再確認・再発では、session 作成と doctor 修復を重ねない。"""
+    # report→close と doctor の結合は reported_case、前処理失敗時の停止は
+    # test_close_doctor_failure_preserves_state_and_saves_invocation_report に残す。
+    monkeypatch.setattr(close_module, "run_doctor_preprocess", lambda _root: None)
+    return feedback_publication_session
+
+
 def _publish_prepared_cases(root, statuses, machine_aggregates):
     # close が保持する record を直接準備する。report→close の結合、
     # normalization・threshold・入力消費は reported_case と test_feedback.py に残す。
@@ -576,10 +585,11 @@ def test_close_completion_log_failure_reports_published_state(open_case, monkeyp
 
 
 def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
-    open_case, monkeypatch
+    case_report_session, monkeypatch
 ):
-    root, issue = open_case
-    _active_session(root, monkeypatch)
+    root = case_report_session
+    _, _, identity = _store_agent_issue(root, None)
+    issue = _publish_prepared_cases(root, {identity: "inconclusive"}, {})[identity]
     _install_codex_outputs(
         monkeypatch, _remediation_output(issue["issue_id"], "human_required")
     )
@@ -600,9 +610,9 @@ def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
 
 
 def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(
-    ready_content_session, monkeypatch
+    case_report_session, monkeypatch
 ):
-    root, _, _ = ready_content_session
+    root = case_report_session
     log = root / ".cmoc/gu/log/sub_command/exec_000000_2026-10-08_00-00.jsonl"
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text("{}\n")
