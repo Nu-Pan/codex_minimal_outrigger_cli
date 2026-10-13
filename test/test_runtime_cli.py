@@ -574,43 +574,11 @@ def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
     assert notifications == []
 
 
-def test_cli_tui_startup_keyboard_interrupt_emits_failure_notification(
-    cli_terminal_directory: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """TUI process 起動前の Ctrl+C は失敗結果として通知する。"""
-    notifications: list[str] = []
-    monkeypatch.setattr(
-        runtime_cli,
-        "notify_terminal_result",
-        lambda _command, _repository, state: notifications.append(state),
-    )
-
-    def interrupt_before_launch() -> None:
-        """TUI 起動前の準備処理から伝播した Ctrl+C を再現する。"""
-        raise KeyboardInterrupt()
-
-    with pytest.raises(KeyboardInterrupt):
-        runtime_cli.run_cli_subcommand(
-            interrupt_before_launch,
-            command_name="tui",
-            command_argv=["cmoc", "tui"],
-            doctor_preprocess=False,
-            tui_process=True,
-        )
-
-    assert notifications == ["failed"]
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "# 失敗: cmoc tui" in captured.err
-    assert "Traceback" not in captured.err
-
-
 def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
     cli_terminal_directory: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Codex subprocess の起動前中断を TUI 終了後の中断と混同しない。"""
     root = cli_terminal_directory
@@ -624,6 +592,8 @@ def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
     )
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
+    # 永続採番は test_runtime_ids.py、TUI との結合は test_codex_runtime_tui.py に残す。
+    monkeypatch.setattr(runtime_codex_tui, "new_id", runtime_logging.new_id)
     notifications: list[str] = []
     monkeypatch.setattr(
         runtime_cli,
@@ -659,49 +629,37 @@ def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
         )
 
     assert notifications == ["failed"]
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "# 失敗: cmoc tui" in captured.err
+    assert "Traceback" not in captured.err
 
 
-@pytest.mark.parametrize(
-    ("tui_process", "expected_state"),
-    [(False, "completed"), (True, None)],
-)
-def test_cli_terminal_notification_boundary_on_success(
+def test_cli_tui_success_does_not_emit_terminal_result_notification(
     cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
-    tui_process: bool,
-    expected_state: str | None,
 ) -> None:
-    """非対話成功だけを終了 log と cleanup の後に terminal 通知する。"""
-    root = cli_terminal_directory
-    calls: list[tuple[str, Path, str]] = []
-
-    def record_notification(command: str, repository: Path, state: str) -> None:
-        """通知時点の logger と終了 event を検証する。"""
-        assert runtime_cli.current_subcommand_logger() is None
-        [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
-        events = [json.loads(line) for line in log_path.read_text().splitlines()]
-        assert events[-1]["event"] == "command_finished"
-        calls.append((command, repository, state))
-
-    monkeypatch.setattr(runtime_cli, "notify_terminal_result", record_notification)
+    """TUI 正常終了時には terminal result の表示と通知を追加しない。"""
+    notifications: list[str] = []
+    monkeypatch.setattr(
+        runtime_cli,
+        "notify_terminal_result",
+        lambda _command, _repository, state: notifications.append(state),
+    )
 
     runtime_cli.run_cli_subcommand(
         lambda: None,
         command_name="probe",
         command_argv=["cmoc", "probe"],
         doctor_preprocess=False,
-        tui_process=tui_process,
+        tui_process=True,
     )
 
     captured = capsys.readouterr()
-    expected = [] if expected_state is None else [("probe", root, expected_state)]
-    assert calls == expected
-    if tui_process:
-        assert captured.out == ""
-        assert "# 完了: cmoc probe" not in captured.err
-    else:
-        assert "# 完了: cmoc probe" in captured.out
+    assert notifications == []
+    assert captured.out == ""
+    assert "# 完了: cmoc probe" not in captured.err
 
 
 @pytest.mark.parametrize("tui_process", [False, True])
@@ -803,11 +761,19 @@ def test_interruptible_cli_handles_common_preprocess_interrupt(
 def test_cli_notification_failure_does_not_change_terminal_result(
     cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """通知 callback 自体の失敗を成功したサブコマンドへ逆流させない。"""
+    """終了 log と cleanup 後に成功を一度通知し、通知失敗を結果へ逆流させない。"""
+    root = cli_terminal_directory
+    calls: list[tuple[str, Path, str]] = []
 
-    def fail_notification(*_args: object) -> None:
-        """通知境界からの想定外例外を再現する。"""
+    def fail_notification(command: str, repository: Path, state: str) -> None:
+        """確定・cleanup 済みの通知境界から想定外例外を再現する。"""
+        assert runtime_cli.current_subcommand_logger() is None
+        [log_path] = (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
+        events = [json.loads(line) for line in log_path.read_text().splitlines()]
+        assert events[-1]["event"] == "command_finished"
+        calls.append((command, repository, state))
         raise RuntimeError("toast failed")
 
     monkeypatch.setattr(runtime_cli, "notify_terminal_result", fail_notification)
@@ -818,6 +784,10 @@ def test_cli_notification_failure_does_not_change_terminal_result(
         command_argv=["cmoc", "probe"],
         doctor_preprocess=False,
     )
+
+    assert calls == [("probe", root, "completed")]
+    captured = capsys.readouterr()
+    assert "# 完了: cmoc probe" in captured.out
 
 
 def test_render_error_uses_concise_handled_failure_format() -> None:
