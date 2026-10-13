@@ -765,7 +765,8 @@ def _resolve_reference_path(
         raise _corruption(
             f"{description} path が symlink を含みます。", lexical_candidate
         )
-    candidate = lexical_candidate.resolve(strict=False)
+    # symlink を含まない絶対 path は、同じ祖先を再走査せず .. だけ正規化する。
+    candidate = Path(os.path.normpath(lexical_candidate))
     expected = expected_root.resolve(strict=False)
     if candidate != expected and expected not in candidate.parents:
         raise _corruption(f"{description} path が期待 root 外です。", candidate)

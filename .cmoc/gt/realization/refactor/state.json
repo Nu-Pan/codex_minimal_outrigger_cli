@@ -357,7 +357,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "058852babba8588d1a91592f7b21cfd8d92bbe8e6d923185517c26704e5373c5",
-    "last_investigated_at": "2026-10-11_16-09-47_758"
+    "last_investigated_at": "2026-10-13_23-38-58_519"
   },
   "oracle/src/oracle/acp_builder/feedback/remediate_issue.py": {
     "investigation_required": true,

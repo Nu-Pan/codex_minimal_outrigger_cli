@@ -2454,7 +2454,9 @@ def test_normalization_schema_supports_editable_namespace_package(
 
 
 @pytest.mark.parametrize("allow_missing", [False, True])
-@pytest.mark.parametrize("link_kind", ["file", "parent", "dangling"])
+@pytest.mark.parametrize(
+    "link_kind", ["file", "parent", "parent_traversal", "dangling"]
+)
 def test_state_reference_rejects_in_repository_symlink_alias(
     feedback_directory: Path,
     allow_missing: bool,
@@ -2467,10 +2469,15 @@ def test_state_reference_rejects_in_repository_symlink_alias(
     target = expected_root / "manifest.json"
     content = b"artifact\n"
     target.write_bytes(content)
-    if link_kind == "parent":
+    if link_kind in {"parent", "parent_traversal"}:
         alias_parent = expected_root / "alias"
         alias_parent.symlink_to(expected_root, target_is_directory=True)
-        alias = alias_parent / target.name
+        # .. の正規化で symlink の要素を消してから検査してはならない。
+        alias = (
+            alias_parent / ".." / target.name
+            if link_kind == "parent_traversal"
+            else alias_parent / target.name
+        )
     else:
         alias = expected_root / "alias.json"
         alias.symlink_to(target if link_kind == "file" else expected_root / "missing")
@@ -2514,6 +2521,10 @@ def test_state_reference_cleanup_relaxes_only_file_existence(
         )
 
     assert validate(reference) == target
+    (directory / "nested").mkdir()
+    assert validate({**reference, "path": "artifacts/nested/../record.json"}) == target
+    with pytest.raises(CmocError, match="期待 root 外"):
+        validate({**reference, "path": "artifacts/../outside.json"})
     target.write_bytes(b"changed\n")
     with pytest.raises(CmocError, match="SHA256"):
         validate(reference)
