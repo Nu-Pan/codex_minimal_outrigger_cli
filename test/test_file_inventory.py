@@ -445,21 +445,25 @@ def test_inventory_rejects_symlink_when_ignore_status_is_unknown(
         enumerate_oracle_and_realization_files(root)
 
 
-@pytest.mark.parametrize("target_location", ["inside", "outside"])
 def test_inventory_does_not_follow_ignored_symlink_target(
     tmp_path: Path,
     cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    target_location: str,
 ) -> None:
     """work-root 内外の symlink 参照先を link 経由で走査しない。"""
     root = cli_repository
     (root / ".gitignore").write_text("*.link\n")
-    target = root / "target" if target_location == "inside" else tmp_path / "target"
-    target.mkdir()
-    (target / "payload.txt").write_text("payload\n")
-    link = root / "ignored.link"
-    link.symlink_to(target, target_is_directory=True)
+    links: list[Path] = []
+    # 内外の参照先を同時に用意し、repository 準備と列挙を一度で済ませる。
+    for location, target in (
+        ("inside", root / "target"),
+        ("outside", tmp_path / "target"),
+    ):
+        target.mkdir()
+        (target / "payload.txt").write_text("payload\n")
+        link = root / f"ignored-{location}.link"
+        link.symlink_to(target, target_is_directory=True)
+        links.append(link)
     scanned: list[Path] = []
     original_scandir = runtime_git.os.scandir
 
@@ -474,14 +478,13 @@ def test_inventory_does_not_follow_ignored_symlink_target(
         root, enumerate_oracle_and_realization_files(root)
     )
 
-    assert link.absolute() not in scanned
-    assert all(
-        not relative.startswith("ignored.link/") for relative in realization_files
-    )
-    if target_location == "inside":
-        assert "target/payload.txt" in realization_files
-    else:
-        assert target.absolute() not in scanned
+    for link in links:
+        assert link.absolute() not in scanned
+        assert all(
+            not relative.startswith(f"{link.name}/") for relative in realization_files
+        )
+    assert "target/payload.txt" in realization_files
+    assert (tmp_path / "target").absolute() not in scanned
 
 
 @pytest.mark.parametrize(
@@ -536,15 +539,15 @@ def test_inventory_accepts_linked_worktree_git_file(
     assert realization_files == {"README.md"}
 
 
-def test_inventory_uses_all_ignore_sources_in_each_repository(
+def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     tmp_path: Path, cli_repository: Path
 ) -> None:
-    """root・nested の ignore source を owning repository ごとに反映する。"""
+    """列挙と単一 path 分類が owning repository の ignore source を反映する。"""
     root = cli_repository
     outer_global = tmp_path / "outer-global-ignore"
     outer_global.write_text("outer-global.txt\n")
     run_git(root, "config", "core.excludesFile", str(outer_global))
-    (root / ".gitignore").write_text("outer-root.txt\n")
+    (root / ".gitignore").write_text("outer-root.txt\n*.outer\n")
     subdirectory = root / "subdirectory"
     subdirectory.mkdir()
     (subdirectory / ".gitignore").write_text("outer-nested.txt\n")
@@ -564,7 +567,7 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(
     nested_global = tmp_path / "nested-global-ignore"
     nested_global.write_text("nested-global.txt\n")
     run_git(nested, "config", "core.excludesFile", str(nested_global))
-    (nested / ".gitignore").write_text("nested-root.txt\n")
+    (nested / ".gitignore").write_text("nested-root.txt\n*.nested\n")
     nested_subdirectory = nested / "subdirectory"
     nested_subdirectory.mkdir()
     (nested_subdirectory / ".gitignore").write_text("nested-child.txt\n")
@@ -576,9 +579,11 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(
         "nested-global.txt",
         "nested-local.txt",
         "subdirectory/nested-child.txt",
+        "dropped.nested",
     ):
         (nested / relative).write_text("ignored\n")
     (nested / "outer-root.txt").write_text("outer rules must not leak\n")
+    (nested / "kept.outer").write_text("kept\n")
 
     _, realization_files = _relative_sets(
         root, enumerate_oracle_and_realization_files(root)
@@ -593,9 +598,16 @@ def test_inventory_uses_all_ignore_sources_in_each_repository(
         "nested/nested-global.txt",
         "nested/nested-local.txt",
         "nested/subdirectory/nested-child.txt",
+        "nested/dropped.nested",
     }
     assert ignored_paths.isdisjoint(realization_files)
     assert "nested/outer-root.txt" in realization_files
+    assert "nested/kept.outer" in realization_files
+
+    # 同じ nested index と ignore source で、単一 path 分類の境界も検証する。
+    assert is_realization_file_path(root, nested / "kept.outer")
+    assert not is_realization_file_path(root, nested / "dropped.nested")
+    assert not is_realization_file_path(root, nested / ".git" / "config")
 
 
 def test_inventory_validates_duplicate_global_ignore_source_once(
@@ -632,24 +644,6 @@ def test_inventory_validates_duplicate_global_ignore_source_once(
 
     assert "ignored.txt" not in realization_files
     assert [path.resolve() for path in validated].count(global_ignore.resolve()) == 1
-
-
-def test_single_path_classifier_uses_nested_repository_context(
-    cli_repository: Path,
-) -> None:
-    """単一 path 分類も最内側 repository の ignore と metadata 境界を使う。"""
-    root = cli_repository
-    (root / ".gitignore").write_text("*.outer\n")
-    nested = _make_nested_repo(root / "nested")
-    (nested / ".gitignore").write_text("*.nested\n")
-    kept = nested / "kept.outer"
-    dropped = nested / "dropped.nested"
-    kept.write_text("kept\n")
-    dropped.write_text("dropped\n")
-
-    assert is_realization_file_path(root, kept)
-    assert not is_realization_file_path(root, dropped)
-    assert not is_realization_file_path(root, nested / ".git" / "config")
 
 
 def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
