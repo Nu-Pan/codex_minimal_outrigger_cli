@@ -69,6 +69,7 @@ from commons.runtime_feedback import (
     begin_feedback_call,
     start_feedback_invocation,
 )
+from commons.runtime_feedback_close_state import load_close_work
 from commons.runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_HOST,
@@ -2866,7 +2867,7 @@ def test_feedback_interrupt_after_run_start_reports_retained_run(
 def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
     ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """manifest の atomic write 後に中断しても interrupted 状態を保存する。"""
+    """manifest 保存直後の中断を記録し、未完了の cut を close で追い越さない。"""
     root, _session_branch, session_path = ready_run_session
     original_write = remediation_module.write_report_cut_manifest
 
@@ -2883,11 +2884,34 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
     assert result.exit_code == 0, result.output
     session_state = json.loads(session_path.read_text())
     assert session_state["run"]["state"] == "joinable"
-    manifest, _ = load_report_cut(root)
+    manifest, manifest_path = load_report_cut(root)
     assert manifest["processing"]["status"] == "interrupted"
     assert 'terminal_classification: "user_interruption"' in (
         terminal_primary_report(result).read_text()
     )
+
+    # 保存済み cut を使い、close の事前条件だけのために別の report/run を作らない。
+    saved_manifest = manifest_path.read_bytes()
+    saved_session = session_path.read_bytes()
+    before = load_active_state(root)
+    rejected = runner.invoke(
+        app,
+        [
+            "feedback",
+            "close",
+            "fbc_000000_2026-10-08_00-00",
+            "--reason",
+            "外部で解決を確認した",
+        ],
+        catch_exceptions=False,
+    )
+    assert rejected.exit_code == 1, rejected.output
+    assert "未完了の feedback run/publication/cleanup" in rejected.stderr
+    assert "feedback/invocation" in str(terminal_primary_report(rejected))
+    assert load_close_work(root) is None
+    assert load_active_state(root) == before
+    assert manifest_path.read_bytes() == saved_manifest
+    assert session_path.read_bytes() == saved_session
 
 
 @pytest.mark.usefixtures("feedback_without_transport")

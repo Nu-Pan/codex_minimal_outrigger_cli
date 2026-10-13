@@ -4,7 +4,7 @@ import json
 
 import pytest
 from _cli_support import runner, seed_search_config, terminal_primary_report
-from _git_support import SESSION_ID, make_repo, run_git
+from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_git
 from test_feedback import (
     _active_session,
     _context,
@@ -40,6 +40,13 @@ from commons.runtime_feedback_store import (
 )
 from commons.runtime_ids import is_common_id
 from commons.runtime_logging import SubcommandLogger
+from commons.runtime_state import (
+    RunPart,
+    SessionPart,
+    SessionState,
+    state_path,
+    write_state,
+)
 from main import app
 
 pytestmark = pytest.mark.usefixtures("feedback_without_transport")
@@ -472,26 +479,46 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(
     assert 'latest_state_summary: "attention"' in text
 
 
-def test_close_rejects_writer_lock_and_pending_feedback_run(open_case, monkeypatch):
+def test_close_rejects_writer_lock_and_pending_feedback_run(open_case):
+    """writer 排他と各未終了 run state を、session 作成や report 実行なしで検査する。"""
     root, issue = open_case
-    _active_session(root, monkeypatch)
     before = feedback_state.load_active_state(root)
     with feedback_state.feedback_writer_lock(root):
         result = _close(issue)
     assert result.exit_code == 1, result.output
-    assert feedback_state.load_active_state(root).current == before.current
-
-    def failed_call(*_a, **_k):
-        raise OSError("injected agent failure")
-
-    monkeypatch.setattr(report_module, "run_codex_exec", failed_call)
-    report = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert report.exit_code == 1, report.output
-    assert feedback_state.load_report_cut(root) is not None
-    result = _close(issue)
-    assert result.exit_code == 1, result.output
+    assert "feedback writer" in result.stderr
     assert close_state.load_close_work(root) is None
-    assert feedback_state.load_active_state(root).current == before.current
+    assert feedback_state.load_active_state(root) == before
+
+    # close が読む保存済み state だけを用意する。実 report cut による拒否は
+    # test_feedback.py の report cut 保存直後の中断 test と一緒に検査する。
+    path = state_path(root, SESSION_ID)
+    commit = before.generation_manifest["session_commit"]
+    state = SessionState(
+        session=SessionPart(
+            session_home_branch=current_branch(root), session_fork_commit=commit
+        ),
+        run=RunPart(
+            state="running",
+            kind="feedback_report",
+            branch=RUN_BRANCH,
+            fork_commit=commit,
+        ),
+    )
+    for run_state in ("running", "joinable", "error"):
+        state.run.state = run_state
+        write_state(path, state)
+        saved = path.read_bytes()
+
+        result = _close(issue)
+
+        assert result.exit_code == 1, (run_state, result.output)
+        assert "未終了の feedback run" in result.stderr, run_state
+        assert "feedback/invocation" in str(terminal_primary_report(result)), run_state
+        assert close_state.load_close_work(root) is None, run_state
+        assert feedback_state.load_active_state(root) == before, run_state
+        assert feedback_state.load_report_cut(root) is None, run_state
+        assert path.read_bytes() == saved, run_state
 
 
 def test_close_completion_log_failure_reports_published_state(open_case, monkeypatch):
