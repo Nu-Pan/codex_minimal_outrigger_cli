@@ -18,6 +18,7 @@ publication・中断・破損検査は ready session fixture から始め、TCP 
 """
 
 import hashlib
+import itertools
 import json
 import os
 import socket
@@ -52,6 +53,7 @@ import commons.runtime_feedback_protocol as feedback_protocol_module
 import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
 import commons.runtime_feedback_store as feedback_store_module
+import commons.runtime_logging as logging_module
 import sub_commands.feedback.decision as decision_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
@@ -106,10 +108,21 @@ from main import app
 
 
 @pytest.fixture
-def feedback_directory(tmp_path: Path) -> Path:
-    """Git を参照しない保存・path・lock 検査には通常 directory だけを用意する。"""
+def feedback_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """保存・path・受付の検査に不要な Git と永続採番を準備しない。"""
     root = tmp_path / "repo"
     root.mkdir()
+    # 永続採番は test_runtime_ids.py、process 間の共有は test_codex_runtime_paths.py、
+    # collector と実採番の結合は validates_context_rate_and_durable_observation に残す。
+    ids = itertools.count()
+
+    def in_memory_id(repository: Path, prefix: str) -> str:
+        assert repository.resolve() == root.resolve()
+        assert prefix in {"exec", "fbo"}
+        return f"{prefix}_{next(ids):06d}_2000-01-01_00-00"
+
+    monkeypatch.setattr(feedback_store_module, "new_id", in_memory_id)
+    monkeypatch.setattr(logging_module, "new_id", in_memory_id)
     return root
 
 
