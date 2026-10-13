@@ -25,9 +25,9 @@
   },
   "codex_minimal_outrigger_cli.code-workspace": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "df9413aa969863c6e2bd6f8db41570832d29f337e36c4f9e97bae0178dc224ba",
-    "last_investigated_at": "2026-10-11_07-58-34_378"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "53e7dfc8bec76134a77539529044bdfdffc66580e4e1a853cbc5794d38616889",
+    "last_investigated_at": "2026-10-13_12-33-44_380"
   },
   "oracle/doc/app_spec/cli_auto_completion.md": {
     "investigation_required": true,

@@ -836,11 +836,12 @@ def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
 
 
 def test_doctor_preprocess_waits_for_common_repository_lock(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree と repository で共有する doctor lock の解放待ちを検証する。"""
 
-    root = make_repo(tmp_path)
+    # linked worktree に必要な HEAD だけ用意し、追跡 file の準備を省く。
+    root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-doctor-lock"
     run_git(root, "worktree", "add", "-b", "linked-doctor-lock", str(linked), "HEAD")
     lock_path = doctor_module.doctor_lock_path(root)
@@ -852,32 +853,59 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
         target=_hold_doctor_lock,
         args=(lock_path, ready_child, release_child),
     )
-    lock_attempted = threading.Event()
+    lock_contended = threading.Event()
     original_flock = doctor_module.fcntl.flock
 
     def observe_lock_attempt(fd: int, operation: int) -> None:
-        """doctor が排他 lock を取得しようとしたことをテストへ通知する。"""
+        """実 lock の競合を確認してから、元の blocking 操作へ戻す。"""
 
         if operation & doctor_module.fcntl.LOCK_EX:
-            lock_attempted.set()
+            try:
+                original_flock(fd, operation | doctor_module.fcntl.LOCK_NB)
+            except BlockingIOError:
+                lock_contended.set()
+            else:
+                return
         original_flock(fd, operation)
 
-    monkeypatch.setattr(doctor_module.fcntl, "flock", observe_lock_attempt)
+    class _RepairBoundaryReached(Exception):
+        pass
+
+    def stop_before_repairs(checked_root: Path) -> None:
+        # 修復・索引同期・commit は専用 test に残し、最初の修復境界で停止する。
+        assert checked_root == linked.resolve()
+        with lock_path.open("a+") as lock_file:
+            with pytest.raises(BlockingIOError):
+                original_flock(
+                    lock_file.fileno(),
+                    doctor_module.fcntl.LOCK_EX | doctor_module.fcntl.LOCK_NB,
+                )
+        raise _RepairBoundaryReached()
+
     process.start()
     released = False
     try:
+        assert ready_parent.poll(timeout=3)
         assert ready_parent.recv() is True
+        monkeypatch.setattr(doctor_module.fcntl, "flock", observe_lock_attempt)
+        monkeypatch.setattr(
+            doctor_module, "ensure_work_directories", stop_before_repairs
+        )
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(
                 doctor_module.run_doctor_preprocess,
                 linked,
                 explicit_doctor=True,
             )
-            assert lock_attempted.wait(timeout=3)
-            assert not future.done()
-            release_parent.send(True)
-            released = True
-            future.result(timeout=3)
+            try:
+                assert lock_contended.wait(timeout=3)
+                assert not future.done()
+            finally:
+                # assertion が失敗しても、executor の終了待ちより先に holder を解放する。
+                release_parent.send(True)
+                released = True
+            with pytest.raises(_RepairBoundaryReached):
+                future.result(timeout=3)
     finally:
         if process.is_alive() and not released:
             release_parent.send(True)
@@ -885,6 +913,13 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
         if process.is_alive():
             process.terminate()
             process.join()
+
+    # 前処理の異常終了後も、同じ実 lock を取得できることを確認する。
+    with lock_path.open("a+") as lock_file:
+        original_flock(
+            lock_file.fileno(),
+            doctor_module.fcntl.LOCK_EX | doctor_module.fcntl.LOCK_NB,
+        )
 
 
 def test_doctor_restores_preexisting_index_when_repair_fails(
