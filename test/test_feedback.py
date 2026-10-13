@@ -781,7 +781,7 @@ def test_reporter_rejects_invalid_collector_result(
 def test_feedback_normalize_builder_protects_nested_code_fences(
     feedback_prompt_directory: Path,
 ) -> None:
-    """normalization の動的 JSON が prompt section の境界を閉じないことを検証する。"""
+    """normalization の動的 JSON 境界と報告無効化を同じ構築結果で検証する。"""
     root = feedback_prompt_directory
     nested = "before\n```\ninside\n```\nafter"
     observation_json = json.dumps({"payload": {"summary": nested}})
@@ -794,6 +794,9 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
         candidate_json,
         root,
     )
+
+    assert not parameter.enable_feedback_reporting
+    assert "cmoc_feedback.submit_observation" not in parameter.prompt
 
     observation_start = parameter.prompt.index("# 構造化済み observation")
     observation_end = parameter.prompt.index(
@@ -880,24 +883,18 @@ def test_feedback_normalization_excludes_candidate_search_hint(
     assert "候補検索だけに使う文字列" not in captured_prompts[0]
 
 
-def test_feedback_issue_builders_disable_reporting(
+def test_feedback_remediate_builder_disables_reporting(
     feedback_prompt_directory: Path,
 ) -> None:
-    """normalization と remediation は同じ追加報告を prompt から外す。"""
+    """remediation は追加報告を無効化し、prompt からも報告指示を外す。"""
     root = feedback_prompt_directory
-    parameters = (
-        build_feedback_normalize_issue_parameter("{}", "[]", root),
-        build_feedback_remediate_issue_parameter(
-            json.dumps({"issue_id": "fbi_" + "a" * 26}),
-            root,
-        ),
+    parameter = build_feedback_remediate_issue_parameter(
+        json.dumps({"issue_id": "fbi_" + "a" * 26}),
+        root,
     )
 
-    assert all(not parameter.enable_feedback_reporting for parameter in parameters)
-    assert all(
-        "cmoc_feedback.submit_observation" not in parameter.prompt
-        for parameter in parameters
-    )
+    assert not parameter.enable_feedback_reporting
+    assert "cmoc_feedback.submit_observation" not in parameter.prompt
 
 
 def test_feedback_processing_versions_hash_canonical_builders() -> None:
