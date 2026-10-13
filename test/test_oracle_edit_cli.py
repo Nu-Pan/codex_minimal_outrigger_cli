@@ -40,13 +40,12 @@ from config.cmoc_config import CmocConfig, CodexCallConfig
 from main import app
 
 
-def _activate_session(
+def _write_session_state(
     root: Path,
     *,
     run: RunPart,
 ) -> Path:
-    """隔離 repository に oracle edit 用の session state を作成する。"""
-    run_git(root, "checkout", "-b", SESSION_BRANCH)
+    """session branch 上の隔離 repository に oracle edit 用の state を作成する。"""
     path = state_path(root, SESSION_ID)
     # oracle edit は join 元情報を使わないため、state の必須文字列だけ用意する。
     write_state(
@@ -63,9 +62,10 @@ def _prepared_repo(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
-    """履歴・Codex HOME・既定設定を持つ隔離 repository を準備する。"""
+    """session branch・履歴・Codex HOME・既定設定を持つ repository を準備する。"""
     setup_codex_home(tmp_path, monkeypatch)
-    root = make_repo(tmp_path)
+    # 元の branch からの移動履歴は使わず、両回で保持する branch・HEAD だけ用意する。
+    root = make_repo(tmp_path, initial_branch=SESSION_BRANCH)
     monkeypatch.chdir(root)
     # doctor 成功後の設定を用意し、実際の保存・読込は検証対象に残す。
     write_config(config_path(root), CmocConfig())
@@ -119,7 +119,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         RUN_BRANCH,
         "abc",
     )
-    session_state_path = _activate_session(root, run=active_run)
+    session_state_path = _write_session_state(root, run=active_run)
     state_before = json.loads(session_state_path.read_text())
     readme_path = root / "README.md"
     readme_path.write_text("# staged change\n")
