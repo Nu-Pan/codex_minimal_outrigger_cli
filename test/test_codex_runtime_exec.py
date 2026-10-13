@@ -16,7 +16,6 @@ from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 import commons.runtime_codex_exec as exec_module
 from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
-from commons.runtime_codex_profile import prepare_codex_override_args
 from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
 
@@ -201,19 +200,3 @@ def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output
     assert result.output_path.read_bytes() == output_bytes
     assert result.output_json is None
     assert result.output_text == "done\n\ufffd"
-
-
-# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-def test_prepare_codex_override_args_does_not_create_codex_home_config(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Codex override の構築時に CODEX_HOME の設定ファイルを作成しないことを検証する。"""
-    codex_home = setup_codex_home(tmp_path, monkeypatch)
-
-    override_args = prepare_codex_override_args(
-        codex_parameter(agent_call_cwd=tmp_path), CmocConfig()
-    )
-
-    assert "--profile" not in override_args
-    assert "-p" not in override_args
-    _assert_no_codex_home_config(codex_home)

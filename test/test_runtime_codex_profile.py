@@ -17,7 +17,12 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from _codex_support import codex_arg_value, codex_override_config, codex_parameter
+from _codex_support import (
+    codex_arg_value,
+    codex_override_config,
+    codex_parameter,
+    setup_codex_home,
+)
 from oracle.other import path_model as path_model_module
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
@@ -55,10 +60,13 @@ def test_codex_overrides_use_dedicated_sandbox_argument() -> None:
         assert codex_arg_value(args, "--sandbox") == "workspace-write", mode
 
 
-def test_prepare_codex_overrides_use_call_defaults() -> None:
-    """mode 共通の既定設定を prepare 境界から検証する。"""
+def test_prepare_codex_overrides_use_call_defaults_without_home_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """既定設定を argv だけで渡し、CODEX_HOME に設定を生成しない。"""
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
     config = CmocConfig()
-    parameter = codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd())
+    parameter = codex_parameter(FileAccessMode.READONLY, agent_call_cwd=tmp_path)
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
     args = prepare_codex_override_args(parameter, config)
 
@@ -116,6 +124,8 @@ def test_prepare_codex_overrides_use_call_defaults() -> None:
     }
     assert "--profile" not in args
     assert "-p" not in args
+    assert not (codex_home / "config.toml").exists()
+    assert not list(codex_home.glob("*.config.toml"))
 
 
 def test_codex_overrides_disable_feedback_reporter_for_selected_call() -> None:
