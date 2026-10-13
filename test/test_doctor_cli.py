@@ -33,17 +33,26 @@ from _cli_support import run_doctor, runner, seed_search_config, terminal_primar
 from _command_support import write_python_executable
 from _git_support import make_repo, run_git
 
+import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
 import commons.runtime_feedback_store as feedback_store_module
 from commons.runtime_config import config_to_dict
 from commons.runtime_document_search import DocumentSearch, SearchError
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_errors import CmocError
-from commons.runtime_feedback import ReporterAvailabilityError
+from commons.runtime_feedback import (
+    ReporterAvailabilityError,
+    start_feedback_invocation,
+    validate_feedback_reporter_availability,
+)
 from commons.runtime_paths import ensure_work_directories
 from commons.runtime_refactor import RefactorState
 from config.cmoc_config import CmocConfig
 from main import app
+
+# TCP collector の起動・protocol 検査は初回修復 test と test_feedback.py に残す。
+# Git・配置先・索引のケースでは、既存 fixture で transport の準備と終了待ちを省く。
+pytestmark = pytest.mark.usefixtures("feedback_without_transport")
 
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
@@ -143,14 +152,17 @@ def test_refactor_preprocess_interruption_keeps_committed_repairs(
 
 
 def test_refactor_preprocess_stop_restores_pending_linked_worktree_index(
-    tmp_path, monkeypatch
+    managed_repository, tmp_path, monkeypatch
 ):
     """main の修復確定後に停止しても、後続 worktree の準備中 index を戻す。"""
-    root = make_repo(tmp_path)
+    root = managed_repository
+    # linked 側は管理 file を checkout で受け取り、準備用 doctor を重ねない。
+    (root / "README.md").write_text("# repo\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "track user change target")
     linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked-refactor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
-    run_doctor(linked)
     (root / ".gitignore").write_text("")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "require main ignore repair")
@@ -217,9 +229,23 @@ def test_doctor_preprocess_repairs_git_state(
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "gt" / "config.json"
 
+    # 公開 doctor と実 collector の結合を、この初回修復ケースで一度検証する。
+    monkeypatch.setattr(
+        cli_module, "start_feedback_invocation", start_feedback_invocation
+    )
+    monkeypatch.setattr(
+        doctor_module,
+        "validate_feedback_reporter_availability",
+        validate_feedback_reporter_availability,
+    )
     monkeypatch.chdir(root)
     result = run_doctor(root)
 
+    assert "feedback reporter unavailable" not in result.output
+    assert not any(
+        event["event"] == "feedback.reporter_unavailable"
+        for event in _new_subcommand_events(root, set())
+    )
     report = terminal_primary_report(result)
     assert report.parent == root / ".cmoc" / "gu" / "report" / "doctor"
     rendered_report = report.read_text(encoding="utf-8")
@@ -830,6 +856,11 @@ def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
         raise KeyboardInterrupt()
 
     monkeypatch.setattr(feedback_store_module, "reporter_input_schema", interrupt)
+    monkeypatch.setattr(
+        doctor_module,
+        "validate_feedback_reporter_availability",
+        validate_feedback_reporter_availability,
+    )
 
     with pytest.raises(KeyboardInterrupt):
         doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
