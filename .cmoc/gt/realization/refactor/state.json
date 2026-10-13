@@ -18,10 +18,10 @@
     "last_investigated_at": "2026-10-13_12-16-40_191"
   },
   "bin/cmoc": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "ecca8ac058c11e34d01cfa23c168db5fca9282542671187abbdc5c762c175f6c",
-    "last_investigated_at": "2026-10-11_07-54-11_676"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "9ba385f1d134b124f44a6063daab267ee68eb0167567b4c7d4af180c80e6d516",
+    "last_investigated_at": "2026-10-13_12-19-56_538"
   },
   "codex_minimal_outrigger_cli.code-workspace": {
     "investigation_required": true,
