@@ -993,11 +993,14 @@ def test_session_completion_rejects_missing_state_fields(
 
 
 @pytest.fixture
-def session_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+def session_preprocess(
+    monkeypatch: pytest.MonkeyPatch, nonpersistent_execution_ids: None
+) -> list[Path]:
     """session 固有の競合・失敗検査では doctor を省き、呼び出し先を記録する。"""
     # fork の競合・失敗検査は実 Git と pre-log の exclude 修復を使い、設定を準備しない。
     # fork→abandon/join の結合と doctor の修復・順序は正常系・linked worktree と
     # test_doctor_cli.py に残す。
+    # ログの exec ID だけ永続採番を省き、session ID の発行・衝突検査は実経路を通す。
     roots: list[Path] = []
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", roots.append)
     return roots

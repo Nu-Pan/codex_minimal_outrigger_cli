@@ -98,7 +98,24 @@ def ready_content_session(
 
 
 @pytest.fixture
-def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def nonpersistent_execution_ids(monkeypatch: pytest.MonkeyPatch) -> None:
+    """採番を検査しない CLI test に、保存を伴わない実行 ID を用意する。"""
+    # 永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py の
+    # test_subcommand_logger_keeps_one_file_per_execution に残し、ID の対応は実検査する。
+    ids = count()
+    monkeypatch.setattr(
+        runtime_logging,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+    )
+
+
+@pytest.fixture
+def cli_terminal_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_execution_ids: None,
+) -> Path:
     """表示・通知・前処理失敗に不要な外部処理と永続採番を準備しない。"""
     # 実 Git の cwd・linked worktree 境界は test_runtime_cli.py で検証する。
     # collector の TCP 受付・保存・drain は test_feedback.py に残す。
@@ -109,14 +126,6 @@ def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> P
     monkeypatch.setattr(runtime_cli, "repo_root", lambda: root)
     monkeypatch.setattr(
         runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
-    )
-    # 永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py の
-    # test_subcommand_logger_keeps_one_file_per_execution に残し、ID の対応は実検査する。
-    ids = count()
-    monkeypatch.setattr(
-        runtime_logging,
-        "new_id",
-        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
     )
     return root
 
