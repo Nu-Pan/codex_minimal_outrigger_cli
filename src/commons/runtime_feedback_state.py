@@ -27,8 +27,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
+from jsonschema.protocols import Validator
 
 from .runtime_errors import CmocError
 from .runtime_feedback_store import (
@@ -47,6 +47,7 @@ from .runtime_feedback_store import (
     write_immutable_json,
 )
 from .runtime_ids import is_common_id, new_id
+from .runtime_json_schema import checked_schema_validator
 
 _JsonObject = dict[str, Any]
 
@@ -2356,7 +2357,7 @@ def _validate_report_cut_checkpoint(
 
 
 @lru_cache(maxsize=1)
-def _normalization_validator() -> Draft202012Validator:
+def _normalization_validator() -> Validator:
     """oracle schema から normalization output 検査用 validator を構築する。"""
     # schema と validator を一緒に再利用し、checkpoint ごとの再構築を避ける。
     try:
@@ -2382,11 +2383,11 @@ def _normalization_validator() -> Draft202012Validator:
                 break
         else:
             raise
-    schema = json.loads(schema_text)
-    if not isinstance(schema, dict):
+    # 出力受理と同じ本文の解析・定義検査を共有し、checkpoint 専用に再構築しない。
+    validator = checked_schema_validator(schema_text)
+    if not isinstance(validator.schema, dict):
         raise TypeError("normalization schema must be an object")
-    Draft202012Validator.check_schema(schema)
-    return Draft202012Validator(schema)
+    return validator
 
 
 def _normalization_output_matches_schema(output: dict[str, Any]) -> bool:
