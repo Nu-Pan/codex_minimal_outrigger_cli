@@ -3570,12 +3570,34 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
 
 
 def test_refactor_interrupt_before_run_creation_is_normal_completion(
-    ready_run_session: tuple[Path, str, Path],
+    cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 作成前の fork lifecycle 中断も正常終了として記録する。"""
     # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-    root, _session_branch, state_path = ready_run_session
+    # Git 配置・run 作成は lifecycle test、doctor の中断・rollback は
+    # test_doctor_cli.py に残し、ここでは完了済み前処理からの停止境界を検査する。
+    root = cli_terminal_directory
+    saved_state_path = state_path(root, SESSION_ID)
+    write_state(
+        saved_state_path,
+        SessionState(
+            session=SessionPart(
+                session_home_branch="main", session_fork_commit="session-fork"
+            )
+        ),
+    )
+    saved_state = saved_state_path.read_bytes()
+    monkeypatch.setattr(refactor_module, "work_root", lambda: root)
+    monkeypatch.setattr(
+        refactor_module, "run_doctor_preprocess", lambda *_args, **_kwargs: None
+    )
+
+    def unexpected_run_start(*_args: object, **_kwargs: object) -> NoReturn:
+        """中断後の run 作成を許可しない。"""
+        pytest.fail("run must not start after interruption")
+
+    monkeypatch.setattr(refactor_module, "start_editing_run", unexpected_run_start)
     original_step = refactor_module.start_subcommand_step
 
     def interrupt_before_run(
@@ -3597,8 +3619,15 @@ def test_refactor_interrupt_before_run_creation_is_normal_completion(
     )
 
     assert result.exit_code == 0
-    assert _state(state_path)["run"]["state"] == "ready"
+    assert saved_state_path.read_bytes() == saved_state
+    assert not (root / ".cmoc/gu/worktree").exists()
     assert "# 失敗" not in result.output
+    report = terminal_primary_report(result)
+    report_text = report.read_text()
+    assert 'terminal_classification: "user_interruption"' in report_text
+    assert 'completion_reason: "user_interruption"' in report_text
+    assert 'refactor_stage: "create run"' in report_text
+    assert "run not established" in report_text
     events = [
         json.loads(line)
         for path in (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
@@ -3609,10 +3638,12 @@ def test_refactor_interrupt_before_run_creation_is_normal_completion(
         and event.get("result") == "interrupted"
         for event in events
     )
-    assert any(
-        event.get("event") == "command_finished" and event.get("returncode") == 0
-        for event in events
-    )
+    completion = events[-1]
+    assert completion["event"] == "command_finished"
+    assert completion["returncode"] == 0
+    assert completion["classification"] == "user_interruption"
+    assert completion["completion_reason"] == "user_interruption"
+    assert completion["primary_report_path"] == str(report.resolve())
 
 
 @pytest.mark.parametrize("interrupt_point", ["commit", "post_commit_record"])
