@@ -737,19 +737,18 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_changed_sections_and_moved_files_reuse_saved_embeddings(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cli_repository: Path
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document_repository: Path
 ) -> None:
     """実 chunker で変更・重複・移動・削除後の再利用と現在位置を検査する。"""
     pytest.importorskip("sqlite_vec")
     from commons import runtime_document_search_worker as worker_module
 
-    # 履歴を参照しないため、未追跡の検索対象と実 Git root だけを用意する。
-    root = cli_repository
-    document = root / "oracle/doc/sections.md"
-    document.parent.mkdir(parents=True)
+    # Git 分類は読取り範囲・同期競合・worktree 再利用の test で検査する。
+    # 実 Node の分割・cache・現在位置を通し、各 event の Git 走査を重ねない。
+    root = document_repository
+    document = root / "oracle/doc/allowed.md"
     a, b, c = "# A\nalpha\n", "# B\nbravo\n", "# C\ncharlie\n"
     document.write_text(a + b + c)
-    (root / ".gitignore").write_text("/.cmoc/gu/\n")
     runtime = tmp_path / "fake-worker"
     runtime.mkdir()
     _fake_node_model(runtime)
@@ -1634,7 +1633,9 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
     tmp_path: Path,
 ) -> None:
     """実 stdio 境界で正本の公開定義を伝え、未準備を識別できる。"""
-    root = _repo_with_docs(tmp_path)
+    # 未準備の応答は文書同期より前に返るため、Git と検索文書を準備しない。
+    root = tmp_path / "repo"
+    root.mkdir()
     log_path = tmp_path / "caller.jsonl"
     log_path.touch()
     context = {
