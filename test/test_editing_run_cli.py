@@ -157,12 +157,15 @@ def ready_join_session(
 
 @pytest.fixture
 def stored_running_run(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
 ) -> EditingRunContext:
     """所有権と状態遷移の検査には保存済み state と通常 directory だけ用意する。"""
     # 実 Git の配置解決は test_resolve_active_run_reuses_placement_queries_...、
     # 共通 directory の解決は test_git_query_reuse.py、実 flock は
     # test_runtime_state.py に残す。ここでも state・tracking の I/O と lock は実行する。
+    kind = getattr(request, "param", "realization_refactor")
     path = state_path(tmp_path, SESSION_ID)
     write_state(
         path,
@@ -170,7 +173,7 @@ def stored_running_run(
             session=SessionPart(
                 session_home_branch="main", session_fork_commit="session-fork"
             ),
-            run=RunPart("running", "realization_refactor", RUN_BRANCH, "run-fork"),
+            run=RunPart("running", kind, RUN_BRANCH, "run-fork"),
         ),
     )
     run_worktree = tmp_path / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID
@@ -182,7 +185,7 @@ def stored_running_run(
         state_path=path,
         session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
-        kind="realization_refactor",
+        kind=kind,
         run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=run_worktree,
@@ -1950,31 +1953,35 @@ def test_refactor_report_failure_after_joinable_publication_sets_error_state(
     assert 'state_after: "error"' in report.read_text()
 
 
+@pytest.mark.parametrize("stored_running_run", ["realization_apply"], indirect=True)
 def test_apply_error_preserves_unreadable_process_tracking(
-    ready_run_session: tuple[Path, str, Path],
+    stored_running_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply error cleanup が検証不能な process tracking を削除しない。"""
-    root, session_branch, state_path = ready_run_session
-    session_id = session_branch.removeprefix("cmoc/session/")
-    tracking_path = run_process_id_path(root, session_id)
+    # fork→error cleanup と実 Git の rollback は遅延 commit の CLI test に残す。
+    # ここでは tracking の読取・削除、state 遷移、report 保存を実処理で検査する。
+    context = replace(stored_running_run, state_before="ready")
+    tracking_path = run_process_id_path(context.repo, context.session_id)
+    tracking_path.parent.mkdir(parents=True)
+    tracking_path.write_bytes(b"\xff")
+    rolled_back = []
+    monkeypatch.setattr(apply_module, "rollback_work_unit", rolled_back.append)
+    monkeypatch.setattr(apply_module, "tree_changes", lambda *_args: [])
 
-    def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
-        """Codex failure と破損した tracking を再現する。"""
-        tracking_path.write_bytes(b"\xff")
-        raise RuntimeError("agent failed")
-
-    monkeypatch.setattr(apply_module, "run_codex_exec", fail_agent)
-
-    result = runner.invoke(
-        app,
-        ["realization", "apply", "fork"],
-        catch_exceptions=False,
+    report = apply_module._record_error(
+        context, context.session_fork_commit, None, RuntimeError("agent failed")
     )
 
-    assert result.exit_code == 1
-    assert _state(state_path)["run"]["state"] == "error"
+    assert rolled_back == [context.run_worktree]
+    assert _state(context.state_path)["run"]["state"] == "error"
     assert tracking_path.read_bytes() == b"\xff"
+    report_text = report.read_text()
+    assert 'state_after: "error"' in report_text
+    assert "exit_code: 1" in report_text
+    assert "agent failed" in report_text
+    assert "Codex child stop failed" in report_text
+    assert "run process tracking を検証できません。" in report_text
 
 
 @pytest.mark.parametrize("interrupted", [False, True])
