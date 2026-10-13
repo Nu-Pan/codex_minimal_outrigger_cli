@@ -36,18 +36,31 @@ def _raw_input(root, identity, observed_at="2026-10-08T00:00:00Z"):
     }
 
 
+def _seed_receipts(root, inputs):
+    ledger = {
+        "schema_version": 1,
+        "high_watermark": len(inputs),
+        "pending": {
+            path.stem: {"sequence": index, **reference}
+            for index, (path, reference) in enumerate(inputs, 1)
+        },
+    }
+    (feedback_root(root) / "intake.json").write_bytes(canonical_json_bytes(ledger))
+
+
 @pytest.fixture
 def pending_receipt(tmp_path):
     path, reference = _raw_input(tmp_path, "fbo_" + "1" * 32)
-    with observation_publication_lock(tmp_path):
-        record_observation_receipt(tmp_path, path)
+    # 破損拒否の前提だけを作る。実登録と境界の結合は正常ケースで検証する。
+    _seed_receipts(tmp_path, [(path, reference)])
     return tmp_path, path, reference
 
 
-def test_capture_reads_each_raw_once_and_preserves_receipt_order(
-    pending_receipt, monkeypatch
-):
-    root, received, _ = pending_receipt
+def test_capture_reads_each_raw_once_and_preserves_receipt_order(tmp_path, monkeypatch):
+    root = tmp_path
+    received, _ = _raw_input(root, "fbo_" + "1" * 32)
+    with observation_publication_lock(root):
+        record_observation_receipt(root, received)
     # raw 保存直後に停止した入力は、ID・日時が古くても今回の受理順序へ追加する。
     orphan, reference = _raw_input(root, "fbo_" + "0" * 32, "2026-10-07T00:00:00Z")
     reads = Counter()
@@ -123,15 +136,7 @@ def test_new_receipt_rejects_raw_outside_observation_store(tmp_path):
 def cleanup_receipts(tmp_path):
     # 登録・durability は既存の intake・store test に残し、cleanup の固定入力だけ作る。
     inputs = [_raw_input(tmp_path, "fbo_" + str(index) * 32) for index in (1, 2, 3)]
-    ledger = {
-        "schema_version": 1,
-        "high_watermark": 3,
-        "pending": {
-            path.stem: {"sequence": index, **reference}
-            for index, (path, reference) in enumerate(inputs, 1)
-        },
-    }
-    (feedback_root(tmp_path) / "intake.json").write_bytes(canonical_json_bytes(ledger))
+    _seed_receipts(tmp_path, inputs)
     return (
         tmp_path,
         [path for path, _ in inputs[:2]],

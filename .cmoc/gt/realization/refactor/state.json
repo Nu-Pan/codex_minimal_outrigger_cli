@@ -1436,8 +1436,8 @@
   "test/test_feedback_intake.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "74c596936d1ebce69678506d71096a03eae501a20bc7895a89cd3fdfe67c97e0",
-    "last_investigated_at": "2026-10-11_07-29-53_424"
+    "last_investigated_sha256": "dcdabdbec908ef5da3fa7f717b6b60456355943edc16fd046362da977b0f163b",
+    "last_investigated_at": "2026-10-13_11-45-41_008"
   },
   "test/test_feedback_reconfirmation.py": {
     "investigation_required": true,
