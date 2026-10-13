@@ -421,9 +421,11 @@ def test_tui_callback_drain_handles_late_start_with_finite_wait(
 
 def test_tui_callback_commands_run_as_standalone_scripts(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
     toast_clock,
 ) -> None:
-    """SessionStart stdin と legacy callback argv を standalone 実行する。"""
+    """stdin/argv の standalone 境界と process 間の重複排除を検証する。"""
     callback = runtime_windows_toast.create_tui_notification_callback(
         "oracle investigation",
         tmp_path / "repository",
@@ -474,18 +476,32 @@ def test_tui_callback_commands_run_as_standalone_scripts(
         assert result.returncode == 0
         assert result.stdout == ""
         assert result.stderr == ""
-        for _ in range(2):
-            result = subprocess.run(
-                [*callback.command, turn_payload],
-                env=environment,
-                text=True,
-                capture_output=True,
-                timeout=10,
-                check=False,
-            )
-            assert result.returncode == 0
-            assert result.stdout == ""
-            assert result.stderr == ""
+        result = subprocess.run(
+            [*callback.command, turn_payload],
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
+
+        # 子 process が残した state を親の実入口から読み、再起動なしで重複を確かめる。
+        duplicate_notifications: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            runtime_windows_toast,
+            "_run_windows_toast_transport",
+            lambda title, message: (
+                duplicate_notifications.append((title, message)) or True
+            ),
+        )
+        assert runtime_windows_toast.main([*callback.command[2:], turn_payload]) == 0
+        assert duplicate_notifications == []
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err == ""
         assert len(list(state_root.glob("*.seen"))) == 1
         assert len(list(state_root.glob("root-*.session"))) == 1
         assert [
