@@ -1550,8 +1550,8 @@
   "test/test_runtime_git_ignore.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "6c8a6377ef0f7fb2ede7bfd35014acc39cfc0f2a17b08114fe407c6644f26536",
-    "last_investigated_at": "2026-10-11_06-01-59_529"
+    "last_investigated_sha256": "635489628f8693c99fee81a2f6556c1ac2276a3ff5dba9ca208d4df7938be2f4",
+    "last_investigated_at": "2026-10-13_10-02-40_879"
   },
   "test/test_runtime_ids.py": {
     "investigation_required": true,
