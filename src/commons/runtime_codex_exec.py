@@ -4,6 +4,7 @@ import json
 import subprocess
 import time
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -658,10 +659,20 @@ def run_codex_exec(
         nonlocal quota_polls
         check_recovery_interruption()
         probe_parameter = _quota_availability_probe_parameter(parameter)
-        probe_config = deepcopy(config)
+        # 開始時に固定した設定を共有し、probe の選択だけ別の map にする。
+        probe_config = config
         if inherited:
-            probe_config.codex.agent_calls[probe_parameter.agent_call_kind] = (
-                config.codex.agent_calls[parameter.agent_call_kind]
+            probe_config = replace(
+                config,
+                codex=replace(
+                    config.codex,
+                    agent_calls={
+                        **config.codex.agent_calls,
+                        probe_parameter.agent_call_kind: config.codex.agent_calls[
+                            parameter.agent_call_kind
+                        ],
+                    },
+                ),
             )
         # 正本 builder が cwd と Git context を検証済みなので、その結果を再利用する。
         probe_agent_call_cwd = probe_parameter.agent_call_cwd

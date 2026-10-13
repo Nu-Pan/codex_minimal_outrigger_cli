@@ -44,8 +44,8 @@
   "oracle/doc/app_spec/codex_model_provider.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "d81b0aff42367a14e32d9a0367ee01f90d59cdee6e69a70e4521ca2e96eede62",
-    "last_investigated_at": "2026-10-11_08-27-10_141"
+    "last_investigated_sha256": "88e4c2165f56b2d4c97f8c5f6dcb22139f129b4f907a97c355932f387456921f",
+    "last_investigated_at": "2026-10-13_13-11-59_321"
   },
   "oracle/doc/app_spec/console_and_file_log.md": {
     "investigation_required": true,
