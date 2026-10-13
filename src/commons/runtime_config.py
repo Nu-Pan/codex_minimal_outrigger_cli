@@ -411,7 +411,7 @@ def _reject_symlinked_config_path(path: Path) -> None:
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     # config は work-root 内の tracked file なので、link 先の設定を読み書きしない。
     current = path.absolute()
-    while current != current.parent:
+    while (parent := current.parent) != current:
         if current.is_symlink():
             raise CmocError(
                 "cmoc config path は symlink 経由で扱えません。",
@@ -420,7 +420,7 @@ def _reject_symlinked_config_path(path: Path) -> None:
                 ],
                 str(current),
             )
-        current = current.parent
+        current = parent
 
 
 def write_config(path: Path, config: CmocConfig) -> None:
