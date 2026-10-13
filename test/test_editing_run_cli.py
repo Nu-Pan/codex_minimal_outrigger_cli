@@ -2825,6 +2825,72 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
         assert "session.last_joined_apply_fork_commit updated" not in output
 
 
+@pytest.mark.parametrize(
+    "incidental", ["oracle/spec.md", ".cmoc/gt/realization/refactor/state.json"]
+)
+def test_merge_resolution_does_not_add_file_access_postvalidation(
+    tmp_path, monkeypatch, incidental
+):
+    """応答後の差分は記録し、file access policy だけによる受理拒否を加えない。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の「agent call の差分検証」
+    # Fake の違反編集で cmoc の検証境界を確認する。agent の編集権限は拡張しない。
+    # Git 境界は double にし、snapshot の実際の本文比較と marker 検査を通す。
+    # 実 Git との結合と失敗時の rollback は下の CLI test に残す。
+    root = tmp_path
+    conflict_relative = "src/conflict.py"
+    conflict = root / conflict_relative
+    conflict.parent.mkdir()
+    conflict.write_text("<<<<<<< HEAD\n")
+    parameter = AgentCallParameter(
+        agent_call_kind="test_merge_resolution",
+        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        prompt="merge result",
+        structured_output_schema_path=None,
+        agent_call_cwd=root,
+    )
+
+    def resolved_codex(_parameter, **_kwargs):
+        conflict.write_text("resolved\n")
+        changed = root / incidental
+        changed.parent.mkdir(parents=True, exist_ok=True)
+        changed.write_text("{}\n")
+        return SimpleNamespace(output_text="merge_resolution: resolved\n")
+
+    commands = []
+
+    def git(args, git_cwd, check=True):
+        assert git_cwd == root
+        commands.append(args)
+        paths = (
+            f"{conflict_relative}\0{incidental}\0"
+            if args[:2] == ["diff", "--cached"]
+            else ""
+        )
+        return SimpleNamespace(returncode=0, stdout=paths, stderr="")
+
+    def status(_root, **_kwargs):
+        paths = [("UU", conflict)]
+        if (root / incidental).exists():
+            paths.append(("??", root / incidental))
+        return paths
+
+    monkeypatch.setattr(merge_conflict_module, "repo_root", lambda _root: root)
+    monkeypatch.setattr(merge_conflict_module, "status_path_statuses", status)
+    monkeypatch.setattr(merge_conflict_module, "run_git", git)
+    result = merge_conflict_module.resolve_merge_conflicts(
+        root,
+        parameter,
+        codex_exec=resolved_codex,
+        purpose="test merge resolution",
+        initial_conflicts=[conflict_relative],
+    )
+
+    assert result["agent_status"] == "resolved"
+    assert result["incidental_paths"] == [incidental]
+    assert any(args[0] == "add" for args in commands)
+    assert any(args[0] == "commit" for args in commands)
+
+
 def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     ready_join_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2879,26 +2945,6 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
         )
 
     monkeypatch.setattr(merge_conflict_module, "run_codex_exec", resolved_codex)
-
-    # 付随編集の検査中に、同じ Git 配置・設定の問い合わせを繰り返さない。
-    queries = Counter()
-    original_run = git_module.subprocess.run
-    original_classifier = merge_conflict_module.is_realization_file_path
-
-    def record_query(argv, *args, **kwargs):
-        if argv[0] == "git" and argv[1] in {"rev-parse", "config"}:
-            queries[tuple(argv)] += 1
-        return original_run(argv, *args, **kwargs)
-
-    def classify_path(*args, **kwargs):
-        with monkeypatch.context() as probe:
-            probe.setattr(git_module.subprocess, "run", record_query)
-            return original_classifier(*args, **kwargs)
-
-    monkeypatch.setattr(
-        merge_conflict_module, "is_realization_file_path", classify_path
-    )
-
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert len(calls) == 2
@@ -2907,7 +2953,6 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     assert (root / "src" / "related.py").read_text() == "value = 1\n"
     assert _state(state_path)["run"]["state"] == "ready"
     assert "src/related.py" in terminal_primary_report(result).read_text()
-    assert max(queries.values(), default=0) <= 1
 
 
 def test_run_join_keeps_completed_merge_when_final_report_update_fails(
