@@ -3,7 +3,6 @@
 import json
 import multiprocessing
 import os
-import threading
 from multiprocessing.connection import Connection
 from pathlib import Path
 
@@ -27,18 +26,30 @@ from commons.runtime_state import (
 )
 
 
-def _hold_session_fork_lock(
-    root: Path, common_dir: Path, ready: Connection, release: Connection
+def _acquire_session_fork_lock(
+    root: Path, common_dir: Path, status: Connection
 ) -> None:
-    """別 process で session fork lock を保持し、解放指示を待つ。"""
+    """別 process から実 lock の競合と取得を通知する。"""
     # spawn でも親の monkeypatch に依存せず、同じ共有 directory を使う。
-    with pytest.MonkeyPatch.context() as monkeypatch:
+    with status, pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(
             runtime_state_module, "git_common_dir", lambda _root: common_dir
         )
+        original_flock = runtime_state_module.fcntl.flock
+
+        def observe_lock_attempt(fd: int, operation: int) -> None:
+            # 親が保持する lock への競合を、時間経過に頼らず確かめる。
+            if operation & runtime_state_module.fcntl.LOCK_EX:
+                try:
+                    original_flock(fd, operation | runtime_state_module.fcntl.LOCK_NB)
+                except BlockingIOError:
+                    status.send("contended")
+            original_flock(fd, operation)
+
+        monkeypatch.setattr(runtime_state_module.fcntl, "flock", observe_lock_attempt)
+        assert status.recv() == "acquire"
         with session_fork_lock(root):
-            ready.send(True)
-            release.recv()
+            status.send("acquired")
 
 
 def _valid_state() -> SessionState:
@@ -546,55 +557,32 @@ def test_session_fork_lock_is_shared_across_processes(
     common_dir = tmp_path / "common"
     # Git common directory の実解決は test_git_query_reuse.py に残し、
     # ここでは異なる起点からの実 flock の競合・解放後の取得だけを検証する。
-    ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
-    release_child, release_parent = multiprocessing.Pipe(duplex=False)
+    status_parent, status_child = multiprocessing.Pipe()
     process = multiprocessing.Process(
-        target=_hold_session_fork_lock,
-        args=(root / "linked", common_dir, ready_child, release_child),
+        target=_acquire_session_fork_lock,
+        args=(root / "linked", common_dir, status_child),
     )
-    process.start()
     monkeypatch.setattr(
         runtime_state_module, "git_common_dir", lambda _root: common_dir
     )
-    lock_contended = threading.Event()
-    acquired = threading.Event()
-
-    original_flock = runtime_state_module.fcntl.flock
-
-    def observe_lock_attempt(fd: int, operation: int) -> None:
-        """実 flock の競合を通知してから、通常の blocking 取得へ進む。"""
-        # 子 process が保持する lock への競合を、時間経過に頼らず確かめる。
-        if operation & runtime_state_module.fcntl.LOCK_EX:
-            try:
-                original_flock(fd, operation | runtime_state_module.fcntl.LOCK_NB)
-            except BlockingIOError:
-                lock_contended.set()
-        original_flock(fd, operation)
-
-    monkeypatch.setattr(runtime_state_module.fcntl, "flock", observe_lock_attempt)
-    worker = threading.Thread(target=lambda: _acquire_lock(root, acquired))
-    released = False
     try:
-        assert ready_parent.recv()
-        worker.start()
-        assert lock_contended.wait(timeout=3)
-        assert not acquired.is_set()
-        release_parent.send(True)
-        released = True
-        assert acquired.wait(timeout=3)
-    finally:
-        if not released:
-            release_parent.send(True)
-        worker.join(timeout=3)
+        # fork で holder の file descriptor を子へ継承させない。
+        process.start()
+        status_child.close()
+        # 親を holder にすることで、取得側に追加の thread と解放用 Pipe を使わない。
+        with session_fork_lock(root):
+            status_parent.send("acquire")
+            assert status_parent.poll(timeout=3)
+            assert status_parent.recv() == "contended"
+            assert not status_parent.poll()
+        assert status_parent.poll(timeout=3)
+        assert status_parent.recv() == "acquired"
         process.join(timeout=3)
+        assert process.exitcode == 0
+    finally:
         if process.is_alive():
             process.terminate()
             process.join(timeout=3)
-    assert not worker.is_alive()
-    assert not process.is_alive()
-
-
-def _acquire_lock(root: Path, acquired: threading.Event) -> None:
-    """lock を取得して worker 側の event を通知する。"""
-    with session_fork_lock(root):
-        acquired.set()
+        process.close()
+        status_parent.close()
+        status_child.close()
