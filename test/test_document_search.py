@@ -318,17 +318,15 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> N
 
 @pytest.mark.parametrize("edit_after_stream", [False, True])
 def test_sync_rechecks_event_source_without_rereading_other_documents(
-    cli_repository, monkeypatch, edit_after_stream
+    document_repository, monkeypatch, edit_after_stream
 ):
     """各確定時は対象本文だけを読み、同期完了時には全本文の一致を確認する。"""
     from commons import runtime_document_search as module
 
-    root = cli_repository
-    (root / ".gitignore").write_text(".cmoc/gu/\n")
+    # Git 分類は専用ケースに残し、ここでは各確定時の本文読取りを検査する。
+    root = document_repository
     docs = root / "oracle/doc"
-    docs.mkdir(parents=True)
-    for name in ("first", "second"):
-        (docs / f"{name}.md").write_text(f"# {name}\n本文\n")
+    (docs / "second.md").write_text("# second\n本文\n")
     opened = []
     secure_read = module._secure_read
 
@@ -350,7 +348,7 @@ def test_sync_rechecks_event_source_without_rereading_other_documents(
                 observe({"kind": "document_prepared", "path": path, "chunk_count": 1})
             super().stream_chunks(documents, resumes, observe, **kwargs)
             if edit_after_stream:
-                (docs / "first.md").write_text("# 同期終了前に変更された本文\n")
+                (docs / "allowed.md").write_text("# 同期終了前に変更された本文\n")
 
     with closing(DocumentSearch(root, _tuning(), worker=ObservedWorker())) as search:
         if edit_after_stream:
@@ -409,11 +407,12 @@ def test_sync_rejects_changed_or_unreadable_source_before_saving(
     "failure_code", ["MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"]
 )
 def test_incomplete_stream_keeps_verified_chunks_and_resumes(
-    tmp_path: Path, failure_code: str
+    tmp_path: Path, document_repository: Path, failure_code: str
 ) -> None:
     """途中失敗を成功扱いせず、保存済み chunk の再計算を避ける。"""
     pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
+    # 分類済みの文書を使い、途中保存と再開の検査に Git 準備を重ねない。
+    root = document_repository
     document = root / "oracle/doc/allowed.md"
     document.write_text("# 前半の原文\n後半の原文\n")
     vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
@@ -483,11 +482,11 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
 
 
 def test_deadline_after_first_chunk_preserves_it_for_retry(
-    tmp_path: Path, document_search_clock
+    tmp_path: Path, document_repository: Path, document_search_clock
 ) -> None:
     """期限超過後の検索を失敗にし、有効な途中 chunk を再利用する。"""
     pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
 
     class PausingWorker(_InferenceDouble):
@@ -1012,11 +1011,11 @@ def test_config_change_preserves_index_while_request_uses_it(
 
 
 def test_zero_hit_search_rechecks_source_before_return(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document_repository: Path
 ) -> None:
     """空白文書の同期直後に本文が変わったら、ゼロ件を成功として返さない。"""
     pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     document = root / "oracle/doc/allowed.md"
     document.write_text(" \n")
     search = DocumentSearch(
