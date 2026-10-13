@@ -23,6 +23,7 @@ import commons.runtime_windows_toast as runtime_windows_toast
 from commons.runtime_config import write_config
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+from commons.runtime_refactor import sync_refactor_state, write_refactor_state
 from commons.runtime_state import SessionPart, SessionState, state_path, write_state
 from config.cmoc_config import CmocConfig
 
@@ -50,6 +51,7 @@ def _prepare_run_session(
     monkeypatch: pytest.MonkeyPatch,
     *,
     with_content: bool,
+    with_managed_files: bool = False,
 ) -> tuple[Path, str, Path]:
     """必要な初期内容と設定を一つの commit に揃えて session を用意する。"""
     # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
@@ -64,6 +66,14 @@ def _prepare_run_session(
         (root / "oracle/spec.md").write_text("# spec\n")
     # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    if with_managed_files:
+        # HEAD を固定する検査には、管理物も初期 commit に揃えて修復 commit を省く。
+        agents = root / ".agents"
+        agents.mkdir()
+        (agents / ".gitkeep").touch()
+        # state 自身を含む entry 集合を、初期内容がすべて揃ってから同期する。
+        write_refactor_state(root, {})
+        sync_refactor_state(root)
     run_git(root, "add", ".")
     run_git(root, "commit", "-m", "session seed")
     home_branch = current_branch(root)
@@ -95,6 +105,18 @@ def ready_content_session(
 ) -> tuple[Path, str, Path]:
     """run の検査に使う oracle と realization の初期内容を用意する。"""
     return _prepare_run_session(cli_repository, monkeypatch, with_content=True)
+
+
+@pytest.fixture
+def ready_join_session(
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """commit 参照と rollback の検査に、同期済み管理物を含む clean session を用意する。"""
+    # fixture では doctor 全体を実行しない。修復・索引同期は CLI 本処理と
+    # test_doctor_cli.py に残し、join 前後の HEAD と state の比較条件を保つ。
+    return _prepare_run_session(
+        cli_repository, monkeypatch, with_content=True, with_managed_files=True
+    )
 
 
 @pytest.fixture

@@ -42,7 +42,6 @@ import sub_commands.run.abandon as run_abandon_module
 import sub_commands.run.join as run_join_command_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_content import file_sha256
-from commons.runtime_doctor import run_doctor_preprocess
 from commons.runtime_errors import CmocError
 from commons.runtime_ids import is_common_id
 from commons.runtime_logging import SubcommandLogger
@@ -142,17 +141,6 @@ def ready_abandon_run(
     return _prepare_run(
         ready_run_session, run_state=getattr(request, "param", "joinable")
     )
-
-
-@pytest.fixture
-def ready_join_session(
-    ready_content_session: tuple[Path, str, Path],
-) -> tuple[Path, str, Path]:
-    """commit 参照と rollback を検査する前に、doctor の修復を完了させる。"""
-    # join 中の前処理で HEAD が進まないようにし、merge 前後の比較条件を保つ。
-    root, _session_branch, _state_path = ready_content_session
-    run_doctor_preprocess(root)
-    return ready_content_session
 
 
 @pytest.fixture
