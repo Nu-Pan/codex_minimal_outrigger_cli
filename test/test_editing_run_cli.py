@@ -11,6 +11,7 @@ import json
 import os
 import signal
 from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import NoReturn
@@ -34,6 +35,7 @@ import commons.runtime_run as runtime_run_module
 import commons.runtime_run_join as run_join_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import commons.runtime_run_report as run_report_module
+import commons.runtime_state as runtime_state_module
 import sub_commands.realization.apply.fork as apply_module
 import sub_commands.realization.refactor.fork as refactor_module
 import sub_commands.run.abandon as run_abandon_module
@@ -66,6 +68,7 @@ from commons.runtime_state import (
     RunPart,
     SessionPart,
     SessionState,
+    load_state_for_branch,
     state_path,
     write_state,
 )
@@ -150,6 +153,52 @@ def ready_join_session(
     root, _session_branch, _state_path = ready_content_session
     run_doctor_preprocess(root)
     return ready_content_session
+
+
+@pytest.fixture
+def stored_running_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> EditingRunContext:
+    """所有権と状態遷移の検査には保存済み state と通常 directory だけ用意する。"""
+    # 実 Git の配置解決は test_resolve_active_run_reuses_placement_queries_...、
+    # 共通 directory の解決は test_git_query_reuse.py、実 flock は
+    # test_runtime_state.py に残す。ここでも state・tracking の I/O と lock は実行する。
+    path = state_path(tmp_path, SESSION_ID)
+    write_state(
+        path,
+        SessionState(
+            session=SessionPart(
+                session_home_branch="main", session_fork_commit="session-fork"
+            ),
+            run=RunPart("running", "realization_refactor", RUN_BRANCH, "run-fork"),
+        ),
+    )
+    run_worktree = tmp_path / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID
+    run_worktree.mkdir(parents=True)
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path,
+        session_id=SESSION_ID,
+        state_path=path,
+        session_branch=SESSION_BRANCH,
+        session_fork_commit="session-fork",
+        kind="realization_refactor",
+        run_branch=RUN_BRANCH,
+        run_fork_commit="run-fork",
+        run_worktree=run_worktree,
+        state_before="running",
+    )
+
+    def resolved_run(allowed_states):
+        _session_id, _path, state = load_state_for_branch(tmp_path, SESSION_BRANCH)
+        assert state.run.state in allowed_states
+        return context, state
+
+    monkeypatch.setattr(lifecycle_module, "resolve_active_run", resolved_run)
+    monkeypatch.setattr(
+        runtime_state_module, "git_common_dir", lambda _root: tmp_path / "common"
+    )
+    return context
 
 
 def _state(path: Path) -> dict:
@@ -2246,46 +2295,44 @@ def test_refactor_start_error_does_not_recover_competing_run(
 
 
 def test_recover_started_run_rejects_run_owned_by_other_process(
-    ready_run_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
+    stored_running_run: EditingRunContext,
 ) -> None:
     """別 process の tracking を持つ active run を recovery 対象にしない。"""
-    _root, _session_branch, state_path = ready_run_session
-    context = _prepare_run(
-        ready_run_session, kind="realization_refactor", run_state="running"
-    )
-    # tracking 自体は存在させ、未作成を理由に recovery が拒否されるケースと分ける。
+    context = stored_running_run
+    # 同じ process の tracking は回収でき、PID だけ異なる場合に拒否する。
     runtime_run_module.write_run_process_id(
         context.repo, context.session_id, os.getpid()
     )
-    tracked = SimpleNamespace(
-        process_id=os.getpid() + 1,
-        start_time=None,
-        child_processes=(),
-    )
-    monkeypatch.setattr(lifecycle_module, "read_run_process_id", lambda *_args: tracked)
+    recovered = lifecycle_module.recover_started_run(context.kind)
+    assert recovered is not None
+    assert recovered.run_worktree == context.run_worktree
+    assert recovered.state_before == "ready"
+    tracked = runtime_run_module.read_run_process_id(context.repo, context.session_id)
+    assert tracked is not None and tracked.start_time is not None
+    tracking_path = run_process_id_path(context.repo, context.session_id)
+    tracking_path.write_text(f"{tracked.process_id + 1} {tracked.start_time}\n")
+    state_before = context.state_path.read_bytes()
+    tracking_before = tracking_path.read_bytes()
 
-    assert lifecycle_module.recover_started_run("realization_refactor") is None
-    assert _state(state_path)["run"]["state"] == "running"
+    assert lifecycle_module.recover_started_run(context.kind) is None
+    assert context.state_path.read_bytes() == state_before
+    assert tracking_path.read_bytes() == tracking_before
     assert context.run_worktree.exists()
 
 
 def test_recover_started_run_rejects_unreadable_process_tracking(
-    ready_run_session: tuple[Path, str, Path],
+    stored_running_run: EditingRunContext,
 ) -> None:
     """壊れた tracking を未作成として別 process の run recovery に使わない。"""
-    root, session_branch, state_path = ready_run_session
-    context = _prepare_run(
-        ready_run_session, kind="realization_refactor", run_state="running"
-    )
-    tracking_path = run_process_id_path(
-        root, session_branch.removeprefix("cmoc/session/")
-    )
+    context = stored_running_run
+    tracking_path = run_process_id_path(context.repo, context.session_id)
     tracking_path.parent.mkdir(parents=True)
     tracking_path.write_text("not a process identity\n")
+    state_before = context.state_path.read_bytes()
 
-    assert lifecycle_module.recover_started_run("realization_refactor") is None
-    assert _state(state_path)["run"]["state"] == "running"
+    assert lifecycle_module.recover_started_run(context.kind) is None
+    assert context.state_path.read_bytes() == state_before
+    assert tracking_path.read_text() == "not a process identity\n"
     assert context.run_worktree.exists()
 
 
@@ -2549,16 +2596,28 @@ def test_resolve_active_run_rejects_run_branch_from_another_session(
 
 
 def test_set_run_state_rejects_overwriting_terminal_state(
-    ready_run_session: tuple[Path, str, Path],
+    stored_running_run: EditingRunContext,
 ) -> None:
     """公開済み terminal state を遅延 cleanup が別 state へ変更しない。"""
-    _root, _session_branch, state_path = ready_run_session
-    context = _prepare_run(ready_run_session)
+    context = replace(
+        stored_running_run, kind="realization_apply", state_before="joinable"
+    )
+    state = SessionState.from_dict(_state(context.state_path))
+    state.run.state = "joinable"
+    state.run.kind = context.kind
+    write_state(context.state_path, state)
+    state_before = context.state_path.read_bytes()
+    runtime_run_module.write_run_process_id(
+        context.repo, context.session_id, os.getpid()
+    )
+    tracking_path = run_process_id_path(context.repo, context.session_id)
+    tracking_before = tracking_path.read_bytes()
 
     with pytest.raises(CmocError, match="state が実行中に変更されました"):
         set_run_state(context, "error")
 
-    assert _state(state_path)["run"]["state"] == "joinable"
+    assert context.state_path.read_bytes() == state_before
+    assert tracking_path.read_bytes() == tracking_before
 
 
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
