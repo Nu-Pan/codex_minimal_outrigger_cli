@@ -19,6 +19,7 @@ import json
 import threading
 import time
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 import typer
@@ -727,12 +728,13 @@ def test_existing_primary_report_survives_update_failure(
     "invalid_kind", ["empty", "directory", "symlink", "dangling_symlink", "unreadable"]
 )
 def test_existing_invalid_report_is_rejected_without_rewrite(
-    primary_report_directory: Path,
+    tmp_path: Path,
     invalid_kind: str,
 ) -> None:
     """各 file 境界と読取失敗を拒否し、既存 report と link 先を保持する。"""
     # missing path と共通の終了処理は次の結合 test に残し、ここでは保存 API を検証する。
-    root = primary_report_directory
+    # report 検査で終了するため、CLI context・実ログ・採番を準備しない。
+    root = tmp_path
     report_path = root / "invalid-report.md"
     linked_target = root / "linked-report.md"
     if invalid_kind == "empty":
@@ -746,7 +748,7 @@ def test_existing_invalid_report_is_rejected_without_rewrite(
     else:
         report_path.write_bytes(b"\xff")
 
-    logger = SubcommandLogger(root, "doctor")
+    logger = Mock(spec=SubcommandLogger)
     with pytest.raises(PrimaryReportSaveError) as exc_info:
         primary_report_module.ensure_primary_report(
             root,
@@ -762,6 +764,7 @@ def test_existing_invalid_report_is_rejected_without_rewrite(
         )
 
     assert exc_info.value.target_path == report_path
+    assert logger.mock_calls == []
     if invalid_kind in {"symlink", "dangling_symlink"}:
         assert report_path.is_symlink()
         assert report_path.readlink() == linked_target
