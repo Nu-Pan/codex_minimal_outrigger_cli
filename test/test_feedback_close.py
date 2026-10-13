@@ -48,7 +48,12 @@ from commons.runtime_state import (
 )
 from main import app
 
-pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+# exec の永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py に残す。
+# close の実行別 log・report と state 保存を検査し、採番 DB の同期書き込みだけ省く。
+# 案件・generation・observation の実採番と recovery での ID 引継ぎは維持する。
+pytestmark = pytest.mark.usefixtures(
+    "feedback_without_transport", "nonpersistent_execution_ids"
+)
 
 
 @pytest.fixture

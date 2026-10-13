@@ -327,7 +327,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "a5f187f1dba5e4a7b7db7e45a5338a9b06e51acfe188aeb7a9ce3fea04b6e1e1",
-    "last_investigated_at": "2026-10-11_15-17-50_886"
+    "last_investigated_at": "2026-10-13_22-38-49_545"
   },
   "oracle/doc/dev_rule/test_rule.md": {
     "investigation_required": true,
