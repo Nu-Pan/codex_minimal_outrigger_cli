@@ -23,10 +23,10 @@ def _clear_completion_probe_environment(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def _copy_wrapper(fake_cmoc_root: Path) -> None:
-    """テスト用 cmoc root に起動 wrapper を配置する。"""
+    """検証に必要な内容と実行権限だけを複製し、起動 wrapper を配置する。"""
     fake_bin = fake_cmoc_root / "bin"
     fake_bin.mkdir(parents=True)
-    shutil.copy2(_WRAPPER_SOURCE, fake_bin / "cmoc")
+    shutil.copy(_WRAPPER_SOURCE, fake_bin / "cmoc")
 
 
 def _write_probe_python(fake_cmoc_root: Path) -> None:

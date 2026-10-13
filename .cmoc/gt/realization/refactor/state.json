@@ -1574,8 +1574,8 @@
   "test/test_runtime_wrapper.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "707b3f26990edb78254d6b4a9b15a2b50f704cf7f8afd6c89b609f3ce72be6d5",
-    "last_investigated_at": "2026-10-11_06-41-43_147"
+    "last_investigated_sha256": "8aaf6c75f306b3d342374cbf5949aaf324c0c329079b77d26ef05f92d93d7d8d",
+    "last_investigated_at": "2026-10-13_10-46-23_859"
   },
   "test/test_session_cli.py": {
     "investigation_required": true,
