@@ -794,6 +794,7 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert run_git(root, "branch", "--list", next_state["run"]["branch"]).stdout == ""
 
 
+@pytest.mark.usefixtures("nonpersistent_execution_ids")
 @pytest.mark.parametrize("run_state", ["joinable", "error"])
 @pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
 @pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
@@ -807,6 +808,7 @@ def test_apply_join_hook_selects_diff_base(
     """merge 結果と開始時 state の全組合せで、比較始点の選択と保存を検証する。"""
     # Git の merge・state 同期・資源 cleanup を置換し、run 作成を省く。
     # state と report は実際に保存し、実 Git との結合は下の CLI test に残す。
+    # ID の永続採番は test_runtime_ids.py と test_runtime_cli.py に残し、SQLite 準備を省く。
     previous_base = "previous-apply-fork" if has_previous_apply else None
     state = SessionState(
         session=SessionPart(
