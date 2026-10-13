@@ -392,12 +392,13 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
 
 
 def test_run_worktree_rejects_noncanonical_branch(
-    cli_repository: Path,
+    tmp_path: Path,
 ) -> None:
     """現行 ID を持たない branch を worktree の保存先へ解決しない。"""
-    root = cli_repository
+    # 名前の拒否は root 探索より前に行うため、Git repository を準備しない。
+    root = tmp_path
 
-    # 拒否で repository は変わらないため、全 branch 境界に同じ実 Git root を使う。
+    # 全 branch 境界を両 API で検査し、root 探索へ進めば未初期化の root で失敗する。
     for branch in (
         f"cmoc/run/../{RUN_ID}",
         f"cmoc/run/{SESSION_ID}/..",
