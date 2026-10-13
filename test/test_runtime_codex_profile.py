@@ -34,7 +34,6 @@ from commons.runtime_codex_profile import (
     codex_subprocess_env,
     prepare_codex_override_args,
     prepare_schema,
-    read_output_json,
 )
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
@@ -603,23 +602,3 @@ def test_prepare_schema_preserves_source_bytes_for_hash_store(tmp_path: Path) ->
     assert stored is not None
     assert stored.name == f"{hashlib.sha256(source_bytes).hexdigest()}.json"
     assert stored.read_bytes() == source_bytes
-
-
-def test_read_output_json_returns_none_for_invalid_utf8(
-    tmp_path: Path,
-) -> None:
-    """不正 encoding の schema-less output を JSON failure として扱う。"""
-    output = tmp_path / "output.json"
-    output.write_bytes(b"\xff")
-
-    assert read_output_json(output) is None
-
-
-def test_read_output_json_returns_none_for_excessively_nested_json(
-    tmp_path: Path,
-) -> None:
-    """JSON decoder の recursion failure を schema-less output failure として扱う。"""
-    output = tmp_path / "output.json"
-    output.write_text("[" * 10_000 + "0" + "]" * 10_000)
-
-    assert read_output_json(output) is None

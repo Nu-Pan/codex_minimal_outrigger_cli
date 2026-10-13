@@ -23,7 +23,6 @@ from .runtime_codex_profile import (
     extract_resume_token,
     prepare_codex_override_args,
     prepare_schema,
-    read_output_json,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
@@ -62,6 +61,28 @@ from .runtime_results import (
 )
 
 _MAX_OUTPUT_CORRECTIONS = 2
+
+
+def _read_optional_output(path: Path) -> tuple[str, Any]:
+    """schema なしの出力から本文と JSON を取得し、不正 JSON は None とする。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    try:
+        output_bytes = path.read_bytes()
+    except FileNotFoundError:
+        return "", None
+    try:
+        output_text = output_bytes.decode("utf-8")
+    except UnicodeError:
+        # 表示用の置換文字を、正常に符号化された JSON として受理しない。
+        output_text = output_bytes.decode("utf-8", errors="replace")
+        output_json = None
+    else:
+        try:
+            output_json = json.loads(output_text)
+        except (RecursionError, json.JSONDecodeError):
+            output_json = None
+    # Path.read_text() が行っていた改行変換を本文の返却でも保つ。
+    return output_text.replace("\r\n", "\n").replace("\r", "\n"), output_json
 
 
 def _read_required_output(path: Path) -> tuple[str, Any]:
@@ -1050,7 +1071,7 @@ def run_codex_exec(
                     detail,
                 )
         else:
-            output_json = read_output_json(output_path)
+            output_text, output_json = _read_optional_output(output_path)
         _emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=call_path,
@@ -1063,13 +1084,6 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        # Structured Output は検証した本文を再利用し、結果構築で再読み取りしない。
-        if schema_path is None:
-            try:
-                # schema-less output の不正 UTF-8 でも結果構築を中断しない。
-                output_text = output_path.read_text(encoding="utf-8", errors="replace")
-            except FileNotFoundError:
-                output_text = ""
         return CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,

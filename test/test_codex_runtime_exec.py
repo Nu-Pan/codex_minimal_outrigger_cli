@@ -20,6 +20,42 @@ from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
 
 
+def test_schema_less_output_preserves_text_and_optional_json(tmp_path):
+    """省略可能な出力の境界値と本文・JSON の一貫性を CLI 起動なしで検証する。"""
+    # 出力 file 以外の前提は共通なので、同じ通常 file の内容だけを差し替える。
+    cases = [
+        (None, "", None),
+        (b"", "", None),
+        (b" \r\n\r", " \n\n", None),
+        (b"done\n", "done\n", None),
+        (
+            '{"text": "日本語\ufffd"}\r\n'.encode("utf-8"),
+            '{"text": "日本語\ufffd"}\n',
+            {"text": "日本語\ufffd"},
+        ),
+        (
+            b'{"text": "\xff"}\r\n',
+            '{"text": "\ufffd"}\n',
+            None,
+        ),
+        (
+            b"[" * 10_000 + b"0" + b"]" * 10_000,
+            "[" * 10_000 + "0" + "]" * 10_000,
+            None,
+        ),
+    ]
+    output = tmp_path / "output.json"
+    for output_bytes, expected_text, expected_json in cases:
+        if output_bytes is None:
+            output.unlink(missing_ok=True)
+        else:
+            output.write_bytes(output_bytes)
+        assert exec_module._read_optional_output(output) == (
+            expected_text,
+            expected_json,
+        )
+
+
 def test_setup_codex_home_isolates_home_and_codex_home(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -1584,20 +1584,6 @@ def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
     return write_hashed_file(schema_store_dir(root), "", ".json", schema_text)
 
 
-def read_output_json(path: Path) -> Any:
-    """schema なしの Codex output が空または不正 JSON の場合は None を返す。"""
-    try:
-        output_text = path.read_text(encoding="utf-8")
-    except (FileNotFoundError, UnicodeError):
-        return None
-    if not output_text.strip():
-        return None
-    try:
-        return json.loads(output_text)
-    except (RecursionError, json.JSONDecodeError, UnicodeError):
-        return None
-
-
 def codex_error_text(stdout_text: str, stderr_text: str) -> str:
     """Codex の stderr と JSONL event 内 message を利用者向け detail に束ねる。"""
     fragments: list[str] = [stderr_text]
