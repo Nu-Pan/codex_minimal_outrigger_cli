@@ -1008,6 +1008,24 @@ def test_pending_observations_rejects_invalid_json(feedback_directory, raw_conte
     assert raw.read_bytes() == raw_content
 
 
+def test_pending_observations_rejects_undefined_raw_json_artifact(
+    feedback_directory: Path,
+) -> None:
+    """命名外 JSON を無視せず拒否し、raw の内容と診断 path を保持する。"""
+    # CLI の未公開・error report は test_invalid_raw_observation_blocks_publication に残す。
+    root = feedback_directory
+    unknown = feedback_root(root) / "observation" / "v1" / "unknown.json"
+    unknown.parent.mkdir(parents=True)
+    raw_content = b"{}\n"
+    unknown.write_bytes(raw_content)
+
+    with pytest.raises(CmocError, match="raw store の検査") as error:
+        feedback_report_module._pending_observations(root)
+
+    assert str(unknown) in error.value.detail
+    assert unknown.read_bytes() == raw_content
+
+
 def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
     """同じ path でも異なる evidence subject type を同一候補へ絞り込まない。"""
     observation = {
@@ -3407,23 +3425,6 @@ def test_invalid_raw_observation_blocks_publication(
     invocation_report = terminal_primary_report(result)
     assert invocation_report.parent.name == "invocation"
     assert 'terminal_classification: "error"' in invocation_report.read_text()
-
-
-@pytest.mark.usefixtures("feedback_without_transport")
-def test_undefined_raw_json_artifact_blocks_publication(
-    ready_run_session: tuple[Path, str, Path],
-) -> None:
-    """raw store の observation 命名外 JSON を無視して正常 publication しない。"""
-    root, _session_branch, _state_path = ready_run_session
-    unknown = feedback_root(root) / "observation" / "v1" / "unknown.json"
-    unknown.parent.mkdir(parents=True, exist_ok=True)
-    unknown.write_text("{}\n")
-
-    result = runner.invoke(app, ["feedback", "report"])
-
-    assert result.exit_code == 1
-    assert unknown.exists()
-    assert not (feedback_root(root) / "active" / "current.json").exists()
 
 
 @pytest.mark.usefixtures("feedback_without_transport")
