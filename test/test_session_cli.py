@@ -176,10 +176,10 @@ def break_preprocess_invariants(work: Path) -> Path:
     return gitignore
 
 
-def test_session_fork_creates_session_branch_and_state(
+def test_session_fork_and_abandon_update_branch_state_and_reports(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """同じ fork 成功経路で branch/state/report と ignore/log/clean 状態を検証する。"""
+    """同じ session で fork と abandon の branch/state/report と管理物を検証する。"""
     # fork の検査には実 Git の HEAD が必要だが、追跡ファイルの内容は使わない。
     root = committed_repository
     monkeypatch.chdir(root)
@@ -189,9 +189,10 @@ def test_session_fork_creates_session_branch_and_state(
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    branch = current_branch(root)
-    assert branch.startswith("cmoc/session/")
-    state = json.loads(session_state_path(root, branch).read_text())
+    session_branch = current_branch(root)
+    assert session_branch.startswith("cmoc/session/")
+    state_path = session_state_path(root, session_branch)
+    state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
     assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["last_joined_apply_fork_commit"] is None
@@ -217,9 +218,34 @@ def test_session_fork_creates_session_branch_and_state(
     report = terminal_primary_report(result)
     rendered_report = report.read_text(encoding="utf-8")
     assert report.parent == root / ".cmoc" / "gu" / "report" / "session" / "fork"
-    assert f'session_branch: "{branch}"' in rendered_report
+    assert f'session_branch: "{session_branch}"' in rendered_report
     assert f'home_branch: "{home_branch}"' in rendered_report
     assert 'session_state_after: "active"' in rendered_report
+
+    # 検証済みの session をそのまま破棄し、別 repository と fork の再準備を省く。
+    # linked worktree の session 固有 commit と失敗時の rollback は専用ケースに残す。
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
+
+    result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert current_branch(root) == home_branch
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        != 0
+    )
+    state = json.loads(state_path.read_text())
+    assert state["session"]["state"] == "abandoned"
+    assert f"- abandoned_branch: `{session_branch}`" in result.output
+    assert "- session_state: `abandoned`" in result.output
+    report = terminal_primary_report(result)
+    rendered_report = report.read_text(encoding="utf-8")
+    assert f'session_branch: "{session_branch}"' in rendered_report
+    assert f'home_branch: "{home_branch}"' in rendered_report
+    assert 'session_state_after: "abandoned"' in rendered_report
 
 
 def test_session_fork_uses_captured_head_when_home_advances_before_branch_creation(
@@ -566,43 +592,6 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
     assert state["session"]["session_home_branch"] == "linked-home"
     assert state["session"]["session_fork_commit"] == linked_commit
     assert run_git(linked, "rev-parse", session_branch).stdout.strip() == linked_commit
-
-
-def test_session_abandon_switches_home_and_marks_state(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """session abandonがhome branchへ戻りstateをabandonedにすることを検証する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    seed_search_config(root)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    session_branch = current_branch(root)
-    state_path = session_state_path(root, session_branch)
-    home_branch = session_home_branch(root, session_branch)
-    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
-
-    result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
-
-    assert result.exit_code == 0
-    assert current_branch(root) == home_branch
-    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
-    assert (
-        subprocess.run(
-            ["git", "rev-parse", "--verify", session_branch], cwd=root
-        ).returncode
-        != 0
-    )
-    state = json.loads(state_path.read_text())
-    assert state["session"]["state"] == "abandoned"
-    assert f"- abandoned_branch: `{session_branch}`" in result.output
-    assert "- session_state: `abandoned`" in result.output
-    report = terminal_primary_report(result)
-    rendered_report = report.read_text(encoding="utf-8")
-    assert f'session_branch: "{session_branch}"' in rendered_report
-    assert f'home_branch: "{home_branch}"' in rendered_report
-    assert 'session_state_after: "abandoned"' in rendered_report
 
 
 def test_session_abandon_uses_linked_worktree_branch(
