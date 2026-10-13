@@ -1030,7 +1030,6 @@ def test_run_abandon_stops_tracked_process_for_error_run(
     assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
 
 
-@pytest.mark.parametrize("ready_abandon_run", ["joinable", "error"], indirect=True)
 def test_run_abandon_rejects_unreadable_process_tracking(
     ready_abandon_run: EditingRunContext,
 ) -> None:
@@ -1041,14 +1040,21 @@ def test_run_abandon_rejects_unreadable_process_tracking(
     tracking_path.parent.mkdir(parents=True)
     tracking_path.write_bytes(b"\xff")
 
-    result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+    # 拒否後も資源が残るため、両 state の停止分岐を同じ実 worktree で検査する。
+    for run_state in ("joinable", "error"):
+        state = SessionState.from_dict(_state(state_path))
+        state.run.state = run_state
+        write_state(state_path, state)
+        run_before = _state(state_path)["run"]
 
-    assert result.exit_code == 1
-    assert "process tracking を検証できません" in result.output
-    assert _state(state_path)["run"]["state"] == context.state_before
-    assert context.run_worktree.exists()
-    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
-    assert tracking_path.read_bytes() == b"\xff"
+        result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+        assert result.exit_code == 1, run_state
+        assert "process tracking を検証できません" in result.output, run_state
+        assert _state(state_path)["run"] == run_before, run_state
+        assert context.run_worktree.exists(), run_state
+        assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+        assert tracking_path.read_bytes() == b"\xff", run_state
 
 
 def test_run_abandon_reports_stale_child_stop_warning(
@@ -3247,11 +3253,8 @@ def test_start_run_prepares_work_directories_before_publishing_state(
     assert _state(state_path)["run"]["state"] == "running"
 
 
-@pytest.mark.parametrize(
-    "kind", ["realization_apply", "realization_refactor", "feedback_report"]
-)
 def test_start_run_directory_conflict_cleans_unpublished_resources(
-    ready_run_session, monkeypatch, kind
+    ready_run_session, monkeypatch
 ):
     """配置先の衝突で開始に失敗した場合、session の内容と ready state を保つ。"""
     root, session_branch, state_path = ready_run_session
@@ -3271,20 +3274,23 @@ def test_start_run_directory_conflict_cleans_unpublished_resources(
 
     monkeypatch.setattr(lifecycle_module, "new_run_target", record_target)
 
-    with pytest.raises(CmocError) as exc_info:
-        start_editing_run(kind)
+    # 各失敗で ready state と衝突内容が保たれることを確認し、session 準備を共用する。
+    for kind in ("realization_apply", "realization_refactor", "feedback_report"):
+        targets.clear()
+        with pytest.raises(CmocError) as exc_info:
+            start_editing_run(kind)
 
-    [(run_branch, run_worktree)] = targets
-    assert "作業用配置先" in exc_info.value.summary
-    assert f"work-root: {run_worktree}" in exc_info.value.detail
-    assert f"path: {run_worktree / 'src'}" in exc_info.value.detail
-    assert state_path.read_bytes() == state_before
-    assert collision.read_text() == "kept tracked collision\n"
-    assert not run_worktree.exists()
-    assert not lifecycle_module.branch_exists(root, run_branch)
-    assert not run_process_id_path(
-        root, session_branch.removeprefix("cmoc/session/")
-    ).exists()
+        [(run_branch, run_worktree)] = targets
+        assert "作業用配置先" in exc_info.value.summary, kind
+        assert f"work-root: {run_worktree}" in exc_info.value.detail, kind
+        assert f"path: {run_worktree / 'src'}" in exc_info.value.detail, kind
+        assert state_path.read_bytes() == state_before, kind
+        assert collision.read_text() == "kept tracked collision\n", kind
+        assert not run_worktree.exists(), kind
+        assert not lifecycle_module.branch_exists(root, run_branch), kind
+        assert not run_process_id_path(
+            root, session_branch.removeprefix("cmoc/session/")
+        ).exists(), kind
 
 
 def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(
