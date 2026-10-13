@@ -237,9 +237,13 @@ def _finish_from_journal(
                 or state.current["report_sha256"] != report_reference["sha256"]
             ):
                 raise _failure("feedback publication point を確認できません。")
-            work = load_report_cut(repo)
-            if work is not None:
-                manifest, manifest_path = work
+            # 同じ排他区間で検証した cleanup manifest を再読・再検証しない。
+            manifest = state.cleanup_manifest
+            if manifest is None:
+                # cleanup 完了後も、別の未完了 cut を見逃さず identity を検査する。
+                work = load_report_cut(repo)
+                manifest = work[0] if work is not None else None
+            if manifest is not None:
                 if (
                     manifest["report_cut_id"] != journal["report_cut_id"]
                     or manifest["run"]["identity"] != journal["identity"]

@@ -55,6 +55,7 @@ import commons.runtime_feedback_state as feedback_state_module
 import commons.runtime_feedback_store as feedback_store_module
 import commons.runtime_logging as logging_module
 import sub_commands.feedback.decision as decision_module
+import sub_commands.feedback.recovery as recovery_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
 from acp.builder.feedback.normalize_issue import (
@@ -2598,10 +2599,31 @@ def test_empty_report_publishes_current_generation(
         "run_codex_exec",
         lambda *_args, **_kwargs: pytest.fail("empty report must not call Codex"),
     )
+    # 終了処理でも hash 検証済み manifest を共有し、同じ内容の再読込を検出する。
+    finish = recovery_module._finish_from_journal
+    original_read = Path.read_bytes
+    cleanup_reads = []
+
+    def finish_with_read_count(context, journal, path):
+        manifest_path = feedback_state_module.report_cut_manifest_path(
+            root, journal["report_cut_id"]
+        )
+
+        def read(candidate):
+            if candidate == manifest_path:
+                cleanup_reads.append(candidate)
+            return original_read(candidate)
+
+        with monkeypatch.context() as finalization_patch:
+            finalization_patch.setattr(Path, "read_bytes", read)
+            return finish(context, journal, path)
+
+    monkeypatch.setattr(recovery_module, "_finish_from_journal", finish_with_read_count)
 
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
+    assert len(cleanup_reads) == 1
     [log_path] = set(log_dir.glob("*.jsonl")) - previous_logs
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     [publication_event] = [
@@ -3472,3 +3494,13 @@ def test_cleanup_corruption_is_a_required_recovery_failure(
     cut_path.write_bytes(canonical_json_bytes(changed))
     with pytest.raises(CmocError, match="SHA256"):
         load_active_state(root)
+    # 同じ invocation の snapshot だけを共有し、次回 recovery は改変を再検査する。
+    pointer_path = feedback_state_module.current_pointer_path(root)
+    pointer_content = pointer_path.read_bytes()
+    corrupted_content = cut_path.read_bytes()
+    recovered = runner.invoke(app, ["feedback", "report"])
+    assert recovered.exit_code == 1, recovered.output
+    assert "SHA256" in recovered.output
+    assert pointer_path.read_bytes() == pointer_content
+    assert cut_path.read_bytes() == corrupted_content
+    assert (feedback_root(root) / "finalization.json").is_file()
