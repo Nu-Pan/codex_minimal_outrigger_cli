@@ -1593,31 +1593,55 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
     assert "`renamed.md`" in report
 
 
-def test_refactor_missing_target_rejects_unexpected_processing_unit_changes(
+def test_refactor_state_refresh_rejects_unexpected_processing_unit_changes(
     ready_join_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """消えた target の同期単位でも想定外 path を commit しない。"""
-    # target 消失前の state 同期まで準備し、session 作成の CLI は重複させない。
-    context = start_editing_run("realization_refactor")
-
-    (context.run_worktree / "README.md").unlink()
+    """target の有無によらず、state 同期後の想定外 path を commit しない。"""
+    # 共通開始処理は専用 test に残し、同期済み state と実 worktree だけ用意する。
+    context = _prepare_run(
+        ready_join_session, kind="realization_refactor", run_state="running"
+    )
     unexpected_path = context.run_worktree / "memo" / "unexpected.md"
-    unexpected_path.parent.mkdir()
-    unexpected_path.write_text("must not be committed\n")
+    late_realization = context.run_worktree / "late-realization.md"
+    synchronize = refactor_module.sync_refactor_state
+
+    def sync_with_unexpected_changes(root):
+        state = synchronize(root)
+        unexpected_path.parent.mkdir(exist_ok=True)
+        unexpected_path.write_text("must not be committed\n")
+        late_realization.write_text("not reported by the agent\n")
+        return state
+
+    monkeypatch.setattr(
+        refactor_module, "sync_refactor_state", sync_with_unexpected_changes
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            output_json={
+                "findings": [],
+                "verification": {"status": "not_required", "summary": "no changes"},
+            },
+        ),
+    )
     before_head = run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip()
 
-    with pytest.raises(CmocError, match="想定外差分"):
-        refactor_module._run_refactor_unit(
-            context,
-            "README.md",
-            [],
-            {},
-            [],
-        )
+    # 同じ run を rollback して、消失時の同期と通常の調査結果保存を両方検査する。
+    for target_exists in (False, True):
+        if not target_exists:
+            (context.run_worktree / "README.md").unlink()
+        with pytest.raises(CmocError, match="想定外差分") as error:
+            refactor_module._run_refactor_unit(context, "README.md", [], {}, [])
 
-    assert run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip() == (
-        before_head
-    )
+        assert "memo/unexpected.md" in error.value.detail
+        assert "late-realization.md" in error.value.detail
+        assert run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip() == (
+            before_head
+        )
+        refactor_module.rollback_work_unit(context.run_worktree)
 
 
 def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
@@ -4065,6 +4089,16 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
     """関連 file の変更を調査実績へ数えず、追加 file は次巡に公平に処理する。"""
     _root, _, _state_path = ready_content_session
     reviewed = []
+    classified = Counter()
+    classify = lifecycle_module.is_realization_file_path
+
+    def record_classification(root, path, **kwargs):
+        classified[path.relative_to(root).as_posix()] += 1
+        return classify(root, path, **kwargs)
+
+    monkeypatch.setattr(
+        lifecycle_module, "is_realization_file_path", record_classification
+    )
 
     def review(parameter, **kwargs):
         target = kwargs["purpose"].removeprefix("realization refactor: ")
@@ -4096,6 +4130,8 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
     )
     assert result.exit_code == 0, result.output
     assert refactor_unit_diff_queries == []
+    # 同期後に同じ変更 path を再分類して Git process を増やさない。
+    assert classified == {"README.md": 1, "src/new.py": 1}
     assert reviewed == [
         ".gitignore",
         "README.md",
