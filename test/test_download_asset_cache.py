@@ -11,7 +11,6 @@ import io
 import json
 import multiprocessing
 import shutil
-import ssl
 import subprocess
 import tarfile
 import urllib.error
@@ -23,7 +22,11 @@ from urllib.parse import unquote, urlsplit
 
 import pytest
 from _cli_support import runner, terminal_primary_report
-from _download_asset_support import download_response, process_obtain
+from _download_asset_support import (
+    download_response,
+    http_distribution_opener,
+    process_obtain,
+)
 from _git_support import make_repo
 
 import commons.runtime_cli as cli_module
@@ -44,14 +47,8 @@ from commons.runtime_results import TerminalResult
 from main import app
 
 
-@pytest.fixture(scope="module")
-def download_tls_context():
-    """代替 HTTP 通信のたびに、同じ標準 CA 証明書を読み込み直さない。"""
-    return ssl.create_default_context()
-
-
 @pytest.fixture
-def distribution(monkeypatch, download_tls_context):
+def distribution(monkeypatch):
     """HTTP transport の応答を置換し、urllib の redirect と通信記録を通す。"""
     bodies = {"/model": b"model bytes", "/dependency": b"dependency bytes"}
     requests = []
@@ -65,15 +62,7 @@ def distribution(monkeypatch, download_tls_context):
             request.full_url, bodies.get(path, b""), 200 if path in bodies else 503
         )
 
-    build_opener = urllib.request.build_opener
-
-    def opener(*handlers):
-        # handler と通信記録は取得ごとに作り、TLS context の準備だけを共有する。
-        return build_opener(
-            *handlers, urllib.request.HTTPSHandler(context=download_tls_context)
-        )
-
-    monkeypatch.setattr(urllib.request, "build_opener", opener)
+    monkeypatch.setattr(urllib.request, "build_opener", http_distribution_opener())
     monkeypatch.setattr(urllib.request.HTTPHandler, "http_open", transport)
     return "http://distribution.invalid", bodies, requests
 

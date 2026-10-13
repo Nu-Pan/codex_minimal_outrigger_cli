@@ -1244,8 +1244,8 @@
   "test/_download_asset_support.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "c27df9c0170685a8dd9caac6d2ef766f0b8b66ddd3e0e89a3b7dc3e717433e81",
-    "last_investigated_at": "2026-10-11_07-15-25_872"
+    "last_investigated_sha256": "95e1e2ed0b6a025cb3c8b92309c63132f3773dbdbed9870c5685cdd27e0dca8d",
+    "last_investigated_at": "2026-10-13_11-24-56_111"
   },
   "test/_git_support.py": {
     "investigation_required": true,
