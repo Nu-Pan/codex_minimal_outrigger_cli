@@ -17,8 +17,8 @@ from oracle.prompt_builder.editor_input import (
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor as runtime_editor_module
+import commons.runtime_logging as runtime_logging_module
 from cmoc_runtime import CmocError
-from commons.runtime_ids import is_common_id
 
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
 
@@ -30,6 +30,19 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     handoff_start: Mock,
 ) -> None:
     """同じ本文 path を保存まで使い、別実行と旧データの変更を避ける。"""
+    # 採番の順序・永続化は test_runtime_ids.py、logger の ID 引き継ぎは
+    # test_oracle_edit_cli.py と test_oracle_investigation_cli.py に残す。
+    execution_ids = (
+        "exec_00000z_2000-01-01_00-00",
+        "exec_000010_2000-01-01_00-00",
+    )
+    issued_ids = iter(execution_ids)
+
+    def issue_execution_id(repository: Path, prefix: str) -> str:
+        assert (repository, prefix) == (tmp_path, "exec")
+        return next(issued_ids)
+
+    monkeypatch.setattr(runtime_logging_module, "new_id", issue_execution_id)
     old_recovery = tmp_path / ".cmoc/gu/editor_input/old_orig.md"
     old_log = tmp_path / ".cmoc/gu/log/editor_input/old_orig.md"
     for existing in (old_recovery, old_log):
@@ -72,9 +85,9 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
         assert input_path.read_text(encoding="utf-8") == original_prompt + "\n"
 
     assert opened == paths
-    execution_ids = [path.name.removesuffix("_orig.md") for path in paths]
-    assert all(is_common_id(value, "exec") for value in execution_ids)
-    assert execution_ids[0] < execution_ids[1]
+    assert [path.name for path in paths] == [
+        f"{value}_orig.md" for value in execution_ids
+    ]
     assert paths[0].read_text(encoding="utf-8") == "<!-- editor note -->\ninput-1\n"
     assert set(old_log.parent.iterdir()) == {old_log, *paths}
     assert list(old_recovery.parent.iterdir()) == [old_recovery]
