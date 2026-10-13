@@ -68,8 +68,8 @@
   "oracle/doc/app_spec/download_asset_cache.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "38f58f1366c4d0d494550ea9485e51ea5d3ed4d6fa1172f68a35401e2a238cbd",
-    "last_investigated_at": "2026-10-11_09-08-21_460"
+    "last_investigated_sha256": "34b624bd536269c3651f051295676cbc8186e212d057ed09052fcdd667e044ef",
+    "last_investigated_at": "2026-10-13_14-01-08_031"
   },
   "oracle/doc/app_spec/editor_input_handoff.md": {
     "investigation_required": true,
