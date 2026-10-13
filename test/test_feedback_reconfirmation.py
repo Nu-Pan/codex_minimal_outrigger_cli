@@ -1317,6 +1317,71 @@ def test_publication_and_active_generation_use_hash_verified_bytes(
         _assert_hash_verified_state_snapshot(root, state, path, monkeypatch)
 
 
+def test_published_active_state_reuses_one_cleanup_snapshot(
+    publication_feedback, monkeypatch
+):
+    """cleanup 待ちでも hash 検証済み manifest を再読せず、次回は改変を拒否する。"""
+    h = publication_feedback
+    root = h.context.repo
+    expected = load_active_state(root)
+    original_read = Path.read_bytes
+    original_content = original_read(h.path)
+    reads = []
+
+    def replace_after_read(path):
+        content = original_read(path)
+        if path == h.path:
+            reads.append(path)
+            if len(reads) == 1:
+                path.write_bytes(b"{}\n")
+        return content
+
+    try:
+        with monkeypatch.context() as snapshot_patch:
+            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+            assert validate_feedback_state(root) == expected
+            assert reads == [h.path]
+            with pytest.raises(CmocError, match="SHA256"):
+                validate_feedback_state(root)
+            assert reads == [h.path, h.path]
+    finally:
+        h.path.write_bytes(original_content)
+
+
+def test_published_cleanup_still_checks_work_inventory(publication_feedback):
+    """内容の再検証を省いても、余分な cut・file・symlink を許容しない。"""
+    h = publication_feedback
+    root = h.context.repo
+    work_root = h.path.parent.parent
+    expected = load_active_state(root)
+
+    # 同じ publication を保ち、work root と cut 内部の未定義 file を独立に検査する。
+    for path in (work_root / "unknown.json", h.path.parent / "unknown.json"):
+        path.write_bytes(b"{}\n")
+        try:
+            with pytest.raises(CmocError, match="未定義 artifact"):
+                validate_feedback_state(root)
+        finally:
+            path.unlink()
+
+    extra_cut = work_root / "fbc_00000000-0000-7000-8000-000000000002"
+    extra_cut.mkdir()
+    try:
+        with pytest.raises(CmocError, match="複数"):
+            validate_feedback_state(root)
+    finally:
+        extra_cut.rmdir()
+
+    alias = work_root / "alias"
+    alias.symlink_to(h.path.parent, target_is_directory=True)
+    try:
+        with pytest.raises(CmocError, match="未定義 artifact"):
+            validate_feedback_state(root)
+    finally:
+        alias.unlink()
+    assert validate_feedback_state(root) == expected
+
+
 def test_publication_staging_relaxes_only_artifact_existence(publication_feedback):
     """保存途中の欠落だけを許し、現存する破損と不正な file を拒否する。"""
     h = publication_feedback
