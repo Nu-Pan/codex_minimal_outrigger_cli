@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 from _cli_support import run_doctor, runner, seed_search_config, terminal_primary_report
 from _command_support import write_python_executable
-from _git_support import make_repo, run_git
+from _git_support import init_repo, make_repo, run_git
 
 import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
@@ -636,7 +636,10 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
 ):
     """同じ blob の再登録を省き、更新時も mode と保存対象外の entry を保つ。"""
     monkeypatch.setenv("GIT_DEFAULT_HASH", object_format)
-    root = make_repo(tmp_path)
+    # hash 形式の設定後に初期化し、検査対象の config commit だけで HEAD を作る。
+    root = tmp_path / "repo"
+    root.mkdir()
+    init_repo(root)
     assert (
         run_git(root, "rev-parse", "--show-object-format").stdout.strip()
         == object_format
@@ -1316,11 +1319,11 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
 
 
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """既に追跡された `.cmoc/gu` のファイルを実体を残して index から外すことを検証する。"""
 
-    root = make_repo(tmp_path)
+    root = cli_repository
     local_path = root / ".cmoc" / "gu" / "cache.json"
     local_path.parent.mkdir(parents=True)
     local_path.write_text("{}\n")
@@ -1337,11 +1340,11 @@ def test_doctor_preprocess_untracks_existing_cmoc_local_files(
 
 
 def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """事前に stage された `.cmoc/gu` の変更を doctor が復元・上書きしないことを検証する。"""
 
-    root = make_repo(tmp_path)
+    root = cli_repository
     local_path = root / ".cmoc" / "gu" / "cache.json"
     local_path.parent.mkdir(parents=True)
     local_path.write_text('{"old": true}\n')
@@ -1360,11 +1363,11 @@ def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
 
 
 def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_deletion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """生成した `.agents/.gitkeep` だけを修復 commit し、既存の削除 stage を保つことを検証する。"""
 
-    root = make_repo(tmp_path)
+    root = cli_repository
     agents_file = root / ".agents" / "existing.txt"
     agents_file.parent.mkdir()
     agents_file.write_text("existing\n")
@@ -1453,12 +1456,12 @@ def test_agents_tracking_preserves_existing_files_and_index(
 
 @pytest.mark.parametrize("index_flag", [None, "--skip-worktree"])
 def test_doctor_restores_missing_tracked_gitkeep(
-    tmp_path: Path,
+    cli_repository: Path,
     index_flag: str | None,
 ) -> None:
     """tracked な `.agents/.gitkeep` の unstaged deletion を復元する。"""
 
-    root = make_repo(tmp_path)
+    root = cli_repository
     # 必要な追跡 entry だけを準備し、doctor の全修復を setup で重ねない。
     gitkeep = root / ".agents" / ".gitkeep"
     gitkeep.parent.mkdir()
@@ -1550,11 +1553,11 @@ def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
 
 
 def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """利用者の追加・rename を修復 commit に混ぜず、元の staged 内容を保つ。"""
 
-    root = make_repo(tmp_path)
+    root = cli_repository
     old_path = root / "old.txt"
     new_path = root / "new.txt"
     old_path.write_text("same content\n")
@@ -1637,12 +1640,12 @@ def test_staged_deletion_check_preserves_saved_index_with_one_git_query(
 
 
 def test_doctor_preserves_preexisting_staged_gitignore_deletion(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """doctor が既存 .gitignore の staged deletion も保持する。"""
 
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
     # staged deletion の前提には追跡済み ignore file があれば足りる。
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
