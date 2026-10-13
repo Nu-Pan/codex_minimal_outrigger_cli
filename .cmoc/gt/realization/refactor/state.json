@@ -1430,8 +1430,8 @@
   "test/test_feedback_history.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "74e941d11a5f47de74ad916f432ad02dc4d6c0211b315b76151ffd76f631830f",
-    "last_investigated_at": "2026-10-11_07-22-22_364"
+    "last_investigated_sha256": "56ca76e0962139d261d307c6b16f2c5761a08c5746befa837fe0ecf910d97dd8",
+    "last_investigated_at": "2026-10-13_11-36-40_519"
   },
   "test/test_feedback_intake.py": {
     "investigation_required": true,

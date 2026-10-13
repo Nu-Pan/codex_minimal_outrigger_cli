@@ -11,7 +11,7 @@ from commons.runtime_feedback_store import canonical_json_bytes, sha256_bytes
 
 
 @pytest.fixture
-def saved_history(tmp_path):
+def history_input(tmp_path):
     generation = "fbg_000001_2026-10-08_00-00"
     record = {
         "schema_version": 1,
@@ -28,14 +28,23 @@ def saved_history(tmp_path):
         "observations": [],
     }
     path = tmp_path / ".cmoc/gu/feedback/history" / f"{generation}.json"
-    path.parent.mkdir(parents=True)
-    content = canonical_json_bytes(record)
+    return tmp_path, path, record
+
+
+def _save_history(root, path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
-    reference = {
-        "path": path.relative_to(tmp_path).as_posix(),
+    return {
+        "path": path.relative_to(root).as_posix(),
         "sha256": sha256_bytes(content),
     }
-    return tmp_path, path, record, reference
+
+
+@pytest.fixture
+def saved_history(history_input):
+    root, path, record = history_input
+    reference = _save_history(root, path, canonical_json_bytes(record))
+    return root, path, record, reference
 
 
 def test_history_load_uses_hash_verified_bytes_and_ignores_staged_history(
@@ -68,33 +77,39 @@ def test_history_load_uses_hash_verified_bytes_and_ignores_staged_history(
         ("invalid_json", "canonical JSON"),
     ],
 )
-def test_history_load_rejects_corruption(saved_history, fault, message):
-    root, path, record, reference = saved_history
+def test_history_load_rejects_corruption(history_input, fault, message):
+    root, path, record = history_input
     if fault == "schema":
         content = canonical_json_bytes({**record, "schema_version": 2})
     elif fault == "invalid_json":
         content = b"{"
     else:
         content = json.dumps(record).encode()
-    path.write_bytes(content)
-    reference["sha256"] = sha256_bytes(content)
+    # 拒否対象だけを保存し、直後に上書きする正常 file は準備しない。
+    reference = _save_history(root, path, content)
 
     with pytest.raises(CmocError, match=message):
         load_history(root, [reference])
 
 
-@pytest.mark.parametrize("fault", ["duplicate", "nested"])
-def test_history_load_rejects_duplicate_or_nested_paths(saved_history, fault):
-    root, path, _, reference = saved_history
-    references = [reference, reference]
-    if fault == "nested":
-        nested = path.parent / "nested" / path.name
-        nested.parent.mkdir()
-        nested.write_bytes(path.read_bytes())
-        references = [{**reference, "path": nested.relative_to(root).as_posix()}]
+def test_history_load_rejects_duplicate_paths(saved_history):
+    root, _, _, reference = saved_history
 
     with pytest.raises(CmocError, match="path が重複または不正"):
-        load_history(root, references)
+        load_history(root, [reference, reference])
+
+
+def test_history_load_rejects_nested_paths(history_input):
+    root, path, record = history_input
+    nested = path.parent / "nested" / path.name
+    # path は内容の読込前に拒否されるため、directory と file は不要。
+    reference = {
+        "path": nested.relative_to(root).as_posix(),
+        "sha256": sha256_bytes(canonical_json_bytes(record)),
+    }
+
+    with pytest.raises(CmocError, match="path が重複または不正"):
+        load_history(root, [reference])
 
 
 @pytest.mark.parametrize("root_kind", ["relative", "symlink"])
@@ -109,11 +124,7 @@ def test_history_load_preserves_reference_order_with_repository_aliases(
     }
     next_path = path.with_name(f"{next_record['generation_id']}.json")
     content = canonical_json_bytes(next_record)
-    next_path.write_bytes(content)
-    next_reference = {
-        "path": next_path.relative_to(root).as_posix(),
-        "sha256": sha256_bytes(content),
-    }
+    next_reference = _save_history(root, next_path, content)
     if root_kind == "relative":
         monkeypatch.chdir(root)
         repository = Path(".")
