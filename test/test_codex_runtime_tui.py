@@ -64,8 +64,8 @@ def tui_log_directory(
     tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Path:
     """ログ・handoff context の検査では、ID の永続採番を準備しない。"""
-    # 永続性・並行採番は test_runtime_ids.py、TUI の採番との結合は
-    # 同一 timestamp・prompt 起動のケースに残す。
+    # 永続性は test_runtime_ids.py、並行採番は test_codex_runtime_paths.py に残す。
+    # TUI の採番との結合は同一 timestamp・prompt 起動のケースで検証する。
     ids = count()
 
     def issue_id(_root: Path, prefix: str) -> str:

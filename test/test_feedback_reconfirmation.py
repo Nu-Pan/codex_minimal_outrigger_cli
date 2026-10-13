@@ -75,8 +75,8 @@ def feedback_run(tmp_path, monkeypatch):
         "a" * 40,
         worktree,
     )
-    # 採番の永続性・並行発行は test_runtime_ids.py、feedback との結合は
-    # test_feedback.py に残し、ここでは ID の対応と artifact の実検査を保つ。
+    # 採番の永続性は test_runtime_ids.py、並行発行は test_codex_runtime_paths.py、
+    # feedback との結合は test_feedback.py に残し、ID の対応と artifact の実検査を保つ。
     sequences = Counter()
 
     def allocate_id(root, prefix):
