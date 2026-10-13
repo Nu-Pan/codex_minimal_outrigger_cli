@@ -8,9 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from itertools import count
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import (
     codex_arg_value,
@@ -44,17 +44,13 @@ from config.cmoc_config import CmocConfig
 
 @pytest.fixture
 def tui_runtime_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """ログ・設定・起動失敗の検証では Git context を解決済みとして扱う。"""
-    # 実 Git の cwd・linked worktree 境界は、この file の prompt 起動ケースに残す。
+    """Git context の導出を扱わない検証に、解決済みの root を渡す。"""
+    # 実 Git の root 導出は test_basic_runtime.py、TUI との結合は linked 起動ケースに残す。
     root = tmp_path / "repo"
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        runtime_codex_tui,
-        "AgentCallPathContext",
-        lambda agent_call_cwd: SimpleNamespace(
-            agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
-        ),
+        path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
     return root
 
@@ -63,9 +59,9 @@ def tui_runtime_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 def tui_log_directory(
     tui_runtime_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Path:
-    """単発 TUI のログ検査では、ID の永続採番を準備しない。"""
-    # 永続性・並行採番は test_runtime_ids.py、TUI の採番との結合は
-    # 同一 timestamp・並行 TUI・prompt 起動のケースに残す。
+    """ログ・handoff context の検査では、ID の永続採番を準備しない。"""
+    # 永続性は test_runtime_ids.py、並行採番は test_codex_runtime_paths.py に残す。
+    # TUI の採番との結合は同一 timestamp・prompt 起動のケースで検証する。
     ids = count()
 
     def issue_id(_root: Path, prefix: str) -> str:
@@ -91,15 +87,31 @@ def _tui_call_logs(root: Path) -> list[Path]:
 # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
 def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
-    cli_repository: Path,
+    tui_log_directory: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     toast_clock,
 ) -> None:
     """PURE_ORACLE_READ の完全 prompt 本文と CLI 引数を変更せず渡す。"""
     # Fake CLI は callback を起動しない。drain の待機契約は test_windows_toast.py で検証する。
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
+    # 実 process への受け渡しと通知設定を検査し、Git 導出・永続採番の準備は重ねない。
+    # 永続採番との結合は同一 timestamp と linked 起動のケースに残す。
+    root = tui_log_directory
+    # version の判定・有限な起動引数は test_runtime_codex_profile.py に残す。
+    # 判定関数との結合は通し、固定の version を返すためだけの process は作らない。
+    real_run = subprocess.run
+    version_probe = Mock(
+        side_effect=lambda argv, **_kwargs: subprocess.CompletedProcess(
+            argv, 0, stdout=b"codex-cli 0.153.4\n"
+        )
+    )
+
+    def run_with_fake_version(argv, **kwargs):
+        if argv[:1] == ["codex"] and "--version" in argv:
+            return version_probe(argv, **kwargs)
+        return real_run(argv, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run_with_fake_version)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -107,9 +119,6 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
         bin_dir / "codex",
         [
             "import json, os, pathlib, sys",
-            "if '--version' in sys.argv[1:]:",
-            "    print('codex-cli 0.153.4')",
-            "    raise SystemExit(0)",
             "args = sys.argv[1:]",
             "prompt = args[-1]",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
@@ -139,6 +148,11 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     )
 
     record = json.loads(recorder.read_text())
+    version_probe.assert_called_once()
+    assert version_probe.call_args.kwargs["cwd"] == root.resolve()
+    probe_environment = version_probe.call_args.kwargs["env"]
+    assert probe_environment["PATH"] == f"{bin_dir}:/usr/bin"
+    assert probe_environment["CODEX_HOME"] == str(tmp_path / "codex_home")
     assert record["cwd"] == str(root.resolve())
     assert record["prompt_text"] == "complete prompt\n"
     assert record["handoff_repository"] is None
@@ -152,11 +166,12 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     assert override_config["approvals_reviewer"] == "auto_review"
     notification_command = override_config["notify"]
     assert isinstance(notification_command, list)
-    assert notification_command[0] == sys.executable
-    assert Path(notification_command[1]).name == "runtime_windows_toast.py"
-    assert notification_command[2] == "codex-tui-callback"
-    callback_state_root = Path(notification_command[3])
-    assert notification_command[4:] == ["codex tui", root.name]
+    notification_launcher = notification_command[:-4]
+    assert notification_launcher[0] == sys.executable
+    assert Path(notification_launcher[-1]).name == "runtime_windows_toast.py"
+    assert notification_command[-4] == "codex-tui-callback"
+    callback_state_root = Path(notification_command[-3])
+    assert notification_command[-2:] == ["codex tui", root.name]
     assert "features" not in override_config
     assert record["args"][record["args"].index("--enable") + 1] == "hooks"
     hooks = override_config["hooks"]
@@ -170,10 +185,9 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     assert session_handler["timeout"] == 10
     assert session_handler["async"] is False
     session_start_command = shlex.split(session_handler["command"])
-    assert session_start_command[0] == sys.executable
-    assert Path(session_start_command[1]).name == "runtime_windows_toast.py"
-    assert session_start_command[2] == "codex-tui-session-start-hook"
-    assert Path(session_start_command[3]) == callback_state_root
+    assert session_start_command[:-2] == notification_launcher
+    assert session_start_command[-2] == "codex-tui-session-start-hook"
+    assert Path(session_start_command[-1]) == callback_state_root
     assert not callback_state_root.exists()
     hook_state = hooks["state"]
     assert list(hook_state) == ["/<session-flags>/config.toml:session_start:0:0"]
@@ -217,6 +231,40 @@ def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
     override_config = codex_override_config(tui_process.call_args.args[0])
     assert override_config["notify"] == []
     assert "hooks" not in override_config
+
+
+def test_run_codex_tui_reuses_context_for_notification_and_search(
+    tui_log_directory, monkeypatch, toast_clock
+):
+    """通知設定を追加しても検索 MCP の root を再探索せず、call の記録と揃える。"""
+    root = tui_log_directory
+    roots = Mock(return_value=(root, root))
+    monkeypatch.setattr(path_model_module, "_resolve_git_worktree_roots", roots)
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        lambda *_args: True,
+    )
+    process = Mock(
+        side_effect=lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0)
+    )
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", process)
+
+    run_codex_tui(
+        replace(codex_parameter(agent_call_cwd=root), enable_document_search_mcp=True),
+        root=root,
+        config=CmocConfig(),
+    )
+
+    roots.assert_called_once_with(root)
+    process.assert_called_once()
+    overrides = codex_override_config(process.call_args.args[0])
+    assert overrides["notify"]
+    assert overrides["hooks"]["SessionStart"]
+    server = overrides["mcp_servers"]["cmoc_document_search"]
+    call = json.loads(_tui_call_logs(root)[0].read_text())
+    assert server["cwd"] == call["work_root"] == str(root)
+    assert json.loads(server["args"][-1])["work_root"] == call["work_root"]
 
 
 def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
@@ -644,11 +692,14 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
 
 
 def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
-    tui_runtime_directory, monkeypatch
+    tui_log_directory, monkeypatch
 ):
     """並行する TUI の MCP が自身の起動前ログと一致する送信元を保持する。"""
     # 送信元の分離は実 stdio MCP で確かめ、Git root 導出は prompt 起動ケースに委ねる。
-    root = tui_runtime_directory
+    # fixture の一意な ID を使い、並行時の送信元対応は実ログと照合する。
+    root = tui_log_directory
+    roots = Mock(return_value=(root, root))
+    monkeypatch.setattr(path_model_module, "_resolve_git_worktree_roots", roots)
     monkeypatch.setenv(EDITOR_INPUT_SOURCE_ENV, "stale-parent-source")
     monkeypatch.setattr(
         runtime_codex_tui,
@@ -673,6 +724,18 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
         assert {key: event[key] for key in source} == source
         call = json.loads(Path(event["call_log_path"]).read_text())
         assert call["codex_call_id"] == source["codex_call_id"]
+        search_server = codex_override_config(argv)["mcp_servers"][
+            "cmoc_document_search"
+        ]
+        search_context = json.loads(search_server["args"][-1])
+        assert search_server["cwd"] == call["work_root"] == str(root)
+        assert search_context["work_root"] == call["work_root"]
+        assert search_context["log_context"] == {
+            "path": source["sub_command_log_path"],
+            "command": source["subcommand"],
+            "execution_id": source["execution_id"],
+            "codex_call_id": source["codex_call_id"],
+        }
         assert source["codex_call_id"] != "cc_000008_2026-09-29_15-04"
         assert argv[-1] == "unchanged prompt"
         assert all(
@@ -744,6 +807,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
                     codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
                     prompt="unchanged prompt",
                     enable_editor_input_handoff_mcp=True,
+                    enable_document_search_mcp=True,
                 ),
                 root=root,
                 config=CmocConfig(),
@@ -754,6 +818,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         assert all(result.returncode == 0 for result in pool.map(launch, loggers))
+    assert roots.call_count == 2
     assert len({source["codex_call_id"] for source in observed.values()}) == 2
     for name, source in observed.items():
         completed = loggers[name].codex_call_records()[-1]

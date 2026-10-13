@@ -19,6 +19,7 @@ import json
 import threading
 import time
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 import typer
@@ -28,6 +29,7 @@ from _cli_support import terminal_primary_report
 import commons.runtime_cli as runtime_cli
 import commons.runtime_primary_report as primary_report_module
 from cmoc_runtime import CmocError, TerminalResult
+from commons.runtime_logging import SubcommandLogger
 from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
 
@@ -723,26 +725,67 @@ def test_existing_primary_report_survives_update_failure(
 
 
 @pytest.mark.parametrize(
-    "invalid_kind", ["missing", "empty", "directory", "symlink", "dangling_symlink"]
+    "invalid_kind", ["empty", "directory", "symlink", "dangling_symlink", "unreadable"]
 )
-def test_invalid_report_path_becomes_internal_failure_without_path_display(
-    primary_report_directory: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
+def test_existing_invalid_report_is_rejected_without_rewrite(
+    tmp_path: Path,
     invalid_kind: str,
 ) -> None:
-    """保存を確認できない path を隠し、report 基盤の internal failure にする。"""
-    root = primary_report_directory
-    unsaved_path = root / "must-not-be-displayed.md"
+    """各 file 境界と読取失敗を拒否し、既存 report と link 先を保持する。"""
+    # missing path と共通の終了処理は次の結合 test に残し、ここでは保存 API を検証する。
+    # report 検査で終了するため、CLI context・実ログ・採番を準備しない。
+    root = tmp_path
+    report_path = root / "invalid-report.md"
     linked_target = root / "linked-report.md"
     if invalid_kind == "empty":
-        unsaved_path.touch()
+        report_path.touch()
     elif invalid_kind == "directory":
-        unsaved_path.mkdir()
+        report_path.mkdir()
     elif invalid_kind in {"symlink", "dangling_symlink"}:
         if invalid_kind == "symlink":
             linked_target.write_text("protected report\n", encoding="utf-8")
-        unsaved_path.symlink_to(linked_target)
+        report_path.symlink_to(linked_target)
+    else:
+        report_path.write_bytes(b"\xff")
+
+    logger = Mock(spec=SubcommandLogger)
+    with pytest.raises(PrimaryReportSaveError) as exc_info:
+        primary_report_module.ensure_primary_report(
+            root,
+            "doctor",
+            ("cmoc", "doctor"),
+            "natural_completion",
+            0,
+            TerminalResult(
+                primary_report=report_path,
+                primary_report_role="doctor execution report",
+            ),
+            logger,
+        )
+
+    assert exc_info.value.target_path == report_path
+    assert logger.mock_calls == []
+    if invalid_kind in {"symlink", "dangling_symlink"}:
+        assert report_path.is_symlink()
+        assert report_path.readlink() == linked_target
+        if invalid_kind == "symlink":
+            assert linked_target.read_text(encoding="utf-8") == "protected report\n"
+        else:
+            assert not linked_target.exists()
+    elif invalid_kind == "directory":
+        assert report_path.is_dir()
+    else:
+        assert report_path.read_bytes() == (b"" if invalid_kind == "empty" else b"\xff")
+
+
+def test_invalid_report_save_becomes_internal_failure_without_path_display(
+    primary_report_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """保存 API の失敗を internal failure にし、未保存 path の表示・起動を防ぐ。"""
+    root = primary_report_directory
+    unsaved_path = root / "must-not-be-displayed.md"
     opened: list[Path] = []
     monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", opened.append)
 
@@ -766,10 +809,7 @@ def test_invalid_report_path_becomes_internal_failure_without_path_display(
     assert "primary report の保存を確認できませんでした。" in captured.err
     assert str(unsaved_path) not in captured.err
     assert "- primary report (" not in captured.err
-    if invalid_kind == "missing":
-        assert not unsaved_path.exists()
-    elif invalid_kind == "symlink":
-        assert linked_target.read_text(encoding="utf-8") == "protected report\n"
+    assert not unsaved_path.exists()
     assert opened == []
     log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
     [log_path] = log_directory.glob("*.jsonl")
@@ -778,43 +818,4 @@ def test_invalid_report_path_becomes_internal_failure_without_path_display(
     assert finished["event"] == "command_finished"
     assert finished["failure"]["classification"] == "internal_failure"
     assert finished["failure"]["target_path"] == str(unsaved_path.absolute())
-    assert finished["terminal_result"]["primary_report_path"] is None
-
-
-def test_unreadable_existing_report_becomes_internal_failure_without_path_display(
-    primary_report_directory: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """既存 report の読み取り失敗も report 基盤の internal failure にする。"""
-    root = primary_report_directory
-    unreadable_path = root / "unreadable-report.md"
-    unreadable_path.write_bytes(b"\xff")
-
-    def return_unreadable_report() -> TerminalResult:
-        return TerminalResult(
-            primary_report=unreadable_path,
-            primary_report_role="doctor execution report",
-        )
-
-    with pytest.raises(typer.Exit) as exc_info:
-        runtime_cli.run_cli_subcommand(
-            return_unreadable_report,
-            command_name="doctor",
-            command_argv=("cmoc", "doctor"),
-            doctor_preprocess=False,
-        )
-
-    captured = capsys.readouterr()
-    assert exc_info.value.exit_code == 1
-    assert "# 失敗: cmoc doctor" in captured.err
-    assert "primary report の保存を確認できませんでした。" in captured.err
-    assert str(unreadable_path) not in captured.err
-    assert "- primary report (" not in captured.err
-    log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
-    [log_path] = log_directory.glob("*.jsonl")
-    events = [json.loads(line) for line in log_path.read_text().splitlines()]
-    finished = events[-1]
-    assert finished["event"] == "command_finished"
-    assert finished["failure"]["classification"] == "internal_failure"
-    assert finished["failure"]["target_path"] == str(unreadable_path.absolute())
     assert finished["terminal_result"]["primary_report_path"] is None

@@ -17,7 +17,13 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from _codex_support import codex_arg_value, codex_override_config, codex_parameter
+from _codex_support import (
+    codex_arg_value,
+    codex_override_config,
+    codex_parameter,
+    setup_codex_home,
+)
+from oracle.other import path_model as path_model_module
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -28,7 +34,6 @@ from commons.runtime_codex_profile import (
     codex_subprocess_env,
     prepare_codex_override_args,
     prepare_schema,
-    read_output_json,
 )
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
@@ -54,10 +59,13 @@ def test_codex_overrides_use_dedicated_sandbox_argument() -> None:
         assert codex_arg_value(args, "--sandbox") == "workspace-write", mode
 
 
-def test_prepare_codex_overrides_use_call_defaults() -> None:
-    """mode 共通の既定設定を prepare 境界から検証する。"""
+def test_prepare_codex_overrides_use_call_defaults_without_home_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """既定設定を argv だけで渡し、CODEX_HOME に設定を生成しない。"""
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
     config = CmocConfig()
-    parameter = codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd())
+    parameter = codex_parameter(FileAccessMode.READONLY, agent_call_cwd=tmp_path)
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
     args = prepare_codex_override_args(parameter, config)
 
@@ -115,6 +123,8 @@ def test_prepare_codex_overrides_use_call_defaults() -> None:
     }
     assert "--profile" not in args
     assert "-p" not in args
+    assert not (codex_home / "config.toml").exists()
+    assert not list(codex_home.glob("*.config.toml"))
 
 
 def test_codex_overrides_disable_feedback_reporter_for_selected_call() -> None:
@@ -150,11 +160,18 @@ def test_codex_overrides_reject_unknown_file_access_mode() -> None:
 
 
 def test_search_mcp_rejects_external_transport_collision(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """user 設定の同名 URL が残った実効 MCP 設定を起動前に拒否する。"""
+    # Git discovery は test_basic_runtime.py に残し、transport の拒否判定を検査する。
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _cwd: (tmp_path, tmp_path),
+    )
     parameter = replace(
-        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=tmp_path),
         enable_document_search_mcp=True,
     )
     argv = ["codex", *build_codex_override_args(parameter, CmocConfig())]
@@ -187,9 +204,7 @@ def test_search_mcp_rejects_external_transport_collision(
 
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fake_run)
     with pytest.raises(CmocError, match="実効設定が call 固定値と一致しません"):
-        runtime_codex_profile._verify_document_search_server(
-            argv, cwd=Path.cwd(), env={}
-        )
+        runtime_codex_profile._verify_document_search_server(argv, cwd=tmp_path, env={})
     assert len(calls) == 1
     assert calls[0][:2] == ["codex", "--no-daemon"]
     assert calls[0][-4:] == ["mcp", "get", "cmoc_document_search", "--json"]
@@ -587,23 +602,3 @@ def test_prepare_schema_preserves_source_bytes_for_hash_store(tmp_path: Path) ->
     assert stored is not None
     assert stored.name == f"{hashlib.sha256(source_bytes).hexdigest()}.json"
     assert stored.read_bytes() == source_bytes
-
-
-def test_read_output_json_returns_none_for_invalid_utf8(
-    tmp_path: Path,
-) -> None:
-    """不正 encoding の schema-less output を JSON failure として扱う。"""
-    output = tmp_path / "output.json"
-    output.write_bytes(b"\xff")
-
-    assert read_output_json(output) is None
-
-
-def test_read_output_json_returns_none_for_excessively_nested_json(
-    tmp_path: Path,
-) -> None:
-    """JSON decoder の recursion failure を schema-less output failure として扱う。"""
-    output = tmp_path / "output.json"
-    output.write_text("[" * 10_000 + "0" + "]" * 10_000)
-
-    assert read_output_json(output) is None

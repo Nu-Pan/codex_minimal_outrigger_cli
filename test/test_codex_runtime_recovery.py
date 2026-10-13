@@ -25,6 +25,7 @@ from _codex_support import (
 
 from commons import runtime_codex_exec as runtime
 from commons import runtime_codex_recovery as recovery
+from commons import runtime_logging
 from commons.runtime_codex_profile import classify_codex_call
 from commons.runtime_errors import CmocError
 from commons.runtime_git import WorktreeSnapshot
@@ -124,14 +125,16 @@ def recovery_case(tmp_path, monkeypatch):
             prompt="recovery probe",
         ),
     )
-    # ID の区別・引継ぎは観測し、永続採番の検証は test_runtime_ids.py と
-    # 実採番を使う test_codex_runtime_quota_retry.py に残す。
+    # ID の区別・引継ぎとログ保存は観測し、永続採番は test_runtime_ids.py、
+    # logger の実採番との結合は test_runtime_cli.py の
+    # test_subcommand_logger_keeps_one_file_per_execution と quota_retry に残す。
     ids = count()
-    monkeypatch.setattr(
-        runtime,
-        "new_id",
-        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
-    )
+    for id_consumer in (runtime, runtime_logging):
+        monkeypatch.setattr(
+            id_consumer,
+            "new_id",
+            lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+        )
     return (
         root,
         codex_parameter(agent_call_cwd=root),
@@ -178,11 +181,16 @@ def execute(case, **kwargs):
 
 def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkeypatch):
     root, parameter, config, logger = recovery_case
+    headers = {"X-Test": "original"}
     config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
         "custom", "work-model", "high"
     )
     config.codex.model_providers["custom"] = CodexModelProviderConfig(
-        {"base_url": "https://provider.invalid/v1", "env_key": "TEST_CREDENTIAL"}
+        {
+            "base_url": "https://provider.invalid/v1",
+            "env_key": "TEST_CREDENTIAL",
+            "http_headers": headers,
+        }
     )
     config.codex.agent_calls["build_quota_availability_probe_parameter"] = (
         CodexCallConfig("openai", "probe-model", "low")
@@ -198,6 +206,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
             config.codex.model_providers["custom"].settings["base_url"] = (
                 "https://changed.invalid"
             )
+            headers["X-Test"] = "changed"
 
     calls = script_codex_calls(
         monkeypatch,
@@ -224,6 +233,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
         assert overrides["model_providers"]["custom"] == {
             "base_url": "https://provider.invalid/v1",
             "env_key": "TEST_CREDENTIAL",
+            "http_headers": {"X-Test": "original"},
         }
     for index in (4, 6):
         assert codex_arg_value(calls[index]["argv"], "resume") == "original-session"
@@ -258,9 +268,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
     )
 
 
-def test_quota_to_capacity_inherits_before_accepting_recovery(
-    recovery_case, monkeypatch
-):
+def test_quota_to_capacity_inherits_only_until_resume(recovery_case, monkeypatch):
     _, parameter, config, _ = recovery_case
     config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
         "openai", "work", "high"
@@ -273,6 +281,9 @@ def test_quota_to_capacity_inherits_before_accepting_recovery(
         [
             (1, jsonl(SESSION, QUOTA), None),
             (1, jsonl(CAPACITY), None),
+            (1, jsonl(QUOTA), None),
+            (0, jsonl(COMPLETED), "ready"),
+            # 再開後の新しい quota 待機には、probe 自身の設定を再び使う。
             (1, jsonl(QUOTA), None),
             (0, jsonl(COMPLETED), "ready"),
             (0, jsonl(COMPLETED), "done"),
@@ -288,12 +299,14 @@ def test_quota_to_capacity_inherits_before_accepting_recovery(
         subcommand_logger=logger,
         transient_poll_interval_sec=17,
     )
-    assert sleeps == [1800, 17, 1800]
+    assert sleeps == [1800, 17, 1800, 1800]
     assert [codex_arg_value(c["argv"], "--model") for c in calls] == [
         "work",
         "probe",
         "work",
         "work",
+        "work",
+        "probe",
         "work",
     ]
 

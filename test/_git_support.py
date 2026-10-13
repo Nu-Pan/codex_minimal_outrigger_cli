@@ -19,10 +19,12 @@ def current_branch(root: Path) -> str:
     return run_git(root, "branch", "--show-current").stdout.strip()
 
 
-def init_repo(root: Path) -> None:
+def init_repo(root: Path, *, initial_branch: str | None = None) -> None:
     """既存 directory に user Git 設定から隔離した test repository を初期化する。"""
     # 利用者の Git template に含まれる hook・設定を持ち込まない。
-    run_git(root, "init", "--template=/dev/null")
+    # 最初から必要な branch に置き、準備だけの branch 切替を省く。
+    branch_args = () if initial_branch is None else ("--initial-branch", initial_branch)
+    run_git(root, "init", "--template=/dev/null", *branch_args)
     # Git が生成した配置設定は保ち、fixture の固定設定だけを一度に追記する。
     with (root / ".git" / "config").open("a", encoding="utf-8") as config:
         config.write(
@@ -37,11 +39,11 @@ def init_repo(root: Path) -> None:
         )
 
 
-def make_repo(tmp_path: Path) -> Path:
+def make_repo(tmp_path: Path, *, initial_branch: str | None = None) -> Path:
     """cmoc CLI test が対象にできる最小の commit 済み repository を作る。"""
     root = tmp_path / "repo"
     root.mkdir()
-    init_repo(root)
+    init_repo(root, initial_branch=initial_branch)
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
     (root / "oracle" / "spec.md").write_text("# spec\n")

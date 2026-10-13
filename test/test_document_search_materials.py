@@ -210,16 +210,18 @@ def test_failed_real_model_probe_never_publishes_materials(
     small_materials: dict[str, bytes],
 ) -> None:
     """推論検証に失敗した隔離 build を次回起動で準備済みと扱わない。"""
-
-    def fake_version(_args: list[str], **_kwargs: Any) -> SimpleNamespace:
-        return SimpleNamespace(stdout="v" + SEARCH_MATERIALS.node_version)
-
+    # probe 失敗後は資材内容の検査に進まないため、runtime/model を作らない。
+    # 正常構築と資材検査は上の lifecycle test に残し、ここでは隔離 build の失敗を通す。
     monkeypatch.setattr(
         setup,
         "_install_node_runtime",
-        lambda _root, base, _fd: _installed_runtime(base),
+        lambda _root, _base, _fd: None,
     )
-    monkeypatch.setattr(worker.subprocess, "run", fake_version)
+    monkeypatch.setattr(
+        setup,
+        "prepare_model",
+        lambda _root, _base, _staging, _artifact: "downloaded",
+    )
     monkeypatch.setattr(setup, "_runtime_versions", lambda _base: None)
     monkeypatch.setattr(
         setup,

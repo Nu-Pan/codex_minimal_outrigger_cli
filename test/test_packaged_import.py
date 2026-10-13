@@ -155,6 +155,8 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
     # builder・正本 schema・editor input・handoff guide は packaged module の実経路を通す。
     # submission のない TCP 起動は省き、登録・取得・上書き・drain は
     # test_editor_input_handoff.py、editor と target の結合は test_prompt_editor_input.py に残す。
+    # 採番は test_runtime_ids.py、入力 path の ID は test_prompt_editor_input.py に残し、
+    # import 検査では確定済み execution ID を渡して SQLite の準備・同期書き込みを省く。
     result = _run_from_packaged_layout(
         target,
         (
@@ -189,6 +191,8 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "assert listed['result']['tools'][1]['inputSchema']['required'] "
             "== ['target_id', 'goal', 'instructions', 'background', "
             "'decisions', 'open_questions', 'oracle_references']; "
+            "editor_input.current_execution_id = "
+            "lambda root: 'exec_000000_2000-01-01_00-00'; "
             "input_path = "
             "editor_input.reserve_prompt_editor_input(Path.cwd()); "
             "skeleton = build_main("

@@ -31,17 +31,6 @@ from commons.runtime_paths import config_path
 from config.cmoc_config import CmocConfig
 
 
-@pytest.fixture
-def search_repository(cli_repository: Path) -> Path:
-    """期限・診断の検証に必要な文書と ignore 規則だけを用意する。"""
-    # 文書の分類と ignore 修復は専用テストで検証し、ここでは staging・修復を重ねない。
-    (cli_repository / ".gitignore").write_text("/.cmoc/gu/\n")
-    docs = cli_repository / "oracle/doc"
-    docs.mkdir(parents=True)
-    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
-    return cli_repository
-
-
 def _observation(tmp_path, *, request=True):
     events = []
 
@@ -207,9 +196,9 @@ def test_simultaneous_deadlines_and_cleanup_failure_preserve_original_reason(
 
 
 def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
-    tmp_path, search_repository, document_search_clock
+    tmp_path, document_repository, document_search_clock
 ):
-    root = search_repository
+    root = document_repository
     # 8 文書を 40 秒間隔で処理し、無進捗の期限内で同期全体を 600 秒超にする。
     for number in range(7):
         (root / f"oracle/doc/extra_{number}.md").write_text(f"# 原文 {number}\n")
@@ -244,9 +233,9 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
 
 
 def test_doctor_sync_has_no_search_deadlines(
-    tmp_path, search_repository, document_search_clock
+    tmp_path, document_repository, document_search_clock
 ):
-    root = search_repository
+    root = document_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     events = []
 
@@ -274,9 +263,9 @@ def test_doctor_sync_has_no_search_deadlines(
     assert events[-1]["no_progress_seconds"] is None
 
 
-def test_saved_deadline_growth_requires_a_new_codex_connection(search_repository):
+def test_saved_deadline_growth_requires_a_new_codex_connection(document_repository):
     # 同じ接続の構築・期限短縮を共有し、両方の増加を独立した設定から試す。
-    root = search_repository
+    root = document_repository
     initial = _tuning()
     write_config(config_path(root), CmocConfig(document_search=initial))
     events = []
@@ -312,9 +301,9 @@ def test_saved_deadline_growth_requires_a_new_codex_connection(search_repository
             assert events[-1]["status"] == "failed", setting
 
 
-def test_parallel_requests_log_to_their_own_codex_calls(tmp_path, search_repository):
+def test_parallel_requests_log_to_their_own_codex_calls(tmp_path, document_repository):
     # 開始記録で両要求を揃え、固定待機なしで同時実行を確実にする。
-    root = search_repository
+    root = document_repository
     path = tmp_path / "caller.jsonl"
     path.touch()
     requests_started = threading.Barrier(2)
@@ -364,9 +353,9 @@ def test_parallel_requests_log_to_their_own_codex_calls(tmp_path, search_reposit
 
 
 def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
-    search_repository, document_search_clock, monkeypatch
+    document_repository, document_search_clock, monkeypatch
 ):
-    root = search_repository
+    root = document_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
     events = []
 

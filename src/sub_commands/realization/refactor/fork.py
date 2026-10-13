@@ -49,7 +49,6 @@ from commons.runtime_run import (
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
-    GitChange,
     commit_work_unit,
     flattened_change_paths,
     recover_started_run,
@@ -60,7 +59,6 @@ from commons.runtime_run_lifecycle import (
     start_editing_run,
     tree_changes,
     unexpected_agent_paths,
-    unexpected_run_paths,
     worktree_change_paths,
 )
 from commons.runtime_run_report import _render_changed_path, write_fork_report
@@ -544,11 +542,7 @@ def _run_refactor_unit(
             context.run_worktree,
             include_rename_sources=True,
         )
-        unexpected = _unexpected_refactor_unit_paths(
-            context,
-            changed_agent_paths=[],
-            pending_paths=all_unit_paths,
-        )
+        unexpected = _unexpected_refresh_paths(context, [], all_unit_paths)
         if unexpected:
             raise CmocError(
                 "refactor 処理単位に想定外差分があります。",
@@ -653,10 +647,8 @@ def _run_refactor_unit(
         context.run_worktree,
         include_rename_sources=True,
     )
-    unexpected = _unexpected_refactor_unit_paths(
-        context,
-        changed_agent_paths=actual_changed_paths,
-        pending_paths=all_unit_paths,
+    unexpected = _unexpected_refresh_paths(
+        context, actual_changed_paths, all_unit_paths
     )
     if unexpected:
         raise CmocError(
@@ -892,37 +884,14 @@ def _reconcile_unresolved_findings(
             unresolved_findings[current_target] = findings
 
 
-def _status_change(path: str) -> GitChange:
-    """未 commit path を共通の差分分類へ渡す最小 GitChange にする。"""
-    return GitChange("M", (path,))
-
-
-def _unexpected_refactor_unit_paths(
-    context: EditingRunContext,
-    *,
-    changed_agent_paths: Collection[str],
-    pending_paths: Collection[str],
-) -> list[str]:
-    """処理単位の commit 前に想定外の run worktree 差分を返す。"""
-    pending = list(pending_paths)
-    unexpected = unexpected_run_paths(
-        context,
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-        # status と tree diff の分類は path 単位で同じなので一時 change として扱う。
-        [_status_change(path) for path in pending],
-    )
-    unexpected.extend(
-        _unexpected_refresh_paths(context, list(changed_agent_paths), pending)
-    )
-    return sorted(set(unexpected))
-
-
 def _unexpected_refresh_paths(
     context: EditingRunContext,
     changed_agent_paths: list[str],
     pending_paths: list[str],
 ) -> list[str]:
     """state 同期後に増えた cmoc 管理外の差分を返す。"""
+    # agent path は子 process 停止後に分類済みで、同期が書き換えるのは state だけ。
+    # 分類の Git 問い合わせは繰り返さず、同期後に増えた path を拒否する。
     refactor_state = refactor_state_path(context.run_worktree).relative_to(
         context.run_worktree
     )

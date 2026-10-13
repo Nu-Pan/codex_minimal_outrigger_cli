@@ -5,14 +5,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
+from oracle.acp_builder.basic import AgentCallParameter
 
 from .runtime_codex import run_codex_exec
 from .runtime_errors import CmocError
 from .runtime_git import (
-    is_realization_file_path,
     literal_pathspec,
-    reuse_git_path_queries,
     run_git,
     status_path_statuses,
 )
@@ -88,28 +86,8 @@ def resolve_merge_conflicts(
             for path in before.keys() | after.keys()
             if before.get(path) != after.get(path)
         }
-        if refactor_relative in changed:
-            raise CmocError(
-                "競合解消 agent が cmoc 管理物を編集しました。",
-                [],
-                refactor_relative,
-            )
-        if parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE:
-            # agent の編集後、staging 前の検査内だけ Git 配置・設定を共有する。
-            with reuse_git_path_queries():
-                forbidden = [
-                    path
-                    for path in sorted(changed)
-                    if not is_realization_file_path(
-                        root, root / path, branch="HEAD", fallback_branch="MERGE_HEAD"
-                    )
-                ]
-            if forbidden:
-                raise CmocError(
-                    "競合解消 agent が編集範囲外を変更しました。",
-                    [],
-                    "\n".join(forbidden),
-                )
+        # 付随編集の観測は report 用。受理条件は下記正本の検証境界に従う。
+        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の「agent call の差分検証」
         result["incidental_paths"] = sorted(
             path for path in changed if path not in conflicts
         )
@@ -121,7 +99,6 @@ def resolve_merge_conflicts(
             )
     if refactor_relative in managed:
         _merge_refactor_state(root, refactor_relative)
-    if refactor_relative in managed:
         sync_refactor_state(root)
     run_git(["add", "-A"], root)
     remaining = unmerged_paths(root)

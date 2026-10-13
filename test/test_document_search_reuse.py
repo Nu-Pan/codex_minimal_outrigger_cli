@@ -171,11 +171,12 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_s
     "change", ["partition", "inference", "runtime", "contract", "model"]
 )
 def test_reuse_compatibility_is_independent_of_partition(
-    tmp_path, cache_search, monkeypatch, change
+    document_repository, cache_search, monkeypatch, change
 ):
     """入力片を固定し、分割条件と推論条件による cache の互換性だけを検査する。"""
+    # Git 分類・共有範囲は実 repository の再利用 test に残す。
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     original = (root / "oracle/doc/allowed.md").read_text()
     with closing(create(root)) as search:
         first = search.synchronize()
@@ -261,8 +262,11 @@ def test_identical_inputs_in_different_repositories_are_not_shared(
     assert len(inputs()) == 2
 
 
-def test_diagnostics_count_actual_duplicate_generation_separately_from_query(tmp_path):
-    root = _repo_with_docs(tmp_path)
+def test_diagnostics_count_actual_duplicate_generation_separately_from_query(
+    document_repository,
+):
+    # 診断件数の検査には、確認済みの文書集合を渡して Git 準備を重ねない。
+    root = document_repository
     original = (root / "oracle/doc/allowed.md").read_text()
     (root / "oracle/doc/copy.md").write_text(original)
     events = []
@@ -298,11 +302,11 @@ def test_diagnostics_count_actual_duplicate_generation_separately_from_query(tmp
 
 
 def test_cache_save_failure_keeps_generated_count_without_claiming_a_save(
-    tmp_path, monkeypatch
+    document_repository, monkeypatch
 ):
     from commons import runtime_document_search as module
 
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     events = []
 
     def fail_save(*_args):

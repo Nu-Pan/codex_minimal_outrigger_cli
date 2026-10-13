@@ -81,6 +81,17 @@ def path_context(tmp_path_factory: pytest.TempPathFactory) -> AgentCallPathConte
         return AgentCallPathContext(agent_call_cwd=linked)
 
 
+@pytest.fixture(scope="module")
+def default_prompt_markdown(path_context: AgentCallPathContext) -> str:
+    """既定 prompt の構成検査で、不変の Markdown を共有して再描画を省く。"""
+    prompt = build_complete_prompt(
+        task="- 短い応答を返すこと",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=path_context,
+    )
+    return render_sd_node_as_markdown(*prompt)
+
+
 def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
     """policy builder の SDHeader を complete prompt と同じ経路で render する。"""
     return render_sd_node_as_markdown(builder_result[1])
@@ -349,41 +360,27 @@ def test_complete_prompt_orders_static_objective_and_dynamic_sections(
 
 
 def test_complete_prompt_omits_unset_optional_objective_sections(
-    path_context: AgentCallPathContext,
+    default_prompt_markdown: str,
 ) -> None:
     """task だけの call では未指定の objective 項目を描画しない。"""
-    prompt = build_complete_prompt(
-        task="- 短い応答を返すこと",
-        file_access_mode=FileAccessMode.READONLY,
-        path_context=path_context,
-    )
-
-    rendered = render_sd_node_as_markdown(*prompt)
-    objective = rendered.split('<cmoc_block id="objective">', 1)[1].split(
-        "</cmoc_block>", 1
-    )[0]
+    objective = default_prompt_markdown.split('<cmoc_block id="objective">', 1)[
+        1
+    ].split("</cmoc_block>", 1)[0]
     assert "# task\n\n- 短い応答を返すこと" in objective
     for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
         assert omitted_heading not in objective
 
 
 def test_complete_prompt_includes_feedback_instruction_exactly_once(
+    default_prompt_markdown: str,
     path_context: AgentCallPathContext,
 ) -> None:
     """全 agent call の共通 feedback instruction が一経路だけで注入される。"""
-    prompt = build_complete_prompt(
-        task="- task",
-        file_access_mode=FileAccessMode.READONLY,
-        path_context=path_context,
-        aux_dynamic_prompt=[],
-    )
-
-    rendered = render_sd_node_as_markdown(*prompt)
-    assert rendered.count("# feedback observation reporting") == 1
-    assert rendered.count("cmoc_feedback.submit_observation") == 1
-    fundamental_policy = rendered.split('<cmoc_block id="fundamental_policy">', 1)[
-        1
-    ].split("</cmoc_block>", 1)[0]
+    assert default_prompt_markdown.count("# feedback observation reporting") == 1
+    assert default_prompt_markdown.count("cmoc_feedback.submit_observation") == 1
+    fundamental_policy = default_prompt_markdown.split(
+        '<cmoc_block id="fundamental_policy">', 1
+    )[1].split("</cmoc_block>", 1)[0]
     expected_policy = _render_policy(_build_feedback_reporting_policy(path_context))
     assert fundamental_policy.count(expected_policy) == 1
 

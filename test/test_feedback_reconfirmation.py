@@ -1,6 +1,6 @@
 """feedback の根拠変更・再確認・封印と publication artifact の整合性を検証する。
 
-Git と Codex の境界だけを置き換え、wave、checkpoint、根拠検査には実装を使う。
+Git・Codex・共通 ID 発行の境界を置き換え、wave、checkpoint、根拠検査には実装を使う。
 """
 
 import copy
@@ -75,6 +75,22 @@ def feedback_run(tmp_path, monkeypatch):
         "a" * 40,
         worktree,
     )
+    # 採番の永続性は test_runtime_ids.py、並行発行は test_codex_runtime_paths.py、
+    # feedback との結合は test_feedback.py に残し、ID の対応と artifact の実検査を保つ。
+    sequences = Counter()
+
+    def allocate_id(root, prefix):
+        assert root == repo
+        assert prefix in {"fbr", "fbg", "fbc", "exec"}
+        sequence = sequences[prefix]
+        sequences[prefix] += 1
+        return f"{prefix}_{sequence:06d}_2026-09-29_15-04"
+
+    for module in (run_state, feedback_state, remediation):
+        monkeypatch.setattr(module, "new_id", allocate_id)
+    monkeypatch.setattr(
+        remediation, "current_execution_id", lambda root: allocate_id(root, "exec")
+    )
     state = load_active_state(repo)
     manifest = remediation._new_manifest(context, state)
     manifest["run"]["invocation_log"] = (
@@ -98,14 +114,18 @@ def feedback_run(tmp_path, monkeypatch):
         handler=lambda issue: _remediation_output(issue["issue_id"], "not_actionable"),
     )
 
+    def input_paths():
+        return [path for path in worktree.iterdir() if path.is_file()]
+
     def contents():
-        return {p.name: p.read_bytes() for p in worktree.iterdir() if p.is_file()}
+        return {path.name: path.read_bytes() for path in input_paths()}
 
     harness.committed = contents()
+    # path を返す境界では本文を読まず、根拠収集と差分検査に必要な読み込みだけ残す。
     monkeypatch.setattr(
         decision,
         "enumerate_oracle_and_realization_files",
-        lambda root: ([], [root / name for name in contents()]),
+        lambda root: ([], [root / path.name for path in input_paths()]),
     )
 
     def changed(*_args, **_kwargs):
@@ -135,7 +155,8 @@ def feedback_run(tmp_path, monkeypatch):
         decision,
         "run_git",
         lambda *_args, **_kwargs: SimpleNamespace(
-            stdout="\0".join(sorted(contents())) + "\0", returncode=0
+            stdout="\0".join(sorted(path.name for path in input_paths())) + "\0",
+            returncode=0,
         ),
     )
     monkeypatch.setattr(
@@ -388,6 +409,47 @@ def report_cut_inputs(feedback_run):
         "normalization": normalization,
         "remediation": repo / remediation_reference["path"],
     }
+
+
+@pytest.mark.parametrize("read_state", [load_active_state, validate_feedback_state])
+def test_unpublished_active_state_uses_one_work_snapshot(
+    report_cut_inputs, monkeypatch, read_state
+):
+    """current がなくても work を一度検証し、次の呼出しでは改変を拒否する。"""
+    h, _ = report_cut_inputs
+    root = h.context.repo
+    write_report_cut_manifest(root, h.manifest)
+    original_read = Path.read_bytes
+    original_content = original_read(h.path)
+    manifest_reads = 0
+
+    def replace_after_read(path):
+        nonlocal manifest_reads
+        content = original_read(path)
+        if path == h.path:
+            manifest_reads += 1
+            if manifest_reads == 1:
+                path.write_bytes(b"{}\n")
+        return content
+
+    try:
+        with monkeypatch.context() as snapshot_patch:
+            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+            state = read_state(root)
+            assert state.current is None
+            assert state.issues == state.machine_aggregates == {}
+            assert manifest_reads == 1
+            with pytest.raises(CmocError):
+                read_state(root)
+    finally:
+        h.path.write_bytes(original_content)
+
+    # current 未作成でも、work の検証だけで未列挙 active artifact を許容しない。
+    unknown = feedback_root(root) / "active" / "unknown.json"
+    unknown.parent.mkdir(parents=True)
+    unknown.write_bytes(b"{}\n")
+    with pytest.raises(CmocError, match="未定義 artifact"):
+        read_state(root)
 
 
 def test_report_cut_update_skips_unchanged_write_but_rechecks_inputs(
@@ -1253,6 +1315,71 @@ def test_publication_and_active_generation_use_hash_verified_bytes(
         root / reference["path"],
     ):
         _assert_hash_verified_state_snapshot(root, state, path, monkeypatch)
+
+
+def test_published_active_state_reuses_one_cleanup_snapshot(
+    publication_feedback, monkeypatch
+):
+    """cleanup 待ちでも hash 検証済み manifest を再読せず、次回は改変を拒否する。"""
+    h = publication_feedback
+    root = h.context.repo
+    expected = load_active_state(root)
+    original_read = Path.read_bytes
+    original_content = original_read(h.path)
+    reads = []
+
+    def replace_after_read(path):
+        content = original_read(path)
+        if path == h.path:
+            reads.append(path)
+            if len(reads) == 1:
+                path.write_bytes(b"{}\n")
+        return content
+
+    try:
+        with monkeypatch.context() as snapshot_patch:
+            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+            assert validate_feedback_state(root) == expected
+            assert reads == [h.path]
+            with pytest.raises(CmocError, match="SHA256"):
+                validate_feedback_state(root)
+            assert reads == [h.path, h.path]
+    finally:
+        h.path.write_bytes(original_content)
+
+
+def test_published_cleanup_still_checks_work_inventory(publication_feedback):
+    """内容の再検証を省いても、余分な cut・file・symlink を許容しない。"""
+    h = publication_feedback
+    root = h.context.repo
+    work_root = h.path.parent.parent
+    expected = load_active_state(root)
+
+    # 同じ publication を保ち、work root と cut 内部の未定義 file を独立に検査する。
+    for path in (work_root / "unknown.json", h.path.parent / "unknown.json"):
+        path.write_bytes(b"{}\n")
+        try:
+            with pytest.raises(CmocError, match="未定義 artifact"):
+                validate_feedback_state(root)
+        finally:
+            path.unlink()
+
+    extra_cut = work_root / "fbc_00000000-0000-7000-8000-000000000002"
+    extra_cut.mkdir()
+    try:
+        with pytest.raises(CmocError, match="複数"):
+            validate_feedback_state(root)
+    finally:
+        extra_cut.rmdir()
+
+    alias = work_root / "alias"
+    alias.symlink_to(h.path.parent, target_is_directory=True)
+    try:
+        with pytest.raises(CmocError, match="未定義 artifact"):
+            validate_feedback_state(root)
+    finally:
+        alias.unlink()
+    assert validate_feedback_state(root) == expected
 
 
 def test_publication_staging_relaxes_only_artifact_existence(publication_feedback):

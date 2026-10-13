@@ -1,10 +1,10 @@
-"""Repository 共通 ID の発行順と種類別採番を検証する。"""
+"""Repository 共通 ID の発行順と種類別採番を検証する。
 
-import os
+process 間の共有・永続性は test_codex_runtime_paths.py の
+test_codex_call_ids_are_process_safe_on_same_timestamp でログとの結合も検証する。
+"""
+
 import sqlite3
-import subprocess
-import sys
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
@@ -108,38 +108,3 @@ def test_sequence_crosses_base36_boundaries(
     assert first.startswith(f"sess_{before}_")
     assert second.startswith(f"sess_{after}_")
     assert first < second
-
-
-def test_parallel_processes_share_one_sequence(tmp_path: Path) -> None:
-    """同じ repository の別 process が同時に発行しても通番が重複しない。"""
-    # 独立 process でも同じ採番実装を読み込む。
-    source_root = Path(runtime_ids.__file__).resolve().parents[1]
-    environment = os.environ.copy()
-    environment["PYTHONPATH"] = os.pathsep.join(
-        part for part in (str(source_root), environment.get("PYTHONPATH")) if part
-    )
-    script = (
-        "import sys; from pathlib import Path; "
-        "from commons.runtime_ids import new_id; "
-        "print('\\n'.join(new_id(Path(sys.argv[1]), 'cc') for _ in range(2)))"
-    )
-
-    def issue_batch(_: int) -> list[str]:
-        # 標準ライブラリだけの子で実採番を通し、不要な site 初期化を省く。
-        process = subprocess.run(
-            [sys.executable, "-S", "-c", script, str(tmp_path)],
-            env=environment,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=15,
-        )
-        return process.stdout.splitlines()
-
-    # 4 独立 process が各々連続発行する。36 進の境界は専用 test で検査する。
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        issued = [item for batch in pool.map(issue_batch, range(4)) for item in batch]
-
-    assert len(issued) == 8
-    assert sorted(int(item.split("_")[1], 36) for item in issued) == list(range(8))
-    assert runtime_ids.new_id(tmp_path, "cc").startswith("cc_000008_")

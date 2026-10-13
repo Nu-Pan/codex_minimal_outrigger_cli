@@ -14,7 +14,7 @@ from pathlib import Path
 import oracle.other.path_model as path_model_module
 import pytest
 from _cli_support import runner, terminal_primary_report
-from _codex_support import FakeCodexResult, codex_override_config, setup_codex_home
+from _codex_support import FakeCodexResult, setup_codex_home
 from _git_support import (
     RUN_BRANCH,
     SESSION_BRANCH,
@@ -27,7 +27,6 @@ import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError, write_config
-from commons.runtime_codex_profile import build_codex_override_args
 from commons.runtime_config import config_path
 from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_state import (
@@ -37,17 +36,16 @@ from commons.runtime_state import (
     state_path,
     write_state,
 )
-from config.cmoc_config import CmocConfig
+from config.cmoc_config import CmocConfig, CodexCallConfig
 from main import app
 
 
-def _activate_session(
+def _write_session_state(
     root: Path,
     *,
     run: RunPart,
 ) -> Path:
-    """隔離 repository に oracle edit 用の session state を作成する。"""
-    run_git(root, "checkout", "-b", SESSION_BRANCH)
+    """session branch 上の隔離 repository に oracle edit 用の state を作成する。"""
     path = state_path(root, SESSION_ID)
     # oracle edit は join 元情報を使わないため、state の必須文字列だけ用意する。
     write_state(
@@ -64,9 +62,10 @@ def _prepared_repo(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
-    """履歴・Codex HOME・既定設定を持つ隔離 repository を準備する。"""
+    """session branch・履歴・Codex HOME・既定設定を持つ repository を準備する。"""
     setup_codex_home(tmp_path, monkeypatch)
-    root = make_repo(tmp_path)
+    # 元の branch からの移動履歴は使わず、両回で保持する branch・HEAD だけ用意する。
+    root = make_repo(tmp_path, initial_branch=SESSION_BRANCH)
     monkeypatch.chdir(root)
     # doctor 成功後の設定を用意し、実際の保存・読込は検証対象に残す。
     write_config(config_path(root), CmocConfig())
@@ -120,14 +119,23 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         RUN_BRANCH,
         "abc",
     )
-    session_state_path = _activate_session(root, run=active_run)
+    session_state_path = _write_session_state(root, run=active_run)
     state_before = json.loads(session_state_path.read_text())
     readme_path = root / "README.md"
     readme_path.write_text("# staged change\n")
     run_git(root, "add", "README.md")
     readme_path.write_text("# unstaged change\n")
-    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
-    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
+    # HEAD・branch・index の blob/mode と working tree の mode を一度に取得する。
+    # working tree の本文は下で直接比較し、patch 生成と個別の Git 起動を省く。
+    status_args = (
+        "status",
+        "--porcelain=v2",
+        "--branch",
+        "--",
+        "README.md",
+        "oracle/spec.md",
+    )
+    status_before = run_git(root, *status_args).stdout.splitlines()
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_main_parameters: list[AgentCallParameter] = []
@@ -245,8 +253,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         return real_load_config(target_root)
 
     monkeypatch.setattr(oracle_edit_module, "load_config", record_load_config)
-    override_args: list[list[str]] = []
-
     real_require_launch_preconditions = (
         oracle_edit_module._require_oracle_edit_launch_preconditions
     )
@@ -263,7 +269,17 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         """各 exec の差分と、失敗後も差分を残す挙動を再現する。"""
         calls.append((parameter, kwargs))
         assert parameter is built_main_parameters[1]
-        override_args.append(build_codex_override_args(parameter, kwargs["config"]))
+        config = kwargs["config"]
+        assert isinstance(config, CmocConfig)
+        # 呼び出し時点の値を検査し、共用 object の途中変更も検出する。
+        # argv・MCP 設定の変換は test_runtime_codex_profile.py と
+        # test_codex_runtime_exec.py に残し、この制御 test で Git 探索を重ねない。
+        call_config = config.codex.agent_calls[parameter.agent_call_kind]
+        assert call_config == CodexCallConfig("custom", "custom-model", "high")
+        assert config.codex.model_providers[call_config.model_provider].settings == {
+            "name": "custom",
+            "http_headers": {"X-Test": "original"},
+        }
         if len(calls) == 1:
             events.append("first")
             assert input_path.read_text(encoding="utf-8") == "oracle spec を更新する"
@@ -373,19 +389,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert "# completion criteria" in main_objective
     assert "# 変更操作の制約" in complete_prompt
 
-    assert "custom-model" in override_args[0]
-    assert 'model_provider="custom"' in override_args[0]
-    assert 'model_reasoning_effort="high"' in override_args[0]
-    assert codex_override_config(override_args[0])["model_providers"]["custom"][
-        "http_headers"
-    ] == {"X-Test": "original"}
     if failure_stage != "first":
         second_parameter, second_kwargs = calls[1]
         assert second_parameter is main_parameter
         assert second_kwargs["root"] == root
         assert second_kwargs["config"] is main_kwargs["config"]
         assert second_kwargs["purpose"] == "oracle edit second"
-        assert override_args[1] == override_args[0]
 
     assert input_path.read_text(encoding="utf-8") == "later human edit"
     assert not list(input_path.parent.glob("*_cmpl.md"))
@@ -393,12 +402,11 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert (root / "oracle" / "spec.md").read_text() == expected_spec
     assert json.loads(session_state_path.read_text()) == state_before
     assert readme_path.read_text() == "# unstaged change\n"
-    assert (
-        run_git(root, "diff", "--cached", "--", "README.md").stdout
-        == staged_diff_before
-    )
-    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
-    assert run_git(root, "status", "--short", "oracle/spec.md").stdout.strip()
+    status_after = run_git(root, *status_args).stdout.splitlines()
+    oracle_status = [line for line in status_after if line.endswith(" oracle/spec.md")]
+    assert len(oracle_status) == 1
+    assert oracle_status[0].startswith("1 .M ")
+    assert [line for line in status_after if line not in oracle_status] == status_before
     assert not (root / ".cmoc" / "gu" / "report" / "oracle" / "edit" / "fork").exists()
     terminal_output = result.stdout + result.stderr
     if failure_stage is None:

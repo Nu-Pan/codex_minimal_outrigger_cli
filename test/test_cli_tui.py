@@ -27,6 +27,10 @@ from cmoc_runtime import write_config
 from config.cmoc_config import CmocConfig
 from main import app
 
+# agent 起動は全ケースでダブルを使うため、利用しない feedback transport は準備しない。
+# TCP の受付・保存・drain は test_feedback.py、doctor の検査順序は test_doctor_cli.py に残す。
+pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+
 
 @pytest.fixture
 def editor_input(
@@ -167,8 +171,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
     readme_path.write_text("# staged change\n")
     run_git(root, "add", "README.md")
     readme_path.write_text("# unstaged change\n")
-    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
-    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
+    # v2 status の HEAD・index blob ID、三段階の mode、dirty 状態と本文を比較する。
+    # staged・unstaged diff を別々に取得するための Git 起動は重ねない。
+    git_state_before = run_git(
+        root, "status", "--porcelain=v2", "--", "README.md"
+    ).stdout
     events: list[str] = []
 
     real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
@@ -299,12 +306,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
         builder_calls[1][0]
         == "<!-- remove me -->\n# 依頼\n\nsrc を確認して必要なら直す"
     )
-    assert readme_path.read_text() == "# unstaged change\n"
+    assert readme_path.read_bytes() == b"# unstaged change\n"
     assert (
-        run_git(root, "diff", "--cached", "--", "README.md").stdout
-        == staged_diff_before
+        run_git(root, "status", "--porcelain=v2", "--", "README.md").stdout
+        == git_state_before
     )
-    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert (root / ".cmoc" / "gu" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
@@ -327,12 +333,8 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     monkeypatch.setattr(
         runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
     )
-    # doctor と TUI は観測用のダブルなので、使わない collector は起動しない。
     # handoff の TCP・guide の結合は test_editor_input_handoff.py に残し、
     # linked 起動では main root への引き渡しと終了順序を観測する。
-    monkeypatch.setattr(
-        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
-    )
     write_config(linked / ".cmoc/gt/config.json", CmocConfig())
     monkeypatch.chdir(linked)
     opened_inputs = editor_input("\nlinked worktree task\n")

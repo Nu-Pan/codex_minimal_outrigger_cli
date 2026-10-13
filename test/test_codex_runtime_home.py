@@ -4,15 +4,17 @@
 test_codex_runtime_paths.py の Fake CLI 起動にまとめる。
 """
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from oracle.other import path_model as path_model_module
 
 import commons.runtime_codex_exec as runtime_codex_exec
+import commons.runtime_codex_tui as runtime_codex_tui
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
-from commons.runtime_codex import run_codex_exec
+from commons.runtime_codex import run_codex_exec, run_codex_tui
 from commons.runtime_codex_profile import validate_codex_home
 from config.cmoc_config import CmocConfig
 
@@ -32,10 +34,10 @@ def codex_call_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-def _spy_codex_subprocess(
+def _spy_codex_startup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> list[tuple[tuple[object, ...], dict[str, object]]]:
-    """Codex subprocess call を記録し、preflight failure で起動数が zero になることを検証する。"""
+    """exec・TUI・version probe の起動境界を、実行せず記録する。"""
     calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
 
     def record_call(*args: object, **kwargs: object) -> None:
@@ -43,54 +45,51 @@ def _spy_codex_subprocess(
         calls.append((args, kwargs))
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", record_call)
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", record_call)
+    monkeypatch.setattr(
+        runtime_codex_tui, "codex_cli_supports_tui_notification_hooks", record_call
+    )
     return calls
 
 
-def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
+@pytest.mark.parametrize(
+    "codex_runner", [run_codex_exec, run_codex_tui], ids=["exec", "tui"]
+)
+@pytest.mark.parametrize(
+    ("codex_home_is_file", "summary", "next_action"),
+    [
+        pytest.param(
+            False,
+            "Codex home が存在しません。",
+            "Codex CLI の通常利用環境を初期化してください。",
+            id="missing",
+        ),
+        pytest.param(
+            True,
+            "Codex home がディレクトリではありません。",
+            "CODEX_HOME のファイル種別を確認してください。",
+            id="file",
+        ),
+    ],
+)
+def test_invalid_codex_home_fails_before_startup_and_log_preparation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    codex_call_directory: Path,
+    codex_runner: Callable[..., object],
+    codex_home_is_file: bool,
+    summary: str,
+    next_action: str,
 ) -> None:
-    """Codex subprocess の起動前に欠落した home を拒否する。"""
+    """欠落・通常 file の home を、Codex 起動と採番・log 作成より前に拒否する。"""
     root = codex_call_directory
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
-    codex_calls = _spy_codex_subprocess(monkeypatch)
-    missing_home = tmp_path / "missing_codex_home"
-    monkeypatch.setenv("CODEX_HOME", str(missing_home))
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        root,
-    )
-
-    try:
-        run_codex_exec(
-            parameter, root=root, transient_poll_interval_sec=0, config=CmocConfig()
-        )
-    except CmocError as exc:
-        error = exc
-    else:
-        raise AssertionError("run_codex_exec should fail before invoking Codex CLI")
-
-    assert error.summary == "Codex home が存在しません。"
-    assert str(missing_home) in error.detail
-    assert "Codex CLI の通常利用環境を初期化してください。" in error.next_actions
-    assert codex_calls == []
-
-
-def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, codex_call_directory: Path
-) -> None:
-    """Codex subprocess の起動前に file を指す home を拒否する。"""
-    root = codex_call_directory
-    home = tmp_path / "home"
-    home.mkdir()
-    monkeypatch.setenv("HOME", str(home))
-    codex_calls = _spy_codex_subprocess(monkeypatch)
-    codex_home = tmp_path / "codex_home_file"
-    codex_home.write_text("not a directory\n")
+    codex_calls = _spy_codex_startup(monkeypatch)
+    codex_home = tmp_path / "codex_home"
+    if codex_home_is_file:
+        codex_home.write_text("not a directory\n")
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
     parameter = AgentCallParameter(
         "build_feedback_normalize_issue_parameter",
@@ -100,19 +99,15 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
         root,
     )
 
-    try:
-        run_codex_exec(
-            parameter, root=root, transient_poll_interval_sec=0, config=CmocConfig()
-        )
-    except CmocError as exc:
-        error = exc
-    else:
-        raise AssertionError("run_codex_exec should fail before invoking Codex CLI")
+    with pytest.raises(CmocError) as caught:
+        codex_runner(parameter, root=root, config=CmocConfig())
 
-    assert error.summary == "Codex home がディレクトリではありません。"
+    error = caught.value
+    assert error.summary == summary
     assert str(codex_home) in error.detail
-    assert "CODEX_HOME のファイル種別を確認してください。" in error.next_actions
+    assert next_action in error.next_actions
     assert codex_calls == []
+    assert list(root.iterdir()) == []
 
 
 @pytest.mark.parametrize("auth_json_is_directory", [False, True])

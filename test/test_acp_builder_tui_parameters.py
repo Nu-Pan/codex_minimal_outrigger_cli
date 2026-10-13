@@ -19,22 +19,11 @@ from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
 from basic.acp import FileAccessMode, TuiResumeTarget
 
 
-@pytest.mark.parametrize(
-    "original_prompt",
-    [
-        "# 依頼\n\nsrc の実装を確認する。",
-        "README の構成を調査する。",
-        "{{original-prompt-here}}",
-    ],
-)
-def test_tui_launch_builder_uses_fixed_parameter_and_policies(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    original_prompt: str,
-) -> None:
-    """オリジナル prompt によらず固定の規定と実行設定を使用する。"""
+@pytest.fixture
+def tui_builder_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """新規・再開 parameter の検査に、Git を準備しない cwd を用意する。"""
     # Git metadata の導出は test_basic_runtime.py と test_cli_tui.py に残す。
-    # 文面・parameter の検査では root 探索結果だけを置換する。
+    # root 探索結果だけを置換し、現在 cwd で保存 cwd を代用した場合は拒否する。
     root = tmp_path / "repo"
     root.mkdir()
     monkeypatch.chdir(root)
@@ -46,7 +35,24 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
     )
+    return root
 
+
+@pytest.mark.parametrize(
+    "original_prompt",
+    [
+        "# 依頼\n\nsrc の実装を確認する。",
+        "README の構成を調査する。",
+        "{{original-prompt-here}}",
+    ],
+)
+def test_tui_launch_builder_uses_fixed_parameter_and_policies(
+    tui_builder_directory: Path,
+    original_prompt: str,
+) -> None:
+    """オリジナル prompt によらず固定の規定と実行設定を使用する。"""
+    # parameter と文面は、root 導出だけを代替した実 builder から取得する。
+    root = tui_builder_directory
     parameter = build_tui_launch_tui_parameter(original_prompt)
 
     assert parameter.agent_call_kind == "build_tui_launch_tui_parameter"
@@ -110,20 +116,21 @@ def test_tui_launch_module_exports_only_builder() -> None:
     [build_tui_launch_tui_parameter, build_oracle_investigation_launch_tui_parameter],
 )
 def test_resume_builder_keeps_workload_without_initial_input(
-    cli_repository, tmp_path, monkeypatch, builder
+    tui_builder_directory, tmp_path, monkeypatch, builder
 ):
     """現在の cwd や過去の prompt を使わず、保存 cwd と元の workload を保つ。"""
-    monkeypatch.chdir(cli_repository)
+    # 保存 cwd を現在 cwd と区別できるよう、初回構築後に別 directory へ移る。
+    root = tui_builder_directory
     fresh = builder("original instruction")
     other = tmp_path / "unrelated_directory"
     other.mkdir()
     monkeypatch.chdir(other)
 
-    resumed = builder(resume=TuiResumeTarget("exact-session-id", cli_repository))
+    resumed = builder(resume=TuiResumeTarget("exact-session-id", root))
 
     assert resumed.prompt is None
     assert resumed.tui_resume_session_id == "exact-session-id"
-    assert resumed.agent_call_cwd == cli_repository.resolve()
+    assert resumed.agent_call_cwd == root.resolve()
     for field in (
         "agent_call_kind",
         "file_access_mode",

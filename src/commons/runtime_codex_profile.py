@@ -33,6 +33,7 @@ from typing import Any
 from oracle.other.document_search import SEARCH_MCP_SERVER, SEARCH_TOOL_NAME
 
 from basic.acp import AgentCallParameter, FileAccessMode
+from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig, JsonTomlValue
 
 from .runtime_codex_recovery import CodexOutcome
@@ -894,6 +895,7 @@ def document_search_mcp_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
     *,
+    path_context: AgentCallPathContext | None = None,
     codex_call_id: str | None = None,
     logger: SubcommandLogger | None = None,
 ) -> list[str]:
@@ -908,9 +910,8 @@ def document_search_mcp_override_args(
             "disabled_tools": [SEARCH_TOOL_NAME],
         }
     else:
-        from basic.path_model import AgentCallPathContext
-
-        context = AgentCallPathContext(parameter.agent_call_cwd)
+        # runtime が確定した context を使い、単独の argv 構築時だけ root を導出する。
+        context = path_context or AgentCallPathContext(parameter.agent_call_cwd)
         search_config = config.document_search
         caller = logger or current_subcommand_logger()
         log_context = (
@@ -968,6 +969,7 @@ def build_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig,
     *,
+    path_context: AgentCallPathContext | None = None,
     notification_command: Sequence[str] | None = None,
     session_start_command: Sequence[str] | None = None,
 ) -> list[str]:
@@ -1008,7 +1010,9 @@ def build_codex_override_args(
             session_start_command if callback_enabled else None
         ),
         *_feedback_mcp_override_args(parameter.enable_feedback_reporting),
-        *document_search_mcp_override_args(parameter, config),
+        *document_search_mcp_override_args(
+            parameter, config, path_context=path_context
+        ),
         *(
             _editor_input_handoff_mcp_override_args()
             if parameter.enable_editor_input_handoff_mcp
@@ -1054,6 +1058,7 @@ def prepare_codex_override_args(
     parameter: AgentCallParameter,
     config: CmocConfig | None = None,
     *,
+    path_context: AgentCallPathContext | None = None,
     notification_command: Sequence[str] | None = None,
     session_start_command: Sequence[str] | None = None,
 ) -> list[str]:
@@ -1062,6 +1067,7 @@ def prepare_codex_override_args(
     return build_codex_override_args(
         parameter,
         resolved_config,
+        path_context=path_context,
         notification_command=notification_command,
         session_start_command=session_start_command,
     )
@@ -1582,20 +1588,6 @@ def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
     # Path.read_text() の改行変換を通さない。
     schema_text = schema_source_path.read_bytes().decode("utf-8")
     return write_hashed_file(schema_store_dir(root), "", ".json", schema_text)
-
-
-def read_output_json(path: Path) -> Any:
-    """schema なしの Codex output が空または不正 JSON の場合は None を返す。"""
-    try:
-        output_text = path.read_text(encoding="utf-8")
-    except (FileNotFoundError, UnicodeError):
-        return None
-    if not output_text.strip():
-        return None
-    try:
-        return json.loads(output_text)
-    except (RecursionError, json.JSONDecodeError, UnicodeError):
-        return None
 
 
 def codex_error_text(stdout_text: str, stderr_text: str) -> str:

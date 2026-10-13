@@ -1116,11 +1116,21 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "external" / "apply.pid"
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["print('ok')"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     monkeypatch.setenv(cmoc_runtime.RUN_PROCESS_TRACKING_ENV, str(tracking_path))
+    # dispatch の検査には child を起動せず、実 OS の停止・tracking は上の test に残す。
+
+    def run_process(
+        argv: list[str], **options: object
+    ) -> subprocess.CompletedProcess[str]:
+        assert options["text"] is True
+        assert options["capture_output"] is True
+        return subprocess.CompletedProcess(argv, 0, "ok\n", "")
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "run",
+        run_process,
+    )
 
     monkeypatch.setattr(
         runtime_codex_profile,
@@ -1136,20 +1146,36 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
     assert not tracking_path.exists()
 
 
-def test_run_codex_subprocess_notifies_after_process_start() -> None:
+def test_run_codex_subprocess_notifies_after_process_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """process 起動 callback を Popen 成功後に一度だけ呼び出す。"""
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-    callbacks: list[str] = []
+    events: list[str] = []
+    process = MagicMock(returncode=0)
+    process.__enter__.return_value = process
+    process.communicate.return_value = ("ok\n", "")
+    process.wait.return_value = 0
+
+    def start_process(*_args: object, **_kwargs: object) -> MagicMock:
+        assert _kwargs["text"] is True
+        assert _kwargs["stdout"] == subprocess.PIPE
+        assert _kwargs["stderr"] == subprocess.PIPE
+        events.append("started")
+        return process
+
+    monkeypatch.setattr(runtime_codex_profile.subprocess, "Popen", start_process)
 
     result = run_codex_subprocess(
-        [sys.executable, "-S", "-c", "print('ok')"],
+        ["codex"],
         text=True,
         capture_output=True,
         check=True,
-        process_started_callback=lambda: callbacks.append("started"),
+        process_started_callback=lambda: events.append("callback"),
     )
 
-    assert callbacks == ["started"]
+    assert events == ["started", "callback"]
+    assert result.returncode == 0
     assert result.stdout == "ok\n"
 
 

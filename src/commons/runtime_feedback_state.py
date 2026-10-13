@@ -27,8 +27,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
+from jsonschema.protocols import Validator
 
 from .runtime_errors import CmocError
 from .runtime_feedback_store import (
@@ -47,6 +47,7 @@ from .runtime_feedback_store import (
     write_immutable_json,
 )
 from .runtime_ids import is_common_id, new_id
+from .runtime_json_schema import checked_schema_validator
 
 _JsonObject = dict[str, Any]
 
@@ -764,7 +765,8 @@ def _resolve_reference_path(
         raise _corruption(
             f"{description} path が symlink を含みます。", lexical_candidate
         )
-    candidate = lexical_candidate.resolve(strict=False)
+    # symlink を含まない絶対 path は、同じ祖先を再走査せず .. だけ正規化する。
+    candidate = Path(os.path.normpath(lexical_candidate))
     expected = expected_root.resolve(strict=False)
     if candidate != expected and expected not in candidate.parents:
         raise _corruption(f"{description} path が期待 root 外です。", candidate)
@@ -1551,6 +1553,16 @@ def _load_generation(
 
 def load_active_state(repo: Path) -> ActiveState:
     """current pointer が選ぶ正常な active state と cleanup state を読む。"""
+    # current 未作成時も、work に属さない active artifact は見逃さない。
+    state = _load_current_state(repo)
+    if state.current is None:
+        _validate_active_artifact_inventory(repo, state, load_report_cut(repo))
+    return state
+
+
+def _load_current_state(repo: Path) -> ActiveState:
+    """current が選ぶ generation を検証し、work 全体の検査は呼出し側へ委ねる。"""
+    # current の有無によらず、active root の通常 directory 境界を検査する。
     active_directory = active_root(repo)
     if _has_symlink_component(active_directory) or (
         active_directory.exists() and not active_directory.is_dir()
@@ -1561,12 +1573,6 @@ def load_active_state(repo: Path) -> ActiveState:
         )
     pointer_path = current_pointer_path(repo)
     if not pointer_path.exists() and not pointer_path.is_symlink():
-        work = load_report_cut(repo)
-        _validate_active_artifact_inventory(
-            repo,
-            ActiveState(None, None, {}, {}, None, None),
-            work,
-        )
         return ActiveState(None, None, {}, {}, None, None)
     pointer = _read_canonical_object(pointer_path, "feedback current pointer")
     _require_exact_fields(
@@ -2352,7 +2358,7 @@ def _validate_report_cut_checkpoint(
 
 
 @lru_cache(maxsize=1)
-def _normalization_validator() -> Draft202012Validator:
+def _normalization_validator() -> Validator:
     """oracle schema から normalization output 検査用 validator を構築する。"""
     # schema と validator を一緒に再利用し、checkpoint ごとの再構築を避ける。
     try:
@@ -2378,11 +2384,11 @@ def _normalization_validator() -> Draft202012Validator:
                 break
         else:
             raise
-    schema = json.loads(schema_text)
-    if not isinstance(schema, dict):
+    # 出力受理と同じ本文の解析・定義検査を共有し、checkpoint 専用に再構築しない。
+    validator = checked_schema_validator(schema_text)
+    if not isinstance(validator.schema, dict):
         raise TypeError("normalization schema must be an object")
-    Draft202012Validator.check_schema(schema)
-    return Draft202012Validator(schema)
+    return validator
 
 
 def _normalization_output_matches_schema(output: dict[str, Any]) -> bool:
@@ -2681,8 +2687,9 @@ def _validate_publication_section(
         )
 
 
-def load_report_cut(repo: Path) -> tuple[_JsonObject, Path] | None:
-    """repository に高々一件ある進行中または terminal な cut を返す。"""
+def _find_report_cut_manifest(repo: Path) -> Path | None:
+    """work root の配置を検査し、一意な report cut の manifest path を返す。"""
+    # close の作業記録を除き、report の directory と未定義 artifact を一度に調べる。
     root = report_work_root(repo)
     if not root.exists() and not root.is_symlink():
         return None
@@ -2690,25 +2697,28 @@ def load_report_cut(repo: Path) -> tuple[_JsonObject, Path] | None:
         raise _corruption(
             "feedback report work root が通常 directory ではありません。", root
         )
-    directories = sorted(
-        path
-        for path in root.iterdir()
-        if path.name != "close" and path.is_dir() and not path.is_symlink()
-    )
-    unexpected = [
-        path
-        for path in root.iterdir()
-        if path not in directories and path.name != "close"
-    ]
-    if unexpected:
-        raise _corruption(
-            "feedback report work root に未定義 artifact があります。", unexpected[0]
-        )
+    directories = []
+    for path in sorted(root.iterdir()):
+        if path.name == "close":
+            continue
+        if path.is_symlink() or not path.is_dir():
+            raise _corruption(
+                "feedback report work root に未定義 artifact があります。", path
+            )
+        directories.append(path)
     if len(directories) > 1:
         raise _corruption("再開対象の feedback report cut が複数あります。", root)
     if not directories:
         return None
-    manifest_path = directories[0] / "manifest.json"
+    return directories[0] / "manifest.json"
+
+
+def load_report_cut(repo: Path) -> tuple[_JsonObject, Path] | None:
+    """repository に高々一件ある進行中または terminal な cut を返す。"""
+    # work root の配置を検査した後に、manifest と参照先を読み取る。
+    manifest_path = _find_report_cut_manifest(repo)
+    if manifest_path is None:
+        return None
     manifest = _read_canonical_object(manifest_path, "report cut manifest")
     from .runtime_feedback_run_state import recover_run_artifact_references
 
@@ -2993,20 +3003,28 @@ def write_checkpoint(repo: Path, path: Path, checkpoint: _JsonObject) -> _JsonOb
 
 def validate_feedback_state(repo: Path) -> ActiveState:
     """current state、cleanup、および単一 work cut の整合性を検証する。"""
-    state = load_active_state(repo)
-    work = load_report_cut(repo)
+    # current 経由で検証した cleanup manifest は、同じ呼出し内で再利用する。
+    state = _load_current_state(repo)
+    work: tuple[_JsonObject, Path] | None
     if state.cleanup_manifest_path is not None:
-        if work is None or work[1] != state.cleanup_manifest_path:
+        if (
+            state.cleanup_manifest is None
+            or _find_report_cut_manifest(repo) != state.cleanup_manifest_path
+        ):
             raise _corruption(
                 "current pointer の cleanup manifest を一意に解決できません。",
                 state.cleanup_manifest_path,
             )
-    elif work is not None:
-        processing = work[0].get("processing")
-        if isinstance(processing, dict) and processing.get("status") == "published":
-            raise _corruption(
-                "未定義の published report cut status があります。", work[1]
-            )
+        work = state.cleanup_manifest, state.cleanup_manifest_path
+        _validate_report_cut_artifact_inventory(repo, *work)
+    else:
+        work = load_report_cut(repo)
+        if work is not None:
+            processing = work[0].get("processing")
+            if isinstance(processing, dict) and processing.get("status") == "published":
+                raise _corruption(
+                    "未定義の published report cut status があります。", work[1]
+                )
     _validate_active_artifact_inventory(repo, state, work)
     return state
 

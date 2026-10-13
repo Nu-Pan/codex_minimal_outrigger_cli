@@ -4,6 +4,7 @@ import json
 import subprocess
 import time
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,6 @@ from .runtime_codex_profile import (
     extract_resume_token,
     prepare_codex_override_args,
     prepare_schema,
-    read_output_json,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
@@ -62,6 +62,28 @@ from .runtime_results import (
 )
 
 _MAX_OUTPUT_CORRECTIONS = 2
+
+
+def _read_optional_output(path: Path) -> tuple[str, Any]:
+    """schema なしの出力から本文と JSON を取得し、不正 JSON は None とする。"""
+    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    try:
+        output_bytes = path.read_bytes()
+    except FileNotFoundError:
+        return "", None
+    try:
+        output_text = output_bytes.decode("utf-8")
+    except UnicodeError:
+        # 表示用の置換文字を、正常に符号化された JSON として受理しない。
+        output_text = output_bytes.decode("utf-8", errors="replace")
+        output_json = None
+    else:
+        try:
+            output_json = json.loads(output_text)
+        except (RecursionError, json.JSONDecodeError):
+            output_json = None
+    # Path.read_text() が行っていた改行変換を本文の返却でも保つ。
+    return output_text.replace("\r\n", "\n").replace("\r", "\n"), output_json
 
 
 def _read_required_output(path: Path) -> tuple[str, Any]:
@@ -288,22 +310,25 @@ def run_codex_exec(
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = deepcopy(config or load_config(path_context.work_root))
-    logger = subcommand_logger or current_subcommand_logger()
-    execution_id = (
-        logger.execution_id if logger is not None else current_execution_id(root)
-    )
-    log_dir = codex_log_dir(root) / execution_id
-    log_dir.mkdir(parents=True, exist_ok=True)
     agent_call_cwd = path_context.agent_call_cwd
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
     # path を対象にする。
     codex_home = resolve_codex_home(agent_call_cwd)
     validate_codex_home(codex_home)
+
+    # 起動できない home では、採番 DB と空の Codex ログディレクトリを作らない。
+    logger = subcommand_logger or current_subcommand_logger()
+    execution_id = (
+        logger.execution_id if logger is not None else current_execution_id(root)
+    )
+    log_dir = codex_log_dir(root) / execution_id
+    log_dir.mkdir(parents=True, exist_ok=True)
     codex_env = codex_subprocess_env(codex_home)
     override_args = prepare_codex_override_args(
         parameter,
         config,
+        path_context=path_context,
     )
     schema_path: Path | None = None
     schema_validator: Validator | None = None
@@ -393,7 +418,11 @@ def run_codex_exec(
             [
                 *override_args,
                 *document_search_mcp_override_args(
-                    parameter, config, codex_call_id=active_codex_call_id, logger=logger
+                    parameter,
+                    config,
+                    path_context=path_context,
+                    codex_call_id=active_codex_call_id,
+                    logger=logger,
                 ),
             ],
             agent_call_cwd,
@@ -635,10 +664,20 @@ def run_codex_exec(
         nonlocal quota_polls
         check_recovery_interruption()
         probe_parameter = _quota_availability_probe_parameter(parameter)
-        probe_config = deepcopy(config)
+        # 開始時に固定した設定を共有し、probe の選択だけ別の map にする。
+        probe_config = config
         if inherited:
-            probe_config.codex.agent_calls[probe_parameter.agent_call_kind] = (
-                config.codex.agent_calls[parameter.agent_call_kind]
+            probe_config = replace(
+                config,
+                codex=replace(
+                    config.codex,
+                    agent_calls={
+                        **config.codex.agent_calls,
+                        probe_parameter.agent_call_kind: config.codex.agent_calls[
+                            parameter.agent_call_kind
+                        ],
+                    },
+                ),
             )
         # 正本 builder が cwd と Git context を検証済みなので、その結果を再利用する。
         probe_agent_call_cwd = probe_parameter.agent_call_cwd
@@ -1048,7 +1087,7 @@ def run_codex_exec(
                     detail,
                 )
         else:
-            output_json = read_output_json(output_path)
+            output_text, output_json = _read_optional_output(output_path)
         _emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=call_path,
@@ -1061,13 +1100,6 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        # Structured Output は検証した本文を再利用し、結果構築で再読み取りしない。
-        if schema_path is None:
-            try:
-                # schema-less output の不正 UTF-8 でも結果構築を中断しない。
-                output_text = output_path.read_text(encoding="utf-8", errors="replace")
-            except FileNotFoundError:
-                output_text = ""
         return CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,

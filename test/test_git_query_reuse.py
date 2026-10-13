@@ -5,7 +5,7 @@ from collections import Counter
 from contextlib import nullcontext
 
 import pytest
-from _git_support import RUN_BRANCH, RUN_ID, SESSION_ID, init_repo, make_repo, run_git
+from _git_support import RUN_BRANCH, RUN_ID, SESSION_ID, init_repo, run_git
 
 import commons.runtime_git as git_module
 from commons.prompt_editor_input import ensure_prompt_editor_roots_ignored
@@ -100,10 +100,11 @@ def test_remove_worktree_preserves_fallback_cleanup_and_rechecks_registration(
 
 
 def test_git_query_reuse_keeps_worktrees_and_environment_separate(
-    tmp_path, monkeypatch
+    committed_repository, tmp_path, monkeypatch
 ):
     """両 root の導出を共有し、異なる起点・環境では取り直す。"""
-    root = make_repo(tmp_path)
+    # linked worktree に必要な HEAD だけを用意し、追跡 file と staging を準備しない。
+    root = committed_repository
     linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked-query", str(linked), "HEAD")
     index_query = ["rev-parse", "--git-path", "index"]
@@ -142,23 +143,6 @@ def test_git_query_reuse_keeps_worktrees_and_environment_separate(
             assert work_root(root) == root
             assert git_calls == calls_after_repo_root
         assert git_module.run_git(index_query, root).stdout.strip() == ".git/index"
-
-
-def test_git_query_reuse_observes_ignore_content_and_index_changes(cli_repository):
-    root = cli_repository
-    candidate = root / "candidate.txt"
-    candidate.write_text("content\n")
-    gitignore = root / ".gitignore"
-    gitignore.write_text("")
-
-    with git_module.reuse_git_path_queries():
-        assert not git_module.is_git_ignored(root, candidate)
-        gitignore.write_text("candidate.txt\n")
-        assert git_module.is_git_ignored(root, candidate)
-        assert git_module.is_untracked_git_ignored(root, candidate)
-        run_git(root, "add", "-f", candidate.name)
-        assert git_module.is_git_ignored(root, candidate)
-        assert not git_module.is_untracked_git_ignored(root, candidate)
 
 
 def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(

@@ -265,15 +265,15 @@ def test_tui_callback_state_is_invocation_local(tmp_path: Path, toast_clock) -> 
     )
 
     assert callback is not None
-    assert callback.command[0] == sys.executable
-    assert Path(callback.command[1]) == Path(runtime_windows_toast.__file__).resolve()
-    assert callback.command[2] == "codex-tui-callback"
-    state_root = Path(callback.command[3])
+    launcher = callback.command[:-4]
+    assert launcher[0] == sys.executable
+    assert Path(launcher[-1]) == Path(runtime_windows_toast.__file__).resolve()
+    assert callback.command[-4] == "codex-tui-callback"
+    state_root = Path(callback.command[-3])
     assert state_root.is_dir()
-    assert callback.command[4:] == ["tui", "repository"]
+    assert callback.command[-2:] == ["tui", "repository"]
     assert callback.session_start_command == [
-        sys.executable,
-        str(Path(runtime_windows_toast.__file__).resolve()),
+        *launcher,
         "codex-tui-session-start-hook",
         str(state_root),
     ]
@@ -301,7 +301,7 @@ def test_tui_callback_close_drains_running_callback(
         tmp_path / "repository",
     )
     assert callback is not None
-    state_root = Path(callback.command[3])
+    state_root = Path(callback.command[-3])
     session_arguments = ["codex-tui-session-start-hook", str(state_root)]
     assert (
         runtime_windows_toast._run_codex_tui_session_start_hook(
@@ -421,9 +421,11 @@ def test_tui_callback_drain_handles_late_start_with_finite_wait(
 
 def test_tui_callback_commands_run_as_standalone_scripts(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
     toast_clock,
 ) -> None:
-    """SessionStart stdin と legacy callback argv を standalone 実行する。"""
+    """stdin/argv の standalone 境界と process 間の重複排除を検証する。"""
     callback = runtime_windows_toast.create_tui_notification_callback(
         "oracle investigation",
         tmp_path / "repository",
@@ -442,7 +444,7 @@ def test_tui_callback_commands_run_as_standalone_scripts(
             "turn-id": "turn-1",
         }
     )
-    state_root = Path(callback.command[3])
+    state_root = Path(callback.command[-3])
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorded_toast = tmp_path / "toast.jsonl"
@@ -459,7 +461,14 @@ def test_tui_callback_commands_run_as_standalone_scripts(
         **os.environ,
         "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
         "CMOC_TEST_TOAST_LOG": str(recorded_toast),
+        "PYTHONPATH": str(bin_dir),
     }
+    # 標準ライブラリだけの helper に、site 初期化や外部 package の準備は不要。
+    # 起動時に site を読み込む回帰は、二つの既存 process の stderr で検出する。
+    (bin_dir / "sitecustomize.py").write_text(
+        "raise RuntimeError('notification helper initialized site')\n",
+        encoding="utf-8",
+    )
 
     try:
         result = subprocess.run(
@@ -474,18 +483,32 @@ def test_tui_callback_commands_run_as_standalone_scripts(
         assert result.returncode == 0
         assert result.stdout == ""
         assert result.stderr == ""
-        for _ in range(2):
-            result = subprocess.run(
-                [*callback.command, turn_payload],
-                env=environment,
-                text=True,
-                capture_output=True,
-                timeout=10,
-                check=False,
-            )
-            assert result.returncode == 0
-            assert result.stdout == ""
-            assert result.stderr == ""
+        result = subprocess.run(
+            [*callback.command, turn_payload],
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
+
+        # 子 process が残した state を親の実入口から読み、再起動なしで重複を確かめる。
+        duplicate_notifications: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            runtime_windows_toast,
+            "_run_windows_toast_transport",
+            lambda title, message: (
+                duplicate_notifications.append((title, message)) or True
+            ),
+        )
+        assert runtime_windows_toast.main([*callback.command[-4:], turn_payload]) == 0
+        assert duplicate_notifications == []
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err == ""
         assert len(list(state_root.glob("*.seen"))) == 1
         assert len(list(state_root.glob("root-*.session"))) == 1
         assert [

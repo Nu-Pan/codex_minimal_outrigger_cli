@@ -1204,11 +1204,16 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     body = work.read_text()
     assert "CMOC_GUIDE_CONFIRMED" in body, response
     assert tui_payload["codex_call_id"] in body
+    # 終了済み process のログを一度だけ解析し、送信元・検索・期限の検証で共有する。
+    subcommand_events = {
+        path: [json.loads(line) for line in path.read_text().splitlines()]
+        for path in (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    }
     source_events = [
         (path, event)
-        for path in (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
-        for line in path.read_text().splitlines()
-        if (event := json.loads(line)).get("event") == "editor_input_handoff_source"
+        for path, events in subcommand_events.items()
+        for event in events
+        if event.get("event") == "editor_input_handoff_source"
     ]
     assert len(source_events) == 1
     log_path, source = source_events[0]
@@ -1221,8 +1226,8 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert source["execution_id"] in transcript
     search_events = [
         event
-        for line in log_path.read_text().splitlines()
-        if (event := json.loads(line))["event"].startswith("document_search_request_")
+        for event in subcommand_events[log_path]
+        if event["event"].startswith("document_search_request_")
     ]
     assert len(search_events) == 3
     assert all(
@@ -1235,8 +1240,8 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert search_events[-1]["failure_code"] == "DEADLINE_EXCEEDED"
     deadline = next(
         event
-        for line in log_path.read_text().splitlines()
-        if (event := json.loads(line))["event"] == "document_search_deadline_exceeded"
+        for event in subcommand_events[log_path]
+        if event["event"] == "document_search_deadline_exceeded"
     )
     assert deadline["request_id"] == search_events[-1]["request_id"]
     assert deadline["deadline_kinds"] == ["search_request"]

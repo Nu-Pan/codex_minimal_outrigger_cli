@@ -16,6 +16,7 @@ import pytest
 from _codex_support import (
     codex_override_config,
     codex_parameter,
+    script_codex_calls,
     setup_codex_home,
 )
 from _command_support import write_python_executable
@@ -23,7 +24,7 @@ from _git_support import run_git
 
 from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
-from commons.runtime_ids import is_common_id
+from commons.runtime_ids import is_common_id, new_id
 from config.cmoc_config import CmocConfig
 
 _FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00-00_000"
@@ -39,28 +40,38 @@ def run_fixed_codex_exec(
         """両 process に同じ生成時刻を与えて path の独立性を確かめる。"""
         return _FIXED_CODEX_TIMESTAMP
 
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # 発行処理を始める前に同期し、記録日時が一致しても各 log が分離されることを調べる。
-    exec_module.timestamp = timestamp_factory
     try:
-        barrier.wait(timeout=5)
-        result = run_codex_exec(
-            codex_parameter(agent_call_cwd=root),
-            root=root,
-            transient_poll_interval_sec=0,
-            config=CmocConfig(),
-        )
-        connection.send(
-            {
-                "call_log_path": str(result.call_log_path),
-                "prompt_log_path": str(result.prompt_log_path),
-                "stdout_log_path": str(result.stdout_log_path),
-                "stderr_log_path": str(result.stderr_log_path),
-                "output_path": str(result.output_path),
-            }
-        )
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(exec_module, "timestamp", timestamp_factory)
+            # subprocess の cwd・env は後続の Fake CLI test に残す。
+            # ここでは 2 process の実採番と log 保存だけを通し、孫 process を起動しない。
+            script_codex_calls(
+                monkeypatch,
+                [(0, '{"type": "turn.completed"}\n', "done\n")] * 2,
+            )
+            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # 発行前に同期し、記録日時が一致しても各 log が分離されることを調べる。
+            barrier.wait(timeout=5)
+            records = []
+            for _ in range(2):
+                result = run_codex_exec(
+                    codex_parameter(agent_call_cwd=root),
+                    root=root,
+                    transient_poll_interval_sec=0,
+                    config=CmocConfig(),
+                )
+                records.append(
+                    {
+                        "call_log_path": str(result.call_log_path),
+                        "prompt_log_path": str(result.prompt_log_path),
+                        "stdout_log_path": str(result.stdout_log_path),
+                        "stderr_log_path": str(result.stderr_log_path),
+                        "output_path": str(result.output_path),
+                    }
+                )
+        connection.send(records)
     except BaseException as exc:
-        connection.send({"error": f"{type(exc).__name__}: {exc}"})
+        connection.send([{"error": f"{type(exc).__name__}: {exc}"}])
     finally:
         connection.close()
 
@@ -68,22 +79,10 @@ def run_fixed_codex_exec(
 def test_codex_call_ids_are_process_safe_on_same_timestamp(
     cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """並列 run_codex_exec が同一生成時刻でも call ID とログを共有しない。"""
+    """並行・連続発行の通番を共有し、同一時刻でもログを分離する。"""
     root = cli_repository
     setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setenv("PATH", "/usr/bin")
     barrier = Barrier(2)
     channels = [Pipe() for _ in range(2)]
     processes = [
@@ -102,19 +101,22 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
 
         for parent, _child in channels:
             assert parent.poll(10)
-            records.append(parent.recv())
+            records.extend(parent.recv())
         for process in started_processes:
             process.join(10)
 
         assert all(process.exitcode == 0 for process in started_processes)
         assert all("error" not in record for record in records), records
+        assert len(records) == 4
         all_log_paths = []
+        cc_sequences = []
         for record in records:
             call_path = Path(record["call_log_path"])
             call_log = json.loads(call_path.read_text())
             assert call_log["timestamp"] == _FIXED_CODEX_TIMESTAMP
             codex_call_id = call_log["codex_call_id"]
             assert is_common_id(codex_call_id, "cc")
+            cc_sequences.append(int(codex_call_id.split("_")[1], 36))
             assert is_common_id(call_log["execution_id"], "exec")
             assert call_path.parent.name == call_log["execution_id"]
             assert call_path.name == f"{codex_call_id}_call.json"
@@ -148,6 +150,9 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
             all_log_paths.extend(related_paths)
 
         assert len(all_log_paths) == len(set(all_log_paths))
+        # 実採番の共有と、子の終了後に親で再利用されないことを同じ起動で検査する。
+        assert sorted(cc_sequences) == list(range(4))
+        assert new_id(root, "cc").startswith("cc_000004_")
     finally:
         for process in started_processes:
             if process.is_alive():
