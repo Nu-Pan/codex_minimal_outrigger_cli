@@ -1031,7 +1031,9 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
 ) -> None:
-    """doctor preprocess は runtime state 保存先ではなく current work root を修復する。"""
+    """共通前処理と明示 doctor の対象 worktree・root 探索の再利用範囲を確認する。"""
+    import sub_commands.doctor as doctor_command
+
     root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
@@ -1064,4 +1066,31 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     assert len(list(log_dir.glob("*.jsonl"))) == 1
+    assert not (linked / ".cmoc" / "gu" / "log" / "sub_command").exists()
+
+    explicit_doctor_roots: list[Path] = []
+
+    def record_explicit_doctor(work: Path, *, explicit_doctor: bool) -> None:
+        assert explicit_doctor is True
+        explicit_doctor_roots.append(work)
+        # 修復処理へ探索結果を持ち越さず、前処理は現在の metadata を読み直す。
+        before_preprocess = root_queries
+        assert runtime_paths.work_root() == work
+        assert root_queries == before_preprocess + 1
+
+    monkeypatch.setattr(doctor_command, "run_doctor_preprocess", record_explicit_doctor)
+    # 既存の linked metadata を共用し、次の main 起動へ root を持ち越さない。
+    for work in (linked, root):
+        monkeypatch.chdir(work)
+        root_queries = 0
+        result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+        assert result.exit_code == 0, result.output
+        assert explicit_doctor_roots[-1] == work.resolve()
+        # wrapper、本体の両 root、前処理の再確認が、それぞれ一度だけ探索する。
+        assert root_queries == 3
+        assert terminal_primary_report(result).parent == root / ".cmoc/gu/report/doctor"
+
+    assert doctor_roots == [linked.resolve()]
+    assert explicit_doctor_roots == [linked.resolve(), root.resolve()]
+    assert len(list(log_dir.glob("*.jsonl"))) == 3
     assert not (linked / ".cmoc" / "gu" / "log" / "sub_command").exists()

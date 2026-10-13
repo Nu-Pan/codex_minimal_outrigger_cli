@@ -11,6 +11,7 @@ from cmoc_runtime import (
     start_subcommand_step,
     work_root,
 )
+from commons.runtime_paths import reuse_root_queries
 
 
 def cmoc_doctor_impl() -> None:
@@ -26,8 +27,10 @@ def cmoc_doctor_impl() -> None:
 
 def _doctor_body() -> TerminalResult:
     """doctor preprocess を実行し、terminal result の固有情報を返す。"""
-    current_work_root = work_root()
-    current_repo_root = repo_root()
+    # 両 root の探索だけを共有し、修復処理へ metadata の結果を持ち越さない。
+    with reuse_root_queries():
+        current_work_root = work_root()
+        current_repo_root = repo_root()
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
     run_doctor_preprocess(current_work_root, explicit_doctor=True)
