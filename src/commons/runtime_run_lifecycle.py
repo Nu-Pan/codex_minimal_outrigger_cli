@@ -396,19 +396,11 @@ def rollback_work_unit(worktree: Path) -> None:
     run_git(["clean", "-fd"], worktree)
 
 
-def commit_work_unit(
-    worktree: Path,
-    message: str,
-    *,
-    allow_empty: bool = False,
-) -> str | None:
+def commit_work_unit(worktree: Path, message: str) -> str | None:
     """worktree の全差分を一つの整合した commit として確定する。"""
     run_git(["add", "-A"], worktree)
     diff = run_git(["diff", "--cached", "--quiet"], worktree, check=False)
     if diff.returncode == 0:
-        if allow_empty:
-            run_git(["commit", "--allow-empty", "-m", message], worktree)
-            return head_commit(worktree)
         return None
     if diff.returncode != 1:
         raise CmocError(
