@@ -45,20 +45,26 @@ def committed_repository(cli_repository: Path) -> Path:
     return cli_repository
 
 
-@pytest.fixture
-def ready_run_session(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+def _prepare_run_session(
+    root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    with_content: bool,
 ) -> tuple[Path, str, Path]:
-    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
+    """必要な初期内容と設定を一つの commit に揃えて session を用意する。"""
     # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
-    root = cli_repository
     monkeypatch.chdir(root)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
         (root / relative).mkdir(parents=True, exist_ok=True)
+    if with_content:
+        # 初期内容を session fork 後に追加する履歴は利用側の検査に不要。
+        # apply の比較範囲は test_realization_apply_fork_and_run_join_use_common_state で検査する。
+        (root / "README.md").write_text("# repo\n")
+        (root / "oracle/spec.md").write_text("# spec\n")
     # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
-    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
+    run_git(root, "add", ".")
     run_git(root, "commit", "-m", "session seed")
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -76,16 +82,19 @@ def ready_run_session(
 
 
 @pytest.fixture
+def ready_run_session(
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
+    return _prepare_run_session(cli_repository, monkeypatch, with_content=False)
+
+
+@pytest.fixture
 def ready_content_session(
-    ready_run_session: tuple[Path, str, Path],
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, str, Path]:
     """run の検査に使う oracle と realization の初期内容を用意する。"""
-    root, _session_branch, _state_path = ready_run_session
-    (root / "README.md").write_text("# repo\n")
-    (root / "oracle" / "spec.md").write_text("# spec\n")
-    run_git(root, "add", "README.md", "oracle/spec.md")
-    run_git(root, "commit", "-m", "apply input")
-    return ready_run_session
+    return _prepare_run_session(cli_repository, monkeypatch, with_content=True)
 
 
 @pytest.fixture
