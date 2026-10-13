@@ -44,8 +44,8 @@ from config.cmoc_config import CmocConfig
 
 @pytest.fixture
 def tui_runtime_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """ログ・設定・起動失敗の検証では Git context を解決済みとして扱う。"""
-    # 実 Git の cwd・linked worktree 境界は、この file の prompt 起動ケースに残す。
+    """Git context の導出を扱わない検証に、解決済みの root を渡す。"""
+    # 実 Git の root 導出は test_basic_runtime.py、TUI との結合は linked 起動ケースに残す。
     root = tmp_path / "repo"
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
@@ -91,15 +91,16 @@ def _tui_call_logs(root: Path) -> list[Path]:
 # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 # docstring の責務記述は {{work-root}}/oracle/doc/dev_rule/coding_rule.md に従う。
 def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
-    cli_repository: Path,
+    tui_log_directory: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     toast_clock,
 ) -> None:
     """PURE_ORACLE_READ の完全 prompt 本文と CLI 引数を変更せず渡す。"""
     # Fake CLI は callback を起動しない。drain の待機契約は test_windows_toast.py で検証する。
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
+    # 実 process への受け渡しと通知設定を検査し、Git 導出・永続採番の準備は重ねない。
+    # 永続採番との結合は同一 timestamp と linked 起動のケースに残す。
+    root = tui_log_directory
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"

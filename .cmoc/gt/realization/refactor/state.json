@@ -176,8 +176,8 @@
   "oracle/doc/app_spec/sub_command/oracle_investigation.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "ee3a09265429f10dd0e74b5a729a3b236b3fccacf2d187898d88d845b7f6270b",
-    "last_investigated_at": "2026-10-11_11-35-50_486"
+    "last_investigated_sha256": "8670446cb57c9b72564ece0af4a1201a4f368b2599060b68b0aca9b9a29f9658",
+    "last_investigated_at": "2026-10-13_17-59-57_066"
   },
   "oracle/doc/app_spec/sub_command/realization_apply.md": {
     "investigation_required": true,
