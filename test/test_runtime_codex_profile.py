@@ -18,6 +18,7 @@ from typing import cast
 
 import pytest
 from _codex_support import codex_arg_value, codex_override_config, codex_parameter
+from oracle.other import path_model as path_model_module
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -150,11 +151,18 @@ def test_codex_overrides_reject_unknown_file_access_mode() -> None:
 
 
 def test_search_mcp_rejects_external_transport_collision(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """user 設定の同名 URL が残った実効 MCP 設定を起動前に拒否する。"""
+    # Git discovery は test_basic_runtime.py に残し、transport の拒否判定を検査する。
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _cwd: (tmp_path, tmp_path),
+    )
     parameter = replace(
-        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=tmp_path),
         enable_document_search_mcp=True,
     )
     argv = ["codex", *build_codex_override_args(parameter, CmocConfig())]
@@ -187,9 +195,7 @@ def test_search_mcp_rejects_external_transport_collision(
 
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fake_run)
     with pytest.raises(CmocError, match="実効設定が call 固定値と一致しません"):
-        runtime_codex_profile._verify_document_search_server(
-            argv, cwd=Path.cwd(), env={}
-        )
+        runtime_codex_profile._verify_document_search_server(argv, cwd=tmp_path, env={})
     assert len(calls) == 1
     assert calls[0][:2] == ["codex", "--no-daemon"]
     assert calls[0][-4:] == ["mcp", "get", "cmoc_document_search", "--json"]
