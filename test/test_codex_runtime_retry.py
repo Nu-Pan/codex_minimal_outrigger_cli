@@ -79,6 +79,8 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     """schema 不合格を同じ session で補正し、Codex call ごとの log を保存する。"""
     # process・MCP 設定・log 保存は実行し、成果物の差分取得と採番は専用 test に残す。
     root = output_only_root
+    roots = Mock(return_value=(root, root))
+    monkeypatch.setattr(path_model_module, "_resolve_git_worktree_roots", roots)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     counter = tmp_path / "counter"
@@ -138,6 +140,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     )
 
     assert result.output_json == {"ok": True}
+    roots.assert_called_once_with(root)
     assert counter.read_text() == "2"
     call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     call_logs = [json.loads(path.read_text()) for path in call_paths]
@@ -159,6 +162,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
             "codex_call_id": call["codex_call_id"],
         }
         assert context["work_root"] == str(root)
+        assert server["cwd"] == str(root)
         tuning = DocumentSearchConfig()
         assert server["tool_timeout_sec"] > (
             tuning.search_request_timeout_seconds + tuning.shutdown_grace_seconds

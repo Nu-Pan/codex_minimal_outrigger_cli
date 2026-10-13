@@ -328,6 +328,7 @@ def run_codex_exec(
     override_args = prepare_codex_override_args(
         parameter,
         config,
+        path_context=path_context,
     )
     schema_path: Path | None = None
     schema_validator: Validator | None = None
@@ -417,7 +418,11 @@ def run_codex_exec(
             [
                 *override_args,
                 *document_search_mcp_override_args(
-                    parameter, config, codex_call_id=active_codex_call_id, logger=logger
+                    parameter,
+                    config,
+                    path_context=path_context,
+                    codex_call_id=active_codex_call_id,
+                    logger=logger,
                 ),
             ],
             agent_call_cwd,

@@ -76,7 +76,9 @@ def run_codex_tui(
     # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
     # TUI の version probe も Codex executable を起動するため、agent call と
     # selected provider の設定を検証してから probe を開始する。
-    override_args = prepare_codex_override_args(parameter, config)
+    override_args = prepare_codex_override_args(
+        parameter, config, path_context=path_context
+    )
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
     # callback state はこの TUI process invocation の期間だけ保持する。
     notification_callback = None
@@ -95,6 +97,7 @@ def run_codex_tui(
             override_args = prepare_codex_override_args(
                 parameter,
                 config,
+                path_context=path_context,
                 notification_command=notification_callback.command,
                 session_start_command=notification_callback.session_start_command,
             )
@@ -103,9 +106,7 @@ def run_codex_tui(
             root=root,
             config=config,
             purpose=purpose,
-            agent_call_cwd=agent_call_cwd,
-            repository=path_context.repo_root,
-            work_root=path_context.work_root,
+            path_context=path_context,
             codex_home=codex_home,
             codex_environment=codex_environment,
             log_dir=log_dir,
@@ -122,9 +123,7 @@ def _run_codex_tui_process(
     root: Path,
     config: CmocConfig,
     purpose: str,
-    agent_call_cwd: Path,
-    repository: Path,
-    work_root: Path,
+    path_context: AgentCallPathContext,
     codex_home: Path,
     codex_environment: dict[str, str],
     log_dir: Path,
@@ -132,6 +131,7 @@ def _run_codex_tui_process(
 ) -> CommandResult:
     """root session filter を設定した 1 つの Codex TUI process を実行する。"""
     # 検証・確定済みの argv に、今回の call ID と検索ログ context を追加する。
+    agent_call_cwd = path_context.agent_call_cwd
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     ts = timestamp()
@@ -142,7 +142,10 @@ def _run_codex_tui_process(
         "codex",
         *override_args,
         *document_search_mcp_override_args(
-            parameter, config, codex_call_id=codex_call_id
+            parameter,
+            config,
+            path_context=path_context,
+            codex_call_id=codex_call_id,
         ),
         "--cd",
         str(agent_call_cwd),
@@ -175,8 +178,8 @@ def _run_codex_tui_process(
         "codex_call_id": codex_call_id,
         "file_access_mode": parameter.file_access_mode.value,
         "cwd": str(agent_call_cwd.resolve()),
-        "work_root": str(work_root.resolve()),
-        "repo_root": str(repository.resolve()),
+        "work_root": str(path_context.work_root),
+        "repo_root": str(path_context.repo_root),
         "codex_home": str(codex_home.resolve()),
         "call_log_path": str(call_path.resolve()),
         "prompt_log_path": str(prompt_path.resolve()),
@@ -247,7 +250,7 @@ def _run_codex_tui_process(
                 )
             environment = editor_input_handoff_subprocess_env(
                 environment,
-                repository,
+                path_context.repo_root,
                 source,
             )
         environment = feedback_call.subprocess_env(environment)

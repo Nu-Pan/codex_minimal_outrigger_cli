@@ -8,9 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from itertools import count
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import (
     codex_arg_value,
@@ -50,11 +50,7 @@ def tui_runtime_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
     monkeypatch.setattr(
-        runtime_codex_tui,
-        "AgentCallPathContext",
-        lambda agent_call_cwd: SimpleNamespace(
-            agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
-        ),
+        path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
     return root
 
@@ -235,6 +231,40 @@ def test_run_codex_tui_disables_callbacks_for_unverified_codex_version(
     override_config = codex_override_config(tui_process.call_args.args[0])
     assert override_config["notify"] == []
     assert "hooks" not in override_config
+
+
+def test_run_codex_tui_reuses_context_for_notification_and_search(
+    tui_log_directory, monkeypatch, toast_clock
+):
+    """通知設定を追加しても検索 MCP の root を再探索せず、call の記録と揃える。"""
+    root = tui_log_directory
+    roots = Mock(return_value=(root, root))
+    monkeypatch.setattr(path_model_module, "_resolve_git_worktree_roots", roots)
+    monkeypatch.setattr(
+        runtime_codex_tui,
+        "codex_cli_supports_tui_notification_hooks",
+        lambda *_args: True,
+    )
+    process = Mock(
+        side_effect=lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0)
+    )
+    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", process)
+
+    run_codex_tui(
+        replace(codex_parameter(agent_call_cwd=root), enable_document_search_mcp=True),
+        root=root,
+        config=CmocConfig(),
+    )
+
+    roots.assert_called_once_with(root)
+    process.assert_called_once()
+    overrides = codex_override_config(process.call_args.args[0])
+    assert overrides["notify"]
+    assert overrides["hooks"]["SessionStart"]
+    server = overrides["mcp_servers"]["cmoc_document_search"]
+    call = json.loads(_tui_call_logs(root)[0].read_text())
+    assert server["cwd"] == call["work_root"] == str(root)
+    assert json.loads(server["args"][-1])["work_root"] == call["work_root"]
 
 
 def test_run_codex_tui_rejects_missing_call_setting_before_version_probe(
@@ -668,6 +698,8 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
     # 送信元の分離は実 stdio MCP で確かめ、Git root 導出は prompt 起動ケースに委ねる。
     # fixture の一意な ID を使い、並行時の送信元対応は実ログと照合する。
     root = tui_log_directory
+    roots = Mock(return_value=(root, root))
+    monkeypatch.setattr(path_model_module, "_resolve_git_worktree_roots", roots)
     monkeypatch.setenv(EDITOR_INPUT_SOURCE_ENV, "stale-parent-source")
     monkeypatch.setattr(
         runtime_codex_tui,
@@ -692,6 +724,18 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
         assert {key: event[key] for key in source} == source
         call = json.loads(Path(event["call_log_path"]).read_text())
         assert call["codex_call_id"] == source["codex_call_id"]
+        search_server = codex_override_config(argv)["mcp_servers"][
+            "cmoc_document_search"
+        ]
+        search_context = json.loads(search_server["args"][-1])
+        assert search_server["cwd"] == call["work_root"] == str(root)
+        assert search_context["work_root"] == call["work_root"]
+        assert search_context["log_context"] == {
+            "path": source["sub_command_log_path"],
+            "command": source["subcommand"],
+            "execution_id": source["execution_id"],
+            "codex_call_id": source["codex_call_id"],
+        }
         assert source["codex_call_id"] != "cc_000008_2026-09-29_15-04"
         assert argv[-1] == "unchanged prompt"
         assert all(
@@ -763,6 +807,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
                     codex_parameter(FileAccessMode.READONLY, agent_call_cwd=root),
                     prompt="unchanged prompt",
                     enable_editor_input_handoff_mcp=True,
+                    enable_document_search_mcp=True,
                 ),
                 root=root,
                 config=CmocConfig(),
@@ -773,6 +818,7 @@ def test_concurrent_tui_sources_reach_mcp_with_flushed_call_mapping(
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         assert all(result.returncode == 0 for result in pool.map(launch, loggers))
+    assert roots.call_count == 2
     assert len({source["codex_call_id"] for source in observed.values()}) == 2
     for name, source in observed.items():
         completed = loggers[name].codex_call_records()[-1]

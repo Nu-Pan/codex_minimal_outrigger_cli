@@ -374,8 +374,8 @@
   "oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "3734eae375f35e80ec174a4755afd8b277ac4a4b71c0a1f2499f4e242c8ba8f8",
-    "last_investigated_at": "2026-10-11_16-42-27_118"
+    "last_investigated_sha256": "6d576edd82511226896a624b3150603ef18c5a413c49e3ebead450143dc29b9f",
+    "last_investigated_at": "2026-10-14_00-14-12_236"
   },
   "oracle/src/oracle/acp_builder/quota_probe.py": {
     "investigation_required": true,
