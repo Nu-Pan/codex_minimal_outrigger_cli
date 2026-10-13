@@ -213,7 +213,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "ecf5f7061a3002b13f796109f2faad8420832522be97a593b0ab88b2535af784",
-    "last_investigated_at": "2026-10-11_12-44-03_339"
+    "last_investigated_at": "2026-10-13_18-56-44_990"
   },
   "oracle/doc/app_spec/sub_command/tui.md": {
     "investigation_required": true,

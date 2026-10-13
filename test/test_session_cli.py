@@ -1024,13 +1024,14 @@ def session_completion_repository(
 
 
 def test_session_join_preserves_repository_local_feedback_state(
-    tmp_path: Path,
+    session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
+    session_preprocess: list[Path],
 ) -> None:
     """session join が repository-local feedback state を merge や rollback しない。"""
-    root = make_repo(tmp_path)
+    # doctor の修復・順序は linked worktree の結合検査に残し、ここでは state 境界を検査する。
+    root = session_completion_repository
     monkeypatch.chdir(root)
-    _seed_session_management_files(root)
     _seed_session_in_worktree(root, root)
     relative = ".cmoc/gu/feedback/normalization_checkpoint/sentinel.json"
     path = root / relative
@@ -1040,6 +1041,7 @@ def test_session_join_preserves_repository_local_feedback_state(
 
     joined = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
+    assert session_preprocess == [root]
     assert joined.exit_code == 0, joined.output
     assert path.read_text() == content
     assert run_git(root, "ls-files", "--", relative).stdout == ""
@@ -1331,6 +1333,13 @@ def test_session_join_repairs_linked_worktree_before_failure_and_completion(
     home_branch = session_home_branch(root, session_branch)
     home_commit = run_git(linked, "rev-parse", home_branch).stdout.strip()
 
+    # feedback state は repo-root 所有なので、doctor を含む両終了経路でも保持する。
+    feedback_relative = ".cmoc/gu/feedback/normalization_checkpoint/sentinel.json"
+    feedback = root / feedback_relative
+    feedback.parent.mkdir(parents=True)
+    feedback_content = '{"repository_local":true}\n'
+    feedback.write_text(feedback_content)
+
     # home branch がなくても先に管理物を修復し、session branch で停止する。
     gitignore = break_preprocess_invariants(linked)
     run_git(root, "branch", "-D", home_branch)
@@ -1351,6 +1360,7 @@ def test_session_join_repairs_linked_worktree_before_failure_and_completion(
     assert run_git(linked, "status", "--short").stdout.strip() == ""
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["state"] == "active"
+    assert feedback.read_text() == feedback_content
 
     # 元の home branch を復元し、session の内容・state・report・cleanup を検査する。
     run_git(root, "branch", home_branch, home_commit)
@@ -1378,6 +1388,9 @@ def test_session_join_repairs_linked_worktree_before_failure_and_completion(
     assert "- conflict 解消用 agent call: `未実行（conflict なし）`" in rendered_report
     assert "- session state: `active` -> `joined`" in rendered_report
     assert "- cleanup: `completed`" in rendered_report
+    assert feedback.read_text() == feedback_content
+    assert run_git(linked, "ls-files", "--", feedback_relative).stdout == ""
+    assert not (linked / feedback_relative).exists()
 
 
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
