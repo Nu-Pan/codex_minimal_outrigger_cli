@@ -2820,9 +2820,8 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
 
 # rollback 済み error の手動終了は、障害原因によらず同じ入力状態を扱う。
 # 各障害を検査し、error（rollback 済み／checkpoint 保存済み）と joinable で両操作を残す。
-# session 作成は共通 fixture で用意し、公開 session fork の結合は後続 wave に残す。
-# 保存済み入力と fake 応答だけを使うため、collector の起動・probe は準備しない。
-@pytest.mark.usefixtures("feedback_without_transport")
+# doctor の修復・索引同期と公開 session fork の結合は後続 wave に残す。
+# 準備済み session を使い、Git 差分・rollback・手動終了を実行する。
 @pytest.mark.parametrize(
     ("fault", "operation"),
     [
@@ -2836,13 +2835,13 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
     ],
 )
 def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
-    ready_content_session: tuple[Path, str, Path],
+    feedback_publication_session: Path,
     monkeypatch: pytest.MonkeyPatch,
     fault: str,
     operation: str,
 ) -> None:
     """未確定 issue の差分を戻し、明示終了で publication せず raw を保持する。"""
-    root, _session_branch, _state_path = ready_content_session
+    root = feedback_publication_session
     _, raw, identity = _store_agent_issue(root, SESSION_ID)
     initial = (root / "README.md").read_text()
 
