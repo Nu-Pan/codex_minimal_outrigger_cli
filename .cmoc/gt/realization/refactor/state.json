@@ -5,6 +5,12 @@
     "last_investigated_sha256": "8e8c7b397f9fb27d970de7519cd3c4ae792449941c59f4a82817cf6117813fc5",
     "last_investigated_at": "2026-10-13_11-56-37_671"
   },
+  ".vscode/python_testing.env": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "LICENSE": {
     "investigation_required": false,
     "last_investigation_result": "no_findings",
