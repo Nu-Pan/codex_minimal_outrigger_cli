@@ -900,10 +900,13 @@ def test_streaming_worker_delivers_chunk_before_cancellation(tmp_path: Path) -> 
         os.close(descriptor)
 
 
-def test_database_symlink_cannot_redirect_index_writes(tmp_path: Path) -> None:
+def test_database_symlink_cannot_redirect_index_writes(
+    tmp_path: Path, document_repository: Path
+) -> None:
     """管理 DB の symlink を拒否し、対象外 path に書き込まない。"""
     pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
+    # Git 分類・ignore 検査は専用ケースに残し、DB の拒否と外部への非書込みを通す。
+    root = document_repository
     search = DocumentSearch(
         root,
         _tuning(),
