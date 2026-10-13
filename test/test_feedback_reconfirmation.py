@@ -411,6 +411,47 @@ def report_cut_inputs(feedback_run):
     }
 
 
+@pytest.mark.parametrize("read_state", [load_active_state, validate_feedback_state])
+def test_unpublished_active_state_uses_one_work_snapshot(
+    report_cut_inputs, monkeypatch, read_state
+):
+    """current がなくても work を一度検証し、次の呼出しでは改変を拒否する。"""
+    h, _ = report_cut_inputs
+    root = h.context.repo
+    write_report_cut_manifest(root, h.manifest)
+    original_read = Path.read_bytes
+    original_content = original_read(h.path)
+    manifest_reads = 0
+
+    def replace_after_read(path):
+        nonlocal manifest_reads
+        content = original_read(path)
+        if path == h.path:
+            manifest_reads += 1
+            if manifest_reads == 1:
+                path.write_bytes(b"{}\n")
+        return content
+
+    try:
+        with monkeypatch.context() as snapshot_patch:
+            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+            state = read_state(root)
+            assert state.current is None
+            assert state.issues == state.machine_aggregates == {}
+            assert manifest_reads == 1
+            with pytest.raises(CmocError):
+                read_state(root)
+    finally:
+        h.path.write_bytes(original_content)
+
+    # current 未作成でも、work の検証だけで未列挙 active artifact を許容しない。
+    unknown = feedback_root(root) / "active" / "unknown.json"
+    unknown.parent.mkdir(parents=True)
+    unknown.write_bytes(b"{}\n")
+    with pytest.raises(CmocError, match="未定義 artifact"):
+        read_state(root)
+
+
 def test_report_cut_update_skips_unchanged_write_but_rechecks_inputs(
     report_cut_inputs, monkeypatch
 ):

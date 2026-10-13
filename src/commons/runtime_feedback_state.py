@@ -1551,6 +1551,16 @@ def _load_generation(
 
 def load_active_state(repo: Path) -> ActiveState:
     """current pointer が選ぶ正常な active state と cleanup state を読む。"""
+    # current 未作成時も、work に属さない active artifact は見逃さない。
+    state = _load_current_state(repo)
+    if state.current is None:
+        _validate_active_artifact_inventory(repo, state, load_report_cut(repo))
+    return state
+
+
+def _load_current_state(repo: Path) -> ActiveState:
+    """current が選ぶ generation を検証し、work 全体の検査は呼出し側へ委ねる。"""
+    # current の有無によらず、active root の通常 directory 境界を検査する。
     active_directory = active_root(repo)
     if _has_symlink_component(active_directory) or (
         active_directory.exists() and not active_directory.is_dir()
@@ -1561,12 +1571,6 @@ def load_active_state(repo: Path) -> ActiveState:
         )
     pointer_path = current_pointer_path(repo)
     if not pointer_path.exists() and not pointer_path.is_symlink():
-        work = load_report_cut(repo)
-        _validate_active_artifact_inventory(
-            repo,
-            ActiveState(None, None, {}, {}, None, None),
-            work,
-        )
         return ActiveState(None, None, {}, {}, None, None)
     pointer = _read_canonical_object(pointer_path, "feedback current pointer")
     _require_exact_fields(
@@ -2993,7 +2997,8 @@ def write_checkpoint(repo: Path, path: Path, checkpoint: _JsonObject) -> _JsonOb
 
 def validate_feedback_state(repo: Path) -> ActiveState:
     """current state、cleanup、および単一 work cut の整合性を検証する。"""
-    state = load_active_state(repo)
+    # work と inventory は current 未作成時も、この呼出し内で一度だけ検査する。
+    state = _load_current_state(repo)
     work = load_report_cut(repo)
     if state.cleanup_manifest_path is not None:
         if work is None or work[1] != state.cleanup_manifest_path:
