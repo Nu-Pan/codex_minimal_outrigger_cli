@@ -101,6 +101,21 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     # 実 process への受け渡しと通知設定を検査し、Git 導出・永続採番の準備は重ねない。
     # 永続採番との結合は同一 timestamp と linked 起動のケースに残す。
     root = tui_log_directory
+    # version の判定・有限な起動引数は test_runtime_codex_profile.py に残す。
+    # 判定関数との結合は通し、固定の version を返すためだけの process は作らない。
+    real_run = subprocess.run
+    version_probe = Mock(
+        side_effect=lambda argv, **_kwargs: subprocess.CompletedProcess(
+            argv, 0, stdout=b"codex-cli 0.153.4\n"
+        )
+    )
+
+    def run_with_fake_version(argv, **kwargs):
+        if argv[:1] == ["codex"] and "--version" in argv:
+            return version_probe(argv, **kwargs)
+        return real_run(argv, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run_with_fake_version)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -108,9 +123,6 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
         bin_dir / "codex",
         [
             "import json, os, pathlib, sys",
-            "if '--version' in sys.argv[1:]:",
-            "    print('codex-cli 0.153.4')",
-            "    raise SystemExit(0)",
             "args = sys.argv[1:]",
             "prompt = args[-1]",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
@@ -140,6 +152,11 @@ def test_run_codex_tui_passes_complete_prompt_for_pure_oracle_read(
     )
 
     record = json.loads(recorder.read_text())
+    version_probe.assert_called_once()
+    assert version_probe.call_args.kwargs["cwd"] == root.resolve()
+    probe_environment = version_probe.call_args.kwargs["env"]
+    assert probe_environment["PATH"] == f"{bin_dir}:/usr/bin"
+    assert probe_environment["CODEX_HOME"] == str(tmp_path / "codex_home")
     assert record["cwd"] == str(root.resolve())
     assert record["prompt_text"] == "complete prompt\n"
     assert record["handoff_repository"] is None

@@ -218,8 +218,8 @@
   "oracle/doc/app_spec/sub_command/tui.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "1aec0b9633a4498180fded849898e627fc5c99e73e263484a466365a3b3e10fe",
-    "last_investigated_at": "2026-10-11_12-50-39_904"
+    "last_investigated_sha256": "5276a6010dacbd56b9d0117f4e0fff19527bc215bfff30db612e1e388f25d6fc",
+    "last_investigated_at": "2026-10-13_19-07-02_017"
   },
   "oracle/doc/app_spec/subcommand_interruption.md": {
     "investigation_required": true,
