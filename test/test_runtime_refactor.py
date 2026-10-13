@@ -217,7 +217,8 @@ def test_refactor_state_sync_rejects_oracle_symlink(
     (root / "oracle").mkdir()
     link = root / "oracle" / "dangling.md"
     link.symlink_to("../missing.md")
-    run_git(root, "add", "oracle/dangling.md")
+    # ignore 規則のない link の拒否に index 登録は不要。tracked かつ ignored な
+    # symlink の拒否は test_file_inventory.py の実 index を使うケースに残す。
 
     assert not is_oracle_file_path(root, link)
     with pytest.raises(CmocError, match="oracle/realization file"):

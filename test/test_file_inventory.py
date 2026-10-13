@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _git_support import RUN_BRANCH, init_repo, make_repo, run_git
+from _git_support import RUN_BRANCH, init_repo, run_git
 
 import commons.runtime_git as runtime_git
 import commons.runtime_refactor as runtime_refactor
@@ -515,11 +515,17 @@ def test_inventory_rejects_simulated_socket_and_device_modes(
         enumerate_oracle_and_realization_files(root)
 
 
-def test_inventory_accepts_linked_worktree_git_file(tmp_path: Path) -> None:
+def test_inventory_accepts_linked_worktree_git_file(
+    committed_repository: Path, tmp_path: Path
+) -> None:
     """linked worktree の regular `.git` metadata file を pruning する。"""
-    root = make_repo(tmp_path)
+    # HEAD は worktree 作成だけに使い、列挙対象は linked 側へ直接用意する。
+    root = committed_repository
     linked = tmp_path / "linked"
     run_git(root, "worktree", "add", "-b", "linked", str(linked), "HEAD")
+    (linked / "README.md").write_text("# repo\n")
+    (linked / "oracle").mkdir()
+    (linked / "oracle" / "spec.md").write_text("# spec\n")
 
     assert (linked / ".git").is_file()
     oracle_files, realization_files = _relative_sets(
