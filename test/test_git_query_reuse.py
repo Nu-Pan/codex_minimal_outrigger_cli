@@ -145,23 +145,6 @@ def test_git_query_reuse_keeps_worktrees_and_environment_separate(
         assert git_module.run_git(index_query, root).stdout.strip() == ".git/index"
 
 
-def test_git_query_reuse_observes_ignore_content_and_index_changes(cli_repository):
-    root = cli_repository
-    candidate = root / "candidate.txt"
-    candidate.write_text("content\n")
-    gitignore = root / ".gitignore"
-    gitignore.write_text("")
-
-    with git_module.reuse_git_path_queries():
-        assert not git_module.is_git_ignored(root, candidate)
-        gitignore.write_text("candidate.txt\n")
-        assert git_module.is_git_ignored(root, candidate)
-        assert git_module.is_untracked_git_ignored(root, candidate)
-        run_git(root, "add", "-f", candidate.name)
-        assert git_module.is_git_ignored(root, candidate)
-        assert not git_module.is_untracked_git_ignored(root, candidate)
-
-
 def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
     cli_repository, monkeypatch
 ):

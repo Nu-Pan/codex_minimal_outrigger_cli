@@ -74,19 +74,29 @@ def test_ignore_checks_classify_literal_path_names(cli_repository: Path) -> None
 def test_ignore_checks_respect_tracked_and_untracked_states(
     cli_repository: Path,
 ) -> None:
-    """tracked file は保持し、untracked file は ignore 状態に従って判定する。"""
+    """ignore 設定と index の変更を反映し、tracked・unignored file を保持する。"""
     root = cli_repository
     ignored = root / "ignored.txt"
     visible = root / "visible.txt"
     ignored.write_text("ignored\n")
     visible.write_text("visible\n")
-    (root / ".gitignore").write_text("ignored.txt\n")
-    run_git(root, "add", "-f", "ignored.txt")
+    gitignore = root / ".gitignore"
+    gitignore.write_text("")
 
-    assert is_git_ignored(root, ignored)
-    assert not is_untracked_git_ignored(root, ignored)
-    assert not is_git_ignored(root, visible)
-    assert not is_untracked_git_ignored(root, visible)
+    # 配置の問い合わせを共有しても、ignore 内容と index の判定は更新する。
+    with runtime_git.reuse_git_path_queries():
+        assert not is_git_ignored(root, ignored)
+        assert not is_untracked_git_ignored(root, ignored)
+
+        gitignore.write_text("ignored.txt\n")
+        assert is_git_ignored(root, ignored)
+        assert is_untracked_git_ignored(root, ignored)
+
+        run_git(root, "add", "-f", "ignored.txt")
+        assert is_git_ignored(root, ignored)
+        assert not is_untracked_git_ignored(root, ignored)
+        assert not is_git_ignored(root, visible)
+        assert not is_untracked_git_ignored(root, visible)
 
 
 @pytest.mark.parametrize(
