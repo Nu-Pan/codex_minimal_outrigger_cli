@@ -136,8 +136,10 @@ def test_subcommand_logger_keeps_one_file_per_execution(
 
 def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     tmp_path: Path,
+    nonpersistent_execution_ids: None,
 ) -> None:
     """並列記録の保存順・待機時間と、呼び出し別 snapshot の独立性を保つ。"""
+    # 実採番との結合は直前の test に残し、追記の検査では SQLite を準備しない。
     logger = SubcommandLogger(tmp_path, "parallel_logging")
     worker_count = 8
     barrier = threading.Barrier(worker_count)
@@ -185,15 +187,17 @@ def test_subcommand_logger_writes_utf8_without_locale_dependency(
     tmp_path: Path,
 ) -> None:
     """ASCII locale でも日本語を含む JSON Lines event を保存する。"""
-    # 標準ライブラリだけの子で実ログ保存を通し、不要な site 初期化を省く。
+    # 実採番との結合は専用 test に残し、子では実ログ保存と locale の境界を検査する。
+    # 標準ライブラリだけで起動し、不要な site 初期化と SQLite の準備を省く。
     source_root = Path(__file__).resolve().parents[1]
     # 子 process の cwd を test root とし、別の一時 directory を作らない。
     script = r"""
 from pathlib import Path
 
-from commons.runtime_logging import SubcommandLogger
+import commons.runtime_logging as runtime_logging
 
-logger = SubcommandLogger(Path.cwd(), "probe")
+runtime_logging.new_id = lambda _root, prefix: f"{prefix}_000000_2000-01-01_00-00"
+logger = runtime_logging.SubcommandLogger(Path.cwd(), "probe")
 logger.event("warning", message="\u65e5\u672c\u8a9e warning")
 """
     result = subprocess.run(
