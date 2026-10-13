@@ -3489,8 +3489,33 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """current refactor unit の中断時に差分を戻して joinable にする。"""
+    """agent 中断で子の停止後に差分を戻し、joinable と終了記録を公開する。"""
     root, _session_branch, state_path = ready_content_session
+    # child 停止と実 rollback は同じ中断で確認し、run の準備と CLI 実行を共有する。
+    # 巡の初期化前の停止と、停止・rollback 失敗はそれぞれの専用 test に残す。
+    child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
+    tracked = SimpleNamespace(child_processes=(child,))
+    stopped: list[object] = []
+    monkeypatch.setattr(
+        runtime_run_module,
+        "read_run_process_id",
+        lambda *_args: tracked,
+    )
+    monkeypatch.setattr(
+        runtime_run_module,
+        "stop_child_process_group",
+        lambda process: stopped.append(process),
+    )
+    rollback = refactor_module.rollback_work_unit
+
+    def rollback_after_child_stop(worktree: Path) -> None:
+        """停止確認を済ませてから実 Git の rollback に進む。"""
+        assert stopped == [child]
+        rollback(worktree)
+
+    monkeypatch.setattr(
+        refactor_module, "rollback_work_unit", rollback_after_child_stop
+    )
 
     def interrupting_agent(
         parameter: AgentCallParameter,
@@ -3514,11 +3539,13 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     )
 
     assert result.exit_code == 0
+    assert stopped == [child]
     state = _state(state_path)
     assert state["run"]["state"] == "joinable"
     parts = state["run"]["branch"].split("/")
     run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     assert (run_worktree / "README.md").read_text() == "# repo\n"
+    assert not worktree_change_paths(run_worktree)
     report = terminal_primary_report(result)
     assert 'completion_reason: "user_interruption"' in report.read_text()
     assert "- completion_reason: `user_interruption`" in result.output
@@ -3704,43 +3731,6 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     assert "- `README.md`: 1 finding(s)" in report_text
     assert "- count: 1" in report_text
     assert "README unresolved finding" in report_text
-
-
-def test_refactor_interrupt_stops_tracked_codex_children_before_rollback(
-    ready_run_session: tuple[Path, str, Path],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """中断時に追跡中 Codex child を停止してから rollback する。"""
-    # 既存の .gitignore を対象に agent を中断し、実 Git の run と rollback 経路は保つ。
-    _root, _session_branch, state_path = ready_run_session
-    child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
-    tracked = SimpleNamespace(child_processes=(child,))
-    stopped: list[object] = []
-    monkeypatch.setattr(
-        runtime_run_module,
-        "read_run_process_id",
-        lambda *_args: tracked,
-    )
-    monkeypatch.setattr(
-        runtime_run_module,
-        "stop_child_process_group",
-        lambda process: stopped.append(process),
-    )
-    monkeypatch.setattr(
-        refactor_module,
-        "run_codex_exec",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
-    )
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor", "fork"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0
-    assert stopped == [child]
-    assert _state(state_path)["run"]["state"] == "joinable"
 
 
 def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
