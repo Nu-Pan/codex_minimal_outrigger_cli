@@ -240,10 +240,10 @@
     "last_investigated_at": "2026-10-13_19-41-21_512"
   },
   "oracle/doc/app_spec/windows_toast_notification.md": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "cbe3d0bba1c661dc1b92c4d2876fb72fb85f82ed0fc122eae2badefd5d798d98",
-    "last_investigated_at": "2026-10-11_13-15-26_772"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "0b263ed33d1fb37118a197f479297796a2cd867ddad507f2265a208ba7f69933",
+    "last_investigated_at": "2026-10-13_19-45-48_917"
   },
   "oracle/doc/branch_model.md": {
     "investigation_required": true,
