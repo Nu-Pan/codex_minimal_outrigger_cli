@@ -3014,8 +3014,8 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     assert manifest["processing"]["status"] == "failed"
 
 
-# 復旧は固定済み artifact を使い、transport の結合は後続 wave の検査に残す。
-@pytest.mark.usefixtures("feedback_without_transport")
+# 復旧の障害検査は修復済み session から始め、doctor の修復・索引同期と
+# transport の結合は後続 wave の検査に残す。
 @pytest.mark.parametrize(
     "fault",
     [
@@ -3027,7 +3027,7 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
     ],
 )
 def test_feedback_recovers_after_auto_join_without_new_calls(
-    ready_content_session: tuple[Path, str, Path],
+    feedback_publication_session: Path,
     monkeypatch: pytest.MonkeyPatch,
     fault: str,
 ) -> None:
@@ -3035,7 +3035,7 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     import commons.runtime_feedback_run_state as run_state_module
     import sub_commands.feedback.recovery as recovery_module
 
-    root, _session_branch, _state_path = ready_content_session
+    root = feedback_publication_session
     _, raw, identity = _store_agent_issue(root, SESSION_ID)
 
     def fake_call(parameter: Any, **_kwargs: Any) -> SimpleNamespace:
