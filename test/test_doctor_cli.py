@@ -52,7 +52,11 @@ from main import app
 
 # TCP collector の起動・protocol 検査は初回修復 test と test_feedback.py に残す。
 # Git・配置先・索引のケースでは、既存 fixture で transport の準備と終了待ちを省く。
-pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+# 永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py に残す。
+# doctor では実ログと report の対応を保ち、採番 DB の準備・同期書き込みを省く。
+pytestmark = pytest.mark.usefixtures(
+    "feedback_without_transport", "nonpersistent_execution_ids"
+)
 
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
