@@ -594,10 +594,13 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
     assert run_git(linked, "rev-parse", session_branch).stdout.strip() == linked_commit
 
 
-def test_session_abandon_uses_linked_worktree_branch(
+def test_session_abandon_repairs_linked_worktree_before_failure_and_completion(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree上のsession abandonが対応home branchを使うことを検証する。"""
+    """linked worktree の修復・事前条件拒否・再実行による破棄を同じ session で検証する。"""
+    # repository・管理物・linked worktree の再準備を省き、両方の CLI 経路を残す。
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     root = committed_repository
     monkeypatch.chdir(root)
     _seed_session_management_files(root)
@@ -609,8 +612,32 @@ def test_session_abandon_uses_linked_worktree_branch(
     session_branch, home_branch = _seed_session_in_worktree(root, linked)
     state_path = session_state_path(root, session_branch)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
-    # session 固有 commit があっても home branch に取り込まないことを検査する。
-    run_git(linked, "commit", "--allow-empty", "-m", "session-only change")
+
+    # home branch がなくても先に管理物を修復し、session branch で停止する。
+    gitignore = break_preprocess_invariants(linked)
+    run_git(root, "branch", "-D", home_branch)
+
+    failed = runner.invoke(app, ["session", "abandon"])
+
+    assert failed.exit_code != 0
+    assert current_branch(root) == root_branch
+    assert current_branch(linked) == session_branch
+    assert "session home branch が存在しません。" in failed.stderr
+    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
+    assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == []
+    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert run_git(linked, "status", "--short").stdout.strip() == ""
+    assert json.loads(state_path.read_text())["session"]["state"] == "active"
+    failed_report = terminal_primary_report(failed)
+    failed_report_content = failed_report.read_text(encoding="utf-8")
+
+    # 破損と修復で session 固有 commit ができているため、追加の空 commit は不要。
+    # 元の home branch を復元して破棄し、home の履歴と失敗時 report の保持を検査する。
+    assert run_git(linked, "rev-parse", "HEAD").stdout.strip() != home_commit
+    run_git(root, "branch", home_branch, home_commit)
 
     result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
 
@@ -627,39 +654,7 @@ def test_session_abandon_uses_linked_worktree_branch(
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
     assert f"- abandoned_branch: `{session_branch}`" in result.output
-
-
-def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree の abandon が固有の事前条件より先に preprocess することを検証する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-    {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    """
-
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    _seed_session_management_files(root)
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
-    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
-    monkeypatch.chdir(linked)
-    session_branch, home_branch = _seed_session_in_worktree(root, linked)
-    gitignore = break_preprocess_invariants(linked)
-    run_git(root, "branch", "-D", home_branch)
-
-    result = runner.invoke(app, ["session", "abandon"])
-
-    assert result.exit_code != 0
-    assert current_branch(linked) == session_branch
-    assert "session home branch が存在しません。" in result.stderr
-    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
-    assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == []
-    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
-        ".agents/.gitkeep"
-    ]
-    assert run_git(linked, "status", "--short").stdout.strip() == ""
+    assert failed_report.read_text(encoding="utf-8") == failed_report_content
 
 
 def test_session_abandon_requires_existing_home_branch(
