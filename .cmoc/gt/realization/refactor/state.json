@@ -117,7 +117,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "1285c9d252877cc50102e29e250642f5700c592accdd9839a448cb1c8a69ed5d",
-    "last_investigated_at": "2026-10-11_10-09-24_658"
+    "last_investigated_at": "2026-10-13_15-42-22_994"
   },
   "oracle/doc/app_spec/oracle_and_realization_file_enumeration.md": {
     "investigation_required": true,

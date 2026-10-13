@@ -416,33 +416,28 @@ def test_inventory_rejects_symlink_not_confirmed_untracked_and_ignored(
 
 
 def test_inventory_rejects_symlink_when_ignore_status_is_unknown(
-    cli_repository: Path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Git が ignore 状態を返せない symlink を列挙エラーにする。"""
-    root = cli_repository
-    (root / ".gitignore").write_text("*.link\n")
+    # 実 Git と ignore source の結合は隣接ケースと test_runtime_git_ignore.py に残す。
+    # ここでは source 検証後の故障応答だけを渡し、repository の準備を省く。
+    root = tmp_path
     (root / "candidate.link").symlink_to(root / "missing-target")
-    original_run = runtime_git.subprocess.run
+    monkeypatch.setattr(
+        runtime_git, "_validate_git_ignore_sources", lambda *_args: None
+    )
 
     def failing_check_ignore(
-        *args: object, **kwargs: object
+        command: list[str], **_kwargs: object
     ) -> subprocess.CompletedProcess:
         """一括 ignore 判定だけを失敗させる。"""
-        command = args[0]
-        if (
-            isinstance(command, list)
-            and command
-            and command[0] == "git"
-            and "check-ignore" in command
-        ):
-            return subprocess.CompletedProcess(
-                command,
-                128,
-                stdout=b"",
-                stderr=b"simulated check-ignore failure",
-            )
-        return original_run(*args, **kwargs)
+        return subprocess.CompletedProcess(
+            command,
+            128,
+            stdout=b"",
+            stderr=b"simulated check-ignore failure",
+        )
 
     monkeypatch.setattr(runtime_git.subprocess, "run", failing_check_ignore)
 
