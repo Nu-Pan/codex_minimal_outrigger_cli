@@ -381,7 +381,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "6b5b392531a9a42aa73ff64a40c24854f2b19cee8f0fb09eb59747f0ae268e01",
-    "last_investigated_at": "2026-10-11_16-53-17_040"
+    "last_investigated_at": "2026-10-14_00-27-39_981"
   },
   "oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py": {
     "investigation_required": true,

@@ -47,12 +47,16 @@ def quota_prompt_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def quota_control_root(
-    quota_prompt_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    quota_prompt_root: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_execution_ids: None,
 ) -> Path:
-    """回復制御に必要な HOME・設定を隔離し、call ID の永続採番を省く。"""
+    """回復制御に必要な HOME・設定を隔離し、execution・call ID の永続採番を省く。"""
     root = quota_prompt_root
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
+    # logger・current_execution_id の採番も共通 fixture で置き換える。
     # 実採番の結合は polls_and_resumes に残す。
     # 永続性・process 間の採番は test_runtime_ids.py と test_codex_runtime_paths.py で検証する。
     ids = count()
