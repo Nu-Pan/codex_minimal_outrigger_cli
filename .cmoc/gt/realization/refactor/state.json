@@ -300,10 +300,10 @@
     "last_investigated_at": "2026-10-13_21-37-08_373"
   },
   "oracle/doc/considered_alternative/working_plan_review.md": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "f02f409e012460c1b72522890ce3ad4b903a1a441f5ff232243c120ba0142af2",
-    "last_investigated_at": "2026-10-11_14-34-43_032"
+    "last_investigated_at": "2026-10-13_21-40-31_130"
   },
   "oracle/doc/dev_rule/coding_rule.md": {
     "investigation_required": true,
