@@ -147,6 +147,7 @@ def _special_path(path: Path, kind: str) -> Iterator[None]:
 
 def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     cli_repository: Path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """最適化列挙と state entry・SHA 更新を full glob 基準へ一致させる。"""
@@ -179,7 +180,19 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
         *classification_names,
     )
 
-    nested = _make_nested_repo(root / "nested")
+    # nested の regular `.git` file も state と full glob の同じ比較で検証する。
+    nested = root / "nested"
+    nested.mkdir()
+    run_git(
+        root,
+        "init",
+        "--template=/dev/null",
+        "--separate-git-dir",
+        str(tmp_path / "nested-git"),
+        str(nested),
+    )
+    run_git(nested, "config", "core.excludesFile", "/dev/null")
+    assert (nested / ".git").is_file()
     (nested / ".gitignore").write_text("*.nested\n")
     (nested / "kept.outer").write_text("nested rule owns this file\n")
     (nested / "dropped.nested").write_text("ignored by nested\n")
@@ -229,6 +242,7 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert "nested/kept.outer" in actual[1]
     assert "nested/dropped.nested" not in actual[1]
     assert "nested/tracked.nested" in actual[1]
+    assert "nested/.git" not in actual[1]
     assert {"AGENTS.md", "oracle/AGENTS.md"}.isdisjoint(actual[0] | actual[1])
     assert "notes.md" in actual[1]
     assert "oracle/notes.md" in actual[0]
