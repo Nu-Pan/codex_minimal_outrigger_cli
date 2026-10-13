@@ -72,10 +72,10 @@
     "last_investigated_at": "2026-10-13_14-01-08_031"
   },
   "oracle/doc/app_spec/editor_input_handoff.md": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "93a87e0427df53e5a3b855ce9659b8bd5e8c1187b4d59fb0480eae5e37db2497",
-    "last_investigated_at": "2026-10-11_09-10-56_081"
+    "last_investigated_sha256": "4ddb1f2772adba60dc13fcb7eec44b8990c7089a27fa24f240794ff8eda5b30c",
+    "last_investigated_at": "2026-10-13_14-04-47_074"
   },
   "oracle/doc/app_spec/error_handling.md": {
     "investigation_required": true,
