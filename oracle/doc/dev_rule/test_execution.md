@@ -2,7 +2,7 @@
 
 ## 責務境界
 
-この文書は、構築済みの cmoc 開発環境における test と品質検査の選択・起動場所・実行・完了判定・報告を定める。関連する要件は、次の正本に従う。
+この文書は、構築済みの cmoc 開発環境における test と品質検査の選択・起動場所・実行・完了判定・報告を定める。VS Code のテストタブ用の pytest 連携設定と操作手順も本書で扱う。関連する要件は、次の正本に従う。
 
 - realization test が満たすべき意味上の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「cmoc テスト実装規約」を正本とする。
 - Codex CLI の sandbox・承認設定と command 単位 sandbox escalation の共通契約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Codex CLI 引数による設定上書き」「Codex CLI sandbox」「command 単位の sandbox 外実行」を正本とする。
@@ -104,6 +104,78 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 - `ResourceWarning` 以外の全 warning を、この手順だけを根拠に一律でエラー化してはいけない。
 - 第三者 library の warning を除外する場合は、実際の出力を根拠に category、module、message の最小範囲へ限定し、理由を記録する。
 - project code の resource leak を warning filter、広範な pytest 設定、または環境変数の解除で隠してはいけない。
+
+## VS Code のテストタブから実行する
+
+WSL 上の既存ワークスペースで Microsoft の Python 拡張を使い、テストタブから pytest の探索、個別・ファイル単位・全件の実行、および失敗箇所の確認ができる構成にする。既定の実行対象は、本書の「通常検証と追加検証を選択する」が定める通常検証に属する test（以下、この節では通常テスト）とする。
+
+pytest とテスト配置の根拠は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「基本」、実経路統合テストの意味と marker の根拠は、同文書の「実経路統合テスト」「用語と選択」を参照する。
+
+### ワークスペースと Python interpreter を確認する
+
+1. `{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「基本環境」に定める既存の `codex_minimal_outrigger_cli.code-workspace` を WSL 接続で開く。拡張機能ビューの WSL 側で Python 拡張が有効であることを確認する。
+2. 対象の workspace folder が現在の worktree root を指し、`${workspaceFolder}` がその path に解決されることを確認する。
+3. 本書の「repository root と Python interpreter を決定する」に従って interpreter を決め、コマンドパレットの `Python: Select Interpreter` でその path を選択して確認する。現在の worktree と main worktree の選択条件、cwd、および検査対象は同節に従う。`python.defaultInterpreterPath` の設定変更だけで、既に選択済みの interpreter が切り替わるとは扱わない。
+4. 選択した Python で pytest が動作することを、本書の「構築済み環境を preflight する」に従って確認する。
+
+環境の新規構築や依存関係の準備が必要な場合は、この実行手順を始める前に、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」に従って準備する。
+
+### pytest 連携と環境変数を設定する
+
+既存ワークスペースに Python 拡張の pytest 連携を設定する。次は、後続実装で既存設定との整合性を確認するための了承済み設定案であり、現状の設定値を示すものではない。
+
+```json
+{
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.cwd": "${workspaceFolder}",
+  "python.testing.pytestArgs": ["test", "-ra", "-m", "not real_path_integration"]
+}
+```
+
+後続実装では、既存の `.code-workspace` と `pyproject.toml` などの設定を確認して統合する。設定ファイルの配置や分割は固定しない。marker だけでは対象を分離できない場合の調整は、本書の「focused test と検査対象を選択する」に従う。
+
+環境変数の意味上の要件と適用範囲は、本書の「Python development mode と ResourceWarning 検査を適用する」を正本とする。同節の実行設定を、`python.envFile` で指定する環境変数ファイルから Python 拡張へ渡す。環境変数ファイルへの記述例は次のとおりとする。
+
+```dotenv
+PYTHONDEVMODE=1
+PYTHONWARNINGS=error::ResourceWarning
+```
+
+環境変数ファイルの具体的な配置先は、既存のファイルと設定を後続実装で確認して決定する。設定後にテストを再探索し、pytest を実行する Python process に両変数が適用されることを確認する。統合ターミナルだけで環境変数を設定したことを、この確認の代わりにしてはいけない。
+
+### 通常テストを探索して実行する
+
+1. テストと設定を保存し、テストタブの更新操作、または `Test: Refresh Tests` で再探索する。探索に失敗した場合は、表示されたエラーと Python の出力を確認する。
+2. 探索された個々の test の実行ボタンで個別実行し、ファイルの実行ボタンでそのファイル内の対象 test を実行する。
+3. テストタブの「すべて実行」で、探索された通常テストを全件実行する。
+4. 結果をテストタブで確認する。失敗した test は、結果とエディターの失敗表示から該当箇所とエラー内容を確認する。
+
+### 人間が実経路統合テストへ切り替える
+
+以下は、人間が実経路統合テストを UI から実行する場合の手順である。テスト自体の実行条件は、本書の「実経路統合テストを実行する」を参照する。
+
+1. `python.testing.pytestArgs` を `["test", "-ra", "-m", "real_path_integration"]` に切り替える。
+2. `Test: Refresh Tests` で再探索し、実経路統合テストが対象になっていることを確認してから、個別・ファイル単位・全件のいずれかで実行する。
+3. 実行後は、後続実装で確定した通常テスト用の引数へ戻して再探索し、通常テストが既定対象に戻ったことを確認する。
+
+agent による Real Codex CLI 使用テストの選択は、本書の「通常検証と追加検証を選択する」に従う。設定追加や UI 手順整備の依頼を、追加検証の実行に対する明示指示とみなしてはいけない。agent の sandbox と command の起動場所には、引き続き本書の「変更中の検査を実行する」「fresh な完了ゲートを実行する」「Real Codex CLI を使う追加検証を起動する」を適用する。
+
+### 後続実装の受入条件
+
+設定実装後、VS Code 上で次を確認する。
+
+- テストの探索、個別実行、ファイル単位実行、通常テスト全件実行、および失敗箇所とエラー内容の表示が、上記の操作でできる。
+- Python 拡張が選択した Python で pytest を起動し、cwd と検査対象が現在の worktree になっている。main worktree の interpreter を使う場合も同じ条件を満たす。
+- pytest を実行する Python process に、本書の「Python development mode と ResourceWarning 検査を適用する」の設定が適用されている。
+- UI と本書の CLI 手順で実行対象が一致し、既定の「すべて実行」が通常テストを欠落なく含み、Real Codex CLI を使う test を含まない。`real_path_integration` marker だけで分離できないケースがある場合も、この条件を満たす。分離のためのテスト変更は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「テストの削除・統合」に従う。
+- 人間による実経路統合テストへの切り替えと通常テストへの復帰が、再探索後の対象に反映される。agent による Real Codex CLI 使用テストの実行を伴う確認には、本書の「通常検証と追加検証を選択する」の条件を適用する。
+
+pytest 設定などの変更後の品質検査は、本書の「fresh な完了ゲートを実行する」「完了を判定する」に従う。UI の受入確認で完了ゲートを代替しない。
+
+既存設定との統合方法、環境変数ファイルの配置先、および marker による分離の十分性は、後続実装で確定する。仕様編集の完了は、設定実装、VS Code 上の動作確認、またはテスト実行の完了を意味しない。
+
+VS Code の機能については、Microsoft の [Python testing](https://code.visualstudio.com/docs/python/testing)、[Python settings reference](https://code.visualstudio.com/docs/python/settings-reference)、[Python environments](https://code.visualstudio.com/docs/python/environments) を技術参考とする。cmoc の意味仕様は、本書と参照先の oracle を正本とする。
 
 ## 変更中の検査を実行する
 
