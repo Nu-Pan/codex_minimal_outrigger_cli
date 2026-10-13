@@ -71,15 +71,14 @@ def output_only_root(
 
 
 def test_run_codex_exec_corrects_schema_output_in_same_session(
-    cli_repository: Path,
+    output_only_root: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capfd: pytest.CaptureFixture[str],
 ) -> None:
     """schema 不合格を同じ session で補正し、Codex call ごとの log を保存する。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
+    # process・MCP 設定・log 保存は実行し、成果物の差分取得と採番は専用 test に残す。
+    root = output_only_root
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     counter = tmp_path / "counter"
@@ -269,8 +268,7 @@ def test_run_codex_exec_corrects_declared_postcondition(
     """初回 call の実差分で決定論的事後条件を検証し、出力だけを補正する。"""
     root = cli_repository
     (root / "README.md").write_text("# repo\n")
-    # snapshot は index の追跡 file を読むため、履歴を作る必要はない。
-    run_git(root, "add", "README.md")
+    # 非 ignore file の実差分で照合できるため、staging や履歴は準備しない。
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
 
