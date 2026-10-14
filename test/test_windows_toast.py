@@ -26,6 +26,7 @@ _REAL_WINDOWS_TOAST_TRANSPORT = runtime_windows_toast._run_windows_toast_transpo
         ("completed", "完了"),
         ("failed", "エラー終了"),
         ("interrupted", "ユーザー中断完了"),
+        ("cancelled", "起動取消（作業未完了）"),
     ],
 )
 def test_terminal_result_uses_only_short_required_fields(

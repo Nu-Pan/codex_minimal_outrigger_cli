@@ -16,7 +16,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
 from typing import Literal
 
-ToastState = Literal["completed", "failed", "interrupted", "waiting"]
+ToastState = Literal["completed", "failed", "interrupted", "cancelled", "waiting"]
 
 _POWERSHELL_TIMEOUT_SEC = 5.0
 _TUI_CALLBACK_STARTUP_GRACE_SEC = 0.25
@@ -30,6 +30,7 @@ _STATE_TEXT: dict[ToastState, str] = {
     "completed": "完了",
     "failed": "エラー終了",
     "interrupted": "ユーザー中断完了",
+    "cancelled": "起動取消（作業未完了）",
     "waiting": "入力待ち",
 }
 _POWERSHELL_SCRIPT = r"""

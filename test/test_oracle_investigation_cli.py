@@ -186,7 +186,7 @@ def test_oracle_investigation_has_no_session_precondition(
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.enable_editor_input_handoff_mcp is True
     assert parameter.enable_document_search_mcp is True
-    assert kwargs["notification_command_name"] == "oracle investigation"
+    assert kwargs["purpose"] == "oracle investigation"
     complete_prompt = parameter.prompt
     assert "# oracle investigation policy" not in complete_prompt
     assert "# oracle policy" in complete_prompt

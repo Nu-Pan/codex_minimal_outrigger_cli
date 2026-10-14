@@ -25,16 +25,13 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 import typer
 from _cli_support import runner, terminal_primary_report
-from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrides
 from _git_support import run_git
 
 import commons.runtime_cli as runtime_cli
-import commons.runtime_codex_tui as runtime_codex_tui
 import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
 import commons.runtime_paths as runtime_paths
@@ -47,8 +44,8 @@ from cmoc_runtime import (
     format_duration,
     render_error,
 )
+from commons.runtime_errors import TuiStartupCancelled
 from commons.runtime_ids import is_common_id
-from config.cmoc_config import CmocConfig
 from main import app
 
 
@@ -578,26 +575,13 @@ def test_cli_tui_keyboard_interrupt_does_not_emit_terminal_result_notification(
     assert notifications == []
 
 
-def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
+def test_cli_tui_initial_cancel_reports_incomplete_work(
     cli_terminal_directory: Path,
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Codex subprocess の起動前中断を TUI 終了後の中断と混同しない。"""
+    """初回の取消を、部分成果による正常完了や TUI 終了と区別する。"""
     root = cli_terminal_directory
-    # 実 Git の TUI root 解決は test_codex_runtime_tui.py の prompt 起動ケースに残す。
-    monkeypatch.setattr(
-        runtime_codex_tui,
-        "AgentCallPathContext",
-        lambda agent_call_cwd: SimpleNamespace(
-            agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
-        ),
-    )
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    # 永続採番は test_runtime_ids.py、TUI との結合は test_codex_runtime_tui.py に残す。
-    monkeypatch.setattr(runtime_codex_tui, "new_id", runtime_logging.new_id)
     notifications: list[str] = []
     monkeypatch.setattr(
         runtime_cli,
@@ -605,38 +589,30 @@ def test_cli_tui_subprocess_startup_interrupt_emits_failure_notification(
         lambda _command, _repository, state: notifications.append(state),
     )
 
-    def interrupt_before_process_start(*_args: object, **_kwargs: object) -> object:
-        """Popen 前の Codex 起動失敗を再現する。"""
-        raise KeyboardInterrupt()
+    def cancel() -> None:
+        raise TuiStartupCancelled()
 
-    monkeypatch.setattr(
-        runtime_codex_tui,
-        "run_codex_subprocess",
-        interrupt_before_process_start,
-    )
-
-    def invoke_tui() -> None:
-        """共通 runner から実際の TUI runtime 起動境界を通る。"""
-        runtime_codex_tui.run_codex_tui(
-            codex_parameter(agent_call_cwd=root),
-            root=root,
-            config=CmocConfig(),
-        )
-
-    with pytest.raises(KeyboardInterrupt):
+    with pytest.raises(typer.Exit) as error:
         runtime_cli.run_cli_subcommand(
-            invoke_tui,
+            cancel,
             command_name="tui",
             command_argv=["cmoc", "tui"],
             doctor_preprocess=False,
             tui_process=True,
         )
 
-    assert notifications == ["failed"]
+    assert error.value.exit_code == 130
+    assert notifications == ["cancelled"]
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "# 失敗: cmoc tui" in captured.err
-    assert "Traceback" not in captured.err
+    assert "初回作業は未完了" in captured.err
+    assert "# 完了:" not in captured.err
+    assert "primary report" not in captured.err
+    [log_path] = (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    records = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert records[-1]["event"] == "command_finished"
+    assert records[-1]["result"] == "tui_startup_cancelled"
+    assert records[-1]["returncode"] == 130
 
 
 def test_cli_tui_success_does_not_emit_terminal_result_notification(

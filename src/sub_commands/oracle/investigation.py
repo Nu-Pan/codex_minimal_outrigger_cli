@@ -64,11 +64,12 @@ def _cmoc_oracle_investigation_body() -> None:
 
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
     parameter = build_oracle_investigation_launch_tui_parameter(instruction)
-    start_subcommand_step(5, "Codex TUI を起動", "launch Codex TUI")
+    start_subcommand_step(
+        5, "初回 exec と対話再開を起動", "launch initial exec and resume"
+    )
     run_codex_tui(
         parameter,
         root=root,
         config=load_config(current_root),
         purpose="oracle investigation",
-        notification_command_name="oracle investigation",
     )

@@ -55,19 +55,6 @@ from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
-_CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS = frozenset(
-    {
-        b"codex-cli 0.151.0",
-        b"codex-cli 0.153.4",
-        b"codex-cli 0.154.0",
-        b"codex-cli 0.155.1",
-        b"codex-cli 0.156.1",
-        b"codex-cli 0.157.1",
-        b"codex-cli 0.158.0",
-        b"codex-cli 0.159.2",
-    }
-)
-_CODEX_VERSION_PROBE_TIMEOUT_SEC = 2.0
 _TUI_SESSION_START_HOOK_KEY = "/<session-flags>/config.toml:session_start:0:0"
 _TUI_SESSION_START_HOOK_TIMEOUT_SEC = 10
 
@@ -623,30 +610,6 @@ def _encode_toml_value(value: JsonTomlValue) -> str:
 def _config_override(key: str, toml_value: str) -> list[str]:
     """Codex CLI の単一 config override を argv fragment にする。"""
     return ["--config", f"{key}={toml_value}"]
-
-
-def codex_cli_supports_tui_notification_hooks(
-    codex_process_cwd: Path,
-    environment: Mapping[str, str],
-) -> bool:
-    """検証済みの root session capture 契約を持つ Codex CLI だけを選ぶ。"""
-    try:
-        result = subprocess.run(
-            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"],
-            cwd=codex_process_cwd,
-            env=environment,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            timeout=_CODEX_VERSION_PROBE_TIMEOUT_SEC,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False
-    return (
-        result.returncode == 0
-        and result.stdout.strip() in _CODEX_TUI_NOTIFICATION_SUPPORTED_VERSIONS
-    )
 
 
 def _codex_session_start_hook_trusted_hash(command: str) -> str:
@@ -1253,12 +1216,14 @@ def _run_subprocess_with_started_callback(
             stdout, stderr = _communicate_codex_process(
                 process, input_data, timeout, cancellation
             )
-        except BaseException:
+        except BaseException as exc:
             if kwargs.get("start_new_session"):
                 _kill_codex_process_group(process)
             else:
                 process.kill()
             process.communicate()
+            # 呼び出し元は、停止が確認できた取消と終了不明を区別して記録する。
+            setattr(exc, "cmoc_process_returncode", process.returncode)
             raise
 
         returncode = process.wait()

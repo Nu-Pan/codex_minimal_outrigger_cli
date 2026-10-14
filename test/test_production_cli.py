@@ -526,6 +526,8 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     if tui:
         if "--enable" in argv:
             assert argv[argv.index("--enable") + 1] == "hooks"
+        assert payload["prompt_log_path"] is None
+        assert argv[-2:] == ["resume", payload["requested_codex_session_id"]]
     else:
         assert "--enable" not in argv
     assert override["model_reasoning_effort"] == call_config.reasoning_effort
@@ -571,7 +573,10 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
         FEEDBACK_COLLECTOR_PORT_ENV,
         FEEDBACK_PROTOCOL_ENV,
     ]
-    if tui:
+    if agent_call_kind in {
+        "build_tui_launch_tui_parameter",
+        "build_oracle_investigation_launch_tui_parameter",
+    }:
         editor_input_server = override["mcp_servers"]["cmoc_editor_input"]
         assert editor_input_server["enabled_tools"] == [
             "get_handoff_guide",
@@ -1200,10 +1205,18 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert len(tui_calls) == 1
     tui_payload = _assert_real_codex_call(next(iter(tui_calls)), tui=True)
     assert tui_payload["purpose"] == tui_purpose
-    assert not exec_calls
+    assert len(exec_calls) == 1
+    initial_payload = _assert_real_codex_call(next(iter(exec_calls)))
+    assert initial_payload["agent_call_kind"] == tui_payload["agent_call_kind"]
+    assert initial_payload["execution_id"] == tui_payload["execution_id"]
+    assert initial_payload["agent_call_id"] != tui_payload["agent_call_id"]
+    assert initial_payload["codex_call_id"] != tui_payload["codex_call_id"]
+    assert (
+        tui_payload["initial_session_id"] == tui_payload["requested_codex_session_id"]
+    )
     body = work.read_text()
     assert "CMOC_GUIDE_CONFIRMED" in body, response
-    assert tui_payload["codex_call_id"] in body
+    assert initial_payload["codex_call_id"] in body
     # 終了済み process のログを一度だけ解析し、送信元・検索・期限の検証で共有する。
     subcommand_events = {
         path: [json.loads(line) for line in path.read_text().splitlines()]
@@ -1215,12 +1228,19 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         for event in events
         if event.get("event") == "editor_input_handoff_source"
     ]
-    assert len(source_events) == 1
-    log_path, source = source_events[0]
+    assert {event["codex_call_id"] for _path, event in source_events} == {
+        initial_payload["codex_call_id"],
+        tui_payload["codex_call_id"],
+    }
+    log_path, source = next(
+        (path, event)
+        for path, event in source_events
+        if event["codex_call_id"] == initial_payload["codex_call_id"]
+    )
     assert source["subcommand"] == " ".join(command)
-    assert source["codex_call_id"] == tui_payload["codex_call_id"]
+    assert source["codex_call_id"] == initial_payload["codex_call_id"]
     assert source["sub_command_log_path"] == str(log_path.resolve())
-    assert Path(source["call_log_path"]) == next(iter(tui_calls))
+    assert Path(source["call_log_path"]) == next(iter(exec_calls))
     assert source["execution_id"] in body
     assert str(log_path.resolve()) in body
     assert source["execution_id"] in transcript
@@ -1231,7 +1251,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     ]
     assert len(search_events) == 3
     assert all(
-        event["codex_call_id"] == tui_payload["codex_call_id"]
+        event["codex_call_id"] == initial_payload["codex_call_id"]
         and event["execution_id"] == source["execution_id"]
         and event["command"] == " ".join(command)
         for event in search_events

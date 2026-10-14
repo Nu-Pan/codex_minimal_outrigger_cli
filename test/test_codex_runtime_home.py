@@ -11,7 +11,6 @@ import pytest
 from oracle.other import path_model as path_model_module
 
 import commons.runtime_codex_exec as runtime_codex_exec
-import commons.runtime_codex_tui as runtime_codex_tui
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec, run_codex_tui
@@ -45,10 +44,6 @@ def _spy_codex_startup(
         calls.append((args, kwargs))
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", record_call)
-    monkeypatch.setattr(runtime_codex_tui, "run_codex_subprocess", record_call)
-    monkeypatch.setattr(
-        runtime_codex_tui, "codex_cli_supports_tui_notification_hooks", record_call
-    )
     return calls
 
 

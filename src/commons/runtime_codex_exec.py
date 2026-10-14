@@ -10,6 +10,7 @@ from typing import Any
 
 from jsonschema import SchemaError
 from jsonschema.protocols import Validator
+from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
@@ -36,7 +37,8 @@ from .runtime_codex_recovery import (
     wait_for_recovery,
 )
 from .runtime_config import load_config
-from .runtime_errors import CmocError
+from .runtime_editor_input_handoff_protocol import editor_input_handoff_subprocess_env
+from .runtime_errors import CmocError, TuiStartupCancelled
 from .runtime_feedback import begin_feedback_call
 from .runtime_feedback_store import rfc3339_now, sha256_bytes, uuid7_prefixed
 from .runtime_git import (
@@ -62,6 +64,12 @@ from .runtime_results import (
 )
 
 _MAX_OUTPUT_CORRECTIONS = 2
+_TUI_AGENT_CALL_KINDS = frozenset(
+    {
+        "build_tui_launch_tui_parameter",
+        "build_oracle_investigation_launch_tui_parameter",
+    }
+)
 
 
 def _read_optional_output(path: Path) -> tuple[str, Any]:
@@ -305,6 +313,13 @@ def run_codex_exec(
             ["対話 TUI の起動経路を使用してください。"],
             f"tui_resume_session_id: {parameter.tui_resume_session_id}",
         )
+    tui_initial = parameter.agent_call_kind in _TUI_AGENT_CALL_KINDS
+    if tui_initial and parameter.structured_output_schema_path is not None:
+        raise CmocError(
+            "TUI 起動用の初回 exec に Structured Output は指定できません。",
+            ["TUI workload の builder が返したパラメータを使用してください。"],
+            f"agent call kind: {parameter.agent_call_kind}",
+        )
     # 設定の外部変更を correction・probe・resume へ持ち込まない。
     check_recovery_interruption()
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
@@ -378,6 +393,7 @@ def run_codex_exec(
     active_agent_call_id = agent_call_id
     active_agent_call_kind = parameter.agent_call_kind
     active_codex_call_id: str | None = None
+    initial_process_state = "not_started"
 
     def _call_data(
         run_parameter: AgentCallParameter,
@@ -388,7 +404,9 @@ def run_codex_exec(
         """call log に残す論理値を実際の呼び出し parameter に揃える。"""
         call_config = run_config.codex.agent_calls[run_parameter.agent_call_kind]
         return {
-            "codex_home": str(run_codex_home),
+            "codex_home": str(
+                run_codex_home.resolve() if tui_initial else run_codex_home
+            ),
             "agent_call_kind": run_parameter.agent_call_kind,
             "model_provider": call_config.model_provider,
             "model": call_config.model,
@@ -398,6 +416,41 @@ def run_codex_exec(
         }
 
     base_call_data = _call_data(parameter, codex_home, agent_call_cwd)
+
+    def _record_tui_initial(
+        state: str,
+        *,
+        status: str | None = None,
+        returncode: int | None = None,
+        codex_session_id: str | None = None,
+    ) -> None:
+        """初回 exec の実際の call と、起動・停止・最終結果を即時記録する。"""
+        # 初回だけの記録であり、他 workload の補正や probe の結果と混ぜない。
+        if not tui_initial or logger is None:
+            return
+        cancellation = current_recovery_cancellation()
+        logger.event(
+            "tui_initial_exec",
+            tui_record_version=2,
+            execution_id=execution_id,
+            subcommand=logger.command,
+            sub_command_log_path=str(logger.path.resolve()),
+            agent_call_id=agent_call_id,
+            codex_call_id=active_codex_call_id,
+            **base_call_data,
+            work_root=str(path_context.work_root),
+            repo_root=str(path_context.repo_root),
+            call_log_path=str(call_path.resolve()),
+            prompt_log_path=str(prompt_path.resolve()),
+            stdout_log_path=str(stdout_path.resolve()),
+            stderr_log_path=str(stderr_path.resolve()),
+            output_path=str(output_path.resolve()),
+            process_state=state,
+            status=status,
+            returncode=returncode,
+            codex_session_id=codex_session_id,
+            cancel_requested=cancellation is not None and cancellation.is_set(),
+        )
 
     def _new_log_paths(codex_call_id: str) -> tuple[str, Path, Path, Path, Path, Path]:
         """発行済み Codex call ID の log path 群を予約する。"""
@@ -447,7 +500,39 @@ def run_codex_exec(
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # prompt log file は `codex exec ... -` の stdin source である。
         check_recovery_interruption()
-        with run_prompt_path.open(encoding="utf-8") as prompt_file:
+        with run_prompt_path.open(encoding="utf-8", newline="") as prompt_file:
+            if tui_initial:
+                # 中断時も CLI が既に出した診断を保持し、本文を console へ流さない。
+                def process_started() -> None:
+                    # Popen の成功後だけ、起動準備から起動確認へ進める。
+                    nonlocal initial_process_state
+                    initial_process_state = "started"
+                    _record_tui_initial("started")
+
+                with (
+                    stdout_path.open("w", encoding="utf-8") as stdout_file,
+                    stderr_path.open("w", encoding="utf-8") as stderr_file,
+                ):
+                    result = run_codex_subprocess(
+                        run_argv,
+                        cwd=run_agent_call_cwd,
+                        stdin=prompt_file,
+                        stdout=stdout_file,
+                        stderr=stderr_file,
+                        text=True,
+                        encoding="utf-8",
+                        env=run_codex_env,
+                        start_new_session=True,
+                        cancellation=current_recovery_cancellation(),
+                        process_started_callback=process_started,
+                    )
+                initial_process_state = "exited"
+                return subprocess.CompletedProcess(
+                    run_argv,
+                    result.returncode,
+                    stdout_path.read_text(encoding="utf-8"),
+                    stderr_path.read_text(encoding="utf-8"),
+                )
             return run_codex_subprocess(
                 run_argv,
                 cwd=run_agent_call_cwd,
@@ -825,6 +910,7 @@ def run_codex_exec(
                 ),
             },
         )
+        _record_tui_initial("prepared")
         attempt_started_at = time.perf_counter()
         feedback_call = begin_feedback_call(
             agent_call_cwd=agent_call_cwd,
@@ -841,12 +927,49 @@ def run_codex_exec(
             enable_feedback_reporting=parameter.enable_feedback_reporting,
         )
         try:
+            call_environment = feedback_call.subprocess_env(codex_env)
+            if parameter.enable_editor_input_handoff_mcp:
+                source = None
+                if logger is not None:
+                    source = EditorInputHandoffSource(
+                        subcommand=logger.command,
+                        execution_id=execution_id,
+                        codex_call_id=active_codex_call_id,
+                        sub_command_log_path=logger.path.resolve(),
+                    )
+                    logger.event(
+                        "editor_input_handoff_source",
+                        subcommand=source.subcommand,
+                        execution_id=source.execution_id,
+                        codex_call_id=source.codex_call_id,
+                        sub_command_log_path=str(source.sub_command_log_path),
+                        call_log_path=str(call_path.resolve()),
+                    )
+                call_environment = editor_input_handoff_subprocess_env(
+                    call_environment, path_context.repo_root, source
+                )
             result = _run_with_prompt_file(
                 current_argv,
                 prompt_path,
-                run_codex_env=feedback_call.subprocess_env(codex_env),
+                run_codex_env=call_environment,
             )
         except BaseException as exc:
+            if tui_initial:
+                stopped_returncode = getattr(exc, "cmoc_process_returncode", None)
+                state = (
+                    "exited"
+                    if stopped_returncode is not None
+                    else "unknown"
+                    if initial_process_state == "started"
+                    else initial_process_state
+                )
+                _record_tui_initial(
+                    state,
+                    status="cancelled"
+                    if isinstance(exc, KeyboardInterrupt)
+                    else "failed",
+                    returncode=stopped_returncode,
+                )
             _ensure_correction_artifacts_unchanged(
                 frozen_artifact_snapshot,
                 run_call_path=call_path,
@@ -878,11 +1001,14 @@ def run_codex_exec(
                 status="failed",
                 error=startup_error,
             )
+            if tui_initial and isinstance(exc, KeyboardInterrupt):
+                raise TuiStartupCancelled from exc
             raise
         finally:
             feedback_call.close()
-        stdout_path.write_text(result.stdout, encoding="utf-8")
-        stderr_path.write_text(result.stderr, encoding="utf-8")
+        if not tui_initial:
+            stdout_path.write_text(result.stdout, encoding="utf-8")
+            stderr_path.write_text(result.stderr, encoding="utf-8")
         _ensure_correction_artifacts_unchanged(
             frozen_artifact_snapshot,
             run_call_path=call_path,
@@ -894,14 +1020,22 @@ def run_codex_exec(
             returncode=result.returncode,
         )
         # 最終 outcome を先に確定し、途中の error と回復済みの成功を区別する。
-        check_recovery_interruption()
+        try:
+            check_recovery_interruption()
+        except KeyboardInterrupt as exc:
+            if tui_initial:
+                _record_tui_initial(
+                    "exited", status="cancelled", returncode=result.returncode
+                )
+                raise TuiStartupCancelled from exc
+            raise
         resume_session_id = resume_session_id or _extract_session_id_from_stdout_log(
             stdout_path
         )
         outcome = classify_codex_call(result.stdout, result.returncode)
         if outcome != "succeeded":
             error_text = codex_error_text(result.stdout, result.stderr)
-            if outcome in {"quota", "transient"}:
+            if not tui_initial and outcome in {"quota", "transient"}:
                 _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
@@ -949,6 +1083,12 @@ def run_codex_exec(
                 continue
             if schema_path is not None and output_corrections > 0:
                 _emit_structured_output_exhausted("resume_unavailable", call_path)
+            _record_tui_initial(
+                "exited",
+                status="failed",
+                returncode=result.returncode,
+                codex_session_id=resume_session_id,
+            )
             _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
@@ -1099,6 +1239,12 @@ def run_codex_exec(
             started_at=attempt_started_at,
             returncode=result.returncode,
             status="succeeded",
+        )
+        _record_tui_initial(
+            "exited",
+            status="succeeded",
+            returncode=result.returncode,
+            codex_session_id=resume_session_id,
         )
         return CodexExecResult(
             returncode=result.returncode,

@@ -214,6 +214,14 @@ def tui() -> None:
     cmoc_tui_impl()
 
 
+@app.command()
+def resume(execution_id: str = typer.Argument(...)) -> None:
+    """終了済みの実行 ID が示す TUI workload の会話を再開する。"""
+    from sub_commands.resume import cmoc_resume_impl
+
+    cmoc_resume_impl(execution_id)
+
+
 @session_app.command("fork")
 def session_fork() -> None:
     """現在 branch から session branch を作る CLI 入口。"""

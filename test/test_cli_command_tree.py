@@ -73,6 +73,7 @@ def test_public_cli_leaf_commands_match_oracle(cli_command: click.Command) -> No
         ("session", "fork"),
         ("session", "join"),
         ("tui",),
+        ("resume",),
     }
 
 

@@ -21,7 +21,6 @@ from commons.prompt_editor_input import (
 )
 from commons.runtime_paths import reuse_root_queries
 from commons.runtime_results import CommandResult
-from config.cmoc_config import CmocConfig
 
 _CodexTui = Callable[..., CommandResult]
 
@@ -42,7 +41,7 @@ def _cmoc_tui_body(
     run_codex_tui: _CodexTui,
     *,
     root: Path,
-    config: CmocConfig,
+    config_root: Path,
 ) -> None:
     """依頼文を編集し、構築したパラメータで Codex TUI を起動する。"""
     # オリジナル prompt だけ未確定の完全 prompt を handoff ガイドに使う。
@@ -73,13 +72,14 @@ def _cmoc_tui_body(
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
     parameter = build_tui_launch_tui_parameter(original_prompt)
 
-    start_subcommand_step(5, "AI Agent TUI を起動", "launch agent TUI")
+    start_subcommand_step(
+        5, "初回 exec と対話再開を起動", "launch initial exec and resume"
+    )
     run_codex_tui(
         parameter,
         root=root,
-        config=config,
+        config=load_config(config_root),
         purpose="tui codex",
-        notification_command_name="tui",
     )
 
 
@@ -92,5 +92,5 @@ def _cmoc_tui_from_current_context() -> None:
     _cmoc_tui_body(
         run_codex_tui,
         root=root,
-        config=load_config(current_root),
+        config_root=current_root,
     )

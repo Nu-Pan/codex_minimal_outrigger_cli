@@ -221,7 +221,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         events.append("tui")
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
-        assert kwargs["notification_command_name"] == "tui"
+        assert kwargs["purpose"] == "tui codex"
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
         assert parameter is builder_calls[1][1]
@@ -355,7 +355,7 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
-    assert tui_kwargs["notification_command_name"] == "tui"
+    assert tui_kwargs["purpose"] == "tui codex"
     assert parameter.agent_call_cwd == root.resolve()
     [saved_input] = (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
     assert opened_inputs == [saved_input]
