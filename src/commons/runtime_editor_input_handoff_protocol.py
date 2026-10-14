@@ -70,7 +70,7 @@ def editor_input_handoff_subprocess_env(
     repository: Path,
     source: EditorInputHandoffSource | None,
 ) -> dict[str, str]:
-    """この TUI process の repository と送信元だけを MCP 環境へ渡す。"""
+    """この Codex process の repository と送信元だけを MCP 環境へ渡す。"""
     # 親 process の送信元を引き継がず、この呼び出しの値で置換する。
     environment = {
         **base,

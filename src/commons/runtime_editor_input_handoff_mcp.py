@@ -1,4 +1,4 @@
-"""Codex TUI が起動する editor input handoff 用 stdio MCP server。"""
+"""Codex process が起動する editor input handoff 用 stdio MCP server。"""
 
 import json
 import os

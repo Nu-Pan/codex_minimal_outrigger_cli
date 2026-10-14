@@ -59,3 +59,7 @@ def render_error(exc: BaseException) -> str:
             f"- 詳細: {detail}",
         ]
     )
+
+
+class TuiStartupCancelled(KeyboardInterrupt):
+    """初回作業が未完了のまま TUI 起動を取り消したことを表す。"""

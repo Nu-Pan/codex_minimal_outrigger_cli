@@ -14,7 +14,13 @@ from .runtime_codex_recovery import (
     install_recovery_interruption,
 )
 from .runtime_doctor import run_doctor_preprocess
-from .runtime_errors import DEFAULT_NEXT_ACTION, CmocError, render_error, safe_text
+from .runtime_errors import (
+    DEFAULT_NEXT_ACTION,
+    CmocError,
+    TuiStartupCancelled,
+    render_error,
+    safe_text,
+)
 from .runtime_feedback import start_feedback_invocation, stop_feedback_invocation
 from .runtime_feedback_store import feedback_completion_counts
 from .runtime_logging import (
@@ -217,6 +223,22 @@ def run_cli_subcommand(
         terminal_state = "failed"
         raise typer.Exit(exc.returncode) from exc
     except KeyboardInterrupt as exc:
+        if tui_process and isinstance(exc, TuiStartupCancelled):
+            stop_feedback()
+            if logger is not None:
+                _finalize_subcommand(
+                    logger,
+                    name,
+                    argv,
+                    "error",
+                    TerminalResult(result="tui_startup_cancelled"),
+                    returncode=130,
+                    error=exc,
+                    emit_console=False,
+                )
+            _emit_progress("TUI の起動を取り消しました。初回作業は未完了です。")
+            terminal_state = "cancelled"
+            raise typer.Exit(130) from exc
         if interruptible and not impl_started:
             mark_current_subcommand_interrupted()
             stop_feedback()
