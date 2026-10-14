@@ -2,7 +2,7 @@
 
 ## 概要
 
-editor input handoff は、Codex TUI の agent が、別の prompt editor input で待機中の editor input file へ依頼を渡す共通機能である。agent は handoff 用 local MCP から受信先の handoff ガイドを取得し、それを踏まえた項目別の依頼内容を渡す。MCP は送信元情報と合成して対象 file 全体を上書きする。
+editor input handoff は、汎用 TUI と oracle 調査 TUI の初回 exec または対話 TUI の agent が、別の prompt editor input で待機中の editor input file へ依頼を渡す共通機能である。最初の依頼でも handoff を利用できるようにする。agent は handoff 用 local MCP から受信先の handoff ガイドを取得し、それを踏まえた項目別の依頼内容を渡す。MCP は送信元情報と合成して対象 file 全体を上書きする。
 
 ## goal
 
@@ -18,8 +18,8 @@ editor input handoff は、Codex TUI の agent が、別の prompt editor input 
 
 - prompt editor input の writer 境界と最終読み取りは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「ファイルの役割」と「editor input の確定手順」を正本とする。
 - agent の直接編集禁止と MCP の書き込み例外は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
-- Codex TUI への MCP と handoff instruction の注入は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」を正本とする。
-- 送信元情報の記録と保存済みログへの到達は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 送信元情報の記録」を正本とする。
+- 初回 exec と TUI への MCP 提供、および handoff instruction の注入は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」を正本とする。
+- 送信元情報の記録と保存済みログへの到達は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「handoff 送信元情報の記録」を正本とする。
 
 ### ガイドと instruction
 
@@ -125,18 +125,20 @@ MCP は入力のパス文字列を `Path` に変換し、参照箇所ととも�
 
 ## 送信元情報
 
-送信元情報は、handoff を行う TUI process と、それを起動した cmoc の実行を識別する次の値とする。
+送信元情報は、handoff を行う Codex process と、それを起動した cmoc の実行を識別する次の値とする。対象は、本書の「概要」で定める初回 exec と対話 TUI に限る。
 
 - 送信元のサブコマンド名
 - `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」で定める、送信元の `{{execution-id}}`
-- 送信元 TUI process に対応する既存の Codex call ID
+- 送信元 Codex process に対応する既存の Codex call ID
 - 対応する診断用サブコマンドログのフルパス
 
-cmoc は実際の呼び出しに付与・保持する値を、送信元 TUI process に結び付いた MCP の呼び出し元コンテキストへ供給する。MCP はこの情報を本文 builder に渡す。送信元情報を転記用 prompt または tool input として agent に渡さず、handoff 専用の ID 体系は作らない。
+cmoc は実際の呼び出しに付与・保持する値を、送信元 Codex process に結び付いた MCP の呼び出し元コンテキストへ供給する。MCP はこの情報を本文 builder に渡す。送信元情報を転記用 prompt または tool input として agent に渡さず、handoff 専用の ID 体系は作らない。
+
+初回 exec の送信元には、その exec の Codex call ID を使用し、後続 TUI の ID で代用しない。内部の自動移行では、実行 ID と実際の最外側のサブコマンド名を維持し、TUI の送信元を新しい TUI process の Codex call ID に結び付ける。
 
 `cmoc resume` で起動した process の送信元サブコマンド名は `resume` とし、その新しい実行 ID・Codex call ID・診断用サブコマンドログを使う。解決した TUI 種別や再開元の送信元情報で置き換えない。Codex session ID を引き継いでも、handoff の context は今回の process に結び付け直す。
 
-並行する TUI process 間でコンテキストを取り違えず、同じ送信元 TUI process の各 turn では、その process に対応する実行情報を使用する。受信先 target の情報から送信元を推定せず、target ID と送信元の識別子を相互に代用しない。必要な送信元情報を取得できない場合は、推測・捏造で補わず handoff の失敗を返す。
+並行する Codex process 間でコンテキストを取り違えず、同じ送信元 TUI process の各 turn では、その process に対応する実行情報を使用する。受信先 target の情報から送信元を推定せず、target ID と送信元の識別子を相互に代用しない。必要な送信元情報を取得できない場合は、推測・捏造で補わず handoff の失敗を返す。
 
 起動・呼び出し管理経路からの供給と準備順序は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う。内部 transport や module の分割は、本書の責務と lifecycle を満たす範囲で実装に委ねる。
 
@@ -145,4 +147,4 @@ cmoc は実際の呼び出しに付与・保持する値を、送信元 TUI proc
 - target の自動発見または自動選択
 - 現在編集中の本文の確認・引き継ぎ
 - editor の自動保存、終了、または排他的 writer 管理
-- Codex TUI 以外への handoff MCP または handoff instruction の注入
+- TUI 起動用の初回 exec 以外の非対話 workload への handoff MCP または handoff instruction の注入

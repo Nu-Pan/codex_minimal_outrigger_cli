@@ -27,11 +27,11 @@ class FileAccessMode(StrEnum):
 
 @dataclass(frozen=True)
 class TuiResumeTarget:
-    """対象検査済みの対話再開入力。
+    """内部の自動移行と公開 resume に共用する検査済みの対話再開入力。
 
-    適格性と環境照合は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md`
-    の「対象の適格性と会話選択」「workload と起動環境の保持」に従い、
-    呼び出し管理側が構築前に確認する。
+    呼び出し管理側が、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md`
+    の「検査済みの再開入力」に従って、経路ごとの適格性と環境を構築前に照合する。
+    この型は検査結果を保持する入力であり、ログや process の検査は行わない。
     """
 
     codex_session_id: str
@@ -59,7 +59,8 @@ class AgentCallParameter:
     # ファイルアクセスモード
     file_access_mode: FileAccessMode
 
-    # 初回入力となる完全 prompt。対話 resume だけは None とする。
+    # TUI 起動用の初回 exec を含む、初回入力となる完全 prompt。
+    # 内部の自動移行と公開 resume の対話起動では None とする。
     prompt: str | None
 
     # Structured Output schema ファイルパス
@@ -82,7 +83,8 @@ class AgentCallParameter:
     # 「feedback reporter と collector context」を参照。
     enable_feedback_reporting: bool = True
 
-    # 対話 resume の外部 session ID。非対話 call の補正・回復には使用しない。
+    # 内部の自動移行と公開 resume の対話起動で使う外部 session ID。
+    # 非対話 call の補正・回復には使用しない。
     # 意味は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
     # 「TUI の新規起動と対話 resume」を正本とする。
     tui_resume_session_id: str | None = None

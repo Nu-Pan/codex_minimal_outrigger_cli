@@ -15,8 +15,9 @@ from ..other.struct_doc import SDHeader, render_sd_node_as_markdown
 
 @dataclass(frozen=True)
 class EditorInputHandoffSource:
-    """cmoc が実際の送信側 TUI process に付与・保持する値。
+    """cmoc が実際の送信側 Codex process に付与・保持する値。
 
+    対象は TUI 起動用の初回 exec と対話 TUI とする。
     識別子の発行、ログの探索、および相対パスの補完は行わない。
     """
 
@@ -57,7 +58,7 @@ def build_editor_input_handoff_body(
         decisions: 決定事項とその理由。
         open_questions: 未確定事項。
         oracle_references: 入力から変換・検証した oracle の文書参照。
-        source: 送信側 TUI process の呼び出し元コンテキストから取得した値。
+        source: 送信側 Codex process の呼び出し元コンテキストから取得した値。
 
     Returns:
         editor input file 全体を置換する Markdown 本文。
@@ -114,7 +115,7 @@ def build_editor_input_handoff_body(
             f"""
             - 送信元のサブコマンド名: {source.subcommand}
             - 送信元の実行 ID: {source.execution_id}
-            - 送信元 TUI process の Codex call ID: {source.codex_call_id}
+            - 送信元 Codex process の Codex call ID: {source.codex_call_id}
             - 診断用サブコマンドログのフルパス: {source.sub_command_log_path}
             """,
         )

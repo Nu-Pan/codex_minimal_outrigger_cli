@@ -4,7 +4,7 @@
 
 - cmoc は、ユーザーが端末を見ていない場合に、処理の完了または人間の入力が必要になったことを Windows toast で知らせる。
 - 対象環境は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「基本環境」が定める Windows 11 上の WSL2 とする。
-- 通知対象は、ユーザーが直接起動した最外側の末端サブコマンドの terminal result と、Codex CLI の TUI における agent turn の完了とする。
+- 通知対象は、ユーザーが直接起動した最外側の末端サブコマンドの terminal result と、Codex CLI の TUI における入力待ちとする。入力待ちは、本書の「TUI の通知境界」で定める初回 exec 後の移行確認と、TUI の agent turn 完了を対象とする。
 - 最外側の末端サブコマンドとは、1 回の `cmoc` invocation でユーザーの argv が選択した、実処理を持つ最も深いサブコマンドを指す。
 - cmoc の内部処理として呼び出す関数、agent call、または Codex call は、最外側の末端サブコマンドではない。
 
@@ -37,13 +37,15 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 
 ## TUI の通知境界
 
+- 初回 exec からの自動移行では、移行先 TUI が同じ会話を開き、人間の入力待ちであることを確認した時点で、初回の「入力待ち」を 1 回だけ通知する。exec 完了直後や TUI process の起動だけでは通知しない。この通知は移行確認の契約とし、exec の turn 完了 callback は使わない。
 - TUI は、agent turn が完了し、人間の入力待ちになった時点で、turn ごとに 1 回だけ通知する。
 - agent turn 完了の状態は、サブコマンド完了ではなく「入力待ち」として通知する。
 - TUI の正常終了時は、ユーザー自身が終了操作を行っているため、サブコマンドの terminal result を追加で通知しない。
-- TUI の起動前エラーまたは異常終了は、失敗結果を確定した後に 1 回だけ通知する。
-- turn の識別と重複排除の範囲は、その TUI process invocation 内に限る。同じ turn の callback を複数回受け取った場合も、重複通知しない。
+- 初回 exec の失敗を含む TUI の起動前エラー、または TUI の異常終了は、失敗結果を確定した後に 1 回だけ通知する。初回成功後の TUI 起動失敗を、初回作業の成功通知で置き換えない。
+- TUI 起動途中の取消の意味は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「TUI 起動途中の取消」に従う。取消を、部分結果による正常完了や入力待ちとして通知しない。
+- turn の識別と重複排除の範囲は、その TUI process invocation 内に限る。同じ turn の callback を複数回受け取った場合も重複通知せず、移行確認による初回通知と TUI callback による同じ入力待ちの通知も重複させない。
 
-`cmoc resume` の通知に使うサブコマンド名は `resume` とする。再開元のコマンド名や解決した TUI 種別で置き換えず、callback と重複排除の context は新しい TUI process に対応させる。
+内部の自動移行では、実際の最外側のサブコマンド名を維持する。後日の公開 `cmoc resume` の通知に使うサブコマンド名は `resume` とする。再開元のコマンド名や解決した TUI 種別で置き換えず、callback と重複排除の context は新しい TUI process に対応させる。
 
 ## 通知内容
 
@@ -66,7 +68,7 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 - 通知の要否は、prompt、assistant の回答、または installed skill に判断させてはならない。
 - cmoc のサブコマンド lifecycle event と、cmoc が起動した Codex process の lifecycle event から決定論的に発火する。
 - cmoc が起動する Codex CLI について、通知に関する effective configuration は呼び出し単位で cmoc が決定する。
-- `codex exec` では、agent turn 完了の通知 callback を無効にする。
+- TUI 起動用の初回を含む `codex exec` では、agent turn 完了の通知 callback を無効にする。
 - TUI では、agent turn 完了を検出する callback を、その TUI process にだけ設定する。
 - 通知を設定するために、`$CODEX_HOME/config.toml` を生成または変更してはならない。
 
@@ -79,6 +81,8 @@ realization の実装前に、利用中の Codex CLI で次の外部契約を、
 - callback を呼び出し単位で設定または無効化する設定 key
 - callback event の種類、payload、および同じ turn の重複を識別するために利用できる情報
 - 対話型 TUI の各 agent turn が完了し、人間の入力待ちになった時点で callback が発火する保証
+- 初回 exec 後の対話 resume で、同じ会話を開いて入力待ちになったことを確実に検出する経路と、その最初の確認時点
+- 移行確認による初回通知と TUI callback の重複を識別・排除でき、以後の turn の通知を欠落させないこと
 
 ### 未検証 interface の扱い
 

@@ -107,7 +107,9 @@ collector は、call-scoped capability から次の context を確定する。ag
 
 subcommand の識別情報には、サブコマンド名と、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」で定める `{{execution-id}}` を使用する。他の識別情報と log は、その観測を受理した実行 ID に対応付ける。
 
-reporter の提供が有効な call では、初回 call と Structured Output の correction call は、同じ agent call ID を使用する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
+reporter の提供が有効な call では、同一 agent call の初回 call と Structured Output の correction call は、同じ agent call ID を使用する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
+
+TUI 起動用の初回 exec と自動移行先 TUI の ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」に従う。collector の context と capability は各 process の call に登録し、最外側のサブコマンド名と実行 ID の共用を、agent call・Codex call の共用と混同しない。
 
 `cmoc resume` では、新しい実行 ID・agent call ID・Codex call ID に context と capability を登録し、サブコマンド名を `resume` とする。`agent_call_kind` は解決した TUI workload の種別を表し、呼び出し元のサブコマンド名とは区別する。Codex session ID や再開元の ID を、新しい観測の帰属に代用しない。再開前に受理済みの observation は、元の context に対応したまま保持する。
 
@@ -141,7 +143,7 @@ feedback remediation の intake wave を閉じる際の終了処理と high-wate
 
 parallel call の lifecycle は互いに分離する。TUI では、1 process の全 turn で同じ Codex call context を使用し、process 終了時に無効化する。
 
-対話 resume は新しい process として本書の「保存経路」を準備し、終了済み process の capability や collector 接続を再使用・再有効化しない。起動失敗時も、作成済みの context に本節の終了処理を適用する。
+内部の自動移行を含む対話 resume は、新しい process として本書の「保存経路」を準備し、終了済み process の capability や collector 接続を再使用・再有効化しない。初回 exec の失敗・取消と TUI 起動失敗でも、作成済みの context に本節の終了処理を適用する。初回に受理した observation の帰属を後続 TUI へ移さない。
 
 reporter の提供が有効な call における reporter または collector の起動失敗、transport failure、および `rejected` result は、feedback の degradation として warning または構造化 event に記録する。本命 Codex workload を失敗または中断させない。意図的な非提供は、この degradation に含めない。
 

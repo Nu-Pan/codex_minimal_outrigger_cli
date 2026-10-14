@@ -7,7 +7,7 @@
 
 ## agent call ごとの直接設定
 
-本節の設定取得に対する例外は、本書の「回復確認 probe の設定例外」に限定する。
+設定 entry の選択に対する例外は、本書の「回復確認 probe の設定例外」に限定する。取得した設定を二つの agent call で共用する TUI の経路は、本節の「TUI 起動での設定の確定」に従う。
 
 - 設定単位は、`AgentCallParameter.agent_call_kind` が表す安定した agent call 種別とする。cmoc はこの値を key として、`CmocConfigCodex` の対応する entry から設定を取得する
 - 各 agent call 種別の設定は、model provider ID、Model 名、および Reasoning Effort 名を必須の直接文字列として持つ
@@ -19,6 +19,14 @@
 - Structured Output の補正、retry、および回復待ち後の再開を個別の設定単位にしてはならない
 - 設定データ構造、field 名、型、および既定値の正確な詳細は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CodexCallConfig`、`CodexModelProviderConfig`、および `CmocConfigCodex` へ委譲する
 - 取得した設定を Codex CLI の argv へ反映し、同じ agent call で維持する規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Model provider、Model、Reasoning Effort」を正本とする
+
+### TUI 起動での設定の確定
+
+汎用 TUI と oracle 調査 TUI の新規起動では、初回 exec の開始時に、元の workload の `agent_call_kind` に対応する model provider・Model・Reasoning Effort・provider-local 設定を取得して確定する。初回 exec と自動移行先 TUI は別の agent call だが、その確定値を共用し、移行時には再取得しない。一回の起動操作の途中で設定が変わることを避けるためである。
+
+後日の公開 `cmoc resume` は、再開時点の同じ workload の設定を取得する。`resume` 専用の agent call 種別や設定 entry は設けない。
+
+共用するのは設定値であり、process の接続や実行 context ではない。各 process への設定適用と MCP・通知の準備は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「対話 resume の process」に従う。
 
 ### 回復確認 probe の設定例外
 

@@ -74,3 +74,22 @@ Codex CLI 呼び出しには、実在の Codex CLI executable（Real Codex CLI�
 ## Fake Codex CLI
 
 Fake Codex CLI は、Real Codex CLI の代わりに決定論的な応答を返し、cmoc の制御ロジックと Codex CLI 呼び出しの前後処理を検証するために使用する。
+
+### TUI の二段階起動と公開 resume
+
+汎用 TUI と oracle 調査 TUI の新規起動、および後日の `cmoc resume` では、Fake から得る終端情報・会話情報・入力待ち状態を制御し、次を確認する。
+
+| 検証対象 | 確認する cmoc の制御 |
+|---|---|
+| 確定入力と完全 prompt | 確定済み入力から builder が構築した完全本文を初回 call の prompt ファイルに保存し、同じ本文を stdin へ渡す。`_orig.md` の再読・代用や argv への本文混入がなく、保存失敗では起動しない。入力確定後の手動送信を要しない |
+| 初回の完了と移行 | UUID の取得だけ、成功情報だけで process が未終了、終了コードだけ、終端情報の矛盾では移行しない。CLI の正常終了・call の最終成功・記録保存を確認後に、同じ UUID へ一度だけ対話移行する |
+| prompt 不在の再開 | 自動移行と公開 resume の両方で、prompt 本文・空文字列・skeleton・補助指示を送らず、prompt ファイルや prompt 用 stdin 入力を作らない。新規入力と検査済み再開入力の排他条件も確認する |
+| 失敗と取消 | 初回失敗では quota・一時障害でも再送・retry・回復待ち・probe・自動 TUI 移行をしない。初回実行中の取消では自然完了を待たず子 process を停止し、成功との競合でも後続処理を始めない。初回成功後の TUI 起動失敗も自動 retry せず、各終了経路の記録と資源回収を保つ |
+| 再開適格性 | 両 workload と再開済み実行の種別解決、非 TUI・ログ不足・破損・未終了・主会話不明の拒否、主会話を確認できる異常終了を扱う。初回成功後の TUI 未起動だけを限定的に追加し、初回失敗・取消・会話を開いたか不明な実行を受理しない。TUI の主会話が不確定になった場合に初回 UUID を代用しない |
+| ID とログ | 最外側の実行、初回 exec、TUI の call を対応付ける。内部移行で実行 ID とサブコマンド名を保ち、公開 resume では新しい実行・call・ログへ記録する。会話切替・不確定化を保持し、再開後のログだけで再度の適格性と会話を判断できる |
+| 設定と MCP | 二段階の間に設定元を変えても初回開始時の確定値を共用し、公開 resume は再開時点の設定を使う。cwd・`$CODEX_HOME`・file access mode の照合と process ごとの argv override を保つ。feedback・handoff・文書検索の context と接続・capability は各 process に帰属し、終了済みのものを再使用しない。初回 handoff の送信元は実際の初回 call ID とする |
+| 表示・通知・排他 | 初回は短い進行表示だけを出し、TUI へ制御を渡した後は混入させない。exec の turn callback は無効で、初回通知は TUI の入力待ち確認後だけに行い、TUI callback と重複しない。取消を作業完了や入力待ちとして通知しない。同じ `$CODEX_HOME`・同じ会話の競合を、移行中・公開 resume の検査から起動まで・TUI の会話切替でも防ぐ |
+
+意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「対象の適格性と会話選択」、および各節から参照するログ・設定・MCP・中断・通知仕様を正本とする。
+
+Fake の状態は cmoc の分岐を検証するための入力であり、実 CLI に同じ API・event・callback が存在する証拠ではない。実 CLI の未検証事項は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「実装前に検証する TUI の外部契約」と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「実装前に検証する Codex CLI の外部契約」に従う。Real Codex CLI を使うテストの実行条件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」を変更しない。

@@ -22,7 +22,7 @@ editor input handoff を含むエディタ入力は、`{{cmoc-root}}/oracle/doc/
 
 正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ委譲する。構築済み prompt の受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt の構築と受け渡し」を正本とする。
 
-handoff を受けた場合も、入力確定後は本書の「実行順序」に従って編集へ進む。送信元の TUI 終了や最終結果の確定を開始条件にしない。
+handoff を受けた場合も、入力確定後は本書の「実行順序」に従って編集へ進む。送信元 Codex process の終了や最終結果の確定を開始条件にしない。
 
 ### 両回で共用する設定
 

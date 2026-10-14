@@ -1,4 +1,4 @@
-"""汎用 TUI の新規起動・対話再開パラメータの構築定義。"""
+"""汎用 TUI の初回 exec・対話再開パラメータの構築定義。"""
 
 # cmoc
 from oracle.acp_builder.basic import (
@@ -16,17 +16,19 @@ def build_tui_launch_tui_parameter(
     *,
     resume: TuiResumeTarget | None = None,
 ) -> AgentCallParameter:
-    """汎用 TUI の新規入力か、検査済みの再開先の一方を受け取る。
+    """初回 exec 用の新規入力か、検査済みの再開先の一方を受け取る。
 
     Args:
         original_prompt: ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す
             オリジナルプロンプト。前後空白の strip は呼び出し側で完了している
             想定。handoff ガイドへ提示する完全プロンプトの skeleton を構築する場合は、
             `{{original-prompt-here}}` を渡す。再開時は指定しない。
-        resume: `cmoc resume` が検査した会話 ID と保存済み cwd。
+        resume: 起動管理側が内部の自動移行または公開 `cmoc resume` の条件で
+            検査した会話 ID と保存済み cwd。新規入力と同時には指定しない。
 
     Returns:
-        同じ workload の設定を持つ、新規起動または対話再開のパラメータ。
+        同じ workload の制約を持つ、初回 exec または prompt 不在の対話再開の
+        パラメータ。process の起動・移行制御は含まない。
 
     Raises:
         ValueError: 新規入力と再開先の両方、またはどちらも指定されていない。
