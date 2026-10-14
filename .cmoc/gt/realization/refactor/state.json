@@ -78,7 +78,7 @@
     "last_investigated_at": "2026-10-13_14-01-08_031"
   },
   "oracle/doc/app_spec/editor_input_handoff.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "4ddb1f2772adba60dc13fcb7eec44b8990c7089a27fa24f240794ff8eda5b30c",
     "last_investigated_at": "2026-10-13_14-04-47_074"
@@ -246,7 +246,7 @@
     "last_investigated_at": "2026-10-13_19-41-21_512"
   },
   "oracle/doc/app_spec/windows_toast_notification.md": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "0b263ed33d1fb37118a197f479297796a2cd867ddad507f2265a208ba7f69933",
     "last_investigated_at": "2026-10-13_19-45-48_917"
@@ -342,7 +342,7 @@
     "last_investigated_at": "2026-10-13_23-00-03_672"
   },
   "oracle/src/oracle/acp_builder/basic.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "e87e851eaad3c5566c9dd920c7038e7f59ad10806d4f55b31d918262bad81081",
     "last_investigated_at": "2026-10-13_23-05-02_926"
