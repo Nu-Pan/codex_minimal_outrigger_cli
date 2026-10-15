@@ -1506,15 +1506,14 @@ def _remove_tracked_child_process(
         path.write_text(("\n".join(lines) + "\n") if lines else "", encoding="utf-8")
 
 
-def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
-    """Structured Output schema を指定 root の内容 hash store へ配置する。"""
-    if schema_source_path is None:
-        return None
+def prepare_schema(root: Path, schema_source_path: Path) -> tuple[Path, str]:
+    """schema を内容 hash store へ配置し、保存先と検証用の本文を返す。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # hash path と保存本文を schema source の UTF-8 bytes に一致させるため、
     # Path.read_text() の改行変換を通さない。
     schema_text = schema_source_path.read_bytes().decode("utf-8")
-    return write_hashed_file(schema_store_dir(root), "", ".json", schema_text)
+    schema_path = write_hashed_file(schema_store_dir(root), "", ".json", schema_text)
+    return schema_path, schema_text
 
 
 def codex_error_text(stdout_text: str, stderr_text: str) -> str:

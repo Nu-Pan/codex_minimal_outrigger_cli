@@ -356,11 +356,9 @@ def run_codex_exec(
         # local schema store を指さなければならない。source の読み取り・UTF-8 decode、
         # JSON parse、schema validation を同じ local failure として扱う。
         try:
-            schema_path = prepare_schema(root, schema_source_path)
-            assert schema_path is not None
-            schema_validator = checked_schema_validator(
-                schema_path.read_text(encoding="utf-8")
-            )
+            schema_path, schema_text = prepare_schema(root, schema_source_path)
+            # 保存に使った本文を検証し、同一内容の再読み取りを省く。
+            schema_validator = checked_schema_validator(schema_text)
         except (
             OSError,
             UnicodeError,
