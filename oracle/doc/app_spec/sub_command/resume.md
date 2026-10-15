@@ -2,7 +2,7 @@
 
 ## 目的と公開入口
 
-終了済みの cmoc 実行を実行 ID で指定し、その実行の Codex 会話を、元の TUI workload の制約で続ける。TUI 未起動でも、初回 exec の成功後に TUI 起動が失敗した実行は、本書の適格性を満たせば再開できる。公開再開入口は `cmoc resume <exec-id>` だけとする。`cmoc tui` と `cmoc oracle investigation` に個別の再開オプションを設けない。
+終了済みの cmoc 実行を実行 ID で指定し、その実行で固定した Codex session ID の会話を、元の TUI workload の制約で続ける。公開再開入口は `cmoc resume <exec-id>` だけとする。`cmoc tui` と `cmoc oracle investigation` に個別の再開オプションを設けない。
 
 必須の位置引数は再開元の実行 ID 一つとし、TUI 種別や Codex session ID をユーザーに再指定させない。実行 ID の書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。
 
@@ -23,18 +23,16 @@ cmoc は、呼び出し元と同じ repository の指定実行 ID に対応す�
 
 ## 対象の適格性と会話選択
 
-対象は、最外側の cmoc 実行と関連する全 Codex process の終了を確認でき、次のいずれかを満たす実行とする。正常終了だけでなく、この条件を満たす異常終了も対象とする。
+再開する会話は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の固定 session ID」に従って選ぶ。対象は、次のすべてを確認できる実行とし、満たさない場合は拒否する。
 
-| 対象の状態 | 選ぶ会話と確認条件 |
-|---|---|
-| TUI が会話を開いた | 会話切替も含め、終了時の主会話の Codex session ID を一意に確認できること |
-| TUI 起動用の初回 exec が成功し、その後の TUI 準備・起動が失敗した | 初回の最終成功、保存済み UUID・環境・必要なログ、および TUI 未起動または会話を開く前の起動失敗を確認できること。初回 exec の UUID を選ぶ |
+- 初回 exec の正常な process 終了と call の最終成功。
+- 必要なログに欠落・破損・解釈不能・対応の不整合がなく、固定した Codex session ID を一意に特定できること。
+- 最外側の cmoc 実行と、関連する起動済みの全 Codex process の終了。process の未起動と、起動後の終了確認不能を区別する。
+- 本書の「workload と起動環境の保持」に従う workload と環境の一致。
 
-後者は、元の作業を繰り返さずに TUI へ復帰するための限定的な追加対象である。初回 exec の失敗・途中中断は含めない。UUID の取得だけでは初回成功を確認したことにならない。
+この条件を満たせば、TUI の正常終了に加え、初回成功後の TUI 準備・起動失敗や、生成後の異常終了も再開対象とする。TUI が実際に会話を開いたか、入力可能になったかは適格性の条件にしない。初回 exec 自体の失敗・取消は対象外とし、UUID の取得だけでは初回成功を確認したことにならない。
 
-- TUI が会話を開いた後や、開いたかどうかを確認できない場合に、初回 UUID や要求した UUID を終了時の主会話の代用にしない。主会話の不確定化を、この追加対象によって回避してはならない。
-- 実行中、終了確認不能、上表を満たさない TUI 未起動、主会話未確定の実行は拒否する。ログの欠落・破損・解釈不能・対応の不整合、Codex session ID の不明も拒否理由とする。
-- `cmoc resume` の実行 ID も同じ条件で次の再開元にできる。その実行自身のログから、種別、選択する会話と適格性の根拠を特定できるものとする。初回成功の記録を根拠として引き継ぐ場合も、今回の TUI の起動・会話対応・終了を確認し、過去の再開元ログを連鎖的にたどらなければ解決できない記録にしない。
+- `cmoc resume` の実行 ID も同じ条件で次の再開元にできる。初回成功は、その実行が引き継いだ根拠で判断する。その実行自身のログから種別と適格性を判断できるものとし、過去の再開元ログを連鎖的にたどることを要求しない。必要な記録の保存は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 再開のための実行記録」に従う。
 - 同じ実行 ID を後日再指定した場合は、そこに記録された会話のその時点の続きへ戻る。指定した cmoc 実行の終了時点へ会話や作業状態を巻き戻す意味ではない。
 - 機能導入前の実行も、必要な記録が存在する場合だけ対象とする。不足情報を推測する互換処理は要求しない。
 
@@ -57,14 +55,14 @@ model provider・Model・Reasoning Effort・provider-local 設定の取得は、
 
 1. 新しい最外側の invocation を開始し、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従って新しい実行 ID とログを用意する。指定された再開元実行 ID との対応を記録する。
 2. `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「Doctor Preprocess」に従う doctor preprocess と、本書の種別解決・対象検査・環境照合を行う。doctor の処理対象には、照合した保存 cwd から導出する work-root を含める。
-3. `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「会話の使用と排他」に従って会話の使用を確保する。異なる実行 ID からの再開も競合として扱う。
-4. 解決した TUI 種別の builder に、確定した Codex session ID と保存された cwd を渡す。新しい agent call と Codex call を開始し、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」に従って process 用の設定と接続を準備する。
+3. `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「会話の使用と排他」に従って固定した session ID の使用を確保する。異なる実行 ID からの再開も競合として扱う。
+4. 解決した TUI 種別の builder に、確定した Codex session ID と保存された cwd を渡す。新しい agent call と Codex call を開始し、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」に従って process 用の設定と接続を準備する。起動前の記録は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 再開のための実行記録」に従う。
 5. 入力エディタを開かず、指定した会話の対話 resume を起動する。追加指示は、再開した TUI でユーザーから受け取る。
-6. 新しい process の会話対応と終了を記録し、その process 用の MCP 接続・capability・callback を終了処理で回収する。起動失敗の場合も、確保済みの資源を回収する。会話の使用の解放は、同文書の「会話の使用と排他」に従う。
+6. 新しい process の終了を待ち、その結果を記録する。その process 用の MCP 接続・capability・通知 context を終了処理で回収する。起動失敗の場合も、確保済みの資源を回収する。会話の使用の解放は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「会話の使用と排他」に従う。
 
 ## 失敗条件と表示
 
-対象検査・環境照合の不合格、同じ会話の使用中、会話の削除・利用不能、および対話 resume の起動失敗は、理由の分かる失敗にする。起動後に会話の利用不能が判明した場合も、新規会話や「最新の会話」へ自動で切り替えてはならない。対象実行 ID、失敗した条件、関係する記録や path を診断可能にする。
+対象検査・環境照合の不合格、同じ固定 session ID の使用中、対話 resume の生成失敗、および生成後の異常終了は、理由の分かる失敗にする。指定した会話の削除・利用不能で再開できない場合も、新規会話や「最新の会話」へ自動で切り替えてはならない。対象実行 ID、失敗した条件、関係する記録や path を診断可能にする。
 
 ログと console の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI と自動補完の境界」、通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「TUI の通知境界」に従う。非 TUI の対象を拒否した場合も、今回の `cmoc resume` には TUI の起動前エラーの境界を適用する。エラー分類は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー分類」に従う。
 

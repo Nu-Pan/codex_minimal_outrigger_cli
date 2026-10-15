@@ -37,8 +37,8 @@ cmoc は、oracle file に関するユーザーの調査指示をエディタか
 ## Codex CLI の起動
 
 - `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「新規起動の二段階実行」に従う
-- 共通呼び出し規約の適用範囲と会話 ID の取得・保存は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」「TUI の会話 ID の取得と追跡」に従う
-- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする
+- 共通呼び出し規約の適用範囲と管理対象の会話 ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」「TUI の固定 session ID」に従う
+- このサブコマンドの初回処理完了・応答完了と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「TUI の通知境界」を正本とする
 
 ## 調査結果と変更の扱い
 

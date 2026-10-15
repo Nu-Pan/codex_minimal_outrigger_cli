@@ -38,7 +38,7 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
     - oracle file に対する realization file の適合性: `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」
 - installed skill は任意の追加規定として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
 - 共通 feedback instruction、各 process の collector context、および accepted observation の保持は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「feedback observation の収集」に従う
-- このサブコマンドの TUI agent turn と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする
+- このサブコマンドの初回処理完了・応答完了と終了時の Windows toast 通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「TUI の通知境界」を正本とする
 
 ### Codex CLI の場合
 
@@ -46,4 +46,4 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
 - editor input handoff は初回 exec と TUI の両方で提供する。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
 - 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う
 - 共通呼び出し規約の適用範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」に従う
-- 会話 ID の取得と保存は、同文書の「TUI の会話 ID の取得と追跡」に従う
+- 管理対象の会話 ID は、同文書の「TUI の固定 session ID」に従う
