@@ -1,6 +1,7 @@
 """feedback の根拠変更・再確認・封印と publication artifact の整合性を検証する。
 
-Git・Codex・共通 ID 発行の境界を置き換え、wave、checkpoint、根拠検査には実装を使う。
+Git・Codex・共通 ID 発行・ディスク同期の境界を置き換え、
+wave、checkpoint、根拠検査には実装を使う。
 """
 
 import copy
@@ -58,6 +59,9 @@ from sub_commands.feedback import decision, remediation, report
 
 @pytest.fixture
 def feedback_run(tmp_path, monkeypatch):
+    # 同期順序・同期失敗時の保存状態は test_feedback_store.py、CLI・collector との結合は
+    # test_feedback.py に残す。write・rename・読込と破損検査はここでも実行する。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
     repo, worktree, session = (tmp_path / name for name in ("repo", "run", "session"))
     for directory in (repo, worktree, session):
         directory.mkdir()

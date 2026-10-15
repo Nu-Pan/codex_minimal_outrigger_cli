@@ -591,7 +591,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "28770e46bfdfbe5d96dcfd77ca52a041aa67413166a532dc6aeebdce14f8e03c",
-    "last_investigated_at": "2026-10-11_21-18-10_547"
+    "last_investigated_at": "2026-10-16_04-52-21_539"
   },
   "src/acp/builder/feedback/normalize_issue.py": {
     "investigation_required": true,
