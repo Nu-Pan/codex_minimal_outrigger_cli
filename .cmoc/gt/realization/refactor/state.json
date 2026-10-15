@@ -486,10 +486,10 @@
     "last_investigated_at": "2026-10-16_03-28-05_257"
   },
   "oracle/src/oracle/other/struct_doc.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "cfa36f05435a6461040d5396dd4a6f6c1c9cd03ea9d5a11bca4b42504474a18e",
-    "last_investigated_at": "2026-10-11_19-16-06_357"
+    "last_investigated_at": "2026-10-16_03-30-12_056"
   },
   "oracle/src/oracle/prompt_builder/basic.py": {
     "investigation_required": true,
