@@ -10,12 +10,27 @@ from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 import test_production_cli as production_cli
+from _command_support import write_python_executable
 from test_production_cli import (
     _advance_trust_confirmation,
-    _completed_tui_message,
+    _completed_tui_turn,
     _run_refactor_until_confirmed,
 )
+from typer.main import get_command
+
+from main import app
+
+_SESSION_ID = "019efe07-4886-7423-b252-625febbe31eb"
+
+
+def test_public_leaf_commands_have_production_scenarios() -> None:
+    """実 CLI を実行しない通常検証でも、公開末端のケース追加漏れを検出する。"""
+    assert (
+        production_cli._registered_leaf_commands(get_command(app))
+        == production_cli.PRODUCTION_SCENARIO_COMMANDS
+    )
 
 
 def test_refactor_driver_interrupts_after_a_confirmed_unit(tmp_path) -> None:
@@ -95,17 +110,26 @@ def test_refactor_driver_rechecks_only_changed_logs(tmp_path, monkeypatch) -> No
 def test_tui_completion_skips_unchanged_logs_and_rechecks_partial_utf8(
     tmp_path, monkeypatch
 ) -> None:
-    """完了済み exec と stream 表示を除外し、TUI の追記完了だけを受理する。"""
+    """別会話と stream 表示を除外し、exec 由来の固定 UUID の完了を受理する。"""
     sessions = tmp_path / "sessions/2026/10/11"
     sessions.mkdir(parents=True)
     exec_log = sessions / "rollout-exec.jsonl"
     exec_log.write_text(
-        json.dumps({"type": "session_meta", "payload": {"originator": "codex-exec"}})
+        json.dumps(
+            {
+                "type": "session_meta",
+                "payload": {"id": "other-session", "originator": "codex_exec"},
+            }
+        )
         + "\n"
         + json.dumps(
             {
                 "type": "event_msg",
-                "payload": {"type": "task_complete", "last_agent_message": "resolver"},
+                "payload": {
+                    "type": "task_complete",
+                    "turn_id": "other-turn",
+                    "last_agent_message": "resolver",
+                },
             }
         )
         + "\n",
@@ -120,12 +144,17 @@ def test_tui_completion_skips_unchanged_logs_and_rechecks_partial_utf8(
 
     monkeypatch.setattr(Path, "read_bytes", record_read)
     versions = {}
-    assert _completed_tui_message(tmp_path, versions) is None
+    assert _completed_tui_turn(tmp_path, _SESSION_ID, versions) is None
 
     # polling 開始後に session が作られる場合も見つける。
     tui_log = sessions / "rollout-tui.jsonl"
     tui_log.write_text(
-        json.dumps({"type": "session_meta", "payload": {"originator": "codex-tui"}})
+        json.dumps(
+            {
+                "type": "session_meta",
+                "payload": {"id": _SESSION_ID, "originator": "codex_exec"},
+            }
+        )
         + "\n"
         + json.dumps(
             {
@@ -137,7 +166,7 @@ def test_tui_completion_skips_unchanged_logs_and_rechecks_partial_utf8(
         encoding="utf-8",
     )
     for _ in range(3):
-        assert _completed_tui_message(tmp_path, versions) is None
+        assert _completed_tui_turn(tmp_path, _SESSION_ID, versions) is None
     assert reads.count(exec_log) == reads.count(tui_log) == 1
 
     completion = (
@@ -146,6 +175,7 @@ def test_tui_completion_skips_unchanged_logs_and_rechecks_partial_utf8(
                 "type": "event_msg",
                 "payload": {
                     "type": "task_complete",
+                    "turn_id": "initial-turn",
                     "last_agent_message": "完了しました",
                 },
             },
@@ -157,14 +187,135 @@ def test_tui_completion_skips_unchanged_logs_and_rechecks_partial_utf8(
     with tui_log.open("ab") as output:
         output.write(completion[:boundary])
     for _ in range(3):
-        assert _completed_tui_message(tmp_path, versions) is None
+        assert _completed_tui_turn(tmp_path, _SESSION_ID, versions) is None
     assert reads.count(tui_log) == 2
 
     with tui_log.open("ab") as output:
         output.write(completion[boundary:])
-    assert _completed_tui_message(tmp_path, versions) == "完了しました"
+    assert _completed_tui_turn(tmp_path, _SESSION_ID, versions) == (
+        "initial-turn",
+        "完了しました",
+    )
     assert reads.count(tui_log) == 3
     assert reads.count(exec_log) == 1
+
+
+def test_resumed_tui_completion_requires_a_new_turn(tmp_path) -> None:
+    """入力文の保存に依存せず、再開時の最終 turn より後の完了だけを受理する。"""
+    log = tmp_path / "sessions/rollout-resumed.jsonl"
+    log.parent.mkdir()
+    log.write_text(
+        json.dumps(
+            {
+                "type": "session_meta",
+                "payload": {"id": _SESSION_ID, "originator": "codex_exec"},
+            }
+        )
+        + "\n"
+    )
+    versions = {}
+
+    def append(payload):
+        with log.open("a") as output:
+            output.write(json.dumps({"type": "event_msg", "payload": payload}) + "\n")
+
+    def completed():
+        return _completed_tui_turn(
+            tmp_path, _SESSION_ID, versions, after_turn_id="previous-turn"
+        )
+
+    append(
+        {
+            "type": "task_complete",
+            "turn_id": "initial-turn",
+            "last_agent_message": "initial answer",
+        }
+    )
+    assert completed() is None
+    append(
+        {
+            "type": "task_complete",
+            "turn_id": "previous-turn",
+            "last_agent_message": "previous answer",
+        }
+    )
+    assert completed() is None
+    append({"type": "task_started", "turn_id": "new-turn"})
+    assert completed() is None
+    append(
+        {
+            "type": "task_complete",
+            "turn_id": "new-turn",
+            "last_agent_message": "new answer",
+        }
+    )
+    assert completed() == ("new-turn", "new answer")
+
+
+@pytest.mark.parametrize("input_message", [None, "follow-up"])
+def test_tui_driver_waits_for_the_composer_and_the_requested_turn(
+    tmp_path, monkeypatch, input_message
+) -> None:
+    """二段階起動と追加入力を Fake process の実 PTY で操作する。"""
+    cmoc = tmp_path / "fake-cmoc"
+    write_python_executable(
+        cmoc,
+        [
+            "import json, os, pathlib, select, sys, time, tty",
+            "tty.setraw(sys.stdin.fileno())",
+            f"session_id = {_SESSION_ID!r}",
+            f"input_message = {input_message!r}",
+            "rollout = pathlib.Path('sessions/rollout-initial.jsonl')",
+            "rollout.parent.mkdir()",
+            "def append(event):",
+            "    with rollout.open('a') as output:",
+            "        output.write(json.dumps(event) + '\\n')",
+            "append({'type': 'session_meta', 'payload': {",
+            "    'id': session_id, 'originator': 'codex_exec'}})",
+            "append({'type': 'event_msg', 'payload': {",
+            "    'type': 'task_complete', 'turn_id': 'initial-turn',",
+            "    'last_agent_message': 'initial answer'}})",
+            "call = pathlib.Path('.cmoc/gu/log/codex/current/tui_call.json')",
+            "call.parent.mkdir(parents=True)",
+            "payload = {'argv': ['codex', 'resume', session_id],",
+            "           'fixed_session_id': session_id, 'process_state': 'prepared'}",
+            "call.write_text(json.dumps(payload))",
+            "time.sleep(0.2)",
+            "assert not select.select([sys.stdin], [], [], 0)[0], 'before spawn'",
+            "payload['process_state'] = 'started'",
+            "call.write_text(json.dumps(payload))",
+            "time.sleep(0.2)",
+            "assert not select.select([sys.stdin], [], [], 0)[0], 'before composer'",
+            "print('? for shortcuts', flush=True)",
+            "def read_until(suffix):",
+            "    received = b''",
+            "    while not received.endswith(suffix):",
+            "        assert select.select([sys.stdin], [], [], 5)[0], 'input timeout'",
+            "        received += os.read(sys.stdin.fileno(), 1)",
+            "    return received",
+            "if input_message is not None:",
+            "    assert read_until(b'\\r') == (",
+            "        b'\\x1b[200~' + input_message.encode() + b'\\x1b[201~\\r')",
+            "    time.sleep(0.2)",
+            "    assert not select.select([sys.stdin], [], [], 0)[0], 'old completion'",
+            "    append({'type': 'event_msg', 'payload': {",
+            "        'type': 'task_complete', 'turn_id': 'new-turn',",
+            "        'last_agent_message': 'new answer'}})",
+            "assert read_until(b'\\x03\\x03') == b'\\x03\\x03'",
+            "print('Shutting down', flush=True)",
+        ],
+    )
+    monkeypatch.setattr(production_cli, "_PRODUCTION_COMMAND_TIMEOUT", 10)
+    response, transcript = production_cli._run_cmoc_tui(
+        cmoc,
+        tmp_path,
+        dict(os.environ),
+        tmp_path,
+        "resume" if input_message is not None else "tui",
+        input_message=input_message,
+    )
+    assert response == ("initial answer" if input_message is None else "new answer")
+    assert "Shutting down" in transcript
 
 
 def test_trust_confirmation_waits_until_the_poll_after_prompt_detection() -> None:
