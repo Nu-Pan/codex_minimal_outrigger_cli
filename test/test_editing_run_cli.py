@@ -102,6 +102,21 @@ def apply_after_preprocess(monkeypatch):
     preprocess.assert_called_with(Path.cwd().resolve())
 
 
+@pytest.fixture
+def refactor_after_preprocess(ready_join_session, monkeypatch):
+    """異常終了の検査には、修復・同期済みの session から本処理を実行する。"""
+    # doctor の修復・索引同期・中断は test_doctor_cli.py、fork との結合は
+    # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
+    # 管理 file は ready_join_session の初期 commit に揃え、前処理を重ねない。
+    preprocess = Mock()
+    monkeypatch.setattr(refactor_module, "run_doctor_preprocess", preprocess)
+    yield ready_join_session
+    # 前処理の省略や、中断時 rollback の指定漏れも検出する。
+    preprocess.assert_called_once_with(
+        ready_join_session[0], rollback_on_interruption=True
+    )
+
+
 @pytest.fixture(autouse=True)
 def real_refactor_builder(monkeypatch):
     """制御 test の prompt 準備を省き、結合 test 用に実 builder を返す。"""
@@ -4336,10 +4351,10 @@ def test_refactor_rejects_unverified_changes_before_state_update(
 
 
 def test_refactor_rejects_unverified_changes_and_rolls_back(
-    ready_content_session, monkeypatch
+    refactor_after_preprocess, monkeypatch
 ):
     """品質検証の未完了で CLI が停止し、rollback・error state・report を残す。"""
-    root, _, state_path = ready_content_session
+    root, _, state_path = refactor_after_preprocess
     calls = []
 
     def review(parameter, **kwargs):
@@ -4361,10 +4376,10 @@ def test_refactor_rejects_unverified_changes_and_rolls_back(
 
 
 def test_refactor_stop_failure_preserves_uncommitted_work(
-    ready_content_session, monkeypatch
+    refactor_after_preprocess, monkeypatch
 ):
     """子の停止を確認できなければ rollback と joinable 公開を行わない。"""
-    root, _, state_path = ready_content_session
+    root, _, state_path = refactor_after_preprocess
 
     def interrupted_review(parameter, **kwargs):
         (parameter.agent_call_cwd / "README.md").write_text("still owned by child\n")
@@ -4397,10 +4412,10 @@ def test_refactor_stop_failure_preserves_uncommitted_work(
 
 
 def test_refactor_interrupted_agent_commit_rolls_back_remaining_untracked_files(
-    ready_content_session, monkeypatch
+    refactor_after_preprocess, monkeypatch
 ):
     """agent の禁止 commit を除去した後も、未確定の追加 file を残さない。"""
-    root, _, state_path = ready_content_session
+    root, _, state_path = refactor_after_preprocess
 
     def interrupted_review(parameter, **_kwargs):
         worktree = parameter.agent_call_cwd
