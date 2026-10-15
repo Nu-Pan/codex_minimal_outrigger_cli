@@ -716,8 +716,8 @@
   "src/commons/document_search_worker/package.json": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "96c15818c1ef628e2eac60d3c44dc739df55233fd7dc719a29def6333b5810ed",
-    "last_investigated_at": "2026-10-12_04-39-59_235"
+    "last_investigated_sha256": "d6a0ec4ed0ad25cdd6587c8ade9c58393b6b4587a708799b2dac81b4f983e1aa",
+    "last_investigated_at": "2026-10-16_07-01-10_454"
   },
   "src/commons/document_search_worker/worker.mjs": {
     "investigation_required": true,

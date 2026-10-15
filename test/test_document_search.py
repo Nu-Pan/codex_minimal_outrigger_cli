@@ -1102,46 +1102,61 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
     assert "result" not in response
 
 
-class _CandidateWorker(_InferenceDouble):
-    """候補位置と文書・query の embedding を制御し、製品経路で検証する。"""
+@pytest.fixture
+def candidate_worker(monkeypatch):
+    """候補の順位・上限・統合は、零埋めを省いた同じコサイン類似度で検査する。"""
+    from commons import runtime_document_search as module
 
-    def __init__(self, ranges, *, vectors=None):
-        super().__init__()
-        self.ranges = ranges
-        self.vectors = vectors
-        self.query_vector = (1, 0)
+    # この検査のベクトルは元から先頭二成分だけを使う。
+    # 実次元数での連携は worker の小容量 pipe・部分編集と資材検証に残す。
+    monkeypatch.setattr(
+        module,
+        "SEARCH_MATERIALS",
+        replace(SEARCH_MATERIALS, embedding_dimensions=2),
+    )
 
-    def run(self, operation, payload, **kwargs):
-        vector = super().run(operation, payload, **kwargs)
-        vector[: len(self.query_vector)] = self.query_vector
-        return vector
+    class _CandidateWorker:
+        def __init__(self, ranges, *, vectors=None):
+            self.operations = []
+            self.ranges = ranges
+            self.vectors = vectors
+            self.query_vector = (1, 0)
 
-    def stream_chunks(self, documents, resumes, on_event, **kwargs):
-        vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
-        for path, source in documents.items():
-            lines = source.splitlines(keepends=True)
-            ranges = self.ranges[path]
-            for ordinal in range(resumes[path], len(ranges)):
-                start, end = ranges[ordinal]
-                embedding = vector
-                if self.vectors is not None:
-                    components = self.vectors[path][ordinal]
-                    embedding = [*components] + [0.0] * (
-                        SEARCH_MATERIALS.embedding_dimensions - len(components)
+        def run(self, operation, payload, **kwargs):
+            self.operations.append(operation)
+            assert operation == "embed_query"
+            return list(self.query_vector)
+
+        def stream_chunks(self, documents, resumes, on_event, **kwargs):
+            for path, source in documents.items():
+                lines = source.splitlines(keepends=True)
+                ranges = self.ranges[path]
+                for ordinal in range(resumes[path], len(ranges)):
+                    start, end = ranges[ordinal]
+                    embedding = list(
+                        self.vectors[path][ordinal]
+                        if self.vectors is not None
+                        else (1, 0)
+                    )
+                    on_event(
+                        {
+                            "kind": "chunk",
+                            "path": path,
+                            "ordinal": ordinal,
+                            "start": len("".join(lines[: start - 1])),
+                            "end": len("".join(lines[:end])),
+                            "embedding": embedding,
+                        }
                     )
                 on_event(
                     {
-                        "kind": "chunk",
+                        "kind": "document_complete",
                         "path": path,
-                        "ordinal": ordinal,
-                        "start": len("".join(lines[: start - 1])),
-                        "end": len("".join(lines[:end])),
-                        "embedding": embedding,
+                        "chunk_count": len(ranges),
                     }
                 )
-            on_event(
-                {"kind": "document_complete", "path": path, "chunk_count": len(ranges)}
-            )
+
+    return _CandidateWorker
 
 
 @pytest.mark.parametrize(
@@ -1161,6 +1176,7 @@ class _CandidateWorker(_InferenceDouble):
 def test_mcp_success_schema_and_candidate_limits(
     tmp_path,
     document_repository,
+    candidate_worker,
     candidate_count,
     available,
     similarities,
@@ -1171,7 +1187,7 @@ def test_mcp_success_schema_and_candidate_limits(
     path = "oracle/doc/allowed.md"
     # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     (root / path).write_text("候補\n" * available)
-    worker = _CandidateWorker({path: [(i + 1, i + 1) for i in range(available)]})
+    worker = candidate_worker({path: [(i + 1, i + 1) for i in range(available)]})
     cases = [
         (vector, similarity, limit, expected)
         for vector, similarity in similarities
@@ -1223,7 +1239,7 @@ def test_mcp_success_schema_and_candidate_limits(
 
 
 def test_mcp_aggregates_current_locations_without_excerpts(
-    tmp_path, document_repository
+    tmp_path, document_repository, candidate_worker
 ):
     """重複・入れ子・連鎖する重なりの最大値を保ち、ファイルと範囲を類似度順に返す。"""
     root = document_repository
@@ -1231,7 +1247,7 @@ def test_mcp_aggregates_current_locations_without_excerpts(
     other = "oracle/doc/second.md"
     (root / other).write_text("別の原文\n")
     (root / path).write_text("".join(f"原文 {i}\n" for i in range(81)))
-    worker = _CandidateWorker(
+    worker = candidate_worker(
         {
             path: [(10, 24), (20, 30), (10, 24), (70, 81), (1, 1), (29, 40), (12, 12)],
             other: [(1, 1)],
@@ -1314,7 +1330,7 @@ def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
 
 
 def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
-    tmp_path, document_repository
+    tmp_path, document_repository, candidate_worker
 ):
     """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
     root = document_repository
@@ -1324,7 +1340,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
     available = candidate_count + 1
     (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
     vectors = [(i - available // 2, 20) for i in range(available)]
-    worker = _CandidateWorker(
+    worker = candidate_worker(
         {path: [(i + 1, i + 1) for i in range(available)]}, vectors={path: vectors}
     )
     expected = {i + 1: x / math.hypot(x, y) for i, (x, y) in enumerate(vectors)}
@@ -1375,7 +1391,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
 
 
 def test_mcp_candidate_limit_applies_before_range_merging(
-    tmp_path, document_repository
+    tmp_path, document_repository, candidate_worker
 ):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
     root = document_repository
@@ -1386,7 +1402,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(
     # 21 位は上位と重なり、22 位は離す。統合後の補充や上限無視で結果が変わる。
     # 異なる embedding の厳密な順位は直前の専用ケースに残す。
     (root / path).write_text("上限外\n重なる候補\n上位の重複候補\n")
-    worker = _CandidateWorker(
+    worker = candidate_worker(
         {path: [(1, 1), (2, 3)] + [(3, 3)] * 20},
         vectors={path: [(0, 1), (3, 4)] + [(1, 0)] * 20},
     )
@@ -1429,7 +1445,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(
 
 
 def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
-    tmp_path, monkeypatch, document_repository
+    tmp_path, monkeypatch, document_repository, candidate_worker
 ):
     """採用上限外へ隠れる異常値や演算失敗も、成功を併記せず MODEL_FAILURE にする。"""
     from commons import runtime_document_search as module
@@ -1441,7 +1457,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
     available = candidate_count + 1
     # 同じ正常ベクトルの本文も共有し、位置・件数を保って余分な cache 保存を省く。
     (root / path).write_text("異常候補\n" + "正常候補\n" * candidate_count)
-    worker = _CandidateWorker(
+    worker = candidate_worker(
         {path: [(i + 1, i + 1) for i in range(available)]},
         vectors={path: [(0, 1)] + [(1, 0)] * candidate_count},
     )
