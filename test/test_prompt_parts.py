@@ -92,6 +92,29 @@ def default_prompt_markdown(path_context: AgentCallPathContext) -> str:
     return render_sd_node_as_markdown(*prompt)
 
 
+@pytest.fixture(scope="module")
+def customized_prompt_markdown(path_context: AgentCallPathContext) -> str:
+    """順序・規定の併用・同値 root 統合に、一度構築した不変 Markdown を使う。"""
+    # 単独 flag の独立性と異値 root の拒否は、それぞれ専用 test で検査する。
+    prompt = build_complete_prompt(
+        task="- 対象 prompt を確認すること",
+        scope="- 入力された prompt を根拠とすること",
+        completion_criteria="- prompt の参照関係が妥当であること",
+        non_goals="- prompt を変更しないこと",
+        file_access_mode=FileAccessMode.READONLY,
+        path_context=path_context,
+        aux_static_prompt=[SDHeader("caller static", "- static")],
+        aux_dynamic_prompt=[SDHeader("caller dynamic", "- dynamic")],
+        aux_placeholder_def={"work-root": path_context.work_root},
+        oracle_and_realization_basic=True,
+        oracle_policy=True,
+        realization_policy=True,
+        realization_findings_policy=True,
+        conflict_resolution_policy=True,
+    )
+    return render_sd_node_as_markdown(*prompt)
+
+
 def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
     """policy builder の SDHeader を complete prompt と同じ経路で render する。"""
     return render_sd_node_as_markdown(builder_result[1])
@@ -313,22 +336,10 @@ def test_complete_prompt_renders_search_routing_for_call_availability(
 
 
 def test_complete_prompt_orders_static_objective_and_dynamic_sections(
-    path_context: AgentCallPathContext,
+    customized_prompt_markdown: str,
 ) -> None:
     """完全 prompt は固定部から動的部へ並べ、call 固有 objective を構築する。"""
-    prompt = build_complete_prompt(
-        task="- 対象 prompt を確認すること",
-        scope="- 入力された prompt を根拠とすること",
-        completion_criteria="- prompt の参照関係が妥当であること",
-        non_goals="- prompt を変更しないこと",
-        file_access_mode=FileAccessMode.READONLY,
-        path_context=path_context,
-        aux_static_prompt=[SDHeader("caller static", "- static")],
-        aux_dynamic_prompt=[SDHeader("caller dynamic", "- dynamic")],
-        oracle_policy=True,
-    )
-
-    rendered = render_sd_node_as_markdown(*prompt)
+    rendered = customized_prompt_markdown
     assert '<cmoc_ref target="fundamental_policy"/>' in rendered
     assert '<cmoc_ref target="objective"/>' in rendered
     objective = rendered.split('<cmoc_block id="objective">', 1)[1].split(
@@ -419,17 +430,12 @@ def test_complete_prompt_renders_file_classification_boundaries(
 
 def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
     path_context: AgentCallPathContext,
+    customized_prompt_markdown: str,
 ) -> None:
     """root placeholder は同値なら統合し、異値なら prompt 構築を失敗させる。"""
     context = path_context
 
-    prompt = build_complete_prompt(
-        task="- task",
-        file_access_mode=FileAccessMode.READONLY,
-        path_context=context,
-        aux_placeholder_def={"work-root": context.work_root},
-    )
-    assert render_sd_node_as_markdown(*prompt).count("- {{work-root}} =") == 1
+    assert customized_prompt_markdown.count("- {{work-root}} =") == 1
 
     with pytest.raises(ValueError, match="Conflicting placeholder definition"):
         build_complete_prompt(
@@ -573,22 +579,10 @@ def test_no_policy_complete_prompt_omits_file_access_policy(
 
 
 def test_complete_prompt_preserves_injected_policy_terms(
-    path_context: AgentCallPathContext,
+    customized_prompt_markdown: str,
 ) -> None:
     """complete promptが注入した各policyの主要語とplaceholderを保持することを検証する。"""
-    prompt = build_complete_prompt(
-        task="- task",
-        file_access_mode=FileAccessMode.READONLY,
-        path_context=path_context,
-        aux_dynamic_prompt=[],
-        oracle_and_realization_basic=True,
-        oracle_policy=True,
-        realization_policy=True,
-        realization_findings_policy=True,
-        conflict_resolution_policy=True,
-    )
-
-    rendered = render_sd_node_as_markdown(*prompt)
+    rendered = customized_prompt_markdown
     assert "プロンプト > oracle file > installed skill の優先順位" in rendered
     assert "今現在の仕様を満たすために必要な realization file" in rendered
     assert rendered.count("所見に対して適用する基準は常に一貫していること") == 1
