@@ -213,10 +213,14 @@ _POLICY_FLAG_HEADINGS = (
 )
 
 
-# routing の flag 検査は、検索有効・無効の文面検査と同じ prompt で行う。
+# 基本定義と routing の flag 検査は、それぞれの文面検査と同じ prompt で行う。
 @pytest.mark.parametrize(
     ("selected_flag", "selected_heading"),
-    [case for case in _POLICY_FLAG_HEADINGS if case[0] != "routing_policy"],
+    [
+        case
+        for case in _POLICY_FLAG_HEADINGS
+        if case[0] not in {"oracle_and_realization_basic", "routing_policy"}
+    ],
 )
 def test_each_policy_flag_adds_only_its_block_once(
     selected_flag: str,
@@ -399,7 +403,7 @@ def test_complete_prompt_includes_feedback_instruction_exactly_once(
 def test_complete_prompt_renders_file_classification_boundaries(
     path_context: AgentCallPathContext,
 ) -> None:
-    """基本定義が三分類と owning repository の判定境界を伝える。"""
+    """基本定義だけを挿入し、三分類と owning repository の判定境界を伝える。"""
     prompt = build_complete_prompt(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
@@ -408,6 +412,10 @@ def test_complete_prompt_renders_file_classification_boundaries(
     )
 
     rendered = render_sd_node_as_markdown(*prompt)
+    for flag, heading in _POLICY_FLAG_HEADINGS:
+        assert rendered.count(heading) == (
+            1 if flag == "oracle_and_realization_basic" else 0
+        )
     for expected in (
         "# uncategorised file",
         "以下の条件をすべて満たすものを oracle file とする",

@@ -543,7 +543,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "4d031e4fe046843bb5f30664d7bd781b15fff2bcceee76934ec57d5e80af7a5a",
-    "last_investigated_at": "2026-10-11_20-27-18_545"
+    "last_investigated_at": "2026-10-16_04-18-50_733"
   },
   "oracle/src/oracle/prompt_builder/policy/oracle.py": {
     "investigation_required": true,
