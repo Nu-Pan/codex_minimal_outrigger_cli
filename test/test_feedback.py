@@ -860,6 +860,8 @@ def test_feedback_normalization_excludes_candidate_search_hint(
         )
 
     monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_run_codex_exec)
+    # 保存・読戻し・破損検査は test_feedback_reconfirmation.py に残す。
+    monkeypatch.setattr(feedback_report_module, "write_checkpoint", lambda *_args: {})
     monkeypatch.setattr(
         feedback_report_module,
         "_record_checkpoint",
@@ -2079,7 +2081,7 @@ def test_report_reference_rejects_symlinked_parent_outside(
 
 
 def test_report_reference_targets_use_resolved_evidence_path(
-    feedback_directory: Path, stored_feedback_context: dict[str, object]
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """同じ file への symlink alias と実体 path を同じ issue subject にする。"""
     root = feedback_directory
@@ -2089,19 +2091,27 @@ def test_report_reference_targets_use_resolved_evidence_path(
     target.write_text("subject\n")
     (root / "alias").symlink_to(target_directory, target_is_directory=True)
 
-    _, first_path = store_agent_observation(
-        root, stored_feedback_context, _payload(path="alias/README.md")
-    )
-    first = read_json_object(first_path)
+    # raw 保存・receipt 登録は collector と intake/store の test に残す。
+    # 保存直前の envelope を使い、path 解決・fingerprint・context の受け渡しを検査する。
+    capture = Mock(return_value=root / "observation.json")
+    monkeypatch.setattr(feedback_store_module, "_store_observation", capture)
+    context = _context(root, head_commit="a" * 40)
+
+    def observation(evidence_path: str) -> dict[str, object]:
+        store_agent_observation(
+            root,
+            context,
+            _payload(path=evidence_path),
+        )
+        return capture.call_args.args[3]
+
+    first = observation("alias/README.md")
     candidate = feedback_report_module._new_candidate(
         first, f"agent\0{first['observation_id']}"
     )
     feedback_report_module._merge_observation(root, candidate, first)
 
-    _, second_path = store_agent_observation(
-        root, stored_feedback_context, _payload(path="nested/README.md")
-    )
-    second = read_json_object(second_path)
+    second = observation("nested/README.md")
     fingerprint = second["evidence_fingerprints"][0]
     exact, comparison = feedback_report_module._agent_comparison_candidates(
         second,
