@@ -525,7 +525,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "968850dfd80be0562fe8f61355ec99e024e6e1251edd5b9d1f0097a0d281dfb0",
-    "last_investigated_at": "2026-10-11_19-58-45_895"
+    "last_investigated_at": "2026-10-16_04-07-05_218"
   },
   "oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py": {
     "investigation_required": true,

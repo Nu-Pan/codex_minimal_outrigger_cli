@@ -1064,12 +1064,12 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
     moved = related / "moved.py"
     for path in (modified, deleted, renamed):
         path.write_text("previous implementation\n")
-    run_git(root, "add", "src")
-    run_git(root, "commit", "-m", "add related implementations")
+    # 失敗後の保持には session 側の追跡 file で足り、準備だけの commit は不要。
+    # 共通祖先から存在する file の変更・削除・rename は下の統合成功 test に残す。
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_session_in_worktree(root, root)
     target.write_text("session change\n")
-    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "add", "oracle/spec.md", "src")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
     target.write_text("home change\n")
