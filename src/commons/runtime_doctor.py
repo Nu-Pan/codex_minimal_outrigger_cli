@@ -735,18 +735,13 @@ def _commit_doctor_repairs_from_head(
         if include_gu_ignore:
             _stage_gitignore_repair(root, index_path)
         _stage_agents_gitkeep_repair(root, index_path, agents_gitkeep_added)
-        if include_config:
-            _stage_tracked_runtime_repair(
-                root,
-                index_path,
-                skip_paths=preserved_runtime_paths,
-            )
-        if include_gu_ignore:
-            _run_git_with_index(
-                ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
-                root,
-                index_path,
-            )
+        _stage_tracked_runtime_repair(
+            root,
+            index_path,
+            skip_paths=preserved_runtime_paths,
+            include_config=include_config,
+            include_gu_ignore=include_gu_ignore,
+        )
         paths = _run_git_with_index(
             ["diff", "--cached", "--name-only"], root, index_path
         ).stdout.splitlines()
@@ -880,18 +875,27 @@ def _stage_tracked_runtime_repair(
     index_path: Path,
     *,
     skip_paths: Collection[str] = (),
+    include_config: bool = True,
+    include_gu_ignore: bool = False,
 ) -> None:
-    """同期済み config/state を ignore 規則に左右されず一時 index へ載せる。"""
-    # 同じ一時 index の対象 entry をまとめて読み、既存の stage と mode を保つ。
-    paths = {
-        str(path.relative_to(root)): path
-        for path in (config_path(root), refactor_state_path(root))
-        if str(path.relative_to(root)) not in skip_paths
-    }
-    if not paths:
+    """一時 index の config/state を同期し、必要なら .cmoc/gu の追跡を外す。"""
+    # 対象 entry を一度に読み、stage と mode の保持、追跡除外の要否に共用する。
+    paths = (
+        {
+            str(path.relative_to(root)): path
+            for path in (config_path(root), refactor_state_path(root))
+            if str(path.relative_to(root)) not in skip_paths
+        }
+        if include_config
+        else {}
+    )
+    pathspecs = list(paths)
+    if include_gu_ignore:
+        pathspecs.append(".cmoc/gu")
+    if not pathspecs:
         return
     entries = _run_git_with_index(
-        ["ls-files", "--stage", "-z", "--", *paths], root, index_path
+        ["ls-files", "--stage", "-z", "--", *pathspecs], root, index_path
     )
     metadata: dict[str, tuple[str, str, str]] = {}
     for record in entries.stdout.split("\0"):
@@ -899,6 +903,16 @@ def _stage_tracked_runtime_repair(
             fields, relative = record.split("\t", 1)
             mode, blob, stage = fields.split()
             metadata.setdefault(relative, (mode, blob, stage))
+
+    # HEAD 起点の index でも追跡済みの管理物がある場合だけ Git を起動する。
+    if include_gu_ignore and any(
+        path == ".cmoc/gu" or path.startswith(".cmoc/gu/") for path in metadata
+    ):
+        _run_git_with_index(
+            ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
+            root,
+            index_path,
+        )
 
     # hash-object --stdin の text input と同じ encoding で比較する。
     # Git 自身が返した object ID の長さから SHA-1 / SHA-256 を区別する。

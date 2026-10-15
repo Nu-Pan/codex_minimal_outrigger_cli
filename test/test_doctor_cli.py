@@ -664,10 +664,25 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
     run_git(root, "add", "-f", state_relative)
     run_git(root, "update-index", "--skip-worktree", state_relative)
 
+    git_calls = 0
+    original_run = doctor_module.subprocess.run
+
+    def count_git_calls(argv, *args, **kwargs):
+        nonlocal git_calls
+        if argv[0] == "git":
+            git_calls += 1
+        return original_run(argv, *args, **kwargs)
+
     index_path = doctor_module._copy_current_index(root)
     try:
         before = index_path.read_bytes()
-        doctor_module._stage_tracked_runtime_repair(root, index_path)
+        with monkeypatch.context() as observed:
+            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+            doctor_module._stage_tracked_runtime_repair(
+                root, index_path, include_gu_ignore=True
+            )
+        # 無変更の runtime と未追跡の管理領域は一度の列挙で足り、rm は不要。
+        assert git_calls <= 1
         assert index_path.read_bytes() == before
 
         changed = '{"label": "変更"}\r\n'
@@ -697,13 +712,6 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
             index_path,
         )
         git_calls = 0
-        original_run = doctor_module.subprocess.run
-
-        def count_git_calls(argv, *args, **kwargs):
-            nonlocal git_calls
-            if argv[0] == "git":
-                git_calls += 1
-            return original_run(argv, *args, **kwargs)
 
         with monkeypatch.context() as observed:
             observed.setattr(doctor_module.subprocess, "run", count_git_calls)
@@ -743,6 +751,27 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
             ).stdout
             == original
         )
+
+        # 別 root の修復では config/state を読まず、指定 index の管理物だけを外す。
+        local = root / ".cmoc/gu/kept\tcache\n.bin"
+        local.parent.mkdir(parents=True)
+        local.write_bytes(b"\0kept cache\xff")
+        doctor_module._run_git_with_index(
+            ["add", "-f", "--", str(local.relative_to(root))], root, index_path
+        )
+        config.unlink()
+        state.unlink()
+        git_calls = 0
+        with monkeypatch.context() as observed:
+            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+            doctor_module._stage_tracked_runtime_repair(
+                root, index_path, include_config=False, include_gu_ignore=True
+            )
+        assert git_calls <= 2
+        assert local.read_bytes() == b"\0kept cache\xff"
+        assert not doctor_module._run_git_with_index(
+            ["ls-files", "--", ".cmoc/gu"], root, index_path
+        ).stdout
     finally:
         index_path.unlink(missing_ok=True)
 
