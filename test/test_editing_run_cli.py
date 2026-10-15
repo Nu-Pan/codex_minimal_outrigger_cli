@@ -2024,13 +2024,18 @@ def test_apply_error_preserves_unreadable_process_tracking(
 @pytest.mark.parametrize("interrupted", [False, True])
 @pytest.mark.parametrize("inspection", ["changes", "state"])
 def test_refactor_terminal_report_survives_change_inspection_failure(
-    ready_run_session: tuple[Path, str, Path],
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     interrupted: bool,
     inspection: str,
 ) -> None:
     """確認不能な差分・履歴を空として扱わず terminal report と state を保存する。"""
-    root, _session_branch, state_path = ready_run_session
+    root, _session_branch, state_path = ready_join_session
+    # doctor の修復・索引同期は test_doctor_cli.py、実際の fork との結合は
+    # mixed_results_until_user_interruption に残す。ここでは同期済み state を使い、
+    # 終了 report の参照失敗ごとに前処理を繰り返さない。
+    preprocess = Mock()
+    monkeypatch.setattr(refactor_module, "run_doctor_preprocess", preprocess)
     agent_failed = False
 
     def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
@@ -2072,6 +2077,8 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
         catch_exceptions=False,
     )
 
+    preprocess.assert_called_once_with(root, rollback_on_interruption=True)
+    assert agent_failed
     expected_state = "joinable" if interrupted else "error"
     expected_reason = "user_interruption" if interrupted else "error"
     assert result.exit_code == (0 if interrupted else 1)

@@ -649,9 +649,9 @@
   },
   "src/acp/builder/realization/refactor/__init__.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
+    "last_investigation_result": "findings",
     "last_investigated_sha256": "4c331bccb54a9842893b30e509c994292dd25afbf1159ad4b7929ebffb3a311d",
-    "last_investigated_at": "2026-10-11_22-53-49_822"
+    "last_investigated_at": "2026-10-16_05-55-46_011"
   },
   "src/acp/builder/realization/refactor/fork/__init__.py": {
     "investigation_required": true,
