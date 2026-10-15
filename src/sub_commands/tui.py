@@ -3,7 +3,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
+from oracle.acp_builder.tui.launch_tui import build_tui_launch_tui_parameter
+
 from cmoc_runtime import (
     load_config,
     repo_root,
