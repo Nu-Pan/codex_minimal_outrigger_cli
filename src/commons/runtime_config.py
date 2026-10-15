@@ -343,17 +343,17 @@ def _int_value(data: dict[str, Any], key: str, default: int) -> int:
 def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     """永続化 JSON object から、不足項目を既定値で補った config を復元する。"""
     # 保存済み入力だけに必要な厳格な検証は load_config 側で行う。
-    return _config_from_dict(data)
+    return _config_from_dict(data, CmocConfig())
 
 
 def _config_from_dict(
     data: dict[str, Any],
+    default: CmocConfig,
     *,
     document_search: DocumentSearchConfig | None = None,
 ) -> CmocConfig:
     """保存内容の検証で復元済みの検索設定があれば、その結果を再利用する。"""
     # Codex 側の省略補完と、値の不正時の診断を共用する。
-    default = CmocConfig()
     try:
         if not isinstance(data, dict):
             raise TypeError("config top-level must be an object")
@@ -531,11 +531,13 @@ def _config_from_saved_data(path: Path, data: dict[str, Any]) -> CmocConfig:
     else:
         calls = codex["agent_calls"]
         providers = codex["model_providers"]
-        missing = set(CmocConfig().codex.agent_calls) - set(calls)
+        # 必須項目の確認と値の復元には、今回の読み込みで作る既定状態を共用する。
+        default = CmocConfig()
+        missing = set(default.codex.agent_calls) - set(calls)
         if missing:
             field = f"codex.agent_calls.{sorted(missing)[0]}"
         else:
-            config = _config_from_dict(data, document_search=document_search)
+            config = _config_from_dict(data, default, document_search=document_search)
             unknown = [
                 kind
                 for kind, call in config.codex.agent_calls.items()
