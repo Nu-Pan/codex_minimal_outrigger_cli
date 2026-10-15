@@ -81,7 +81,10 @@ def _asset(distribution, path="/model"):
 
 
 @pytest.fixture
-def asset_logger(tmp_path):
+def asset_logger(tmp_path, nonpersistent_execution_ids):
+    """資材と実行 ID の対応を保ち、採番 DB の初期化・同期書き込みを省く。"""
+    # 採番の永続性は test_runtime_ids.py、実 logger との結合は
+    # test_runtime_cli.py の test_subcommand_logger_keeps_one_file_per_execution に残す。
     logger = SubcommandLogger(tmp_path, "doctor")
     token = set_current_subcommand_logger(logger)
     try:
@@ -340,7 +343,7 @@ def test_redirect_failure_and_report_preserve_observed_counts(
 
 
 def test_doctor_reports_asset_success_separately_from_validation_failure(
-    tmp_path, distribution, monkeypatch
+    tmp_path, distribution, monkeypatch, nonpersistent_execution_ids
 ):
     """取得・公開成功を保持し、検証失敗を報告して索引同期前に停止する。"""
     root = make_repo(tmp_path)
