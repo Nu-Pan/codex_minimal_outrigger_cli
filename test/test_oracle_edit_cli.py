@@ -448,10 +448,9 @@ def oracle_edit_failure_repository(
     cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[Path]:
-    """準備失敗の検証に必要な root・設定・前処理の呼び出し記録を用意する。"""
+    """準備失敗の検証に必要な root と前処理の呼び出し記録を用意する。"""
     # 準備失敗には Git state は不要。共通 fixture で CLI root と collector を隔離する。
     root = cli_terminal_directory
-    write_config(config_path(root), CmocConfig())
     # builder も同じ root を使う。実 Git の探索は edit-success と test_basic_runtime.py に残す。
     monkeypatch.setattr(
         path_model_module,
@@ -508,6 +507,7 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
     failure_stage: str,
 ) -> None:
     """共用入力確定後の準備失敗では、どちらの編集も開始済みにしない。"""
+    root = oracle_edit_failure_repository
     # 起動前提は失敗境界の double へ置き換えるため、session は不要。
     monkeypatch.setattr(
         oracle_edit_module, "edit_prompt_editor_input", lambda *_args: None
@@ -522,11 +522,11 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
         if stage == failure_stage:
             raise CmocError(f"{stage} failed", [], "test failure")
 
-    real_load_config = oracle_edit_module.load_config
-
     def load_config(repository):
+        # 設定の保存・読込と両回での共用は上の CLI test に残し、失敗段階だけを制御する。
+        assert repository == root
         record_stage("config")
-        return real_load_config(repository)
+        return CmocConfig()
 
     monkeypatch.setattr(oracle_edit_module, "load_config", load_config)
     monkeypatch.setattr(
@@ -601,13 +601,12 @@ def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
         "_resolve_git_worktree_roots",
         lambda _start_path=None: (tmp_path, tmp_path),
     )
-    instruction = (
-        "診断用サブコマンドログ /example/sender.jsonl を参考に oracle を編集する"
-    )
-    empty = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter("").prompt
+    instruction = "過去の agent の会話と最終回答、実行ログ /example/sender.jsonl を参考に oracle を編集する"
     prompt = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
         instruction
     ).prompt
     assert instruction in prompt
+    # ユーザー入力を除いた自動生成文面は、同じ完全 prompt から検査する。
+    generated = prompt.replace(instruction, "", 1)
     for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):
-        assert prior_context not in empty
+        assert prior_context not in generated
