@@ -83,12 +83,20 @@ _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 @pytest.fixture
 def apply_after_preprocess(monkeypatch):
-    """apply の終了・復旧検査では、成功済み前処理の修復と索引同期を繰り返さない。"""
+    """apply の終了・復旧検査では、doctor と prompt の準備を繰り返さない。"""
     # 必要な設定・配置先は ready_*_session が用意する。
     # doctor の修復・失敗は test_doctor_cli.py、apply との実結合は
     # test_realization_apply_fork_and_run_join_use_common_state に残す。
     preprocess = Mock()
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
+    # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を省く。
+    # builder の選択値・文面は test_acp_builder_editing_run_parameters.py、
+    # 実 builder との結合は上記の fork→join test に残す。
+    monkeypatch.setattr(
+        apply_module,
+        "build_realization_apply_fork_launch_exec_parameter",
+        lambda _base, _fork, run_worktree: SimpleNamespace(agent_call_cwd=run_worktree),
+    )
     yield
     # CLI が対象 root の前処理を省略する回帰も検出する。
     preprocess.assert_called_with(Path.cwd().resolve())
