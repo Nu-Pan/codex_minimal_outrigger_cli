@@ -524,10 +524,9 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     assert override["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
     assert "features" not in override
     if tui:
-        if "--enable" in argv:
-            assert argv[argv.index("--enable") + 1] == "hooks"
+        assert "--enable" not in argv
         assert payload["prompt_log_path"] is None
-        assert argv[-2:] == ["resume", payload["requested_codex_session_id"]]
+        assert argv[-2:] == ["resume", payload["fixed_session_id"]]
     else:
         assert "--enable" not in argv
     assert override["model_reasoning_effort"] == call_config.reasoning_effort
@@ -1135,7 +1134,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         for path in report_root.rglob("*")
     }
 
-    # Codex の実 hook から通知 transport まで到達することを、OS 通知だけ隔離して確認する。
+    # Codex の直接 callback から通知 transport まで到達することを、OS 通知だけ隔離して確認する。
     toast_path = tmp_path / "toast.jsonl"
     toast_bin = tmp_path / "toast-recorder"
     toast_bin.mkdir()
@@ -1211,9 +1210,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert initial_payload["execution_id"] == tui_payload["execution_id"]
     assert initial_payload["agent_call_id"] != tui_payload["agent_call_id"]
     assert initial_payload["codex_call_id"] != tui_payload["codex_call_id"]
-    assert (
-        tui_payload["initial_session_id"] == tui_payload["requested_codex_session_id"]
-    )
+    assert tui_payload["initial_session_id"] == tui_payload["fixed_session_id"]
     body = work.read_text()
     assert "CMOC_GUIDE_CONFIRMED" in body, response
     assert initial_payload["codex_call_id"] in body
@@ -1267,7 +1264,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert deadline["deadline_kinds"] == ["search_request"]
     notifications = [json.loads(line) for line in toast_path.read_text().splitlines()]
     assert notifications == [
-        {"title": f"cmoc {' '.join(command)}", "message": f"{root.name} — 入力待ち"}
+        {"title": f"cmoc {' '.join(command)}", "message": f"{root.name} — 初回処理完了"}
     ]
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert run_git(root, "status", "--short").stdout == status_before

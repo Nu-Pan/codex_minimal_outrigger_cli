@@ -36,6 +36,7 @@ from .runtime_codex_recovery import (
     current_recovery_cancellation,
     wait_for_recovery,
 )
+from .runtime_codex_session import CodexSessionLease
 from .runtime_config import load_config
 from .runtime_editor_input_handoff_protocol import editor_input_handoff_subprocess_env
 from .runtime_errors import CmocError, TuiStartupCancelled
@@ -302,6 +303,7 @@ def run_codex_exec(
     probe_timeout_sec: float = 120.0,
     quota_poll_interval_sec: float = 1800.0,
     subcommand_logger: SubcommandLogger | None = None,
+    tui_session_lease: CodexSessionLease | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 補正、実行記録を一括制御する。"""
     # 対話再開の入力不在を、非対話の補正・回復用 prompt と混同しない。
@@ -431,7 +433,7 @@ def run_codex_exec(
         cancellation = current_recovery_cancellation()
         logger.event(
             "tui_initial_exec",
-            tui_record_version=2,
+            tui_record_version=3,
             execution_id=execution_id,
             subcommand=logger.command,
             sub_command_log_path=str(logger.path.resolve()),
@@ -509,23 +511,52 @@ def run_codex_exec(
                     initial_process_state = "started"
                     _record_tui_initial("started")
 
+                def observe_stdout(line: str) -> None:
+                    # 非対話 JSONL だけを観測し、取得した ID を移行まで確保する。
+                    try:
+                        event = json.loads(line)
+                    except ValueError:
+                        return
+                    if (
+                        not isinstance(event, dict)
+                        or event.get("type") != "thread.started"
+                    ):
+                        return
+                    session_id = event.get("thread_id")
+                    if not isinstance(session_id, str):
+                        return
+                    if tui_session_lease is not None:
+                        tui_session_lease.acquire(session_id)
+                        tui_session_lease.process_started()
+                    _record_tui_initial("started", codex_session_id=session_id)
+
                 with (
                     stdout_path.open("w", encoding="utf-8") as stdout_file,
                     stderr_path.open("w", encoding="utf-8") as stderr_file,
                 ):
-                    result = run_codex_subprocess(
-                        run_argv,
-                        cwd=run_agent_call_cwd,
-                        stdin=prompt_file,
-                        stdout=stdout_file,
-                        stderr=stderr_file,
-                        text=True,
-                        encoding="utf-8",
-                        env=run_codex_env,
-                        start_new_session=True,
-                        cancellation=current_recovery_cancellation(),
-                        process_started_callback=process_started,
-                    )
+                    try:
+                        result = run_codex_subprocess(
+                            run_argv,
+                            cwd=run_agent_call_cwd,
+                            stdin=prompt_file,
+                            stdout=stdout_file,
+                            stderr=stderr_file,
+                            text=True,
+                            encoding="utf-8",
+                            env=run_codex_env,
+                            start_new_session=True,
+                            cancellation=current_recovery_cancellation(),
+                            process_started_callback=process_started,
+                            stdout_line_callback=observe_stdout,
+                        )
+                    except BaseException as exc:
+                        if tui_session_lease is not None and isinstance(
+                            getattr(exc, "cmoc_process_returncode", None), int
+                        ):
+                            tui_session_lease.process_stopped()
+                        raise
+                    if tui_session_lease is not None:
+                        tui_session_lease.process_stopped()
                 initial_process_state = "exited"
                 return subprocess.CompletedProcess(
                     run_argv,

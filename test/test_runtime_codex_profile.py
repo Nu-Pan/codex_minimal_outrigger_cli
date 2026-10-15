@@ -9,7 +9,6 @@
 import hashlib
 import json
 import os
-import shlex
 import subprocess
 import sys
 from dataclasses import replace
@@ -300,79 +299,25 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
     )
 
 
-def test_codex_overrides_pair_root_capture_with_legacy_notification() -> None:
-    """root SessionStart 記録と最終 legacy callback を対で設定する。"""
+def test_codex_overrides_configure_direct_notification_callback() -> None:
+    """固定 ID と invocation context を持つ通知専用コマンドだけを渡す。"""
     notification_command = [
         "/notify python",
         "/callback.py",
         "codex-tui-callback",
         "/state",
-        "repository '; Write-Error injected",
+        "tui",
+        "repository",
+        "session-id",
     ]
-    session_start_command = [
-        "/python with space",
-        "/callback.py",
-        "codex-tui-session-start-hook",
-        "/state",
-    ]
-
     args = build_codex_override_args(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
         CmocConfig(),
         notification_command=notification_command,
-        session_start_command=session_start_command,
     )
-
     parsed = codex_override_config(args)
     assert parsed["notify"] == notification_command
     assert parsed["tui"] == {"notifications": False}
-    assert "features" not in parsed
-    assert args[args.index("--enable") + 1] == "hooks"
-    hook_command = shlex.join(session_start_command)
-    hooks = parsed["hooks"]
-    assert isinstance(hooks, dict)
-    assert hooks["SessionStart"] == [
-        {
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": hook_command,
-                    "timeout": 10,
-                    "async": False,
-                }
-            ]
-        }
-    ]
-    assert "Stop" not in hooks
-    assert "SubagentStart" not in hooks
-    assert "SubagentStop" not in hooks
-    assert hooks["state"] == {
-        "/<session-flags>/config.toml:session_start:0:0": {
-            "enabled": True,
-            "trusted_hash": (
-                runtime_codex_profile._codex_session_start_hook_trusted_hash(
-                    hook_command
-                )
-            ),
-        }
-    }
-    assert "--dangerously-bypass-hook-trust" not in args
-    assert (
-        runtime_codex_profile._codex_session_start_hook_trusted_hash("echo hello")
-        == "sha256:863a01826297cdbe63da6b232502523983ae7bb9376872bf40eae001e6e226d4"
-    )
-
-
-def test_codex_overrides_disable_unpaired_notification_callback() -> None:
-    """root capture が欠ける場合は legacy callback を有効にしない。"""
-    args = build_codex_override_args(
-        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
-        CmocConfig(),
-        notification_command=["/callback.py"],
-    )
-
-    parsed = codex_override_config(args)
-    assert parsed["notify"] == []
     assert "hooks" not in parsed
     assert "--enable" not in args
 

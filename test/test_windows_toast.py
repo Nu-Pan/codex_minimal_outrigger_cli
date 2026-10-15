@@ -9,7 +9,6 @@ import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from io import StringIO
 from pathlib import Path
 from threading import Event
 
@@ -143,6 +142,7 @@ def test_completion_marker_disables_notification_initialization_and_transport(
         runtime_windows_toast.create_tui_notification_callback(
             "doctor",
             tmp_path,
+            "root-session",
         )
         is None
     )
@@ -151,11 +151,11 @@ def test_completion_marker_disables_notification_initialization_and_transport(
     assert transport_checks == []
 
 
-def test_codex_callback_notifies_only_recorded_root_turn_once(
+def test_codex_callback_notifies_only_fixed_session_turn_once(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """記録済み root の turn だけを一度通知し、本文を通知へ渡さない。"""
+    """固定した ID の turn だけを一度通知し、本文を通知へ渡さない。"""
     state_root = tmp_path / "callback-state"
     state_root.mkdir()
     calls: list[tuple[str, str]] = []
@@ -163,17 +163,6 @@ def test_codex_callback_notifies_only_recorded_root_turn_once(
         runtime_windows_toast,
         "_run_windows_toast_transport",
         lambda title, message: calls.append((title, message)) or True,
-    )
-    session_arguments = ["codex-tui-session-start-hook", str(state_root)]
-    assert (
-        runtime_windows_toast._run_codex_tui_session_start_hook(
-            session_arguments,
-            {
-                "hook_event_name": "SessionStart",
-                "session_id": "root-session",
-            },
-        )
-        == 0
     )
     payload = json.dumps(
         {
@@ -189,12 +178,13 @@ def test_codex_callback_notifies_only_recorded_root_turn_once(
         str(state_root),
         "oracle investigation",
         "repository",
+        "root-session",
         payload,
     ]
 
     child_payload = json.loads(payload)
     child_payload["thread-id"] = "child-session"
-    child_arguments = [*arguments[:4], json.dumps(child_payload)]
+    child_arguments = [*arguments[:5], json.dumps(child_payload)]
     assert runtime_windows_toast._run_codex_tui_callback(child_arguments) == 0
     assert calls == []
 
@@ -209,53 +199,25 @@ def test_codex_callback_notifies_only_recorded_root_turn_once(
         results = [future.result() for future in futures]
 
     assert results == [0] * 8
-    assert calls == [("cmoc oracle investigation", "repository — 入力待ち")]
+    assert calls == [("cmoc oracle investigation", "repository — 応答完了")]
     assert "prompt secret" not in repr(calls)
     assert "assistant secret" not in repr(calls)
-
-    assert (
-        runtime_windows_toast._run_codex_tui_session_start_hook(
-            session_arguments,
-            {
-                "hook_event_name": "SubagentStart",
-                "session_id": "child-session",
-            },
-        )
-        == 0
-    )
-    assert len(calls) == 1
 
     next_payload = json.loads(payload)
     next_payload["turn-id"] = "turn-2"
     assert (
         runtime_windows_toast._run_codex_tui_callback(
-            [*arguments[:4], json.dumps(next_payload)]
+            [*arguments[:5], json.dumps(next_payload)]
         )
         == 0
     )
-    assert calls[-1] == ("cmoc oracle investigation", "repository — 入力待ち")
+    assert calls[-1] == ("cmoc oracle investigation", "repository — 応答完了")
     assert len(calls) == 2
 
-    # `/new` で同じ TUI process に増えた root session も記録対象にする。
-    assert (
-        runtime_windows_toast._run_codex_tui_session_start_hook(
-            session_arguments,
-            {
-                "hook_event_name": "SessionStart",
-                "session_id": "new-root-session",
-            },
-        )
-        == 0
-    )
-    new_root_payload = json.loads(payload)
-    new_root_payload["thread-id"] = "new-root-session"
-    assert (
-        runtime_windows_toast._run_codex_tui_callback(
-            [*arguments[:4], json.dumps(new_root_payload)]
-        )
-        == 0
-    )
-    assert len(calls) == 3
+    # 切り替え先から callback が来ても、通知対象の ID は固定したままにする。
+    switched = {**json.loads(payload), "thread-id": "new-root-session"}
+    runtime_windows_toast.main([*arguments[:5], json.dumps(switched)])
+    assert len(calls) == 2
 
 
 def test_tui_callback_state_is_invocation_local(tmp_path: Path, toast_clock) -> None:
@@ -263,22 +225,17 @@ def test_tui_callback_state_is_invocation_local(tmp_path: Path, toast_clock) -> 
     callback = runtime_windows_toast.create_tui_notification_callback(
         "tui",
         tmp_path / "repository",
+        "root-session",
     )
 
     assert callback is not None
-    launcher = callback.command[:-4]
+    launcher = callback.command[:-5]
     assert launcher[0] == sys.executable
     assert Path(launcher[-1]) == Path(runtime_windows_toast.__file__).resolve()
-    assert callback.command[-4] == "codex-tui-callback"
-    state_root = Path(callback.command[-3])
+    assert callback.command[-5] == "codex-tui-callback"
+    state_root = Path(callback.command[-4])
     assert state_root.is_dir()
-    assert callback.command[-2:] == ["tui", "repository"]
-    assert callback.session_start_command == [
-        *launcher,
-        "codex-tui-session-start-hook",
-        str(state_root),
-    ]
-
+    assert callback.command[-3:] == ["tui", "repository", "root-session"]
     started_at = toast_clock.now
     callback.close()
 
@@ -300,20 +257,10 @@ def test_tui_callback_close_drains_running_callback(
     callback = runtime_windows_toast.create_tui_notification_callback(
         "tui",
         tmp_path / "repository",
+        "root-session",
     )
     assert callback is not None
-    state_root = Path(callback.command[-3])
-    session_arguments = ["codex-tui-session-start-hook", str(state_root)]
-    assert (
-        runtime_windows_toast._run_codex_tui_session_start_hook(
-            session_arguments,
-            {
-                "hook_event_name": "SessionStart",
-                "session_id": "root-session",
-            },
-        )
-        == 0
-    )
+    state_root = Path(callback.command[-4])
     payload = json.dumps(
         {
             "type": "agent-turn-complete",
@@ -326,6 +273,7 @@ def test_tui_callback_close_drains_running_callback(
         str(state_root),
         "tui",
         "repository",
+        "root-session",
         payload,
     ]
     callback_started = Event()
@@ -430,14 +378,9 @@ def test_tui_callback_commands_run_as_standalone_scripts(
     callback = runtime_windows_toast.create_tui_notification_callback(
         "oracle investigation",
         tmp_path / "repository",
+        "root-session",
     )
     assert callback is not None
-    session_payload = json.dumps(
-        {
-            "hook_event_name": "SessionStart",
-            "session_id": "root-session",
-        }
-    )
     turn_payload = json.dumps(
         {
             "type": "agent-turn-complete",
@@ -445,7 +388,7 @@ def test_tui_callback_commands_run_as_standalone_scripts(
             "turn-id": "turn-1",
         }
     )
-    state_root = Path(callback.command[-3])
+    state_root = Path(callback.command[-4])
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorded_toast = tmp_path / "toast.jsonl"
@@ -473,18 +416,6 @@ def test_tui_callback_commands_run_as_standalone_scripts(
 
     try:
         result = subprocess.run(
-            callback.session_start_command,
-            input=session_payload,
-            env=environment,
-            text=True,
-            capture_output=True,
-            timeout=10,
-            check=False,
-        )
-        assert result.returncode == 0
-        assert result.stdout == ""
-        assert result.stderr == ""
-        result = subprocess.run(
             [*callback.command, turn_payload],
             env=environment,
             text=True,
@@ -505,41 +436,43 @@ def test_tui_callback_commands_run_as_standalone_scripts(
                 duplicate_notifications.append((title, message)) or True
             ),
         )
-        assert runtime_windows_toast.main([*callback.command[-4:], turn_payload]) == 0
+        assert runtime_windows_toast.main([*callback.command[-5:], turn_payload]) == 0
         assert duplicate_notifications == []
         captured = capsys.readouterr()
         assert captured.out == ""
         assert captured.err == ""
         assert len(list(state_root.glob("*.seen"))) == 1
-        assert len(list(state_root.glob("root-*.session"))) == 1
         assert [
             json.loads(line) for line in recorded_toast.read_text().splitlines()
         ] == [
             {
                 "title": "cmoc oracle investigation",
-                "message": "repository — 入力待ち",
+                "message": "repository — 応答完了",
             }
         ]
     finally:
         callback.close()
 
 
-def test_tui_session_start_hook_malformed_json_is_nonfatal(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """壊れた JSON stdin では記録せず、hook の入口から非致命的に戻る。"""
-    # standalone の stdin/argv 境界は正常系に残し、JSON 例外の処理を直接検証する。
+@pytest.mark.parametrize(
+    "payload", ["{", "[]", '{"type":"other"}', '{"type":"agent-turn-complete"}']
+)
+def test_tui_callback_malformed_payload_is_nonfatal(tmp_path, capsys, payload):
     state_root = tmp_path / "callback-state"
     state_root.mkdir()
-    monkeypatch.setattr(sys, "stdin", StringIO("{"))
-
     assert (
-        runtime_windows_toast.main(["codex-tui-session-start-hook", str(state_root)])
+        runtime_windows_toast.main(
+            [
+                "codex-tui-callback",
+                str(state_root),
+                "tui",
+                "repository",
+                "root-session",
+                payload,
+            ]
+        )
         == 0
     )
+    assert not list(state_root.iterdir())
     captured = capsys.readouterr()
-    assert captured.out == ""
-    assert captured.err == ""
-    assert list(state_root.iterdir()) == []
+    assert captured.out == captured.err == ""
