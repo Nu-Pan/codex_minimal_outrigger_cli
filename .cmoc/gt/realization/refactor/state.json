@@ -444,10 +444,10 @@
     "last_investigated_at": "2026-10-16_02-54-50_491"
   },
   "oracle/src/oracle/editor_input_handoff/guide.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "a27040792ca678e214a6c0c0b6cf9adc30029ce6da5b9ffa7df74f6a22beb3ba",
-    "last_investigated_at": "2026-10-11_18-13-34_999"
+    "last_investigated_at": "2026-10-16_02-57-30_240"
   },
   "oracle/src/oracle/editor_input_handoff/overwrite_input.json": {
     "investigation_required": true,
