@@ -105,30 +105,6 @@ def test_make_repo_ignores_global_git_config(
     ]
 
 
-def test_runtime_roots_distinguish_linked_worktree_from_nested_main(
-    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree の両 root を区別し、nested main は run root から除く。"""
-    # 成功と拒否に同じ linked metadata を使い、外側の履歴・worktree 準備を共用する。
-    root = committed_repository
-    linked = tmp_path / "linked"
-    run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
-
-    monkeypatch.chdir(linked)
-    assert repo_root(linked) == root.resolve()
-    assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
-    assert work_root(linked) == linked.resolve()
-
-    # 内側の main repository に履歴は不要。外側の linked root を誤採用しない。
-    nested_main = linked / "repo"
-    nested_main.mkdir()
-    init_repo(nested_main)
-    monkeypatch.chdir(nested_main)
-
-    with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
-        resolve_real_path(RootPathPlaceHolder.RUN)
-
-
 @pytest.mark.parametrize("marker_kind", ["file", "directory"])
 def test_root_resolution_ignores_dot_git_names_without_repository_metadata(
     cli_repository: Path,
@@ -224,11 +200,12 @@ def test_agent_call_path_context_ignores_repository_selection_environment(
 
 
 def test_agent_call_path_contexts_are_parallel_and_call_scoped(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """並列 call が process cwd を変えず、互いに異なる work root を保持する。"""
+    """並列 call の root・cwd 隔離と、nested main の run root 拒否を検証する。"""
+    # 並列 call と runtime root の検査で、実 Git の履歴・linked metadata を共用する。
     root = committed_repository
-    worktrees = [root / "first-worktree", root / "second-worktree"]
+    worktrees = [tmp_path / "linked", root / "second-worktree"]
     for index, worktree in enumerate(worktrees):
         run_git(
             root,
@@ -253,6 +230,22 @@ def test_agent_call_path_contexts_are_parallel_and_call_scoped(
             "repo-root": root.resolve(),
             "work-root": worktree.resolve(),
         }
+
+    # runtime API でも同じ両 root を区別し、linked worktree を run root として返す。
+    linked = worktrees[0]
+    monkeypatch.chdir(linked)
+    assert repo_root(linked) == root.resolve()
+    assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
+    assert work_root(linked) == linked.resolve()
+
+    # 内側の main repository に履歴は不要。外側の linked root を誤採用しない。
+    nested_main = linked / "repo"
+    nested_main.mkdir()
+    init_repo(nested_main)
+    monkeypatch.chdir(nested_main)
+
+    with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
+        resolve_real_path(RootPathPlaceHolder.RUN)
 
 
 def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
