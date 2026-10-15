@@ -180,8 +180,8 @@ def _test_node_runtime(base: Path) -> None:
     node.symlink_to(shutil.which("node"))
 
 
-def _fake_node_model(base: Path) -> None:
-    """実 chunker に文字単位 tokenizer と記録可能な推論を与える。"""
+def _fake_node_model(base: Path, *, tokens_per_character: float = 1.0) -> None:
+    """実 chunker に処理量を記録する tokenizer と推論を与える。"""
     source = resources.files("commons.document_search_worker").joinpath("worker.mjs")
     (base / "worker.mjs").write_bytes(source.read_bytes())
     _test_node_runtime(base)
@@ -191,12 +191,20 @@ def _fake_node_model(base: Path) -> None:
         json.dumps({"type": "module", "exports": "./index.mjs"})
     )
     (package / "index.mjs").write_text(
-        """import { appendFileSync } from "node:fs";
+        f"const tokensPerCharacter = {tokens_per_character};\n"
+        """import { appendFileSync, writeFileSync } from "node:fs";
 export async function getLlama() {
   return { async loadModel() {
+    let tokenizedCharacters = 0;
     return {
-      tokenize: (text) => Array.from(text),
-      async dispose() {},
+      tokenize(text) {
+        const length = Array.from(text).length;
+        tokenizedCharacters += length;
+        return Array(Math.ceil(length * tokensPerCharacter));
+      },
+      async dispose() {
+        writeFileSync("tokenized-characters.json", String(tokenizedCharacters));
+      },
       async createEmbeddingContext() {
         return {
           async getEmbeddingFor(text) {
@@ -696,10 +704,13 @@ def test_worker_reports_closed_output_pipe(tmp_path: Path, operation: str) -> No
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
-    """一括応答が Unicode の原文位置を保ち、overlap を節内に限る。"""
-    _fake_node_model(tmp_path)
-    body = "冒頭 éあ😀\n# A\n" + "長い本文" * 8 + "\n## B\n短い本文é😀\n"
+@pytest.mark.parametrize("tokens_per_character", [0.25, 1.0, 2.0])
+def test_worker_limits_overlap_and_tokenization_to_heading_sections(
+    tmp_path: Path, tokens_per_character: float
+) -> None:
+    """長い節を過剰に tokenize せず、token 上限・Unicode の位置・overlap を保つ。"""
+    _fake_node_model(tmp_path, tokens_per_character=tokens_per_character)
+    body = "冒頭 éあ😀\n# A\n" + "長い本文" * 256 + "\n## B\n短い本文é😀\n"
     tuning = replace(_tuning(), chunk_tokens=12, chunk_overlap_tokens=3)
     request = NodeSearchWorker(tmp_path, tuning)._request(
         "chunk_embed", {"documents": {"doc.md": body}, "config": asdict(tuning)}
@@ -729,14 +740,26 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
             start <= chunk["start"] < chunk["end"] <= end for start, end in sections
         )
         assert body[chunk["start"] : chunk["end"]] == excerpt
-        assert len(excerpt) <= tuning.chunk_tokens
-    assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文é😀\n"
+        assert math.ceil(len(excerpt) * tokens_per_character) <= tuning.chunk_tokens
+    if tokens_per_character <= 1.0:
+        assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文é😀\n"
+    for previous, current in zip(chunks, chunks[1:]):
+        overlap = max(0, previous["end"] - current["start"])
+        assert math.ceil(overlap * tokens_per_character) <= tuning.chunk_overlap_tokens
+        if any(
+            start <= previous["start"] < current["end"] <= end
+            for start, end in sections
+        ):
+            assert overlap > 0
     covered = {
         index for chunk in chunks for index in range(chunk["start"], chunk["end"])
     }
     assert all(
         index in covered for index, char in enumerate(body) if not char.isspace()
     )
+    # 実時間のばらつきに依存せず、残り全文の反復 token 化への回帰を検出する。
+    tokenized_characters = int((tmp_path / "tokenized-characters.json").read_text())
+    assert tokenized_characters < 32 * len(body)
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
