@@ -1884,24 +1884,117 @@ def test_agent_payload_shares_repository_resolution(
     assert outside.value.code == "path_outside_repo"
 
 
-def test_agent_payload_rechecks_evidence_after_masking(feedback_directory, monkeypatch):
-    """マスキング中に evidence の symlink が repo 外へ変わった場合も拒否する。"""
+@pytest.mark.parametrize("retarget_during", ["masking", "fingerprinting"])
+def test_agent_payload_rechecks_evidence_after_masking(
+    feedback_directory, monkeypatch, retarget_during
+):
+    """処理中に重複 evidence の symlink が repo 外へ変わった場合も拒否する。"""
     root = feedback_directory
     (root / "evidence.txt").write_text("evidence")
     alias = root / "alias"
     alias.symlink_to("evidence.txt")
-    mask = feedback_store_module._mask_payload
 
-    def mask_and_retarget(value):
+    def retarget():
         alias.unlink()
         alias.symlink_to(root.parent / "outside.txt")
-        monkeypatch.setattr(feedback_store_module, "_mask_payload", mask)
-        return mask(value)
 
-    monkeypatch.setattr(feedback_store_module, "_mask_payload", mask_and_retarget)
+    if retarget_during == "masking":
+        mask = feedback_store_module._mask_payload
+
+        def mask_and_retarget(value):
+            retarget()
+            monkeypatch.setattr(feedback_store_module, "_mask_payload", mask)
+            return mask(value)
+
+        monkeypatch.setattr(feedback_store_module, "_mask_payload", mask_and_retarget)
+    else:
+        read = Path.read_bytes
+
+        def read_and_retarget(path):
+            content = read(path)
+            retarget()
+            return content
+
+        monkeypatch.setattr(Path, "read_bytes", read_and_retarget)
+
+    payload = _payload(path="alias")
+    payload["evidence"] *= 2
     with pytest.raises(FeedbackRejected) as outside:
-        validate_agent_payload(_payload(path="alias"), root)
+        validate_agent_payload(payload, root)
     assert outside.value.code == "path_outside_repo"
+
+
+@pytest.mark.parametrize("state", ["hashed", "missing", "not_file", "unreadable"])
+def test_agent_payload_shares_fingerprints_only_within_submission(
+    feedback_directory, monkeypatch, state
+):
+    """同じ正規化先の読み取りを共有し、別 file と次の submission は再取得する。"""
+    root = feedback_directory
+    target = root / "evidence.txt"
+    other = root / "other.txt"
+    other.write_bytes(b"other evidence")
+    if state == "not_file":
+        target.mkdir()
+    elif state != "missing":
+        target.write_bytes(b"original evidence")
+    (root / "alias").symlink_to(target)
+    payload = {
+        **_payload(),
+        "evidence": [
+            {"kind": kind, "text": "observed failure", "path": path}
+            for kind, path in (
+                ("file", "evidence.txt"),
+                ("oracle", "./evidence.txt"),
+                ("log", "alias"),
+                ("file", "other.txt"),
+            )
+        ],
+    }
+    original = canonical_json_bytes(payload)
+    read = Path.read_bytes
+    reads = []
+    unreadable = state == "unreadable"
+
+    def read_evidence(path):
+        reads.append(path)
+        if path == target and unreadable:
+            raise PermissionError("injected unreadable evidence")
+        return read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", read_evidence)
+
+    for attempt, (current_state, content) in enumerate(
+        ((state, b"original evidence"), ("hashed", b"updated evidence"))
+    ):
+        if attempt:
+            if state == "not_file":
+                target.rmdir()
+            target.write_bytes(content)
+            unreadable = False
+        reads.clear()
+
+        masked, fingerprints, redactions = validate_agent_payload(payload, root)
+
+        assert masked == payload
+        assert redactions == 0
+        expected_target = {
+            "normalized_path": str(target),
+            "state": current_state,
+            "sha256": sha256_bytes(content) if current_state == "hashed" else None,
+        }
+        assert fingerprints == [
+            {"evidence_index": index, **expected_target} for index in range(3)
+        ] + [
+            {
+                "evidence_index": 3,
+                "normalized_path": str(other),
+                "state": "hashed",
+                "sha256": sha256_bytes(b"other evidence"),
+            }
+        ]
+        assert reads.count(target) == int(current_state in {"hashed", "unreadable"})
+        assert reads.count(other) == 1
+        assert canonical_json_bytes(payload) == original
 
 
 def test_agent_payload_without_path_evidence_skips_repository_resolution(

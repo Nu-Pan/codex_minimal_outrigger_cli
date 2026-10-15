@@ -527,8 +527,9 @@ def _normalized_evidence_path(repo: Path, raw_path: str) -> Path:
     return normalized
 
 
-def _fingerprint(path: Path, evidence_index: int) -> dict[str, object]:
+def _fingerprint(path: Path) -> dict[str, object]:
     """evidence file の現在 fingerprint と取得状態を返す。"""
+    # 内容を取得できない場合も、その時点の状態を保持する。
     state = "missing"
     digest: str | None = None
     try:
@@ -543,7 +544,6 @@ def _fingerprint(path: Path, evidence_index: int) -> dict[str, object]:
         state = "unreadable"
         digest = None
     return {
-        "evidence_index": evidence_index,
         "normalized_path": str(path),
         "state": state,
         "sha256": digest,
@@ -631,8 +631,9 @@ def validate_agent_payload(
             "suspected_secret", "required evidence has no meaning after redaction"
         )
 
-    # path evidence だけを正規化し、payload 本文と fingerprint の両方へ反映する。
+    # path は毎回再検査し、同じ正規化先の内容取得だけ submission 内で共有する。
     fingerprints: list[dict[str, object]] = []
+    fingerprints_by_path: dict[Path, dict[str, object]] = {}
     for index, item in enumerate(masked_evidence):
         if not isinstance(item, dict):
             continue
@@ -642,7 +643,11 @@ def validate_agent_payload(
         if not isinstance(raw_path, str):
             raise FeedbackRejected("evidence_empty", "path evidence requires a path")
         normalized = _normalized_evidence_path(repo, raw_path)
-        fingerprints.append(_fingerprint(normalized, index))
+        if normalized not in fingerprints_by_path:
+            fingerprints_by_path[normalized] = _fingerprint(normalized)
+        fingerprints.append(
+            {"evidence_index": index, **fingerprints_by_path[normalized]}
+        )
     return masked_value, fingerprints, redaction_count
 
 
