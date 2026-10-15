@@ -797,6 +797,12 @@
     "last_investigated_sha256": "70bb84175bd7c41cba3f49f607ccb211a10f903d26f66d39d0368bd4e1c7e251",
     "last_investigated_at": "2026-10-12_05-58-10_285"
   },
+  "src/commons/runtime_codex_session.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
+  },
   "src/commons/runtime_codex_tui.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
@@ -1366,6 +1372,12 @@
     "last_investigation_result": "findings",
     "last_investigated_sha256": "dc5d9e3c9b59db483e87c9e212597fbeb5294c21cae3f7d828245663d3b74036",
     "last_investigated_at": "2026-10-13_06-10-25_327"
+  },
+  "test/test_codex_session.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "test/test_doctor_cli.py": {
     "investigation_required": true,
