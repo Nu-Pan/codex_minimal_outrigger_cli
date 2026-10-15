@@ -215,13 +215,11 @@ def _has_symlink_component(path: Path) -> bool:
     """path の lexical component に symlink が含まれるかを返す。"""
     # resolve せず祖先を調べ、存在しない子の親 symlink も拒否する。
     current = path.absolute()
-    while True:
-        parent = current.parent
-        if current == parent:
-            return False
+    while current.name:
         if current.is_symlink():
             return True
-        current = parent
+        current = current.parent
+    return False
 
 
 def _atomic_create(path: Path, content: bytes) -> bool:
