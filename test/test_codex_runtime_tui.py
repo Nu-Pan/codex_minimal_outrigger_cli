@@ -873,22 +873,14 @@ def test_notification_failure_preserves_tui_execution(directory, monkeypatch, fa
     callback = Mock(command=["notification-helper"])
     if failure == "cleanup":
         callback.close.side_effect = OSError("cleanup failed")
+    if failure == "configure":
+        # 実際の TOML 符号化を失敗させ、通知なしの設定へ戻れることを確かめる。
+        callback.command = [None]
     if failure == "prepare":
         creator = Mock(side_effect=OSError("notification context failed"))
     else:
         creator = Mock(return_value=None if failure == "unavailable" else callback)
     monkeypatch.setattr(tui_module, "create_tui_notification_callback", creator)
-    if failure == "configure":
-        prepare = tui_module.prepare_codex_override_args
-
-        def prepare_without_notification(*args, **kwargs):
-            if kwargs.get("notification_command"):
-                raise ValueError("notification setting failed")
-            return prepare(*args, **kwargs)
-
-        monkeypatch.setattr(
-            tui_module, "prepare_codex_override_args", prepare_without_notification
-        )
     if failure == "send":
         monkeypatch.setattr(
             tui_module,
@@ -905,6 +897,8 @@ def test_notification_failure_preserves_tui_execution(directory, monkeypatch, fa
     assert len(calls) == 1
     if failure in {"prepare", "configure", "unavailable"}:
         assert codex_override_config(calls[0]["argv"])["notify"] == []
+    else:
+        assert codex_override_config(calls[0]["argv"])["notify"] == callback.command
     if failure not in {"prepare", "unavailable"}:
         callback.close.assert_called_once()
 
