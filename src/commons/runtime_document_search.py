@@ -418,16 +418,22 @@ class _EmbeddingCache:
         self.connection.close()
 
     def get(self, digest: str) -> tuple[bytes, str] | None:
-        # 不正な保存結果は公開・再利用せず、不足分として再生成する。
+        # 単一入力片も一覧取得と同じ検証を通して再利用する。
         row = self.connection.execute(
             "select embedding, producer_worktree from embeddings where excerpt_sha256 = ?",
             (digest,),
         ).fetchone()
         if row is None:
             return None
+        return self._validated_entry(digest, row[0], row[1])
+
+    def _validated_entry(
+        self, digest: str, embedding: object, producer: object
+    ) -> tuple[bytes, str] | None:
+        # 不正な保存結果は公開・再利用せず、不足分として再生成する。
         try:
-            vector = _checked_cached_vector(row[0])
-            if not isinstance(row[1], str) or len(row[1]) != 64:
+            vector = _checked_cached_vector(embedding)
+            if not isinstance(producer, str) or len(producer) != 64:
                 raise SearchError("SYNC_FAILED", "embedding producer is invalid")
         except SearchError:
             with self.connection:
@@ -435,7 +441,7 @@ class _EmbeddingCache:
                     "delete from embeddings where excerpt_sha256 = ?", (digest,)
                 )
             return None
-        return vector, row[1]
+        return vector, producer
 
     def save(self, digest: str, vector: bytes, producer: str) -> bool:
         # 先行処理の生成元は後続 worktree での保存・再利用によって置き換えない。
@@ -449,11 +455,12 @@ class _EmbeddingCache:
     def hashes(self, check: Callable[[], None]) -> set[str]:
         # ロック取得後の保存結果を確認し、待機前の不足判定を使わない。
         hashes = set()
-        for (digest,) in self.connection.execute(
-            "select excerpt_sha256 from embeddings"
+        # 検証に必要な列も一度に読み、入力片ごとの再問い合わせを避ける。
+        for digest, embedding, producer in self.connection.execute(
+            "select excerpt_sha256, embedding, producer_worktree from embeddings"
         ):
             check()
-            if self.get(digest) is not None:
+            if self._validated_entry(digest, embedding, producer) is not None:
                 hashes.add(digest)
         return hashes
 

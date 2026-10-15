@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+import struct
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
@@ -18,6 +19,7 @@ from test_document_search import (
 from commons.runtime_document_search import (
     DocumentSearch,
     SearchError,
+    _EmbeddingCache,
 )
 from commons.runtime_document_search_observation import SearchObservation
 from commons.runtime_document_search_types import SEARCH_MATERIALS
@@ -69,6 +71,48 @@ def _worktree(repository, path, branch=None):
     # _repo_with_docs の commit 済み ignore 規則を使い、修復を重ねない。
     run_git(repository, "worktree", "add", *args, str(path), "HEAD")
     return path
+
+
+def test_cache_lookup_and_listing_discard_corrupt_entries(tmp_path):
+    """単一取得と一覧取得で、破損結果を除外し前後の正常な結果を保持する。"""
+    vector = struct.pack("<f", 1.0) + bytes(
+        4 * (SEARCH_MATERIALS.embedding_dimensions - 1)
+    )
+    producer = "a" * 64
+    entries = [
+        (vector, producer),
+        ("not a blob", producer),
+        (b"short", producer),
+        (struct.pack("<f", float("nan")) + vector[4:], producer),
+        (struct.pack("<f", float("inf")) + vector[4:], producer),
+        (bytes(len(vector)), producer),
+        (vector, "short"),
+        (vector, b"a" * 64),
+        (vector, "b" * 64),
+    ]
+    rows = [(f"{index:064x}", *entry) for index, entry in enumerate(entries)]
+    valid = {rows[0][0], rows[-1][0]}
+    with closing(_EmbeddingCache(tmp_path / "cache.sqlite3")) as cache:
+        # 同じ破損条件を両入口へ渡し、一覧の途中削除で後続を見落とす回帰も検出する。
+        for lookup in ("single", "listing"):
+            with cache.connection:
+                cache.connection.executemany(
+                    "insert or replace into embeddings values(?, ?, ?)", rows
+                )
+            if lookup == "single":
+                found = {digest for digest, *_ in rows if cache.get(digest) is not None}
+            else:
+                found = cache.hashes(lambda: None)
+            assert found == valid
+            assert {
+                digest
+                for (digest,) in cache.connection.execute(
+                    "select excerpt_sha256 from embeddings"
+                )
+            } == valid
+            assert cache.get(rows[0][0]) == (vector, producer)
+            assert cache.get(rows[-1][0]) == (vector, "b" * 64)
+            assert cache.get("missing") is None
 
 
 def test_new_run_uses_stale_repository_cache_and_current_locations(
