@@ -1688,11 +1688,11 @@ def test_refactor_state_refresh_rejects_unexpected_processing_unit_changes(
 
 
 def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
-    ready_content_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor agent が cmoc 管理 file を変更した場合は commit しない。"""
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = refactor_after_preprocess
     managed_path = ".cmoc/gt/realization/refactor/state.json"
 
     def fake_refactor(
@@ -1730,6 +1730,7 @@ def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
     )
 
     assert result.exit_code == 1
+    assert "refactor agent が realization file 以外を変更しました" in result.output
     assert _state(state_path)["run"]["state"] == "error"
     parts = _state(state_path)["run"]["branch"].split("/")
     run_worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
@@ -1738,14 +1739,15 @@ def test_refactor_rejects_agent_changes_to_cmoc_managed_files(
     assert restored.exists() == original.exists()
     if original.exists():
         assert restored.read_text() == original.read_text()
+    assert not worktree_change_paths(run_worktree)
 
 
 def test_refactor_rejects_unreported_changed_paths_despite_evidences(
-    ready_content_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """evidences でなく changed_paths の申告漏れにより差分を拒否する。"""
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = refactor_after_preprocess
 
     def fake_refactor(
         parameter: AgentCallParameter,
@@ -1820,6 +1822,7 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
     worktree = root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
     assert (worktree / "README.md").read_text() == "# repo\n"
     assert not (worktree / "unattributed.py").exists()
+    assert not worktree_change_paths(worktree)
 
 
 def test_refactor_changed_path_postcondition_reports_mismatch(
@@ -1879,14 +1882,14 @@ def test_refactor_changed_path_postcondition_uses_deduplicated_union(
 
 
 def test_refactor_rejects_agent_commit_and_rolls_back_unit(
-    ready_content_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = refactor_after_preprocess
 
     def fake_refactor(
         parameter: AgentCallParameter,
