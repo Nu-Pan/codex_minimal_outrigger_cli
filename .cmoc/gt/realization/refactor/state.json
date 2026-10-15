@@ -1183,9 +1183,9 @@
   },
   "src/sub_commands/resume.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "863e2936aa6c4703f2053930ea867134cd2c9dd9b13935f2411895cd10e551da",
+    "last_investigated_at": "2026-10-16_02-04-16_986"
   },
   "src/sub_commands/run/__init__.py": {
     "investigation_required": true,

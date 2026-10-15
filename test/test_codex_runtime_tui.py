@@ -113,9 +113,10 @@ def fake_tui(monkeypatch, *, returncode=0, spawn_error=None, on_call=None):
         if spawn_error is not None:
             raise spawn_error
         kwargs["process_started_callback"]()
-        calls.append({"argv": argv, "env": kwargs["env"], "cwd": kwargs["cwd"]})
+        call = {"argv": argv, "env": kwargs["env"], "cwd": kwargs["cwd"]}
+        calls.append(call)
         if on_call is not None:
-            on_call(calls[-1])
+            on_call(call)
         return subprocess.CompletedProcess(argv, returncode, None, None)
 
     monkeypatch.setattr(tui_module, "run_codex_subprocess", run)
@@ -136,7 +137,9 @@ def fake_initial(
     def run(argv, **kwargs):
         kwargs["process_started_callback"]()
         prompt = kwargs["stdin"].read()
-        calls.append({"argv": argv, "prompt": prompt, "env": kwargs["env"]})
+        # 並行する call の追記後も、この呼び出し自身を callback へ渡す。
+        call = {"argv": argv, "prompt": prompt, "env": kwargs["env"]}
+        calls.append(call)
         stream = stdout
         if unique_sessions:
             source = json.loads(kwargs["env"][EDITOR_INPUT_SOURCE_ENV])
@@ -151,7 +154,7 @@ def fake_initial(
         if output is not None:
             Path(codex_arg_value(argv, "--output-last-message")).write_text(output)
         if on_call is not None:
-            on_call(calls[-1])
+            on_call(call)
         return subprocess.CompletedProcess(argv, returncode, None, None)
 
     monkeypatch.setattr(exec_module, "run_codex_subprocess", run)
