@@ -9,14 +9,13 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 「realization file を扱う判断基準」
 """
 
+import codecs
 import errno
 import fcntl
-import hashlib
 import json
 import os
 import re
 import select
-import shlex
 import signal
 import subprocess
 import sys
@@ -55,8 +54,6 @@ from .runtime_paths import schema_store_dir
 
 RUN_PROCESS_TRACKING_ENV = "CMOC_RUN_PROCESS_ID_PATH"
 _active_run_process_tracking_path: Path | None = None
-_TUI_SESSION_START_HOOK_KEY = "/<session-flags>/config.toml:session_start:0:0"
-_TUI_SESSION_START_HOOK_TIMEOUT_SEC = 10
 
 
 def _first_symlink_component(path: Path) -> Path | None:
@@ -612,102 +609,6 @@ def _config_override(key: str, toml_value: str) -> list[str]:
     return ["--config", f"{key}={toml_value}"]
 
 
-def _codex_session_start_hook_trusted_hash(command: str) -> str:
-    """検証済み Codex の SessionStart command identity を fingerprint 化する。"""
-    # Codex 0.151.0 / 78c290807ce710180111df227df3b7a4fe845452 と
-    # 0.153.4 / 3d2ee51ca2d5db578f328aa75e20aa22c0197c9a、
-    # 0.154.0 / 6b9826e3aa83b1a5947db50f4332cb9c65f1b340 の hook discovery と
-    # canonical JSON fingerprint に合わせる。interface が変わる version は
-    # 呼び出し側の probe で無効化し、legacy notify へは戻さない。
-    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/hooks/src/engine/discovery.rs#L633-L778
-    # https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/hooks/src/engine/discovery.rs#L733-L779
-    # https://github.com/openai/codex/blob/78c290807ce710180111df227df3b7a4fe845452/codex-rs/config/src/fingerprint.rs#L47-L75
-    # 0.154.0 も同じ正規化、root SessionStart、turn 完了後の notify を使う。
-    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/hooks/src/engine/discovery.rs#L766-L809
-    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/config/src/fingerprint.rs#L50-L79
-    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/hook_runtime.rs#L124-L166
-    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/session/turn.rs#L571-L611
-    # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/hooks/src/legacy_notify.rs#L13-L69
-    # 0.155.1 も同じ hash と root SessionStart、turn 完了時の callback を使う。
-    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/hooks/src/engine/discovery.rs#L734-L758
-    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/core/src/hook_runtime.rs#L126-L161
-    # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/core/src/session/turn.rs#L638-L679
-    # 0.156.1 の session-flags、hash と legacy notify payload も同じ契約。
-    # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/hooks/src/engine/discovery.rs#L378-L410
-    # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/hooks/src/engine/discovery.rs#L733-L775
-    # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/config/src/fingerprint.rs#L51-L79
-    # https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/codex-rs/hooks/src/legacy_notify.rs#L11-L38
-    # 0.157.1 も同じ session-flags、hash、turn 完了時の notify 契約を使う。
-    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/engine/discovery.rs#L402-L431
-    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/engine/discovery.rs#L764-L790
-    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/config/src/fingerprint.rs#L50-L81
-    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/core/src/session/turn.rs#L640-L702
-    # https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/hooks/src/legacy_notify.rs#L11-L72
-    # 0.158.0 も同じ SessionFlags と hash、root SessionStart、turn 完了時の notify を使う。
-    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/hooks/src/engine/discovery.rs#L389-L397
-    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/hooks/src/engine/discovery.rs#L733-L757
-    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/core/src/hook_runtime.rs#L121-L164
-    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/core/src/session/turn.rs#L615-L674
-    # https://github.com/openai/codex/blob/064c6b8c737f5b41d171fdda80bd9ef10ad06eb3/codex-rs/hooks/src/legacy_notify.rs#L26-L64
-    # 0.159.2 も同じ trust identity、root SessionStart、turn 完了後の notify を使う。
-    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/hooks/src/engine/discovery.rs#L775-L791
-    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/config/src/fingerprint.rs#L54-L81
-    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/core/src/hook_runtime.rs#L126-L164
-    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/core/src/session/turn.rs#L692-L706
-    # https://github.com/openai/codex/blob/ff6aec96948b70d94983af2641a6b67c94faeff5/codex-rs/hooks/src/legacy_notify.rs#L13-L71
-    identity = {
-        "event_name": "session_start",
-        "hooks": [
-            {
-                "type": "command",
-                "command": command,
-                "timeout": _TUI_SESSION_START_HOOK_TIMEOUT_SEC,
-                "async": False,
-            }
-        ],
-    }
-    serialized = json.dumps(
-        identity,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-    return f"sha256:{hashlib.sha256(serialized).hexdigest()}"
-
-
-def _tui_session_start_hook_override_args(
-    session_start_command: Sequence[str] | None,
-) -> list[str]:
-    """hooks を有効化し、root session ID を記録する設定を返す。"""
-    if not session_start_command:
-        return []
-    command = shlex.join(session_start_command)
-    # root は SessionStart、thread-spawned child は SubagentStart に分離される。
-    # user/managed config の features.hooks=false に依存せず、callback と同じ
-    # invocation で hooks feature を有効化する。--enable は対象版の専用引数。
-    # https://github.com/openai/codex/blob/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/core/src/hook_runtime.rs#L109-L160
-    handler: dict[str, JsonTomlValue] = {
-        "type": "command",
-        "command": command,
-        "timeout": _TUI_SESSION_START_HOOK_TIMEOUT_SEC,
-        "async": False,
-    }
-    hooks: dict[str, JsonTomlValue] = {
-        "SessionStart": [{"hooks": [handler]}],
-        "state": {
-            _TUI_SESSION_START_HOOK_KEY: {
-                "enabled": True,
-                "trusted_hash": _codex_session_start_hook_trusted_hash(command),
-            }
-        },
-    }
-    return [
-        "--enable",
-        "hooks",
-        *_config_override("hooks", _toml_value(hooks)),
-    ]
-
-
 def _model_provider_override_args(
     provider_id: str,
     config: CmocConfig,
@@ -934,7 +835,6 @@ def build_codex_override_args(
     *,
     path_context: AgentCallPathContext | None = None,
     notification_command: Sequence[str] | None = None,
-    session_start_command: Sequence[str] | None = None,
 ) -> list[str]:
     """agent call の直接設定を sandbox と config argv にする。"""
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
@@ -948,10 +848,9 @@ def build_codex_override_args(
             ],
             f"agent call kind: {parameter.agent_call_kind!r}",
         ) from exc
-    callback_enabled = bool(notification_command and session_start_command)
-    notification_argv: list[JsonTomlValue] = []
-    if callback_enabled:
-        notification_argv.extend(notification_command or ())
+    # 0.162.1 の notify は argv 配列で設定され、空配列では callback を起動しない。
+    # https://github.com/openai/codex/blob/092d3acd6bec3e3a14bdc7e7a2810ab628ab759d/codex-rs/core/src/config/mod.rs#L753-L773
+    notification_argv: list[JsonTomlValue] = list(notification_command or ())
     args = [
         "--ask-for-approval",
         "on-request",
@@ -966,12 +865,9 @@ def build_codex_override_args(
             "model_reasoning_effort", _toml_value(call_config.reasoning_effort)
         ),
         # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-        # legacy callback は root SessionStart が記録した session ID で絞り込む。
+        # 固定した session ID は通知専用処理へ渡し、TUI の状態監視に使わない。
         *_config_override("notify", _toml_value(notification_argv)),
         *_config_override("tui.notifications", "false"),
-        *_tui_session_start_hook_override_args(
-            session_start_command if callback_enabled else None
-        ),
         *_feedback_mcp_override_args(parameter.enable_feedback_reporting),
         *document_search_mcp_override_args(
             parameter, config, path_context=path_context
@@ -1023,7 +919,6 @@ def prepare_codex_override_args(
     *,
     path_context: AgentCallPathContext | None = None,
     notification_command: Sequence[str] | None = None,
-    session_start_command: Sequence[str] | None = None,
 ) -> list[str]:
     """CmocConfig と任意の invocation-local callback から Codex argv を返す。"""
     resolved_config = config or CmocConfig()
@@ -1032,7 +927,6 @@ def prepare_codex_override_args(
         resolved_config,
         path_context=path_context,
         notification_command=notification_command,
-        session_start_command=session_start_command,
     )
 
 
@@ -1142,6 +1036,7 @@ def run_codex_subprocess(
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
     cancellation = kwargs.pop("cancellation", None)
+    stdout_line_callback = kwargs.get("stdout_line_callback")
     if cancellation is not None and cancellation.is_set():
         raise KeyboardInterrupt
     try:
@@ -1161,6 +1056,7 @@ def run_codex_subprocess(
             )
         if (
             process_started_callback is not None
+            or stdout_line_callback is not None
             or cancellation is not None
             or kwargs.get("timeout") is not None
         ):
@@ -1192,6 +1088,11 @@ def _run_subprocess_with_started_callback(
     capture_output = kwargs.pop("capture_output", False)
     check = kwargs.pop("check", False)
     timeout = kwargs.pop("timeout", None)
+    stdout_line_callback = kwargs.pop("stdout_line_callback", None)
+    stdout_destination = None
+    if stdout_line_callback is not None:
+        stdout_destination = kwargs["stdout"]
+        kwargs["stdout"] = subprocess.PIPE
     if input_data is not None:
         if kwargs.get("stdin") is not None:
             raise ValueError("stdin and input arguments may not both be used.")
@@ -1214,7 +1115,12 @@ def _run_subprocess_with_started_callback(
             if process_started_callback is not None:
                 process_started_callback()
             stdout, stderr = _communicate_codex_process(
-                process, input_data, timeout, cancellation
+                process,
+                input_data,
+                timeout,
+                cancellation,
+                stdout_line_callback=stdout_line_callback,
+                stdout_destination=stdout_destination,
             )
         except BaseException as exc:
             if kwargs.get("start_new_session"):
@@ -1260,7 +1166,49 @@ def _communicate_codex_process(
     input_data: Any,
     timeout: float | None,
     cancellation: threading.Event | None,
+    *,
+    stdout_line_callback: Callable[[str], None] | None = None,
+    stdout_destination: Any = None,
 ) -> tuple[Any, Any]:
+    # 初回 exec の UUID は process 終了を待たず保存・確保する。TUI は監視しない。
+    if stdout_line_callback is not None:
+        assert input_data is None and process.stdout is not None
+        deadline = time.monotonic() + timeout if timeout is not None else None
+        decoder = codecs.getincrementaldecoder("utf-8")()
+        pending = ""
+        while True:
+            if cancellation is not None and cancellation.is_set():
+                raise KeyboardInterrupt
+            if deadline is not None and time.monotonic() >= deadline:
+                assert timeout is not None
+                raise subprocess.TimeoutExpired(process.args, timeout)
+            readable, _, _ = select.select([process.stdout], [], [], 0.1)
+            if not readable:
+                continue
+            chunk = os.read(process.stdout.fileno(), 65536)
+            text = decoder.decode(chunk, final=not chunk)
+            stdout_destination.write(text)
+            stdout_destination.flush()
+            pending += text
+            while "\n" in pending:
+                line, pending = pending.split("\n", 1)
+                stdout_line_callback(line)
+            if not chunk:
+                if pending:
+                    stdout_line_callback(pending)
+                break
+        # stdout の EOF だけで process 終了を代用しない。
+        while process.poll() is None:
+            if cancellation is not None and cancellation.is_set():
+                raise KeyboardInterrupt
+            if deadline is not None and time.monotonic() >= deadline:
+                assert timeout is not None
+                raise subprocess.TimeoutExpired(process.args, timeout)
+            try:
+                process.wait(timeout=0.1)
+            except subprocess.TimeoutExpired:
+                continue
+        return None, None
     # timeout は probe 一回の期限であり、回復待ち全体の期限ではない。
     if timeout is None and cancellation is None:
         return process.communicate(input_data)
@@ -1325,6 +1273,11 @@ def run_tracked_codex_subprocess(
     input_data = kwargs.pop("input", None)
     capture_output = kwargs.pop("capture_output", False)
     check = kwargs.pop("check", False)
+    stdout_line_callback = kwargs.pop("stdout_line_callback", None)
+    stdout_destination = None
+    if stdout_line_callback is not None:
+        stdout_destination = kwargs["stdout"]
+        kwargs["stdout"] = subprocess.PIPE
     if input_data is not None:
         if kwargs.get("stdin") is not None:
             raise ValueError("stdin and input arguments may not both be used.")
@@ -1448,14 +1401,23 @@ def run_tracked_codex_subprocess(
     try:
         try:
             stdout, stderr = _communicate_codex_process(
-                process, input_data, timeout, cancellation
+                process,
+                input_data,
+                timeout,
+                cancellation,
+                stdout_line_callback=stdout_line_callback,
+                stdout_destination=stdout_destination,
             )
-        except (subprocess.TimeoutExpired, KeyboardInterrupt):
-            if timeout is None and cancellation is None:
+        except BaseException as exc:
+            if stdout_line_callback is None and (
+                not isinstance(exc, (subprocess.TimeoutExpired, KeyboardInterrupt))
+                or (timeout is None and cancellation is None)
+            ):
                 # 通常の tracked call の終了処理は workload の責務に保つ。
                 raise
             _kill_codex_process_group(process)
             process.communicate()
+            setattr(exc, "cmoc_process_returncode", process.returncode)
             raise
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
         if check and result.returncode:

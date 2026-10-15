@@ -5,11 +5,12 @@ import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from contextvars import copy_context
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import Mock
+from uuid import NAMESPACE_URL, uuid5
 
 import oracle.other.path_model as path_model_module
 import pytest
@@ -28,6 +29,7 @@ import commons.runtime_codex_exec as exec_module
 import commons.runtime_codex_tui as tui_module
 from commons.runtime_codex_profile import process_group_has_running_member
 from commons.runtime_codex_recovery import install_recovery_interruption
+from commons.runtime_codex_session import CodexSessionLease
 from commons.runtime_config import write_config
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
@@ -59,7 +61,7 @@ BUILDERS = [
 
 
 @pytest.fixture
-def directory(tmp_path, monkeypatch):
+def directory(tmp_path, monkeypatch, toast_clock):
     root = tmp_path / "repo"
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
@@ -73,6 +75,7 @@ def directory(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", lambda _root: None)
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    fake_tui(monkeypatch)
     return root
 
 
@@ -90,8 +93,38 @@ def events(logger):
     return [json.loads(line) for line in logger.path.read_text().splitlines()]
 
 
+def fake_tui(monkeypatch, *, returncode=0, spawn_error=None, on_call=None):
+    calls = []
+
+    def run(argv, **kwargs):
+        assert not {
+            "stdin",
+            "input",
+            "stdout",
+            "stderr",
+            "capture_output",
+            "stdout_line_callback",
+        }.intersection(kwargs)
+        if spawn_error is not None:
+            raise spawn_error
+        kwargs["process_started_callback"]()
+        calls.append({"argv": argv, "env": kwargs["env"], "cwd": kwargs["cwd"]})
+        if on_call is not None:
+            on_call(calls[-1])
+        return subprocess.CompletedProcess(argv, returncode, None, None)
+
+    monkeypatch.setattr(tui_module, "run_codex_subprocess", run)
+    return calls
+
+
 def fake_initial(
-    monkeypatch, *, stdout=SUCCESS, returncode=0, output="initial answer", on_call=None
+    monkeypatch,
+    *,
+    stdout=SUCCESS,
+    returncode=0,
+    output="initial answer",
+    on_call=None,
+    unique_sessions=False,
 ):
     calls = []
 
@@ -99,7 +132,16 @@ def fake_initial(
         kwargs["process_started_callback"]()
         prompt = kwargs["stdin"].read()
         calls.append({"argv": argv, "prompt": prompt, "env": kwargs["env"]})
-        kwargs["stdout"].write(stdout)
+        stream = stdout
+        if unique_sessions:
+            source = json.loads(kwargs["env"][EDITOR_INPUT_SOURCE_ENV])
+            stream = stdout.replace(
+                SESSION_ID, str(uuid5(NAMESPACE_URL, source["codex_call_id"]))
+            )
+        kwargs["stdout"].write(stream)
+        kwargs["stdout"].flush()
+        for line in stream.splitlines():
+            kwargs["stdout_line_callback"](line)
         kwargs["stderr"].write("diagnostic only")
         if output is not None:
             Path(codex_arg_value(argv, "--output-last-message")).write_text(output)
@@ -154,11 +196,14 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
             )
 
         calls = fake_initial(monkeypatch, on_call=observe)
-        with pytest.raises(CmocError, match="会話追跡と入力待ち確認"):
-            tui_module.run_codex_tui(parameter, root=directory, config=CmocConfig())
+        result = tui_module.run_codex_tui(
+            parameter, root=directory, config=CmocConfig()
+        )
+        assert result.returncode == 0
         initial = [row for row in events(logger) if row["event"] == "tui_initial_exec"]
         assert [row["process_state"] for row in initial] == [
             "prepared",
+            "started",
             "started",
             "exited",
         ]
@@ -171,8 +216,9 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
         assert prepared["agent_call_id"] != initial[-1]["agent_call_id"]
         assert prepared["codex_call_id"] != initial[-1]["codex_call_id"]
         assert prepared["execution_id"] == logger.execution_id
-        assert prepared["requested_codex_session_id"] == SESSION_ID
-        assert prepared["codex_session_id"] is None
+        assert prepared["fixed_session_id"] == SESSION_ID
+        assert "codex_session_id" not in prepared
+        assert "conversation_state" not in prepared
         assert prepared["prompt_log_path"] is None
         resume_call = json.loads(Path(prepared["call_log_path"]).read_text())
         assert resume_call["argv"][-2:] == ["resume", SESSION_ID]
@@ -340,6 +386,8 @@ def test_accepted_cancellation_wins_over_success(directory, monkeypatch):
     calls = fake_initial(monkeypatch, on_call=cancel)
     transition = Mock()
     monkeypatch.setattr(tui_module, "_run_codex_tui_process", transition)
+    notify = Mock()
+    monkeypatch.setattr(tui_module, "notify_terminal_result", notify)
     with call_log(directory) as logger:
         with pytest.raises(TuiStartupCancelled):
             tui_module.run_codex_tui(
@@ -355,6 +403,7 @@ def test_accepted_cancellation_wins_over_success(directory, monkeypatch):
         assert not any(row.get("phase") == "resume_prepared" for row in events(logger))
     assert len(calls) == 1
     transition.assert_not_called()
+    notify.assert_not_called()
 
 
 def test_cancel_stops_fake_process_and_preserves_partial_logs(
@@ -423,16 +472,18 @@ def failed_initial_success(
     directory, monkeypatch, builder=build_tui_launch_tui_parameter, command="tui"
 ):
     calls = fake_initial(monkeypatch)
-    with pytest.raises(typer.Exit):
-        runtime_cli.run_cli_subcommand(
-            lambda: tui_module.run_codex_tui(
-                builder("initial work"), root=directory, config=CmocConfig()
-            ),
-            command_name=command,
-            command_argv=["cmoc", *command.split()],
-            doctor_preprocess=False,
-            tui_process=True,
-        )
+    with monkeypatch.context() as patch:
+        fake_tui(patch, spawn_error=OSError("failed to spawn"))
+        with pytest.raises(typer.Exit):
+            runtime_cli.run_cli_subcommand(
+                lambda: tui_module.run_codex_tui(
+                    builder("initial work"), root=directory, config=CmocConfig()
+                ),
+                command_name=command,
+                command_argv=["cmoc", *command.split()],
+                doctor_preprocess=False,
+                tui_process=True,
+            )
     [source] = list(logs_dir(directory).glob("*.jsonl"))
     return calls, source
 
@@ -451,14 +502,13 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
 
     def resume(execution_id):
         existing = set(logs_dir(directory).glob("*.jsonl"))
-        with pytest.raises(typer.Exit):
-            runtime_cli.run_cli_subcommand(
-                lambda: tui_module.resume_codex_tui(execution_id, directory),
-                command_name="resume",
-                command_argv=["cmoc", "resume", execution_id],
-                doctor_preprocess=False,
-                tui_process=True,
-            )
+        runtime_cli.run_cli_subcommand(
+            lambda: tui_module.resume_codex_tui(execution_id, directory).returncode,
+            command_name="resume",
+            command_argv=["cmoc", "resume", execution_id],
+            doctor_preprocess=False,
+            tui_process=True,
+        )
         [current] = set(logs_dir(directory).glob("*.jsonl")) - existing
         rows = [json.loads(line) for line in current.read_text().splitlines()]
         prepared = next(row for row in rows if row["event"] == "tui_process_prepared")
@@ -483,6 +533,16 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
         patch.setattr(Path, "read_text", no_chain)
         resume(resumed.stem)
     assert source.read_text() == source_text
+    # 初回成功の根拠は今回のログに引き継がれ、再開元の保存物を再読しない。
+    initial = next(
+        row
+        for row in map(json.loads, source_text.splitlines())
+        if row.get("event") == "tui_initial_exec"
+    )
+    for path in Path(initial["call_log_path"]).parent.iterdir():
+        path.unlink()
+    source.unlink()
+    resume(resumed.stem)
     assert len(calls) == 1
 
 
@@ -493,12 +553,15 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
         "failed",
         "cancelled",
         "unknown_exit",
-        "unknown_conversation",
+        "unknown_session",
         "inconsistent_kind",
         "missing_output",
         "bad_uuid",
         "home_changed",
         "broken_json",
+        "initial_exit_unknown",
+        "missing_tui_call",
+        "different_requested_session",
     ],
 )
 def test_public_resume_rejects_ineligible_source(
@@ -513,8 +576,8 @@ def test_public_resume_rejects_ineligible_source(
         record["initial_status"] = condition
     elif condition == "unknown_exit":
         record["tui_process_state"] = "unknown"
-    elif condition == "unknown_conversation":
-        record["tui_conversation_state"] = "unknown"
+    elif condition == "unknown_session":
+        record["fixed_session_id"] = None
     elif condition == "inconsistent_kind":
         record["tui_kind"] = "oracle_investigation"
     elif condition == "missing_output":
@@ -525,6 +588,18 @@ def test_public_resume_rejects_ineligible_source(
         home = tmp_path / "other_home"
         home.mkdir()
         monkeypatch.setenv("CODEX_HOME", str(home))
+    elif condition == "initial_exit_unknown":
+        initial = [row for row in rows if row["event"] == "tui_initial_exec"][-1]
+        initial["process_state"] = "unknown"
+    elif condition in {"missing_tui_call", "different_requested_session"}:
+        prepared = next(row for row in rows if row["event"] == "tui_process_prepared")
+        path = Path(prepared["call_log_path"])
+        if condition == "missing_tui_call":
+            path.unlink()
+        else:
+            call = json.loads(path.read_text())
+            call["argv"][-1] = "019efe07-4886-7423-b252-625febbe31ec"
+            path.write_text(json.dumps(call))
     source.write_text(
         "invalid JSON\n"
         if condition == "broken_json"
@@ -593,7 +668,9 @@ def test_initial_completion_waits_for_process_exit(directory, tmp_path, monkeypa
         )
         try:
             deadline = time.monotonic() + 5
-            while not ready.exists():
+            while not ready.exists() or not any(
+                row.get("codex_session_id") == SESSION_ID for row in events(logger)
+            ):
                 if future.done() or time.monotonic() >= deadline:
                     pytest.fail("fake initial exec did not reach terminal information")
                 time.sleep(0.01)
@@ -601,9 +678,13 @@ def test_initial_completion_waits_for_process_exit(directory, tmp_path, monkeypa
             assert not any(
                 row.get("phase") == "resume_prepared" for row in events(logger)
             )
+            with closing(
+                CodexSessionLease(tui_module.resolve_codex_home(directory))
+            ) as contender:
+                with pytest.raises(CmocError, match="使用中"):
+                    contender.acquire(SESSION_ID)
             release.touch()
-            with pytest.raises(CmocError, match="会話追跡と入力待ち確認"):
-                future.result(timeout=5)
+            assert future.result(timeout=5).returncode == 0
             rows = events(logger)
             initial_exited = next(
                 i
@@ -670,15 +751,17 @@ def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch
         finally:
             target.close()
 
-    calls = fake_initial(monkeypatch, on_call=handoff)
+    calls = fake_initial(monkeypatch, on_call=handoff, unique_sessions=True)
 
     def launch(item):
         builder, command = item
         with call_log(directory, command) as logger:
-            with pytest.raises(CmocError, match="会話追跡と入力待ち確認"):
+            assert (
                 tui_module.run_codex_tui(
                     builder("request"), root=directory, config=CmocConfig()
-                )
+                ).returncode
+                == 0
+            )
             source = observed[command]
             initial = next(
                 row for row in events(logger) if row["event"] == "tui_initial_exec"
@@ -701,3 +784,291 @@ def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch
         )
     assert len(calls) == 2
     assert len({source["codex_call_id"] for source in observed.values()}) == 2
+
+
+@pytest.mark.parametrize(("builder", "command"), BUILDERS)
+@pytest.mark.parametrize("outcome", ["completed", "abnormal", "preparation", "spawn"])
+def test_public_resume_accepts_fixed_id_after_initial_success(
+    directory, monkeypatch, builder, command, outcome
+):
+    fake_initial(monkeypatch)
+    notifications = []
+
+    def notify(name, root, state):
+        notifications.append((name, root, state))
+
+    monkeypatch.setattr(tui_module, "notify_terminal_result", notify)
+    monkeypatch.setattr(runtime_cli, "notify_terminal_result", notify)
+    with monkeypatch.context() as patch:
+        if outcome == "preparation":
+            patch.setattr(
+                tui_module,
+                "prepare_codex_override_args",
+                Mock(side_effect=OSError("configuration unavailable")),
+            )
+        fake_tui(
+            patch,
+            returncode=17 if outcome == "abnormal" else 0,
+            spawn_error=OSError("spawn failed") if outcome == "spawn" else None,
+        )
+
+        def body():
+            return tui_module.run_codex_tui(
+                builder("request"), root=directory, config=CmocConfig()
+            ).returncode
+
+        if outcome == "completed":
+            runtime_cli.run_cli_subcommand(
+                body, command_name=command, doctor_preprocess=False, tui_process=True
+            )
+        else:
+            with pytest.raises(typer.Exit):
+                runtime_cli.run_cli_subcommand(
+                    body,
+                    command_name=command,
+                    doctor_preprocess=False,
+                    tui_process=True,
+                )
+    [source] = list(logs_dir(directory).glob("*.jsonl"))
+    rows = [json.loads(line) for line in source.read_text().splitlines()]
+    record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
+    assert record["fixed_session_id"] == SESSION_ID
+    assert "conversation_state" not in record
+    expected = []
+    if outcome in {"completed", "abnormal"}:
+        expected.append((command, directory, "initial_completed"))
+        assert record["tui_process_state"] == "exited"
+        assert record["tui_returncode"] == (17 if outcome == "abnormal" else 0)
+    else:
+        assert record["tui_process_state"] == (
+            "not_started" if outcome == "preparation" else "spawn_failed"
+        )
+        assert record["tui_returncode"] is None
+    if outcome != "completed":
+        expected.append((command, directory, "failed"))
+    assert notifications == expected
+    notifications.clear()
+    calls = fake_tui(monkeypatch)
+    with call_log(directory, "resume"):
+        assert tui_module.resume_codex_tui(source.stem, directory).returncode == 0
+    assert len(calls) == 1
+    assert calls[0]["argv"][-2:] == ["resume", SESSION_ID]
+    assert notifications == []
+
+
+@pytest.mark.parametrize(
+    "failure", ["prepare", "configure", "send", "cleanup", "unavailable"]
+)
+def test_notification_failure_preserves_tui_execution(directory, monkeypatch, failure):
+    fake_initial(monkeypatch)
+    calls = fake_tui(monkeypatch)
+    callback = Mock(command=["notification-helper"])
+    if failure == "cleanup":
+        callback.close.side_effect = OSError("cleanup failed")
+    if failure == "prepare":
+        creator = Mock(side_effect=OSError("notification context failed"))
+    else:
+        creator = Mock(return_value=None if failure == "unavailable" else callback)
+    monkeypatch.setattr(tui_module, "create_tui_notification_callback", creator)
+    if failure == "configure":
+        prepare = tui_module.prepare_codex_override_args
+
+        def prepare_without_notification(*args, **kwargs):
+            if kwargs.get("notification_command"):
+                raise ValueError("notification setting failed")
+            return prepare(*args, **kwargs)
+
+        monkeypatch.setattr(
+            tui_module, "prepare_codex_override_args", prepare_without_notification
+        )
+    if failure == "send":
+        monkeypatch.setattr(
+            tui_module,
+            "notify_terminal_result",
+            Mock(side_effect=OSError("transport failed")),
+        )
+    with call_log(directory):
+        assert (
+            tui_module.run_codex_tui(
+                build_tui_launch_tui_parameter("request"), root=directory
+            ).returncode
+            == 0
+        )
+    assert len(calls) == 1
+    if failure in {"prepare", "configure", "unavailable"}:
+        assert codex_override_config(calls[0]["argv"])["notify"] == []
+    if failure not in {"prepare", "unavailable"}:
+        callback.close.assert_called_once()
+
+
+def test_initial_and_tui_keep_separate_process_resources(directory, monkeypatch):
+    contexts = []
+    closed = []
+
+    def begin(**fields):
+        index = len(contexts)
+        contexts.append(fields)
+        call = Mock()
+        call.subprocess_env.side_effect = lambda base: {
+            **base,
+            "CALL_CONTEXT": str(index),
+        }
+        call.close.side_effect = lambda: closed.append(index)
+        return call
+
+    monkeypatch.setattr(exec_module, "begin_feedback_call", begin)
+    monkeypatch.setattr(tui_module, "begin_feedback_call", begin)
+    initial = fake_initial(monkeypatch)
+
+    def observe(call):
+        assert closed == [0]
+        assert call["env"]["CALL_CONTEXT"] == "1"
+        source = json.loads(call["env"][EDITOR_INPUT_SOURCE_ENV])
+        assert source["codex_call_id"] == contexts[1]["codex_call_id"]
+        search = codex_override_config(call["argv"])["mcp_servers"][
+            "cmoc_document_search"
+        ]
+        assert (
+            json.loads(search["args"][-1])["log_context"]["codex_call_id"]
+            == source["codex_call_id"]
+        )
+        assert contexts[0]["codex_call_id"] != contexts[1]["codex_call_id"]
+        assert contexts[0]["agent_call_id"] != contexts[1]["agent_call_id"]
+        assert contexts[1]["codex_session_id"] == SESSION_ID
+
+    fake_tui(monkeypatch, on_call=observe)
+    with call_log(directory):
+        tui_module.run_codex_tui(
+            build_tui_launch_tui_parameter("request"), root=directory
+        )
+    assert initial[0]["env"]["CALL_CONTEXT"] == "0"
+    assert closed == [0, 1]
+
+
+def test_session_lease_covers_initial_transition_and_public_validation(
+    directory, monkeypatch
+):
+    home = tui_module.resolve_codex_home(directory)
+
+    def contested(_call):
+        with closing(CodexSessionLease(home)) as contender:
+            with pytest.raises(CmocError, match="使用中"):
+                contender.acquire(SESSION_ID)
+
+    fake_initial(monkeypatch, on_call=contested)
+    fake_tui(monkeypatch, on_call=contested)
+    runtime_cli.run_cli_subcommand(
+        lambda: (
+            tui_module.run_codex_tui(
+                build_tui_launch_tui_parameter("request"), root=directory
+            ).returncode
+        ),
+        command_name="tui",
+        doctor_preprocess=False,
+        tui_process=True,
+    )
+    [source] = list(logs_dir(directory).glob("*.jsonl"))
+    validate = tui_module._validated_resume_record
+
+    def validate_under_lock(*args):
+        contested(None)
+        return validate(*args)
+
+    monkeypatch.setattr(tui_module, "_validated_resume_record", validate_under_lock)
+    with call_log(directory, "resume"):
+        assert tui_module.resume_codex_tui(source.stem, directory).returncode == 0
+    with closing(CodexSessionLease(home)) as next_use:
+        next_use.acquire(SESSION_ID)
+
+
+def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
+    fake_initial(monkeypatch)
+
+    def run(argv, **kwargs):
+        kwargs["process_started_callback"]()
+        raise OSError("process exit cannot be confirmed")
+
+    monkeypatch.setattr(tui_module, "run_codex_subprocess", run)
+    with call_log(directory) as logger:
+        with pytest.raises(OSError, match="exit cannot be confirmed"):
+            tui_module.run_codex_tui(
+                build_tui_launch_tui_parameter("request"), root=directory
+            )
+        final = [row for row in events(logger) if row.get("phase") == "tui_failed"][-1]
+        assert final["tui_process_state"] == "unknown"
+        assert final["tui_returncode"] is None
+    with closing(
+        CodexSessionLease(tui_module.resolve_codex_home(directory))
+    ) as contender:
+        with pytest.raises(CmocError, match="終了未確認"):
+            contender.acquire(SESSION_ID)
+
+
+@pytest.mark.parametrize("returncode", [0, 19])
+def test_tui_process_waits_with_inherited_output_and_records_exit(
+    directory, monkeypatch, tmp_path, capfd, returncode
+):
+    import commons.runtime_codex_profile as profile
+
+    ready = tmp_path / "tui-ready"
+    release = tmp_path / "tui-release"
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import pathlib, sys, time",
+            "args = sys.argv[1:]",
+            "if 'exec' in args:",
+            "    sys.stdin.read()",
+            f"    print({SUCCESS!r}, end='', flush=True)",
+            "    pathlib.Path(args[args.index('--output-last-message') + 1]).write_text('saved reply')",
+            "else:",
+            f"    assert args[-2:] == ['resume', {SESSION_ID!r}]",
+            "    print('fake interactive output', flush=True)",
+            f"    pathlib.Path({str(ready)!r}).touch()",
+            "    for _ in range(1000):",
+            f"        if pathlib.Path({str(release)!r}).exists(): break",
+            "        time.sleep(0.01)",
+            f"    sys.exit({returncode})",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
+    # MCP 自体の検査は別ケースへ残し、この Fake process では端末と終了待ちを観測する。
+    monkeypatch.setattr(
+        profile, "_verify_document_search_server", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        tui_module, "run_codex_subprocess", profile.run_codex_subprocess
+    )
+    with call_log(directory) as logger, ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(
+            copy_context().run,
+            tui_module.run_codex_tui,
+            build_tui_launch_tui_parameter("request"),
+            root=directory,
+        )
+        try:
+            deadline = time.monotonic() + 5
+            while not ready.exists():
+                if future.done() or time.monotonic() >= deadline:
+                    pytest.fail("fake interactive process did not start")
+                time.sleep(0.01)
+            assert not future.done()
+            assert not any(
+                row["event"] == "tui_process_finished" for row in events(logger)
+            )
+            release.touch()
+            if returncode:
+                with pytest.raises(CmocError, match="異常終了"):
+                    future.result(timeout=5)
+            else:
+                assert future.result(timeout=5).returncode == 0
+            [finished] = [
+                row for row in events(logger) if row["event"] == "tui_process_finished"
+            ]
+            assert finished["process_state"] == "exited"
+            assert finished["returncode"] == returncode
+        finally:
+            release.touch()
+    assert "fake interactive output" in capfd.readouterr().out
