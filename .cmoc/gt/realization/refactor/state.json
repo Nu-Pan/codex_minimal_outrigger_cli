@@ -1518,7 +1518,7 @@
     "last_investigated_at": "2026-10-13_08-48-39_691"
   },
   "test/test_production_cli_support.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "cf358ce974f0ea19347e6c7ca0a21c95cf2544dd293d4641084b3b9ed5981b81",
     "last_investigated_at": "2026-10-13_08-50-39_682"
