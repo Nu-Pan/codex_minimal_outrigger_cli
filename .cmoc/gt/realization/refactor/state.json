@@ -1375,9 +1375,9 @@
   },
   "test/test_codex_session.py": {
     "investigation_required": true,
-    "last_investigation_result": "not_investigated",
-    "last_investigated_sha256": null,
-    "last_investigated_at": null
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "0b0ffe27f334e47b2b88ce5978146c9df6171db8004bbf3cde474cdb2281d401",
+    "last_investigated_at": "2026-10-16_02-10-20_038"
   },
   "test/test_doctor_cli.py": {
     "investigation_required": true,
