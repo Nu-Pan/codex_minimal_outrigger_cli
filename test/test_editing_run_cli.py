@@ -81,6 +81,23 @@ pytestmark = pytest.mark.usefixtures("feedback_without_transport")
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
+@pytest.fixture(autouse=True)
+def real_refactor_builder(monkeypatch):
+    """制御 test の prompt 準備を省き、結合 test 用に実 builder を返す。"""
+    # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を繰り返さない。
+    # builder の選択値・文面は test_acp_builder_editing_run_parameters.py、
+    # 実 worktree と call の結合は mixed_results_until_user_interruption に残す。
+    builder = (
+        refactor_module.build_realization_refactor_fork_file_review_and_fix_parameter
+    )
+    monkeypatch.setattr(
+        refactor_module,
+        "build_realization_refactor_fork_file_review_and_fix_parameter",
+        lambda _target_path, run_worktree: SimpleNamespace(agent_call_cwd=run_worktree),
+    )
+    return builder
+
+
 def _start_session(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -3158,6 +3175,7 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     ready_content_session: tuple[Path, str, Path],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    real_refactor_builder,
 ) -> None:
     """各結果の停止・確定順序と、正規化・unresolved・warning の保存を検証する。"""
     # 変更のない一巡を共有し、停止順序・警告保存のためだけの巡回を重複させない。
@@ -3168,6 +3186,12 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     original_commit = refactor_module.commit_work_unit
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
+    # 代表的な一巡では実 builder を使い、run cwd と target の引き渡しを検査する。
+    monkeypatch.setattr(
+        refactor_module,
+        "build_realization_refactor_fork_file_review_and_fix_parameter",
+        real_refactor_builder,
+    )
 
     def record_stop(*_args: object) -> list[str]:
         """tracked child の停止位置を記録する。"""
@@ -3184,12 +3208,18 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
         return original_commit(worktree, message, **kwargs)
 
     def fake_refactor(
-        _parameter: AgentCallParameter,
+        parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """差分のない fixed、unresolved、所見なしを別 target へ返す。"""
         purpose = str(kwargs["purpose"])
         target = purpose.removeprefix("realization refactor: ")
+        run_branch = _state(state_path)["run"]["branch"]
+        worktree = root / ".cmoc/gu/worktree" / Path(*run_branch.split("/")[2:])
+        assert parameter.agent_call_cwd == worktree
+        assert f"- {{{{repo-root}}}} = {root}" in parameter.prompt
+        assert f"- {{{{work-root}}}} = {worktree}" in parameter.prompt
+        assert f"- {{{{target-path}}}} = {worktree / target}" in parameter.prompt
         reviewed.append(target)
         events.append("review")
         if target == ".gitignore":
