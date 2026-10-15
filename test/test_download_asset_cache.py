@@ -27,7 +27,6 @@ from _download_asset_support import (
     http_distribution_opener,
     process_obtain,
 )
-from _git_support import make_repo
 
 import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
@@ -343,10 +342,12 @@ def test_redirect_failure_and_report_preserve_observed_counts(
 
 
 def test_doctor_reports_asset_success_separately_from_validation_failure(
-    tmp_path, distribution, monkeypatch, nonpersistent_execution_ids
+    committed_repository, distribution, monkeypatch, nonpersistent_execution_ids
 ):
     """取得・公開成功を保持し、検証失敗を報告して索引同期前に停止する。"""
-    root = make_repo(tmp_path)
+    # 前処理に必要な HEAD だけ用意し、使わない初期内容と git add は準備しない。
+    # 既存ファイルの Git 修復・commit は test_doctor_cli.py に残す。
+    root = committed_repository
     monkeypatch.chdir(root)
     # 資材準備から失敗 report までを通し、TCP 受付は test_feedback.py に残す。
     monkeypatch.setattr(
