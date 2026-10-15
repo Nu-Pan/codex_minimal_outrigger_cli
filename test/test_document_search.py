@@ -1183,16 +1183,17 @@ def candidate_worker(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "candidate_count,available,similarities,limit_cases",
+    "candidate_count,candidates,limit_cases",
     [
         # 上限を一件超える候補で切捨てを検出し、同じ検証のための余分な保存を省く。
         # 件数条件は負の同点候補で通し、類似度の境界を全上限と直積にしない。
         # 引数の最大値 50 は設定上限 20 のケースで検査し、同じ 50 件の検索を重ねない。
-        (50, 51, [((-3, 4), -0.6)], [(None, 50), (20, 20)]),
-        (20, 21, [((-3, 4), -0.6)], [(None, 20), (50, 20)]),
-        # -1・0・1 は候補不足時に検査する。順位と件数による値の不変性は専用ケースで保つ。
-        (50, 7, [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0)], [(None, 7)]),
-        (50, 0, [((1, 0), 1.0)], [(None, 0)]),
+        (50, [((1, 0), -0.6)] * 51, [(None, 50), (20, 20)]),
+        (20, [((1, 0), -0.6)] * 21, [(None, 20), (50, 20)]),
+        # -1・0・1 は三候補の一検索で検査し、境界値ごとの同期・query 保存を重ねない。
+        # 順位と件数による値の不変性は専用ケースで保つ。
+        (50, [((-3, 4), 1.0), ((-4, -3), 0.0), ((3, -4), -1.0)], [(None, 3)]),
+        (50, [], [(None, 0)]),
     ],
     ids=["candidate-cap", "configured-cap", "similarity-boundaries", "empty"],
 )
@@ -1201,21 +1202,22 @@ def test_mcp_success_schema_and_candidate_limits(
     document_repository,
     candidate_worker,
     candidate_count,
-    available,
-    similarities,
+    candidates,
     limit_cases,
 ):
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
+    # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     root = document_repository
     path = "oracle/doc/allowed.md"
-    # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
-    (root / path).write_text("候補\n" * available)
-    worker = candidate_worker({path: [(i + 1, i + 1) for i in range(available)]})
-    cases = [
-        (vector, similarity, limit, expected)
-        for vector, similarity in similarities
-        for limit, expected in limit_cases
-    ]
+    available = len(candidates)
+    similarities = sorted((similarity for _, similarity in candidates), reverse=True)
+    (root / path).write_text("".join(f"候補 {vector}\n" for vector, _ in candidates))
+    worker = candidate_worker(
+        {path: [(i + 1, i + 1) for i in range(available)]},
+        vectors={path: [vector for vector, _ in candidates]},
+    )
+    # 負の成分を含む非単位 query で、query 側の正規化も検証する。
+    worker.query_vector = (-3, 4)
     with closing(
         DocumentSearch(
             root,
@@ -1225,11 +1227,8 @@ def test_mcp_success_schema_and_candidate_limits(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        # query を変え、各類似度・上限の組合せで推論経路を残す。
-        for request_id, (vector, similarity, limit, expected) in enumerate(
-            cases, start=1
-        ):
-            worker.query_vector = vector
+        # query を変え、各上限で推論経路を残す。
+        for request_id, (limit, expected) in enumerate(limit_cases, start=1):
             worker.operations.clear()
             arguments = {"query": f"候補 {request_id}"}
             if limit is not None:
@@ -1253,9 +1252,13 @@ def test_mcp_success_schema_and_candidate_limits(
                 assert len(ranges) == expected
                 assert all(
                     1 <= location["start_line"] == location["end_line"] <= available
-                    and location["max_similarity"] == pytest.approx(similarity)
+                    and location["max_similarity"]
+                    == pytest.approx(candidates[location["start_line"] - 1][1])
                     for location in ranges
                 )
+                assert [
+                    location["max_similarity"] for location in ranges
+                ] == pytest.approx(similarities[:expected])
             else:
                 assert result["hits"] == []
             assert worker.operations == (["embed_query"] if expected else [])
