@@ -418,6 +418,7 @@ def run_codex_exec(
         }
 
     base_call_data = _call_data(parameter, codex_home, agent_call_cwd)
+    initial_log_paths: dict[str, str] | None = None
 
     def _record_tui_initial(
         state: str,
@@ -428,25 +429,31 @@ def run_codex_exec(
     ) -> None:
         """初回 exec の実際の call と、起動・停止・最終結果を即時記録する。"""
         # 初回だけの記録であり、他 workload の補正や probe の結果と混ぜない。
+        nonlocal initial_log_paths
         if not tui_initial or logger is None:
             return
+        # 初回 exec は再試行せず、同じ保存先を全状態の記録で共有する。
+        if initial_log_paths is None:
+            initial_log_paths = {
+                "sub_command_log_path": str(logger.path.resolve()),
+                "call_log_path": str(call_path.resolve()),
+                "prompt_log_path": str(prompt_path.resolve()),
+                "stdout_log_path": str(stdout_path.resolve()),
+                "stderr_log_path": str(stderr_path.resolve()),
+                "output_path": str(output_path.resolve()),
+            }
         cancellation = current_recovery_cancellation()
         logger.event(
             "tui_initial_exec",
             tui_record_version=3,
             execution_id=execution_id,
             subcommand=logger.command,
-            sub_command_log_path=str(logger.path.resolve()),
+            **initial_log_paths,
             agent_call_id=agent_call_id,
             codex_call_id=active_codex_call_id,
             **base_call_data,
             work_root=str(path_context.work_root),
             repo_root=str(path_context.repo_root),
-            call_log_path=str(call_path.resolve()),
-            prompt_log_path=str(prompt_path.resolve()),
-            stdout_log_path=str(stdout_path.resolve()),
-            stderr_log_path=str(stderr_path.resolve()),
-            output_path=str(output_path.resolve()),
             process_state=state,
             status=status,
             returncode=returncode,
