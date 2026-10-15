@@ -108,7 +108,10 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
 
 # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
 ) -> None:
     """provider・path policy の受け渡しと schema-less 出力の読み取りを検証する。"""
     # schema-less exec は履歴を参照しない。root 探索と Fake CLI の書き込み先だけ用意する。
@@ -148,6 +151,7 @@ def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output
             "    'stdin_fd': os.readlink('/proc/self/fd/0'),",
             "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
+            "print('private stderr', file=sys.stderr)",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -236,3 +240,8 @@ def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output
     assert result.output_path.read_bytes() == output_bytes
     assert result.output_json is None
     assert result.output_text == "done\n\ufffd"
+    # 補正の検査と共用する実 process の出力捕捉を、この代表起動で保証する。
+    assert result.stdout_log_path.read_text() == '{"type": "turn.completed"}\n'
+    assert result.stderr_log_path.read_text() == "private stderr\n"
+    captured = capfd.readouterr()
+    assert captured.out == captured.err == ""

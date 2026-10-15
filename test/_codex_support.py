@@ -98,7 +98,7 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return override_args
 
 
-def script_codex_calls(monkeypatch, responses, *, on_call=None):
+def script_codex_calls(monkeypatch, responses, *, on_call=None, stderr=""):
     """CLI 応答を置換し、出力の bytes、回復・再開とログ保存は実処理する。"""
     import commons.runtime_codex_exec as exec_module
 
@@ -127,7 +127,7 @@ def script_codex_calls(monkeypatch, responses, *, on_call=None):
                 output_path.write_bytes(output)
             else:
                 output_path.write_text(output)
-        return subprocess.CompletedProcess(argv, returncode, stdout, "")
+        return subprocess.CompletedProcess(argv, returncode, stdout, stderr)
 
     monkeypatch.setattr(exec_module, "run_codex_subprocess", run)
     return calls

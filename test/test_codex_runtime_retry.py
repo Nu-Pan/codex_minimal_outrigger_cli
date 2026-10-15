@@ -15,7 +15,6 @@ from _codex_support import (
     setup_codex_home,
     stub_codex_overrides,
 )
-from _command_support import write_python_executable
 from _git_support import init_repo, run_git
 from oracle.other.cmoc_config import DocumentSearchConfig
 
@@ -74,42 +73,23 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     output_only_root: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    capfd: pytest.CaptureFixture[str],
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """schema 不合格を同じ session で補正し、Codex call ごとの log を保存する。"""
-    # process・MCP 設定・log 保存は実行し、成果物の差分取得と採番は専用 test に残す。
+    # 実 process の stdin・stdout・stderr は test_codex_runtime_exec.py に残す。
+    # 補正では実際に渡す argv・本文と保存済み log を照合し、子起動と回数 file を省く。
     root = output_only_root
     roots = Mock(return_value=(root, root))
     monkeypatch.setattr(path_model_module, "_resolve_git_worktree_roots", roots)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    counter = tmp_path / "counter"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, pathlib, sys, tomllib",
-            "args = sys.argv[1:]",
-            "if 'mcp' in args:",
-            "    for arg in args:",
-            "        if arg.startswith('mcp_servers.cmoc_document_search='):",
-            "            server = tomllib.loads(arg)['mcp_servers']['cmoc_document_search']",
-            "    transport = {'type': 'stdio', 'env_vars': [], **{key: server[key] for key in ('command', 'args', 'cwd', 'env')}}",
-            "    print(json.dumps({'name': 'cmoc_document_search', 'transport': transport, **{key: server[key] for key in ('enabled', 'enabled_tools', 'disabled_tools', 'startup_timeout_sec', 'tool_timeout_sec')}}))",
-            "    raise SystemExit(0)",
-            f"counter = pathlib.Path({str(counter)!r})",
-            "count = int(counter.read_text()) if counter.exists() else 0",
-            "counter.write_text(str(count + 1))",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "payload = {'ok': True} if count else {'bad': True}",
-            "output.write_text(json.dumps(payload))",
-            "print('private stderr', file=sys.stderr)",
-            "print(json.dumps({'type': 'thread.started', 'thread_id': 'session-1'}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+    stdout = (
+        '{"type": "thread.started", "thread_id": "session-1"}\n'
+        '{"type": "turn.completed"}\n'
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    calls = script_codex_calls(
+        monkeypatch,
+        [(0, stdout, '{"bad": true}'), (0, stdout, '{"ok": true}')],
+        stderr="private stderr\n",
+    )
     schema = tmp_path / "schema.json"
     schema.write_text(
         json.dumps(
@@ -141,10 +121,11 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
 
     assert result.output_json == {"ok": True}
     roots.assert_called_once_with(root)
-    assert counter.read_text() == "2"
+    assert len(calls) == 2
     call_paths = sorted((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
     call_logs = [json.loads(path.read_text()) for path in call_paths]
     assert len(call_logs) == 2
+    assert [log["argv"] for log in call_logs] == [call["argv"] for call in calls]
     assert {log["agent_call_kind"] for log in call_logs} == {
         "build_feedback_normalize_issue_parameter"
     }
@@ -179,6 +160,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
             == call_logs[0]["argv"][initial_option_index + 1]
         )
     prompts = [Path(log["prompt_log_path"]).read_text() for log in call_logs]
+    assert prompts == [call["prompt"] for call in calls]
     assert prompts[0] == "prompt"
     assert prompts[1].startswith("# Structured Output の出力補正\n")
     assert "作業成果物を変更せず" in prompts[1]
@@ -199,6 +181,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     ):
         assert call_logs[1][key] == call_logs[0][key]
     assert len({log["stdout_log_path"] for log in call_logs}) == 2
+    assert all(Path(log["stdout_log_path"]).read_text() == stdout for log in call_logs)
     assert len({log["stderr_log_path"] for log in call_logs}) == 2
     assert all(
         Path(log["stderr_log_path"]).read_text() == "private stderr\n"
@@ -216,7 +199,7 @@ def test_run_codex_exec_corrects_schema_output_in_same_session(
     assert codex_events[0]["call_log_path"] == str(call_paths[0])
     assert len({event["agent_call_id"] for event in codex_events}) == 1
     assert len({event["codex_call_id"] for event in codex_events}) == 2
-    captured = capfd.readouterr()
+    captured = capsys.readouterr()
     assert captured.out == captured.err == ""
 
 
