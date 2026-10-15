@@ -81,6 +81,19 @@ pytestmark = pytest.mark.usefixtures("feedback_without_transport")
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
+@pytest.fixture
+def apply_after_preprocess(monkeypatch):
+    """apply の終了・復旧検査では、成功済み前処理の修復と索引同期を繰り返さない。"""
+    # 必要な設定・配置先は ready_*_session が用意する。
+    # doctor の修復・失敗は test_doctor_cli.py、apply との実結合は
+    # test_realization_apply_fork_and_run_join_use_common_state に残す。
+    preprocess = Mock()
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
+    yield
+    # CLI が対象 root の前処理を省略する回帰も検出する。
+    preprocess.assert_called_with(Path.cwd().resolve())
+
+
 @pytest.fixture(autouse=True)
 def real_refactor_builder(monkeypatch):
     """制御 test の prompt 準備を省き、結合 test 用に実 builder を返す。"""
@@ -393,6 +406,7 @@ def test_worktree_change_paths_returns_normalized_relative_paths(
     assert worktree_change_paths(root) == ["nested/README.md"]
 
 
+@pytest.mark.usefixtures("apply_after_preprocess")
 def test_apply_rolls_back_unexpected_oracle_change(
     ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
@@ -427,6 +441,7 @@ def test_apply_rolls_back_unexpected_oracle_change(
     assert not (run_worktree / "oracle" / "unexpected.md").exists()
 
 
+@pytest.mark.usefixtures("apply_after_preprocess")
 def test_apply_rejects_agent_commit_and_rolls_back_unit(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
@@ -1272,6 +1287,7 @@ def test_run_abandon_preserves_resources_and_reports_stop_on_cleanup_retries(
         assert 'process_stop: "stopped"' in report_path.read_text(encoding="utf-8")
 
 
+@pytest.mark.usefixtures("apply_after_preprocess")
 @pytest.mark.parametrize("late_path", [None, "late-realization.md", "oracle/spec.md"])
 def test_apply_fork_checks_stopped_children_before_commit(
     ready_content_session: tuple[Path, str, Path],
@@ -1907,6 +1923,7 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
     assert run_git(worktree, "status", "--porcelain").stdout == ""
 
 
+@pytest.mark.usefixtures("apply_after_preprocess")
 def test_apply_report_failure_after_joinable_publication_sets_error_state(
     ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
@@ -2083,6 +2100,7 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
     assert f'completion_reason: "{expected_reason}"' in report_text
 
 
+@pytest.mark.usefixtures("apply_after_preprocess")
 def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
@@ -2174,6 +2192,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     assert "## Changed paths\n- unavailable" in report_text
 
 
+@pytest.mark.usefixtures("apply_after_preprocess")
 @pytest.mark.parametrize(
     "failure",
     [
@@ -2221,6 +2240,7 @@ def test_apply_start_failure_after_run_publish_is_reported(
     assert 'state_before: "ready"' in reports[0].read_text()
 
 
+@pytest.mark.usefixtures("apply_after_preprocess")
 def test_apply_start_failure_does_not_recover_existing_error_run(
     ready_content_session: tuple[Path, str, Path],
 ) -> None:
