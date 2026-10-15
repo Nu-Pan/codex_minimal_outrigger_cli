@@ -665,24 +665,6 @@
     "last_investigated_sha256": "a051f806eb19e9b73542f4bde735c17f507b6f008cf69e3c9c6a6b7e8c9d02b3",
     "last_investigated_at": "2026-10-16_06-07-48_133"
   },
-  "src/acp/builder/session/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "1c24d1b1720d385b0f3388d0c70ebd4fa053c26df3a40f54e8cb91484c901dc8",
-    "last_investigated_at": "2026-10-11_23-24-03_354"
-  },
-  "src/acp/builder/session/join/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "072255c777a758fe7fa412dab9c417d50fc420b5871fae782e550e97a8c1b483",
-    "last_investigated_at": "2026-10-11_23-33-38_559"
-  },
-  "src/acp/builder/session/join/conflict_resolution.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "8b953a82e3c2f04d6875c3e19e5edc13ec4ebdc639e698af3442775851bf8983",
-    "last_investigated_at": "2026-10-11_23-45-29_387"
-  },
   "src/acp/builder/tui/__init__.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
