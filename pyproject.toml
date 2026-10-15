@@ -40,6 +40,7 @@ where = ["src", "oracle/src"]
 "commons.document_search_worker" = ["*.mjs", "package.json", "package-lock.json"]
 
 [tool.pytest.ini_options]
+testpaths = ["test"]
 pythonpath = ["src", "oracle/src"]
 timeout = 120
 markers = [
