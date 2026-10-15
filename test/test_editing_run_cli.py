@@ -18,7 +18,7 @@ from typing import NoReturn
 from unittest.mock import Mock
 
 import pytest
-from _cli_support import runner, seed_search_config, terminal_primary_report
+from _cli_support import runner, terminal_primary_report
 from _git_support import (
     RUN_BRANCH,
     RUN_ID,
@@ -109,23 +109,6 @@ def real_refactor_builder(monkeypatch):
         lambda _target_path, run_worktree: SimpleNamespace(agent_call_cwd=run_worktree),
     )
     return builder
-
-
-def _start_session(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> tuple[Path, str, Path]:
-    """隔離 repository で session を開始し、root・branch・state path を返す。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    # 管理物の修復・索引同期は session fork 自身の doctor preprocess で行う。
-    seed_search_config(root)
-    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
-    assert result.exit_code == 0
-    branch = current_branch(root)
-    session_id = branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
-    return root, branch, state_path
 
 
 def _prepare_run(
@@ -651,11 +634,12 @@ def test_refactor_change_summary_escapes_special_changed_paths() -> None:
 
 
 def test_realization_apply_fork_and_run_join_use_common_state(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """apply の prompt と、変更あり・なしの fork→join の成果物・state を検証する。"""
-    root, session_branch, state_path = _start_session(tmp_path, monkeypatch)
+    # session 作成は test_session_cli.py に残し、実 builder・doctor・fork→join を検査する。
+    root, session_branch, state_path = ready_content_session
     expected_base = _state(state_path)["session"]["session_fork_commit"]
     # prompt への差分混入の検査も同じ fork で行い、run 作成を重複させない。
     (root / "oracle" / "reference_only.md").write_text("oracle payload\n" * 1000)
