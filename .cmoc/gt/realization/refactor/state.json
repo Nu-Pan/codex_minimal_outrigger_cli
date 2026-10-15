@@ -710,8 +710,8 @@
   "src/commons/document_search_worker/package-lock.json": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "7486ee5717110a8e2d7b7ef955f72070b75ce88a5a9718d9f96d66434848efa3",
-    "last_investigated_at": "2026-10-12_04-30-19_826"
+    "last_investigated_sha256": "8e0fa415365acb1223e0687d8cf7d33d6385ffc6010595229ebc3fcbf5cba57f",
+    "last_investigated_at": "2026-10-16_06-54-34_488"
   },
   "src/commons/document_search_worker/package.json": {
     "investigation_required": true,

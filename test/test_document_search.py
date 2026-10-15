@@ -279,41 +279,45 @@ def test_search_only_reads_oracle_doc_markdown(
     assert opened == ["oracle/doc/allowed.md"]
 
 
-def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> None:
+def test_search_syncs_edits_and_reuses_unchanged_embeddings(
+    tmp_path: Path, document_repository: Path
+) -> None:
     """編集・空白化・削除後の旧本文を返さず、無変更推論を再実行しない。"""
     pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
+    # Git 分類・ignore は直前の読取り範囲 test と実 worktree の再利用 test に残す。
+    root = document_repository
     worker = _InferenceDouble()
-    search = DocumentSearch(root, _tuning(), worker=worker, installation_root=tmp_path)
-    first = search.search("内容")
-    assert first["status"] == "ok"
-    assert [hit["path"] for hit in first["hits"]] == ["oracle/doc/allowed.md"]
-    assert first["hits"][0]["ranges"] == [
-        {"start_line": 1, "end_line": 2, "max_similarity": 1.0}
-    ]
-    assert worker.operations == ["chunk_embed", "embed_query"]
+    with closing(
+        DocumentSearch(root, _tuning(), worker=worker, installation_root=tmp_path)
+    ) as search:
+        first = search.search("内容")
+        assert first["status"] == "ok"
+        assert [hit["path"] for hit in first["hits"]] == ["oracle/doc/allowed.md"]
+        assert first["hits"][0]["ranges"] == [
+            {"start_line": 1, "end_line": 2, "max_similarity": 1.0}
+        ]
+        assert worker.operations == ["chunk_embed", "embed_query"]
 
-    unchanged = search.search("内容")
-    assert unchanged == first
-    assert len(worker.operations) == 2
-    (root / "oracle/doc/allowed.md").write_text("# 変更後\n次の内容\n追加の行\n")
-    changed = search.search("内容")
-    assert changed["hits"] == [
-        {
-            "path": "oracle/doc/allowed.md",
-            "ranges": [{"start_line": 1, "end_line": 3, "max_similarity": 1.0}],
-        }
-    ]
-    assert worker.texts[-1] == "# 変更後\n次の内容\n追加の行\n"
-    assert worker.operations.count("chunk_embed") == 2
-    assert worker.operations.count("embed_query") == 1
+        unchanged = search.search("内容")
+        assert unchanged == first
+        assert len(worker.operations) == 2
+        (root / "oracle/doc/allowed.md").write_text("# 変更後\n次の内容\n追加の行\n")
+        changed = search.search("内容")
+        assert changed["hits"] == [
+            {
+                "path": "oracle/doc/allowed.md",
+                "ranges": [{"start_line": 1, "end_line": 3, "max_similarity": 1.0}],
+            }
+        ]
+        assert worker.texts[-1] == "# 変更後\n次の内容\n追加の行\n"
+        assert worker.operations.count("chunk_embed") == 2
+        assert worker.operations.count("embed_query") == 1
 
-    (root / "oracle/doc/allowed.md").write_text(" \n\t")
-    assert search.search("内容") == {"status": "ok", "hits": []}
-    (root / "oracle/doc/allowed.md").unlink()
-    sync = search.synchronize()
-    assert sync.deleted == 1 and sync.chunk_count == 0
-    assert "非公開の本文" not in str(worker.texts)
+        (root / "oracle/doc/allowed.md").write_text(" \n\t")
+        assert search.search("内容") == {"status": "ok", "hits": []}
+        (root / "oracle/doc/allowed.md").unlink()
+        sync = search.synchronize()
+        assert sync.deleted == 1 and sync.chunk_count == 0
 
 
 @pytest.mark.parametrize("edit_after_stream", [False, True])
