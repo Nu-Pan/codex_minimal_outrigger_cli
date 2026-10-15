@@ -462,10 +462,10 @@
     "last_investigated_at": "2026-10-16_03-08-22_533"
   },
   "oracle/src/oracle/other/cmoc_config.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "e076faea58e174f611208a69aee147d6ff348f0a67309eada3972bf38f51036b",
-    "last_investigated_at": "2026-10-11_18-46-10_397"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "b67f3e4e284968b4b191a4dcdc9ce723d954e5550b2764035a3bb80f040a504f",
+    "last_investigated_at": "2026-10-16_03-11-15_916"
   },
   "oracle/src/oracle/other/doc_ref_model.py": {
     "investigation_required": true,
