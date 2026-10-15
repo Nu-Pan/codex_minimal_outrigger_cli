@@ -231,7 +231,8 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
-    tracking_path.write_text("111 222\n")
+    initial_tracking = "111 222\nchild 987 654 987\n"
+    tracking_path.write_text(initial_tracking)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     script = bin_dir / "codex"
@@ -268,8 +269,10 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
     process_id = stdout_lines[0]
     assert stdout_lines[1] == process_id
     assert stdout_lines[2] == "111 222"
-    assert stdout_lines[3].startswith(f"child {process_id} ")
-    assert tracking_path.read_text() == "111 222\n"
+    assert stdout_lines[3] == "child 987 654 987"
+    assert stdout_lines[4].startswith(f"child {process_id} ")
+    assert stdout_lines[4].endswith(f" {process_id}")
+    assert tracking_path.read_text() == initial_tracking
 
 
 def test_signal_process_group_members_uses_each_member_pidfd(
@@ -551,6 +554,10 @@ def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
         monkeypatch.setattr(
             runtime_codex_profile, "process_start_time", lambda _pid: 333
         )
+        # 実 process の列挙は専用 group test に残し、架空の PID は探索しない。
+        monkeypatch.setattr(
+            runtime_codex_profile, "process_group_members", lambda _group: ()
+        )
         monkeypatch.setattr(
             runtime_codex_profile,
             "process_group_has_running_member",
@@ -629,6 +636,11 @@ def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
         lambda *_args, **_kwargs: ExitedProcess(),
     )
     monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((4322, 444),),
+    )
     monkeypatch.setattr(
         runtime_codex_profile, "process_group_has_running_member", lambda _group: True
     )
@@ -720,6 +732,11 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
         lambda *_args, **_kwargs: process,
     )
     monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((4321, 333),),
+    )
 
     with pytest.raises(KeyboardInterrupt):
         run_tracked_codex_subprocess(
