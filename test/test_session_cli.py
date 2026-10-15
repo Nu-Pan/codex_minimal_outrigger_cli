@@ -1121,11 +1121,14 @@ def test_session_join_merges_conflict_and_incidental_changes(
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
-    """競合の内容・mode・削除・改行 path と、一覧外の追加・変更・rename・削除を取り込む。"""
-    # 一つの成功経路を共有し、各編集と NUL framing を独立したファイルで検証する。
+    """linked worktree の起動 context・統合内容・付随編集・report を検証する。"""
+    # 一つの linked 成功経路で cwd・sandbox・report と各編集・NUL framing を検証する。
+    # 同じ内容解消のための repository・branch・競合履歴を別途準備しない。
     # marker が残る失敗時の作業保持は専用ケースで検査する。
     # {{work-root}}/oracle/doc/app_spec/merge_conflict_resolution.md
-    root = session_completion_repository
+    repository = session_completion_repository
+    root = repository / ".cmoc" / "gu" / "worktree" / "linked"
+    run_git(repository, "worktree", "add", "-b", "linked-home", str(root), "HEAD")
     context_target = root / "oracle" / "spec.md"
     mode_target = root / "oracle" / "mode.md"
     deleted_target = root / "oracle" / "deleted.md"
@@ -1145,7 +1148,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     run_git(root, "add", "oracle", "src")
     run_git(root, "commit", "-m", "add conflict targets")
     monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_session_in_worktree(root, root)
+    session_branch, home_branch = _seed_session_in_worktree(repository, root)
     for target in (context_target, mode_target):
         target.write_text("prefix\nsession change\nsuffix\n")
     deleted_target.write_text("session change\n")
@@ -1162,6 +1165,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     run_git(root, "add", "oracle", "src", "README.md")
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
+    calls: list[str] = []
 
     class FakeCodexResult:
         """conflict resolution の成功を表す最小 fake result。"""
@@ -1171,10 +1175,22 @@ def test_session_join_merges_conflict_and_incidental_changes(
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
         """各競合に独立した編集を行い、解消済み結果を返す。"""
+        calls.append(kwargs["purpose"])
         assert set(kwargs) == {"root", "purpose"}
+        assert kwargs["root"] == repository
         assert parameter.agent_call_cwd == root
+        assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
+        assert f"- {{{{repo-root}}}} = {repository}" in parameter.prompt
+        assert f"- {{{{work-root}}}} = {root}" in parameter.prompt
         assert "統合対象" in parameter.prompt
+        assert str(context_target) not in parameter.prompt
         assert str(newline_target) not in parameter.prompt
+        override_args = build_codex_override_args(parameter, CmocConfig())
+        assert override_args[override_args.index("--sandbox") + 1] == (
+            "workspace-write"
+        )
+        assert all("permissions" not in arg for arg in override_args)
+        assert all(str(context_target) not in arg for arg in override_args)
         assert set(merge_conflict_module.unmerged_paths(root)) == {
             "README.md",
             "oracle/spec.md",
@@ -1183,7 +1199,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
             "src/line\nbreak.txt",
         }
         context_target.write_text(
-            "prefix\nhome change\nsession change\nchanged suffix\n"
+            "prefix\nhome change\nsession change\nchanged suffix\nTitle\n=======\n"
         )
         mode_target.write_text("prefix\nresolved change\nsuffix\n")
         mode_target.chmod(mode_target.stat().st_mode | stat.S_IXUSR)
@@ -1202,6 +1218,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
 
     assert session_preprocess == [root]
     assert result.exit_code == 0, result.output
+    assert calls == ["session join conflict resolution"]
     assert current_branch(root) == home_branch
     assert run_git(root, "status", "--porcelain").stdout == ""
     assert run_git(root, "ls-files", "--stage", "oracle/mode.md").stdout.startswith(
@@ -1222,8 +1239,12 @@ def test_session_join_merges_conflict_and_incidental_changes(
     assert not deleted_target.exists()
     assert not delete_modify_target.exists()
     assert newline_target.read_text() == "resolved change\n"
+    rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
+    assert f"- `{context_target}`" in rendered_report
+    assert "- conflict 解消用 agent call: `resolved`" in rendered_report
+    assert "- 確定した解消結果: `confirmed`" in rendered_report
     expected_contents = {
-        "oracle/spec.md": "prefix\nhome change\nsession change\nchanged suffix\n",
+        "oracle/spec.md": "prefix\nhome change\nsession change\nchanged suffix\nTitle\n=======\n",
         "oracle/mode.md": "prefix\nresolved change\nsuffix\n",
         "src/line\nbreak.txt": "resolved change\n",
         "src/moved.py": "previous implementation\n",
@@ -1570,85 +1591,3 @@ def test_session_join_codex_failure_reports_unresolved_merge(
     rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
     assert f"- `{target}`" in rendered_report
     assert "- 確定した解消結果: `未確認`" in rendered_report
-
-
-def test_session_join_conflict_uses_merge_target_worktree_context(
-    session_completion_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
-) -> None:
-    """linked worktree の oracle 競合で cwd・sandbox・prompt・report を検証する。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-    {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    {{work-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
-    {{work-root}}/oracle/src/oracle/other/path_model.py
-    """
-
-    # oracle 競合の成功経路を共有し、sandbox・report 専用の Git 準備を繰り返さない。
-    # 通常 worktree の内容解消は付随編集と改行 path のケースにも残す。
-    # Git の linked metadata と競合解消は実経路を通し、共通サービスを省く。
-    # doctor の修復・順序と fork→join の結合は専用の linked worktree test に残す。
-    root = session_completion_repository
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
-    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
-    monkeypatch.chdir(linked)
-    session_branch, home_branch = _seed_session_in_worktree(root, linked)
-    target = linked / "oracle" / "spec.md"
-    target.write_text("linked session change\n")
-    run_git(linked, "add", "oracle/spec.md")
-    run_git(linked, "commit", "-m", "linked session change")
-    run_git(linked, "switch", home_branch)
-    target.write_text("linked home change\n")
-    run_git(linked, "add", "oracle/spec.md")
-    run_git(linked, "commit", "-m", "linked home change")
-    run_git(linked, "switch", session_branch)
-    calls: list[str] = []
-
-    class FakeCodexResult:
-        """conflict resolution の成功を表す最小 fake result。
-
-        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-        """
-
-        output_text = "merge_resolution: resolved\n"
-        output_json = None
-
-    def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
-        """Codex wrapper に渡す root・cwd と、path に依存しない sandbox を確認する。
-
-        根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-        {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-        """
-
-        calls.append(kwargs["purpose"])
-        assert set(kwargs) == {"root", "purpose"}
-        assert kwargs["root"] == root
-        assert parameter.agent_call_cwd == linked
-        assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
-        assert f"- {{{{repo-root}}}} = {root}" in parameter.prompt
-        assert f"- {{{{work-root}}}} = {linked}" in parameter.prompt
-        assert "統合対象" in parameter.prompt
-        assert str(target) not in parameter.prompt
-        override_args = build_codex_override_args(parameter, CmocConfig())
-        assert override_args[override_args.index("--sandbox") + 1] == (
-            "workspace-write"
-        )
-        assert all("permissions" not in arg for arg in override_args)
-        assert all(str(target) not in arg for arg in override_args)
-        target.write_text("resolved change\nTitle\n=======\n")
-        return FakeCodexResult()
-
-    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
-
-    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
-
-    assert session_preprocess == [linked]
-    assert result.exit_code == 0, result.output
-    assert calls == ["session join conflict resolution"]
-    assert current_branch(linked) == home_branch
-    assert target.read_text() == "resolved change\nTitle\n=======\n"
-    rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
-    assert f"- `{target}`" in rendered_report
-    assert "- conflict 解消用 agent call: `resolved`" in rendered_report
-    assert "- 確定した解消結果: `confirmed`" in rendered_report
