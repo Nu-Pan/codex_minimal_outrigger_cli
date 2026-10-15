@@ -2908,10 +2908,15 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
 
 
 @pytest.mark.parametrize(
-    "incidental", ["oracle/spec.md", ".cmoc/gt/realization/refactor/state.json"]
+    ("incidental", "already_modified"),
+    [
+        ("oracle/spec.md", False),
+        (".cmoc/gt/realization/refactor/state.json", False),
+        ("oracle/spec.md", True),
+    ],
 )
 def test_merge_resolution_does_not_add_file_access_postvalidation(
-    tmp_path, monkeypatch, incidental
+    tmp_path, monkeypatch, incidental, already_modified
 ):
     """応答後の差分は記録し、file access policy だけによる受理拒否を加えない。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の「agent call の差分検証」
@@ -2923,6 +2928,12 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
     conflict = root / conflict_relative
     conflict.parent.mkdir()
     conflict.write_text("<<<<<<< HEAD\n")
+    changed = root / incidental
+    changed.parent.mkdir(parents=True, exist_ok=True)
+    if already_modified:
+        changed.write_text("before\n")
+    unchanged = root / "src/unchanged.py"
+    unchanged.write_text("unchanged\n")
     parameter = AgentCallParameter(
         agent_call_kind="test_merge_resolution",
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
@@ -2933,8 +2944,6 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
 
     def resolved_codex(_parameter, **_kwargs):
         conflict.write_text("resolved\n")
-        changed = root / incidental
-        changed.parent.mkdir(parents=True, exist_ok=True)
         changed.write_text("{}\n")
         return SimpleNamespace(output_text="merge_resolution: resolved\n")
 
@@ -2944,18 +2953,27 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
         assert git_cwd == root
         commands.append(args)
         paths = (
-            f"{conflict_relative}\0{incidental}\0"
+            f"{conflict_relative}\0{incidental}\0src/unchanged.py\0"
             if args[:2] == ["diff", "--cached"]
             else ""
         )
         return SimpleNamespace(returncode=0, stdout=paths, stderr="")
 
     def status(_root, **_kwargs):
-        paths = [("UU", conflict)]
-        if (root / incidental).exists():
-            paths.append(("??", root / incidental))
+        # status が同じまま再編集された本文も報告し、未変更の付随 path は除く。
+        paths = [("UU", conflict), (" M", unchanged)]
+        if changed.exists():
+            paths.append((" M" if already_modified else "??", changed))
         return paths
 
+    reads = Counter()
+    original_read = Path.read_bytes
+
+    def read_bytes(path):
+        reads[path] += 1
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
     monkeypatch.setattr(merge_conflict_module, "repo_root", lambda _root: root)
     monkeypatch.setattr(merge_conflict_module, "status_path_statuses", status)
     monkeypatch.setattr(merge_conflict_module, "run_git", git)
@@ -2969,6 +2987,8 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
 
     assert result["agent_status"] == "resolved"
     assert result["incidental_paths"] == [incidental]
+    # 初期競合は報告対象外なので snapshot 用には読まず、marker 検査は実行する。
+    assert reads[conflict] == 0
     assert any(args[0] == "add" for args in commands)
     assert any(args[0] == "commit" for args in commands)
 
