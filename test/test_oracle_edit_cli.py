@@ -96,6 +96,7 @@ def _assert_exec_parameter(
 def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_execution_ids: None,
     failure_stage: str | None,
     first_changes: bool,
 ) -> None:
@@ -103,6 +104,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     # 変更なしでも二回目へ進む条件は成功ケースで検証する。
     # 失敗処理は差分に分岐しないため、各回の編集後の失敗で差分保持も検証する。
     # collector の受理・drain は test_feedback.py に残し、exec 制御と差分保持を検証する。
+    # 永続採番と logger の結合は test_runtime_ids.py と test_runtime_cli.py に残す。
+    # ここでは実行 ID の受け渡しと editor input・report・log の保存を実検査する。
     root = _prepared_repo(tmp_path, monkeypatch)
     integrated_case = failure_stage is None and first_changes
     if not integrated_case:
