@@ -405,7 +405,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "bbc306ca51e2531c56e96a9c9bf2b7745a84e7e04281163e501323c84b435c00",
-    "last_investigated_at": "2026-10-11_17-26-13_938"
+    "last_investigated_at": "2026-10-16_02-26-46_675"
   },
   "oracle/src/oracle/acp_builder/run/join/conflict_resolution.py": {
     "investigation_required": true,

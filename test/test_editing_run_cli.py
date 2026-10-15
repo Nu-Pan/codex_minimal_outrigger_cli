@@ -1705,77 +1705,62 @@ def test_refactor_rejects_unreported_changed_paths_despite_evidences(
 ) -> None:
     """evidences でなく changed_paths の申告漏れにより差分を拒否する。"""
     root, _session_branch, state_path = ready_content_session
-    first_review = True
 
     def fake_refactor(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """evidences には全差分を載せ、changed_paths では一部だけ申告する。"""
-        nonlocal first_review
-        purpose = str(kwargs["purpose"])
-        target = purpose.removeprefix("realization refactor: ")
-        if target == "README.md" and first_review:
-            first_review = False
-            worktree = parameter.agent_call_cwd
-            (worktree / "README.md").write_text("fixed\n")
-            (worktree / "unattributed.py").write_text("unexpected\n")
-            output = {
-                "findings": [
-                    {
-                        "title": "README finding",
-                        "evidences": [
-                            {
-                                "path": str(worktree / "README.md"),
-                                "line_start": 1,
-                                "line_end": 1,
-                                "summary": "README の変更行",
-                            },
-                            {
-                                "path": str(worktree / "unattributed.py"),
-                                "line_start": 1,
-                                "line_end": 1,
-                                "summary": "追加した realization file",
-                            },
-                        ],
-                        "changed_paths": ["README.md"],
-                        "oracle_requirement": "README を正しく扱う",
-                        "observed_implementation": "README に問題がある",
-                        "reason": "修正が必要",
-                        "resolution": {
-                            "status": "fixed",
-                            "summary": "README を修正した",
-                            "verification": "確認済み",
+        # 起点以外の関連 file も編集できるため、README の順番まで巡回しない。
+        worktree = parameter.agent_call_cwd
+        (worktree / "README.md").write_text("fixed\n")
+        (worktree / "unattributed.py").write_text("unexpected\n")
+        output = {
+            "findings": [
+                {
+                    "title": "README finding",
+                    "evidences": [
+                        {
+                            "path": str(worktree / "README.md"),
+                            "line_start": 1,
+                            "line_end": 1,
+                            "summary": "README の変更行",
                         },
-                    }
-                ],
-                "verification": {
-                    "status": "passed",
-                    "summary": "fake full quality gate passed",
+                        {
+                            "path": str(worktree / "unattributed.py"),
+                            "line_start": 1,
+                            "line_end": 1,
+                            "summary": "追加した realization file",
+                        },
+                    ],
+                    "changed_paths": ["README.md"],
+                    "oracle_requirement": "README を正しく扱う",
+                    "observed_implementation": "README に問題がある",
+                    "reason": "修正が必要",
+                    "resolution": {
+                        "status": "fixed",
+                        "summary": "README を修正した",
+                        "verification": "確認済み",
+                    },
                 },
-            }
-            postcondition = kwargs["structured_output_postcondition"]
-            assert callable(postcondition)
-            issues = postcondition(output, frozenset({"README.md", "unattributed.py"}))
-            if issues:
-                raise CmocError(
-                    "Codex CLI の Structured Output 検証に失敗しました。",
-                    ["Codex call log を確認してください。"],
-                    repr(issues),
-                )
-            return SimpleNamespace(
-                returncode=0,
-                output_json=output,
+            ],
+            "verification": {
+                "status": "passed",
+                "summary": "fake full quality gate passed",
+            },
+        }
+        postcondition = kwargs["structured_output_postcondition"]
+        assert callable(postcondition)
+        issues = postcondition(output, frozenset({"README.md", "unattributed.py"}))
+        if issues:
+            raise CmocError(
+                "Codex CLI の Structured Output 検証に失敗しました。",
+                ["Codex call log を確認してください。"],
+                repr(issues),
             )
         return SimpleNamespace(
             returncode=0,
-            output_json={
-                "findings": [],
-                "verification": {
-                    "status": "passed",
-                    "summary": "fake full quality gate passed",
-                },
-            },
+            output_json=output,
         )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
