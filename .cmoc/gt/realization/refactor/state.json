@@ -613,9 +613,9 @@
   },
   "src/acp/builder/oracle/edit/__init__.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
+    "last_investigation_result": "findings",
     "last_investigated_sha256": "aceb2892c60c365c1ab63b37a6a8264fbaf18cc2d0e146e7f8d370741f78ac55",
-    "last_investigated_at": "2026-10-11_21-44-22_952"
+    "last_investigated_at": "2026-10-16_05-21-29_165"
   },
   "src/acp/builder/oracle/edit/launch_exec.py": {
     "investigation_required": true,

@@ -26,8 +26,8 @@ from _git_support import (
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
 from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import CmocError, write_config
-from commons.runtime_config import config_path
+from cmoc_runtime import CmocError
+from commons.runtime_config import config_path, config_to_dict
 from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_state import (
     RunPart,
@@ -62,13 +62,11 @@ def _prepared_repo(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
-    """session branch・履歴・Codex HOME・既定設定を持つ repository を準備する。"""
+    """session branch・履歴・Codex HOME を持つ repository を準備する。"""
     setup_codex_home(tmp_path, monkeypatch)
     # 元の branch からの移動履歴は使わず、両回で保持する branch・HEAD だけ用意する。
     root = make_repo(tmp_path, initial_branch=SESSION_BRANCH)
     monkeypatch.chdir(root)
-    # doctor 成功後の設定を用意し、実際の保存・読込は検証対象に残す。
-    write_config(config_path(root), CmocConfig())
     return root
 
 
@@ -239,7 +237,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
     real_load_config = oracle_edit_module.load_config
     config_file = config_path(root)
-    configured = json.loads(config_file.read_text())
+    # doctor 成功後の設定を直接用意し、直後に上書きする既定設定の保存・再読込を省く。
+    configured = config_to_dict(CmocConfig())
     call_kind = "build_oracle_edit_main_launch_exec_parameter"
     configured["codex"]["agent_calls"][call_kind] = {
         "model_provider": "custom",
@@ -249,6 +248,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     configured["codex"]["model_providers"]["custom"] = {
         "settings": {"name": "custom", "http_headers": {"X-Test": "original"}}
     }
+    config_file.parent.mkdir(parents=True, exist_ok=True)
     config_file.write_text(json.dumps(configured))
 
     def record_load_config(target_root: Path):
