@@ -137,6 +137,9 @@ def test_editor_wait_accepts_only_active_repository_target_and_last_content(
     assert input_path.read_text(encoding="utf-8") == expected_body
 
 
+# 実行 ID の永続採番は test_runtime_ids.py と上の editor 結合ケースに残す。
+# 軽量 fixture を使うケースでも、target ID の採番・route・TCP は実処理を通す。
+@pytest.mark.usefixtures("nonpersistent_execution_ids")
 def test_handoff_revalidates_file_and_repository_on_each_overwrite(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -203,6 +206,7 @@ def test_handoff_rejects_symlinked_input_directory(
     assert input_path.read_text(encoding="utf-8") == "outside"
 
 
+@pytest.mark.usefixtures("nonpersistent_execution_ids")
 def test_target_close_does_not_follow_replaced_guide_parent(
     tmp_path: Path,
 ) -> None:
@@ -229,6 +233,7 @@ def test_target_close_does_not_follow_replaced_guide_parent(
     assert not (moved_editor_input / "input.guide.md").exists()
 
 
+@pytest.mark.usefixtures("nonpersistent_execution_ids")
 def test_target_close_drains_an_accepted_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -388,6 +393,7 @@ def test_handoff_readers_keep_absolute_deadline_during_progress(
     assert timeouts[-4:] == [0.5, 0.375, 0.25, 0.125]
 
 
+@pytest.mark.usefixtures("nonpersistent_execution_ids")
 def test_target_deadline_releases_connection_and_accepts_next_submission(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
