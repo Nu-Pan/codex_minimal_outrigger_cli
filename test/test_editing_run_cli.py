@@ -15,6 +15,7 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import NoReturn
+from unittest.mock import Mock
 
 import pytest
 from _cli_support import runner, seed_search_config, terminal_primary_report
@@ -3010,6 +3011,8 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     run_head = run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip()
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     calls: list[AgentCallParameter] = []
+    status_checks = Mock(wraps=merge_conflict_module.status_path_statuses)
+    monkeypatch.setattr(merge_conflict_module, "status_path_statuses", status_checks)
 
     def unresolved_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
         calls.append(parameter)
@@ -3023,7 +3026,13 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert len(calls) == 1
+    # 未解消後に返さない付随編集一覧を再走査しない。
+    assert status_checks.call_count == 1
     assert failed.exit_code == 1
+    assert (
+        "検証不足: 人間意図を確認できません。"
+        in terminal_primary_report(failed).read_text()
+    )
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
     assert (root / "README.md").read_text() == "session change\n"
     assert not (root / "src" / "incidental.py").exists()
@@ -3047,9 +3056,12 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
         )
 
     monkeypatch.setattr(merge_conflict_module, "run_codex_exec", resolved_codex)
+    status_checks.reset_mock()
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert len(calls) == 2
+    # 成功時は前後を比較し、付随編集を report に残す。
+    assert status_checks.call_count == 2
     assert result.exit_code == 0, result.output
     assert (root / "README.md").read_text() == "session change\nrun change\n"
     assert (root / "src" / "related.py").read_text() == "value = 1\n"

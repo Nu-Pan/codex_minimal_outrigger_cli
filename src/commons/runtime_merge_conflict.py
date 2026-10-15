@@ -81,6 +81,12 @@ def resolve_merge_conflicts(
             conflict_agent_report=report,
             conflict_call_log=result["call_log"],
         )
+        if result["agent_status"] != "resolved":
+            raise CmocError(
+                "競合解消 agent が完了を確認できませんでした。",
+                ["Codex call log の未解消理由と検証結果を確認してください。"],
+                report,
+            )
         after = _status_snapshot(root, conflict_paths)
         changed = {
             path
@@ -90,12 +96,6 @@ def resolve_merge_conflicts(
         # 付随編集の観測は report 用。受理条件は下記正本の検証境界に従う。
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の「agent call の差分検証」
         result["incidental_paths"] = sorted(changed)
-        if result["agent_status"] != "resolved":
-            raise CmocError(
-                "競合解消 agent が完了を確認できませんでした。",
-                ["Codex call log の未解消理由と検証結果を確認してください。"],
-                report,
-            )
     if refactor_relative in managed:
         _merge_refactor_state(root, refactor_relative)
         sync_refactor_state(root)
