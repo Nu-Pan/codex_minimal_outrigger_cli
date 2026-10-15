@@ -260,34 +260,40 @@ def test_reuse_compatibility_is_independent_of_partition(
     assert inputs() == [original] * (2 if incompatible else 1)
 
 
-@pytest.mark.parametrize(
-    "failure_code", ["MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"]
-)
 def test_failed_sync_saved_results_are_reusable_in_another_worktree(
-    tmp_path, cache_search, failure_code
+    tmp_path, cache_search
 ):
+    """失敗の種類ごとに未保存の入力を使い、途中保存結果を別 worktree で再利用する。"""
     create, inputs = cache_search
     root = _repo_with_docs(tmp_path, committed=True)
     run = _worktree(root, tmp_path / "run")
 
-    class FailingWorker(_InferenceDouble):
-        def stream_chunks(self, documents, resumes, on_event, **kwargs):
-            def stop_after_chunk(event):
-                on_event(event)
-                if event["kind"] == "chunk":
-                    raise SearchError(failure_code, "stop after saved embedding")
+    # Git の準備だけを共有し、各失敗では新規生成・保存を必ず通す。
+    # 失敗後の同一 worktree での再開は test_incomplete_stream_keeps_verified_chunks_and_resumes に残す。
+    for failure_code in ("MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"):
+        source = f"# {failure_code}\n途中で保存する本文\n"
+        for worktree in (root, run):
+            (worktree / "oracle/doc/allowed.md").write_text(source)
 
-            super().stream_chunks(documents, resumes, stop_after_chunk, **kwargs)
+        class FailingWorker(_InferenceDouble):
+            def stream_chunks(self, documents, resumes, on_event, **kwargs):
+                def stop_after_chunk(event):
+                    on_event(event)
+                    if event["kind"] == "chunk":
+                        raise SearchError(failure_code, "stop after saved embedding")
 
-    with closing(DocumentSearch(root, _tuning(), worker=FailingWorker())) as search:
-        with pytest.raises(SearchError) as failure:
-            search.synchronize()
-        assert failure.value.code == failure_code
-        assert search.sync_progress["generated_embeddings"] == 1
-        assert search.sync_progress["persisted_embeddings"] == 1
-    with closing(create(run)) as search:
-        assert search.synchronize().reused_embeddings == 1
-        assert search.sync_progress["generated_embeddings"] == 0
+                super().stream_chunks(documents, resumes, stop_after_chunk, **kwargs)
+
+        with closing(DocumentSearch(root, _tuning(), worker=FailingWorker())) as search:
+            with pytest.raises(SearchError) as failure:
+                search.synchronize()
+            assert failure.value.code == failure_code
+            assert search.sync_progress["generated_embeddings"] == 1
+            assert search.sync_progress["persisted_embeddings"] == 1
+        with closing(create(run)) as search:
+            assert search.synchronize().reused_embeddings == 1
+            assert search.sync_progress["generated_embeddings"] == 0
+            assert search.sync_progress["reused_other_worktree"] == 1
     assert inputs() == []
 
 
