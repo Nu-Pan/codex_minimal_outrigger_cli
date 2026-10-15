@@ -476,8 +476,8 @@
   "oracle/src/oracle/other/document_search.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "3726caafdfaeee751bc4e6dde3ff7ae5d04c29f90b3b8268e4f8e8a8c91d6735",
-    "last_investigated_at": "2026-10-11_19-04-21_713"
+    "last_investigated_sha256": "4f6c656e4314410e9f68f19ed4d30c85f540d3e678431249f6cf07943a255363",
+    "last_investigated_at": "2026-10-16_03-20-39_387"
   },
   "oracle/src/oracle/other/path_model.py": {
     "investigation_required": true,

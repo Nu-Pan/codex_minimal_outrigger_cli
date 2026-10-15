@@ -1378,11 +1378,13 @@ def test_mcp_candidate_limit_applies_before_range_merging(
     path = "oracle/doc/allowed.md"
     # 20・21 件の採用で統合前の上限違反を検出する。50 の境界は別ケースで保つ。
     candidate_count = 21
-    available = candidate_count + 1
-    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
+    # 上位 20 件は同じ本文片にし、22 件の候補を三種類の cache 保存だけで用意する。
+    # 21 位は上位と重なり、22 位は離す。統合後の補充や上限無視で結果が変わる。
+    # 異なる embedding の厳密な順位は直前の専用ケースに残す。
+    (root / path).write_text("上限外\n重なる候補\n上位の重複候補\n")
     worker = _CandidateWorker(
-        {path: [(i + 1, available) for i in range(available)]},
-        vectors={path: [(i + 1, 1) for i in range(available)]},
+        {path: [(1, 1), (2, 3)] + [(3, 3)] * 20},
+        vectors={path: [(0, 1), (3, 4)] + [(1, 0)] * 20},
     )
     with closing(
         DocumentSearch(
@@ -1394,7 +1396,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(
     ) as search:
         tool = _listed_search_tool(search)
         # 同じ query の上限だけを変え、索引と query embedding を再利用する。
-        for limit in (20, candidate_count):
+        for limit, start_line in ((20, 3), (candidate_count, 2)):
             response = _response(
                 {
                     "jsonrpc": "2.0",
@@ -1413,11 +1415,9 @@ def test_mcp_candidate_limit_applies_before_range_merging(
                     "path": path,
                     "ranges": [
                         {
-                            "start_line": available - limit + 1,
-                            "end_line": available,
-                            "max_similarity": pytest.approx(
-                                available / math.hypot(available, 1)
-                            ),
+                            "start_line": start_line,
+                            "end_line": 3,
+                            "max_similarity": 1.0,
                         }
                     ],
                 }
