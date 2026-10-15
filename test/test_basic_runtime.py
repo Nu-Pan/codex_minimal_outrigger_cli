@@ -25,6 +25,7 @@ from _git_support import (
     run_git,
 )
 
+import commons.runtime_git as runtime_git
 import commons.runtime_paths as runtime_paths
 from basic.path_model import (
     AgentCallPathContext,
@@ -556,13 +557,26 @@ def test_remove_worktree_rejects_non_run_branch_at_managed_path(
 
 def test_remove_worktree_rejects_noncanonical_run_ids(
     committed_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """旧 ID の branch と登録先が一致しても削除対象にしない。"""
+    """旧 ID は登録済みでも拒否し、不要な worktree 一覧取得を行わない。"""
     root = committed_repository
     old_id = "2026-09-29_15-04_07_123456789"
     target = root / ".cmoc/gu/worktree" / old_id / old_id
     run_git(root, "worktree", "add", "-b", f"cmoc/run/{old_id}/{old_id}", str(target))
 
+    # 実登録と拒否後の保存を検査しつつ、ID だけで拒否できる候補の Git 起動を数える。
+    git_queries = []
+    original_run_git = runtime_git.run_git
+
+    def record_query(args, repository, **kwargs):
+        git_queries.append(args)
+        return original_run_git(args, repository, **kwargs)
+
+    monkeypatch.setattr(runtime_git, "run_git", record_query)
     with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
         remove_worktree(root, target)
     assert target.is_dir()
+    assert not any(args[:2] == ["worktree", "list"] for args in git_queries), (
+        git_queries
+    )

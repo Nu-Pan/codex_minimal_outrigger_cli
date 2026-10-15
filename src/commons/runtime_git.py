@@ -510,14 +510,13 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     # work-root の削除は .cmoc/gu/worktree/{{session-id}}/{{run-id}} に限定する。
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
+    # ID だけで拒否できる候補には、Git の worktree 一覧を取得しない。
+    expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
+    if parse_run_branch_ids(expected_branch) is None:
+        raise _unmanaged_worktree_error(worktree, base)
     # {{work-root}}/oracle/doc/branch_model.md
     # 命名規則だけでは不十分であり、削除は対応する Git linked worktree に限定する。
-    expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
-    registered_branch = _registered_worktree_branches(root).get(resolved)
-    if (
-        parse_run_branch_ids(expected_branch) is None
-        or registered_branch != expected_branch
-    ):
+    if _registered_worktree_branches(root).get(resolved) != expected_branch:
         raise _unmanaged_worktree_error(worktree, base)
     if candidate.exists() and not _has_linked_worktree_metadata(root, candidate):
         raise _unmanaged_worktree_error(worktree, base)
