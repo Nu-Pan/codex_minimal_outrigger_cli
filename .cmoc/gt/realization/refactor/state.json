@@ -534,10 +534,10 @@
     "last_investigated_at": "2026-10-16_04-09-30_666"
   },
   "oracle/src/oracle/prompt_builder/policy/feedback_reporting.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "dd1ec94235362ec58e162b4a96a8ca7e83c4f7909742580f18f6cb6bce55cabc",
-    "last_investigated_at": "2026-10-11_20-17-48_163"
+    "last_investigated_at": "2026-10-16_04-11-52_303"
   },
   "oracle/src/oracle/prompt_builder/policy/file_access.py": {
     "investigation_required": true,
