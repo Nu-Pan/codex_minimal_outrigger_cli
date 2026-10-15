@@ -4237,7 +4237,10 @@ def test_refactor_rejects_unverified_changes_before_state_update(
     ready_join_session, monkeypatch
 ):
     """未検証の各 status で成果物と調査 state を確定しない。"""
-    context = start_editing_run("realization_refactor")
+    # run の開始・公開は専用 lifecycle test、rollback は次の CLI test に残す。
+    context = _prepare_run(
+        ready_join_session, kind="realization_refactor", run_state="running"
+    )
     worktree = context.run_worktree
     before_head = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
     before_state = load_refactor_state(worktree)
