@@ -223,6 +223,7 @@ logger.event("warning", message="\u65e5\u672c\u8a9e warning")
 
 def test_noninteractive_success_emits_one_terminal_result_after_progress(
     cli_terminal_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout を成功 terminal result だけにし、詳細 step はログへ閉じる。"""
@@ -230,6 +231,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     root = cli_terminal_directory
     report_path = root / "report.md"
     report_path.write_text("# report\n")
+
+    def completion_counts(repository: Path) -> tuple[int, list[str]]:
+        """検証済みの件数・warning を正しい repository の終端処理へ渡す。"""
+        assert repository == root
+        return 123, ["feedback warning"]
+
+    monkeypatch.setattr(runtime_cli, "feedback_completion_counts", completion_counts)
 
     def succeed() -> TerminalResult:
         """トップレベルと内部 step を含む成功結果を返す。"""
@@ -275,6 +283,8 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     ]
     assert captured.out.count("# 完了: cmoc probe") == 1
     assert captured.out.count(str(report_path.resolve())) == 1
+    assert "- pending feedback observation: `123`" in captured.out
+    assert captured.out.count("- warning: feedback warning") == 1
     assert "cmoc probe を開始" in captured.err
     assert "cmoc probe: top level" in captured.err
     assert "nested" not in captured.err
@@ -283,6 +293,11 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["classification"] == "natural_completion"
+    assert events[-1]["returncode"] == 0
+    assert events[-1]["pending_feedback_observation_count"] == 123
+    assert events[-1]["warnings"] == ["feedback warning"]
+    assert events[-1]["terminal_result"]["pending_feedback_observation_count"] == 123
+    assert events[-1]["terminal_result"]["warnings"] == ["feedback warning"]
     assert events[-1]["terminal_result"]["result"] == "attention"
     assert events[-1]["terminal_result"]["details"] == [
         {"name": "target", "value": str(root / "input.json")},

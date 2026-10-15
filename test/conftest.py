@@ -165,6 +165,11 @@ def cli_terminal_directory(
     monkeypatch.setattr(
         runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
     )
+    # pending の inventory・件数・通知境界は test_feedback.py、結果の引き渡しは
+    # test_runtime_cli.py に残し、表示・report の検査で空の store を毎回検証しない。
+    monkeypatch.setattr(
+        runtime_cli, "feedback_completion_counts", lambda _root: (0, [])
+    )
     return root
 
 
