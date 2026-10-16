@@ -1148,8 +1148,8 @@
   "src/sub_commands/realization/refactor/fork.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "b9c81a188dd663bcbf9e2a3a51c8a5c043f9c8b84eacb40cc965bec6793dc895",
-    "last_investigated_at": "2026-10-12_16-55-24_744"
+    "last_investigated_sha256": "6354e8fdc09b0e18fffad6cc1e1bac9df2f6c3b3299473e9501ea5b99b19aa2c",
+    "last_investigated_at": "2026-10-16_14-26-13_869"
   },
   "src/sub_commands/resume.py": {
     "investigation_required": true,

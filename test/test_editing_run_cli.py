@@ -2061,20 +2061,23 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
 ) -> None:
     """確認不能な差分・履歴を空として扱わず terminal report と state を保存する。"""
     root, _session_branch, state_path = refactor_after_preprocess
-    agent_failed = False
+    # report の故障検査には巡回・agent call の準備が不要。実 CLI の終端処理は通す。
+    # agent 作業の rollback は test_refactor_interrupt_rolls_back_current_unit_and_is_joinable
+    # と test_refactor_rejects_unverified_changes_and_rolls_back に残す。
+    cycle_failed = False
 
-    def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
-        """agent failure または user interruption を再現する。"""
-        nonlocal agent_failed
-        agent_failed = True
+    def fail_cycle(*_args: object, **_kwargs: object) -> NoReturn:
+        """巡回開始時に error または user interruption を再現する。"""
+        nonlocal cycle_failed
+        cycle_failed = True
         if interrupted:
             raise KeyboardInterrupt()
-        raise RuntimeError("agent failed")
+        raise RuntimeError("cycle failed")
 
     monkeypatch.setattr(
         refactor_module,
-        "run_codex_exec",
-        fail_agent,
+        "_initialize_cycle",
+        fail_cycle,
     )
     if inspection == "changes":
         monkeypatch.setattr(
@@ -2085,15 +2088,11 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
             ),
         )
     else:
-        load = refactor_module.load_refactor_state
-
-        def unreadable_after_agent(root):
-            if agent_failed:
-                raise RuntimeError("state unavailable")
-            return load(root)
-
+        # 巡回前に停止するため、report より前の state 読み取りは準備しない。
         monkeypatch.setattr(
-            refactor_module, "load_refactor_state", unreadable_after_agent
+            refactor_module,
+            "load_refactor_state",
+            Mock(side_effect=RuntimeError("state unavailable")),
         )
 
     result = runner.invoke(
@@ -2102,7 +2101,7 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
         catch_exceptions=False,
     )
 
-    assert agent_failed
+    assert cycle_failed
     expected_state = "joinable" if interrupted else "error"
     expected_reason = "user_interruption" if interrupted else "error"
     assert result.exit_code == (0 if interrupted else 1)
