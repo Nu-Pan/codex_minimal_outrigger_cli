@@ -200,8 +200,8 @@
   "oracle/doc/app_spec/sub_command/resume.md": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "c99812a8ae524635e35c03d12fe84ed28241e9faf148828a2bf7d23b38c267fa",
-    "last_investigated_at": "2026-10-13_02-48-35_335"
+    "last_investigated_sha256": "2283e9da43399bc5022e03b8239600aec9fafd40e4b5b516dbb5f346933abfa1",
+    "last_investigated_at": "2026-10-16_15-24-12_743"
   },
   "oracle/doc/app_spec/sub_command/session_abandon.md": {
     "investigation_required": true,

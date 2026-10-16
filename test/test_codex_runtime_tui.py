@@ -1012,6 +1012,9 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
 ):
     import commons.runtime_codex_profile as profile
 
+    # 初回 process の終了待ちは test_initial_completion_waits_for_process_exit に残す。
+    # ここでは初回応答を既存 helper で返し、検証対象の TUI process だけを起動する。
+    initial_calls = fake_initial(monkeypatch)
     ready = tmp_path / "tui-ready"
     release = tmp_path / "tui-release"
     bin_dir = tmp_path / "bin"
@@ -1021,18 +1024,13 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
         [
             "import pathlib, sys, time",
             "args = sys.argv[1:]",
-            "if 'exec' in args:",
-            "    sys.stdin.read()",
-            f"    print({SUCCESS!r}, end='', flush=True)",
-            "    pathlib.Path(args[args.index('--output-last-message') + 1]).write_text('saved reply')",
-            "else:",
-            f"    assert args[-2:] == ['resume', {SESSION_ID!r}]",
-            "    print('fake interactive output', flush=True)",
-            f"    pathlib.Path({str(ready)!r}).touch()",
-            "    for _ in range(1000):",
-            f"        if pathlib.Path({str(release)!r}).exists(): break",
-            "        time.sleep(0.01)",
-            f"    sys.exit({returncode})",
+            f"assert args[-2:] == ['resume', {SESSION_ID!r}]",
+            "print('fake interactive output', flush=True)",
+            f"pathlib.Path({str(ready)!r}).touch()",
+            "for _ in range(1000):",
+            f"    if pathlib.Path({str(release)!r}).exists(): break",
+            "    time.sleep(0.01)",
+            f"sys.exit({returncode})",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
@@ -1073,4 +1071,5 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
             assert finished["returncode"] == returncode
         finally:
             release.touch()
+    assert len(initial_calls) == 1
     assert "fake interactive output" in capfd.readouterr().out
