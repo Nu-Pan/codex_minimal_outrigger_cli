@@ -686,6 +686,8 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     original_builder = apply_module.build_realization_apply_fork_launch_exec_parameter
     built_parameters: list[AgentCallParameter] = []
     calls: list[tuple[AgentCallParameter, Path]] = []
+    inspect_changes = Mock(wraps=apply_module.tree_changes)
+    monkeypatch.setattr(apply_module, "tree_changes", inspect_changes)
 
     def capture_builder(
         diff_base_commit: str,
@@ -748,6 +750,7 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert isinstance(run_branch, str) and run_branch.startswith("cmoc/run/")
     assert len(calls) == len(built_parameters) == 1
     parameter, run_worktree = calls[0]
+    inspect_changes.assert_called_once_with(run_worktree, run_fork_commit)
     assert parameter is built_parameters[0]
     assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert run_worktree != root
@@ -821,6 +824,8 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     assert (
         "## Changed paths\n- none\n" in terminal_primary_report(next_fork).read_text()
     )
+    # HEAD と未確定差分の検査で無変更が確定しているので、履歴を再照会しない。
+    inspect_changes.assert_called_once_with(run_worktree, run_fork_commit)
     next_diff = run_git(
         root, "diff", run_fork_commit, next_state["run"]["fork_commit"], "--", "oracle"
     ).stdout
