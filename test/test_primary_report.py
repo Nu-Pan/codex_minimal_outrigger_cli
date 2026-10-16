@@ -23,15 +23,17 @@ from unittest.mock import Mock
 
 import pytest
 import typer
-import yaml
 from _cli_support import terminal_primary_report
+from _report_support import assert_report_layout, report_metadata, report_section
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_primary_report as primary_report_module
+import commons.runtime_primary_report_render as report_render_module
 from cmoc_runtime import CmocError, TerminalResult
 from commons.runtime_logging import SubcommandLogger
 from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
+from commons.runtime_report_markdown import ReportSummary
 
 
 @pytest.fixture
@@ -120,6 +122,7 @@ def test_formatted_primary_report_is_opened_once_before_terminal_event(
         assert logger is not None
         assert path.is_file()
         rendered = path.read_text(encoding="utf-8")
+        assert_report_layout(rendered)
         assert "# cmoc doctor report" in rendered
         assert '"message": "first\nsecond"' in rendered
         assert "### Codex 最終出力" in rendered
@@ -375,7 +378,7 @@ def test_early_error_saves_command_specific_primary_report(
     report_directory: str,
     required_fields: tuple[str, ...],
 ) -> None:
-    """処理開始前の error でも固有の保存先と必須 front matter を保つ。"""
+    """処理開始前の error でも固有の保存先と必須実行情報を保つ。"""
     # doctor preprocess から共通 report 保存へ到達する経路は、
     # test_runtime_cli.py の前処理失敗ケースで検証し、個別 report を重複生成しない。
     root = primary_report_directory
@@ -406,8 +409,9 @@ def test_early_error_saves_command_specific_primary_report(
     assert report_path.is_file()
     assert captured.err.count(str(report_path)) == 1
     rendered = report_path.read_text(encoding="utf-8")
-    front_matter = rendered.split("---", 2)[1]
-    metadata = yaml.safe_load(front_matter)
+    assert_report_layout(rendered)
+    information = report_section(rendered, "実行情報")
+    metadata = report_metadata(rendered)
     assert isinstance(metadata, dict)
     assert metadata["execution_id"] == report_path.stem
     assert metadata["subcommand_log_path"] == str(
@@ -415,11 +419,11 @@ def test_early_error_saves_command_specific_primary_report(
     )
     assert metadata["terminal_classification"] == "error"
     assert metadata["exit_code"] == 1
-    assert 'terminal_classification: "error"' in front_matter
-    assert "exit_code: 1" in front_matter
-    assert f'repo_root: "{root.resolve()}"' in front_matter
-    assert "理由:" not in front_matter
-    assert "詳細:" not in front_matter
+    assert 'terminal_classification: "error"' in information
+    assert "exit_code: 1" in information
+    assert f'repo_root: "{root.resolve()}"' in information
+    assert "理由:" not in information
+    assert "詳細:" not in information
     for field in required_fields:
         assert field in metadata
     assert "early failure" in rendered
@@ -428,10 +432,12 @@ def test_early_error_saves_command_specific_primary_report(
     for section in _EARLY_ERROR_SECTIONS[command_name]:
         assert section in rendered
     if command_name == "oracle edit":
-        assert 'first_agent_call_status: "not_started"' in front_matter
-        assert 'second_agent_call_status: "not_started"' in front_matter
+        assert 'first_agent_call_status: "not_started"' in information
+        assert 'second_agent_call_status: "not_started"' in information
+        assert "入力未確定" in report_section(rendered, "元の指示")
+        assert "入力未確定" in rendered.split("## 元の指示", 1)[0]
     if command_name == "realization refactor fork":
-        assert 'completion_reason: "error"' in front_matter
+        assert 'completion_reason: "error"' in information
         assert "## Current fork" in rendered
         assert "- processed targets: not_fixed" in rendered
         assert "## Unresolved targets" in rendered
@@ -441,9 +447,10 @@ def test_early_error_saves_command_specific_primary_report(
         assert "## Refactor state" in rendered
         assert "## Change summary" in rendered
     if command_name == "realization apply fork":
-        assert 'completion_reason: "error"' in front_matter
-        assert "feedback_observation_count: 0" in front_matter
-        assert "feedback_observations: []" in front_matter
+        assert 'completion_reason: "error"' in information
+        assert "feedback_observation_count: 0" in information
+        assert "feedback_observations: []" in information
+        assert "commit 範囲: 未確定 → 未確定" in report_section(rendered, "元の指示")
     if command_name == "feedback report":
         assert "feedback publication または active state ではありません" in rendered
 
@@ -559,6 +566,78 @@ def test_primary_report_keeps_outputs_observations_and_artifact_paths(
             )
     assert "accepted issue" in report
     assert "different workload" in report
+
+
+def test_saved_individual_report_uses_final_result_and_late_notices(
+    primary_report_directory,
+    capsys,
+):
+    root = primary_report_directory
+    warning = "late warning " + "details " * 80
+
+    def body():
+        logger = runtime_cli.current_subcommand_logger()
+        path = root / "individual.md"
+        content = primary_report_module.prepare_primary_report(
+            path,
+            "cmoc run join report",
+            {
+                "command": "cmoc run join",
+                "execution_id": logger.execution_id,
+                "subcommand_log_path": str(logger.path),
+                "terminal_classification": "natural_completion",
+                "exit_code": 0,
+                "state_after": "ready",
+            },
+            ReportSummary("完了", ("merge は確定済みです。",)),
+            "確定済みの merge を維持します。",
+        )
+        primary_report_module.write_reserved_primary_report(path, content)
+        logger.record_warning(warning, emit=False)
+        logger.event(
+            "feedback_observation_accepted",
+            observation_id="new-observation",
+            payload={"summary": "new issue", "workload_limitation": "external"},
+        )
+        raise CmocError(
+            "late failure",
+            ["inspect latest result"],
+            "late failure detail",
+            terminal_result=TerminalResult(
+                primary_report=path, primary_report_role="run join report"
+            ),
+        )
+
+    with pytest.raises(typer.Exit):
+        runtime_cli.run_cli_subcommand(
+            body, command_name="run join", doctor_preprocess=False
+        )
+    report = terminal_primary_report(capsys.readouterr().err).read_text()
+    assert_report_layout(report)
+    assert "失敗" in report_section(report, "実行結果")
+    assert "merge は確定済み" in report_section(report, "実行結果")
+    assert "late warning" in report_section(report, "要注意事項")
+    assert "新規 feedback observation: 1 件" in report_section(report, "要注意事項")
+    assert "late failure" in report_section(report, "要注意事項")
+    assert "inspect latest result" in report_section(report, "次の操作")
+    assert warning in report
+    assert "new issue" in report
+    assert report_metadata(report)["terminal_classification"] == "error"
+    assert report_metadata(report)["exit_code"] == 1
+
+
+def test_inherited_report_notices_belong_to_original_execution(tmp_path, monkeypatch):
+    original = SubcommandLogger(tmp_path, "feedback report")
+    original.record_warning("original warning", emit=False)
+    resumed = SubcommandLogger(tmp_path, "feedback report")
+    resumed.record_warning("resumed warning", emit=False)
+    monkeypatch.setattr(
+        report_render_module, "current_subcommand_logger", lambda: resumed
+    )
+    notices = report_render_module.saved_execution_notices(
+        original.path, original.execution_id
+    )
+    assert notices == ("original warning",)
 
 
 def test_structured_output_display_preserves_json_values_and_hierarchy(
@@ -698,9 +777,9 @@ def test_refactor_fallback_records_user_interruption_reason(
 
     captured = capsys.readouterr()
     report_path = terminal_primary_report(captured.out)
-    front_matter = report_path.read_text(encoding="utf-8").split("---", 2)[1]
-    assert 'terminal_classification: "user_interruption"' in front_matter
-    assert 'completion_reason: "user_interruption"' in front_matter
+    information = report_metadata(report_path.read_text(encoding="utf-8"))
+    assert information["terminal_classification"] == "user_interruption"
+    assert information["completion_reason"] == "user_interruption"
 
 
 def test_existing_primary_report_survives_update_failure(

@@ -32,7 +32,6 @@ from commons.runtime_codex_recovery import (
     defer_recovery_interruption,
 )
 from commons.runtime_primary_report import update_primary_report_fields
-from commons.runtime_primary_report_render import yaml_scalar
 from commons.runtime_refactor import (
     RefactorState,
     load_refactor_state,
@@ -41,6 +40,7 @@ from commons.runtime_refactor import (
     sync_refactor_state,
     write_refactor_state,
 )
+from commons.runtime_report_markdown import ReportSummary, terminal_outcome, yaml_scalar
 from commons.runtime_results import StructuredOutputValidationIssue
 from commons.runtime_run import (
     read_run_process_id,
@@ -1108,6 +1108,22 @@ def _write_refactor_report(
     return write_fork_report(
         context,
         "realization/refactor/fork",
+        summary=ReportSummary(
+            terminal_outcome("error" if reason == "error" else "user_interruption"),
+            (
+                f"完了した巡: {progress.completed_cycles} / 終了時の巡: {progress.cycle}",
+                f"終了段階: {progress.termination_phase or progress.phase}",
+                f"確定した処理単位: {len(units)} 件",
+            ),
+            (
+                *([repr(error)] if error is not None else []),
+                *report_cleanup_errors,
+                f"巡内の保留対象: {len(unresolved_targets)} 件 / 未処理対象: {uninvestigated_targets} 件",
+                f"未解決所見を持つ対象: {len(unresolved_findings)} 件",
+                "テスト時間・短縮率は、比較可能な完了済み計測がありません。",
+            ),
+            _refactor_next_actions(report_cleanup_errors),
+        ),
         state_after=state_after,
         completion_reason=reason,
         changed_paths=changed_paths,

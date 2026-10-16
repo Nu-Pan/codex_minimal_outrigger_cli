@@ -4,7 +4,60 @@ import html
 import json
 from typing import Any
 
+from .runtime_feedback_history import state_summary
 from .runtime_feedback_store import mask_feedback_text
+from .runtime_report_markdown import ReportSummary
+
+
+def feedback_report_summary(
+    issues: dict[str, dict[str, Any]],
+    outcome: str,
+    *,
+    scope: tuple[str, ...] = (),
+    publication_pending: bool = False,
+    notices: tuple[str, ...] = (),
+) -> ReportSummary:
+    """案件の残件と invocation の成否を分け、必要な確認と操作を示す。"""
+    # 未確認事項を解決済みへ読み替えず、generation に含まれる判定だけを数える。
+    human = sum(
+        issue["verification"]["status"] == "human_required" for issue in issues.values()
+    )
+    inconclusive = sum(
+        issue["verification"]["status"] == "inconclusive" for issue in issues.values()
+    )
+    attention = list(notices)
+    actions: list[str] = []
+    if publication_pending:
+        attention.append(
+            "保存時点では publication・cleanup・終了処理は未完了です。invocation の終端結果は未確定です。"
+        )
+        actions.append(
+            "保存後の publication・cleanup・最終 state と terminal result を、実行情報に示す元の実行ログで確認してください。"
+        )
+    if human:
+        attention.append(f"人間対応が必要な案件（human_required）: {human} 件。")
+        actions.append(
+            "案件一覧の Human action に従って対応し、`cmoc feedback report` で再確認してください。"
+        )
+    if inconclusive:
+        attention.append(
+            f"判定不能の案件（inconclusive）: {inconclusive} 件。最新状態の要約は incomplete です。問題の解決は確認できていません。"
+        )
+        actions.append(
+            "判定不能の理由と根拠を確認してください。外部解決を人間が確認した案件は `cmoc feedback close <案件ID> --reason <理由>` で終了できます。"
+        )
+    attention.append(
+        "確認範囲はこの generation の入力境界までです。未取り込みの観測や確定後の変化は確認していません。"
+    )
+    return ReportSummary(
+        outcome,
+        (
+            *scope,
+            f"最新状態の要約: {state_summary(issues)} / human_required: {human} 件 / inconclusive: {inconclusive} 件",
+        ),
+        tuple(attention),
+        tuple(actions),
+    )
 
 
 def render_current_cases(issues: dict[str, dict[str, Any]]) -> str:

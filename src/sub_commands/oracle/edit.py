@@ -23,7 +23,10 @@ from commons.prompt_editor_input import (
 )
 from commons.runtime_git import current_branch
 from commons.runtime_paths import reuse_root_queries
-from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_primary_report import (
+    update_primary_report_fields,
+    update_primary_report_input,
+)
 from commons.runtime_state import load_session_part_for_branch
 
 
@@ -67,6 +70,7 @@ def _cmoc_oracle_edit_body() -> None:
         repository,
         input_path,
     )
+    update_primary_report_input(instruction)
 
     start_subcommand_step(5, "共用する入力と設定を確定", "prepare edit calls")
     parameter = build_oracle_edit_main_launch_exec_parameter(instruction)
@@ -110,6 +114,7 @@ def _require_oracle_edit_launch_preconditions(
             f"work_root: {current_root.resolve()}\nrepo_root: {repository.resolve()}",
         )
     branch = current_branch(current_root)
+    update_primary_report_fields(session_branch=branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError(
             "cmoc oracle edit は session branch 上で実行してください。",

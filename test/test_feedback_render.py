@@ -1,6 +1,13 @@
 """案件一覧の順序と判定ごとの情報を Git・publication の準備なしで検証する。"""
 
-from commons.runtime_feedback_render import render_current_cases
+import pytest
+from _report_support import report_section
+
+from commons.runtime_feedback_render import (
+    feedback_report_summary,
+    render_current_cases,
+)
+from commons.runtime_report_markdown import render_report_document
 
 
 def _case(number, status):
@@ -81,3 +88,48 @@ def test_empty_current_cases_explains_absence():
     rendered = render_current_cases({})
     assert "未終了の案件はありません。" in rendered
     assert "- Latest result:" not in rendered
+
+
+@pytest.mark.parametrize(
+    ("statuses", "expected"),
+    [
+        ([], "ok"),
+        (["human_required"], "attention"),
+        (["inconclusive"], "incomplete"),
+        (["human_required", "inconclusive"], "incomplete"),
+    ],
+)
+def test_publication_summary_separates_issue_state_and_unfinished_invocation(
+    statuses, expected
+):
+    issues = {str(index): _case(index, status) for index, status in enumerate(statuses)}
+    rendered = render_report_document(
+        "cmoc feedback report",
+        {
+            "command": "cmoc feedback report",
+            "report_cut_id": "fixed-cut",
+            "final_high_watermark": 7,
+            "execution_id": "original-execution",
+        },
+        feedback_report_summary(
+            issues,
+            "report 保存時点の記録です。",
+            publication_pending=True,
+        ),
+        render_current_cases(issues),
+    )
+    result = report_section(rendered, "実行結果")
+    attention = report_section(rendered, "要注意事項")
+    actions = report_section(rendered, "次の操作")
+    assert f"最新状態の要約: {expected}" in result
+    assert "保存時点" in result
+    assert "未完了" in attention and "未確定" in attention
+    assert "元の実行ログ" in actions
+    assert "未取り込みの観測や確定後の変化は確認していません" in attention
+    if "human_required" in statuses:
+        assert "人間対応が必要" in attention
+        assert "Human action" in actions
+    if "inconclusive" in statuses:
+        assert "問題の解決は確認できていません" in attention
+        assert "cmoc feedback close" in actions
+    assert "fixed-cut" in report_section(rendered, "元の指示")

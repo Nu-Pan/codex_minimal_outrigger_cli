@@ -29,6 +29,7 @@ from _git_support import (
     make_repo,
     run_git,
 )
+from _report_support import assert_report_layout, report_metadata, report_section
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_git as git_module
@@ -54,6 +55,7 @@ from commons.runtime_primary_report import (
     start_primary_report_context,
 )
 from commons.runtime_refactor import load_refactor_state
+from commons.runtime_report_markdown import ReportSummary
 from commons.runtime_results import TerminalResult
 from commons.runtime_run import run_process_id_path
 from commons.runtime_run_lifecycle import (
@@ -338,6 +340,7 @@ def test_run_reports_keep_execution_ids_generated_time_and_content(
         run_report_module.write_fork_report(
             context,
             "realization/apply/fork",
+            summary=ReportSummary("完了"),
             state_after="joinable",
             completion_reason="completed",
             changed_paths=changed_paths,
@@ -363,7 +366,7 @@ def test_run_reports_keep_execution_ids_generated_time_and_content(
     )
 
     # 既に保存する fork report で空・通常・特殊文字の path を検証する。
-    assert "## Changed paths\n- none\n" in contents[fork_paths[0]]
+    assert "## Changed paths\n\n- none\n" in contents[fork_paths[0]]
     assert "- `plain.md`" in contents[fork_paths[1]]
     assert (
         "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>"
@@ -800,6 +803,8 @@ def test_realization_apply_fork_and_run_join_use_common_state(
     )
     report_path = terminal_primary_report(joined)
     report_text = report_path.read_text()
+    assert_report_layout(report_text)
+    assert "cleanup: completed" in report_section(report_text, "実行結果")
     assert "session.last_joined_apply_fork_commit=" not in report_text
     assert 'command: "cmoc run join"' in report_text
     assert 'terminal_classification: "natural_completion"' in report_text
@@ -832,7 +837,7 @@ def test_realization_apply_fork_and_run_join_use_common_state(
         run_git(next_worktree, "rev-parse", "HEAD").stdout.strip() == next_fork_commit
     )
     assert (
-        "## Changed paths\n- none\n" in terminal_primary_report(next_fork).read_text()
+        "## Changed paths\n\n- none\n" in terminal_primary_report(next_fork).read_text()
     )
     # HEAD と未確定差分の検査で無変更が確定しているので、履歴を再照会しない。
     inspect_changes.assert_called_once_with(run_worktree, run_fork_commit)
@@ -1238,9 +1243,12 @@ def test_apply_report_fields_include_accepted_feedback_paths(
         "feedback_observations": observations,
     }
     assert result.primary_report is not None
-    front_matter = result.primary_report.read_text(encoding="utf-8").split("---", 2)[1]
-    assert "feedback_observation_count: 1" in front_matter
-    assert f"feedback_observations: {json.dumps(observations)}" in front_matter
+    report = result.primary_report.read_text(encoding="utf-8")
+    assert_report_layout(report)
+    metadata = report_metadata(report)
+    assert metadata["feedback_observation_count"] == 1
+    assert metadata["feedback_observations"] == observations
+    assert "新規 feedback observation: 1 件" in report_section(report, "要注意事項")
 
 
 def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
@@ -1537,10 +1545,12 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     )
     assert len(reports) == 1
     report = reports[0].read_text()
-    assert "## Completion\nuser_interruption" in report
+    assert "## Completion\n\nuser_interruption" in report
     destinations = sorted(destination for destination, *_flags in cases.values())
     expected_targets = "\n".join(f"  - `{path}`" for path in destinations)
-    assert f"## Unresolved targets\n- count: 3\n- paths:\n{expected_targets}" in report
+    assert (
+        f"## Unresolved targets\n\n- count: 3\n- paths:\n{expected_targets}" in report
+    )
     for source, (destination, _replace_content, _add_unrelated_file) in cases.items():
         assert f"- `{destination}`: deferred {source}" in report
 
@@ -1655,6 +1665,9 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
     assert "renamed.md" not in reviewed
     report = terminal_primary_report(result).read_text()
     assert 'completion_reason: "user_interruption"' in report
+    assert_report_layout(report)
+    assert "中断完了" in report_section(report, "実行結果")
+    assert "保留対象: 1 件" in report_section(report, "要注意事項")
     assert "- count: 1" in report
     assert "`renamed.md`" in report
 
@@ -2125,7 +2138,7 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
     report_text = reports[0].read_text()
     if inspection == "changes":
         assert "change inspection failed" in report_text
-        assert "## Changed paths\n- unavailable" in report_text
+        assert "## Changed paths\n\n- unavailable" in report_text
     else:
         assert "state inspection failed" in report_text
         assert "- entries: null" in report_text
@@ -2221,7 +2234,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     assert "agent commit cleanup failed" in report_text
     assert "change inspection failed" in report_text
     assert "git diff unavailable" in report_text
-    assert "## Changed paths\n- unavailable" in report_text
+    assert "## Changed paths\n\n- unavailable" in report_text
 
 
 @pytest.mark.usefixtures("apply_after_preprocess")
@@ -3361,7 +3374,7 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     assert "README unresolved finding" in report_text
     assert "resolution.summary: 人間の判断が必要" in report_text
     assert f"Codex call log: `{call_log}`" in report_text
-    assert "## Change summary\n- none\n" in report_text
+    assert "## Change summary\n\n- none\n" in report_text
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(
@@ -4179,7 +4192,7 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
         assert "- current cycle: 2" in report
         assert "- cycle confirmed investigations: 0" in report
         assert "- cycle deferred targets: 0" in report
-        assert "## Unresolved findings\n- `README.md`: deferred" in report
+        assert "## Unresolved findings\n\n- `README.md`: deferred" in report
         assert "try next cycle" in report
         return
     assert len(reviewed) == count * 2
@@ -4187,7 +4200,7 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
     assert reviewed[count - 1] == reviewed[count] == "README.md"
     assert all(reviewed.count(target) == 2 for target in state)
     assert "- completed cycles: 2" in report
-    assert "## Unresolved findings\n- none" in report
+    assert "## Unresolved findings\n\n- none" in report
     assert "test timing: unavailable" in result.output
 
 
@@ -4315,7 +4328,7 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
     assert (worktree / "README.md").read_text() == "resolved\n"
     assert not worktree_change_paths(worktree)
     report = terminal_primary_report(result).read_text()
-    assert "## Unresolved findings\n- none" in report
+    assert "## Unresolved findings\n\n- none" in report
     assert "committed unit inspection failed" in report
 
 
