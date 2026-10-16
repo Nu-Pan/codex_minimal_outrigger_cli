@@ -153,22 +153,19 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                     return close_exit.exit_code
                 return 1
             # {{work-root}}/oracle/doc/app_spec/error_handling.md
-            # 未 raise の例外を render_error すると Call stack が概要だけになるため、
-            # parser error を cause にした report exception を raise してから描画する。
-            try:
-                raise CmocError(
-                    "CLI 引数解析に失敗しました。",
-                    [
-                        "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
-                    ],
-                    click_exception.format_message(),
-                ) from exc
-            except CmocError as report_error:
-                typer.echo(
-                    f"{render_error(report_error)}\n"
-                    f"- 終了コード: `{click_exception.exit_code}`",
-                    err=True,
-                )
+            # スタックを表示しない解析エラーは、描画用の例外を送出せず整形する。
+            report_error = CmocError(
+                "CLI 引数解析に失敗しました。",
+                [
+                    "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
+                ],
+                click_exception.format_message(),
+            )
+            typer.echo(
+                f"{render_error(report_error)}\n"
+                f"- 終了コード: `{click_exception.exit_code}`",
+                err=True,
+            )
             if standalone_mode:
                 raise SystemExit(click_exception.exit_code) from exc
             raise
