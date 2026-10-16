@@ -495,10 +495,11 @@ def test_doctor_rechecks_work_directories_after_repair_commit(
 
 
 def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """設定を保持し、初回・編集・無変更・削除の索引同期と報告を確認する。"""
-    root = make_repo(tmp_path)
+    # HEAD の文書だけを参照するため、初期内容を一つの commit に揃える。
+    root = cli_repository
     # 設定保持も同じ CLI 起動で確認し、専用 repository と doctor 起動を重ねない。
     expected_config = config_to_dict(CmocConfig())
     expected_config["num_parallel"] = 3
@@ -516,7 +517,7 @@ def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
     config_path.write_text(json.dumps(incomplete_config) + "\n")
 
     document = root / "oracle/doc/source.md"
-    document.parent.mkdir()
+    document.parent.mkdir(parents=True)
     original = "# original document\n"
     updated = "# updated document\n"
     document.write_text(original)
@@ -1158,11 +1159,12 @@ def test_doctor_reports_unsaved_inconsistent_search_candidate(
 
 
 def test_doctor_generates_config_under_broad_cmoc_ignore(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """広い `.cmoc/` ignore があっても生成 config を追跡可能に修復することを検証する。"""
 
-    root = committed_repository
+    # ignore 規則を最初の commit に含め、準備だけの空 commit を作らない。
+    root = cli_repository
     (root / ".gitignore").write_text(".cmoc/\n")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "ignore cmoc working data")
