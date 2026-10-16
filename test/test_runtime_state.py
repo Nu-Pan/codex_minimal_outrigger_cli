@@ -122,10 +122,11 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
 
 
 @pytest.mark.parametrize("branch", [None, 1])
-def test_load_state_rejects_non_string_branch(tmp_path: Path, branch: object) -> None:
+def test_load_state_rejects_non_string_branch(branch: object) -> None:
     """branch の型異常を raw AttributeError として漏らさない。"""
+    # branch の型検証に保存先は不要なので、directory を準備しない。
     with pytest.raises(CmocError, match="cmoc 管理 branch"):
-        load_state_for_branch(tmp_path, branch)  # type: ignore[arg-type]
+        load_state_for_branch(Path("unused"), branch)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -141,12 +142,11 @@ def test_load_state_rejects_non_string_branch(tmp_path: Path, branch: object) ->
         RUN_ID,
     ],
 )
-def test_state_path_rejects_noncanonical_session_id(
-    tmp_path: Path, session_id: str
-) -> None:
+def test_state_path_rejects_noncanonical_session_id(session_id: str) -> None:
     """現行 session ID 以外を state の保存先に使わない。"""
+    # ID の書式検証に保存先は不要なので、directory を準備しない。
     with pytest.raises(CmocError, match="session-id"):
-        state_path(tmp_path, session_id)
+        state_path(Path("unused"), session_id)
 
 
 def test_state_io_rejects_noncanonical_filename(tmp_path: Path) -> None:
