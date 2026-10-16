@@ -99,6 +99,10 @@ def close_repository(committed_repository, monkeypatch):
     # doctor 内部の修復・索引同期は専用 test と reported_case で検証する。
     # close が前処理の失敗を越えて更新しないことは、この file の失敗 test に残す。
     monkeypatch.setattr(close_module, "run_doctor_preprocess", lambda _root: None)
+    # 同期の順序・失敗・再保存は test_feedback_store.py、close と実同期の結合は
+    # reported_case に残す。保存・recovery の検査で同じディスク同期待ちを重ねない。
+    # write・rename・hash 検査と、確定点前後の障害注入・cleanup は実処理を通す。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
     # 保存済み案件には実 HEAD と README の根拠だけを用意し、追跡 file の準備を省く。
     # 追跡済み差分・doctor との結合は reported_case に残す。
     root = committed_repository
@@ -243,14 +247,10 @@ def _publish_prepared_cases(root, statuses, machine_aggregates):
 
 
 @pytest.fixture
-def open_case(close_repository, monkeypatch):
+def open_case(close_repository):
     root = close_repository
-    # 同期の順序・失敗は test_feedback_store.py で検査する。初期状態の準備だけ
-    # ディスク同期待ちを省き、close 本体の保存・recovery では実 fsync に戻す。
-    with monkeypatch.context() as preparation:
-        preparation.setattr("os.fsync", lambda _fd: None)
-        _, _, identity = _store_agent_issue(root, None)
-        issues = _publish_prepared_cases(root, {identity: "inconclusive"}, {})
+    _, _, identity = _store_agent_issue(root, None)
+    issues = _publish_prepared_cases(root, {identity: "inconclusive"}, {})
     return root, issues[identity]
 
 
