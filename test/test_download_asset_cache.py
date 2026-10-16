@@ -94,9 +94,12 @@ def asset_logger(tmp_path, nonpersistent_execution_ids):
 
 @pytest.fixture
 def asset_events(asset_logger, monkeypatch):
-    """実 logger の状態記録を保ち、資材の検査に不要なディスク追記を省く。"""
+    """実ファイルと logger の状態を検査し、重複するディスク追記・同期を省く。"""
     # 保存・report との結合は redirect と doctor の専用ケースに残す。
     monkeypatch.setattr(logging_module, "append_log_record", lambda *_args: None)
+    # 実 fsync による取得・公開は並行取得・redirect・doctor のケースに残す。
+    # ここでも write・flush・rename と保存内容・完全性の照合は実行する。
+    monkeypatch.setattr(cache_module.os, "fsync", lambda _fd: None)
     return asset_logger
 
 
