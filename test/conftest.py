@@ -126,9 +126,12 @@ def feedback_publication_session(
     feedback_without_transport: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
-    """案件の publication 検査には、修復不要の session を用意する。"""
+    """案件の publication 検査には、修復不要の session と同期を待たない保存を使う。"""
     # doctor の修復・設定検査は test_doctor_cli.py、feedback との結合は
     # test_feedback.py の repairs_sequential_waves_and_preserves_late_intake に残す。
+    # fsync の順序・失敗・再保存は test_feedback_store.py、実同期との結合は
+    # 上記の wave test に残す。write・rename・hash 検査と recovery は実行する。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
     # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
     monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", lambda: None)
     root, _session_branch, _state_path = ready_join_session
