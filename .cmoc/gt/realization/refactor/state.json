@@ -1322,8 +1322,8 @@
   "test/test_codex_runtime_recovery.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "b961686d3c9e5c8cbb6dd3308e18cfe00523f5a02154e1d397a57d38ab1cd3a8",
-    "last_investigated_at": "2026-10-13_05-40-20_613"
+    "last_investigated_sha256": "a3f56bde456148336e561b957f0fa4029ff6437b267703bb94b3e57e9f43e968",
+    "last_investigated_at": "2026-10-16_17-15-28_525"
   },
   "test/test_codex_runtime_retry.py": {
     "investigation_required": true,

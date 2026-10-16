@@ -2,11 +2,11 @@
 
 import json
 import os
+import select
 import signal
 import subprocess
 import sys
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
 from dataclasses import replace
@@ -505,8 +505,8 @@ import pathlib, subprocess, sys
 from commons.runtime_codex_recovery import defer_recovery_interruption
 try:
     with defer_recovery_interruption():
-        subprocess.run([sys.executable, '-c',
-            "import pathlib, sys; pathlib.Path('ready').touch(); "
+        subprocess.run([sys.executable, '-S', '-c',
+            "import pathlib, sys; print('ready', flush=True); "
             "sys.stdin.read(); pathlib.Path('artifact').write_text('committed')"],
             check=True)
         pathlib.Path('record').write_text('confirmed')
@@ -520,8 +520,9 @@ except KeyboardInterrupt:
             str(repository / path) for path in ("src", "oracle/src")
         ),
     }
+    # 明示した PYTHONPATH と標準ライブラリだけを使い、site の初期化を省く。
     with subprocess.Popen(
-        [sys.executable, "-c", script],
+        [sys.executable, "-S", "-c", script],
         cwd=tmp_path,
         env=environment,
         start_new_session=True,
@@ -531,11 +532,8 @@ except KeyboardInterrupt:
         stderr=subprocess.PIPE,
     ) as process:
         try:
-            deadline = time.monotonic() + 5
-            while not (tmp_path / "ready").exists():
-                assert process.poll() is None
-                assert time.monotonic() < deadline
-                time.sleep(0.01)
+            assert select.select([process.stdout], [], [], 5)[0], "child did not start"
+            assert process.stdout.readline() == "ready\n"
             os.killpg(process.pid, signal.SIGINT)
             # SIGINT を送ってから子を解放し、固定待機なしで確定中の中断を保証する。
             stdout, stderr = process.communicate(input="commit\n", timeout=5)
