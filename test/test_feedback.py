@@ -2615,11 +2615,11 @@ def test_state_reference_cleanup_relaxes_only_file_existence(
         "sha256": hashlib.sha256(content).hexdigest(),
     }
 
-    def validate(value):
+    def validate(value, expected_root=directory):
         return feedback_state_module._validate_artifact_reference(
             root,
             value,
-            expected_root=directory,
+            expected_root=expected_root,
             description="state artifact",
             allow_missing=allow_missing,
         )
@@ -2627,6 +2627,20 @@ def test_state_reference_cleanup_relaxes_only_file_existence(
     assert validate(reference) == target
     (directory / "nested").mkdir()
     assert validate({**reference, "path": "artifacts/nested/../record.json"}) == target
+    assert validate(reference, directory / "nested/..") == target
+    assert (
+        validate(reference, directory.relative_to(Path.cwd(), walk_up=True)) == target
+    )
+    # 期待 root の別表記も解決し、呼び出し間の retarget を cache しない。
+    root_alias = root / "root-alias"
+    root_alias.symlink_to(directory, target_is_directory=True)
+    assert validate(reference, root_alias) == target
+    root_alias.unlink()
+    root_alias.symlink_to(root / "elsewhere", target_is_directory=True)
+    with pytest.raises(CmocError, match="期待 root 外"):
+        validate(reference, root_alias)
+    with pytest.raises(CmocError, match="期待 root 外"):
+        validate({**reference, "path": "artifacts-neighbor/record.json"})
     with pytest.raises(CmocError, match="期待 root 外"):
         validate({**reference, "path": "artifacts/../outside.json"})
     target.write_bytes(b"changed\n")

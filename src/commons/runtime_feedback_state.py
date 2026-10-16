@@ -771,8 +771,10 @@ def _resolve_reference_path(
         )
     # symlink を含まない絶対 path は、同じ祖先を再走査せず .. だけ正規化する。
     candidate = Path(os.path.normpath(lexical_candidate))
-    expected = expected_root.resolve(strict=False)
-    if candidate != expected and expected not in candidate.parents:
+    # 字句上の配下なら期待 root の祖先も検査済み。別表記の場合だけ解決する。
+    if not candidate.is_relative_to(
+        expected_root.absolute()
+    ) and not candidate.is_relative_to(expected_root.resolve(strict=False)):
         raise _corruption(f"{description} path が期待 root 外です。", candidate)
     return candidate
 
