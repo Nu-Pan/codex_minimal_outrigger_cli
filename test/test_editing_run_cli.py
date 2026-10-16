@@ -2311,30 +2311,28 @@ def test_start_run_rechecks_session_branch_under_lock(
     ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """fork lock 待機中の branch 変更で別 session の run を作成しない。"""
-    root, session_branch, state_path = ready_run_session
-    original_current_branch = lifecycle_module.current_branch
-    calls = 0
+    """fork の事前検査後に branch が変わっても別 session の run を作成しない。"""
+    root, _session_branch, state_path = ready_run_session
+    state_before = state_path.read_bytes()
+    original_ready = lifecycle_module.require_ready_session
+    changed_branch = "cmoc/session/changed-before-fork"
 
-    def switch_branch_after_ready_check(_root: Path) -> str:
-        """lock 内の再検査だけへ別 branch を返す。"""
-        nonlocal calls
-        calls += 1
-        if calls == 3:
-            return "cmoc/session/changed-before-fork"
-        return original_current_branch(_root)
+    def switch_branch_after_ready_check():
+        ready = original_ready()
+        run_git(root, "switch", "-c", changed_branch)
+        return ready
 
     monkeypatch.setattr(
         lifecycle_module,
-        "current_branch",
+        "require_ready_session",
         switch_branch_after_ready_check,
     )
 
     with pytest.raises(CmocError, match="current branch が lock 内で変更"):
         start_editing_run("realization_apply")
 
-    assert _state(state_path)["run"]["state"] == "ready"
-    assert current_branch(root) == session_branch
+    assert state_path.read_bytes() == state_before
+    assert current_branch(root) == changed_branch
     assert not list((root / ".cmoc" / "gu" / "worktree").glob("*/*"))
 
 
@@ -3409,6 +3407,13 @@ def test_start_run_prepares_work_directories_before_publishing_state(
     root, _session_branch, state_path = ready_run_session
     original_write = lifecycle_module.write_state
     observed = []
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git":
+            queries[(kwargs.get("cwd"), tuple(argv[1:]))] += 1
+        return original_run(argv, *args, **kwargs)
 
     def observe_running(path, state):
         if state.run.state == "running":
@@ -3423,6 +3428,7 @@ def test_start_run_prepares_work_directories_before_publishing_state(
         original_write(path, state)
 
     monkeypatch.setattr(lifecycle_module, "write_state", observe_running)
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
 
     context = start_editing_run(kind)
 
@@ -3432,7 +3438,15 @@ def test_start_run_prepares_work_directories_before_publishing_state(
         not list((context.run_worktree / relative).iterdir())
         for relative in _WORK_DIRECTORIES
     )
-    assert _state(state_path)["run"]["state"] == "running"
+    stored_run = _state(state_path)["run"]
+    assert stored_run["state"] == "running"
+    assert stored_run["kind"] == kind
+    # 事前検査と lock 内で branch は再検査し、同じ配置の探索を重ねない。
+    assert queries[(root, ("branch", "--show-current"))] == 2
+    root_queries = sum(
+        count for (_cwd, argv), count in queries.items() if "--show-toplevel" in argv
+    )
+    assert root_queries <= 2
 
 
 def test_start_run_directory_conflict_cleans_unpublished_resources(

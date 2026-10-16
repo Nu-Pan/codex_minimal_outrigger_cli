@@ -141,8 +141,9 @@ def start_editing_run(kind: str) -> EditingRunContext:
         _state,
         session_fork_commit,
     ) = require_ready_session()
-    session_branch = current_branch(session_worktree)
-    with run_lifecycle_lock(repository, session_id):
+    session_branch = f"cmoc/session/{session_id}"
+    # lock 取得後だけ配置照会を共有し、待機前の情報や次回の開始へ持ち越さない。
+    with run_lifecycle_lock(repository, session_id), reuse_git_path_queries():
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # editor 入力中や並行 process の間に状態が変わり得るため lock 内で再検査する。
         locked_branch = current_branch(session_worktree)
