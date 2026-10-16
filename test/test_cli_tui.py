@@ -14,8 +14,9 @@ from unittest.mock import Mock
 
 import oracle.other.path_model as path_model_module
 import pytest
-from _cli_support import runner
+from _cli_support import runner, terminal_primary_report
 from _git_support import make_repo, run_git
+from _report_support import original_report_input, report_metadata
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli_module
@@ -75,23 +76,33 @@ def editor_input(
 @pytest.mark.parametrize(
     "command", [["tui"], ["oracle", "investigation"], ["oracle", "edit"]]
 )
-def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
+@pytest.mark.parametrize(
+    ("raw_input", "save_fails"),
+    [
+        pytest.param(b"recoverable input\r\n", True, id="save-failure"),
+        pytest.param(b"", False, id="empty"),
+        pytest.param(" \t\r\n\u3000\u00a0\n".encode("utf-8"), False, id="whitespace"),
+    ],
+)
+def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
     cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_start: Mock,
     command: list[str],
+    raw_input: bytes,
+    save_fails: bool,
 ) -> None:
-    """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
+    """保存失敗・空入力では原文を残し、後続の構築・起動をせず終了処理を行う。"""
     root = cli_terminal_directory
     # root 解決は test_basic_runtime.py と下の main/linked 成功ケースに残す。
-    # 保存失敗の CLI 制御では root を解決済みとし、Git の準備・探索を省く。
+    # 入力中断の CLI 制御では root を解決済みとし、Git の準備・探索を省く。
     monkeypatch.setattr(
         path_model_module,
         "_resolve_git_worktree_roots",
         lambda _start_path=None: (root, root),
     )
     # doctor の実処理との結合は、下の TUI 成功ケースと test_doctor_cli.py に残す。
-    # 保存失敗の検査では呼び出しを記録し、修復 commit・索引同期を繰り返さない。
+    # 入力中断の検査では呼び出しを記録し、修復 commit・索引同期を繰り返さない。
     doctor_roots: list[Path] = []
     monkeypatch.setattr(
         runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
@@ -116,10 +127,10 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
         assert doctor_roots == [root]
         assert ignored_roots == [root]
         handoff_start.return_value.close.assert_not_called()
-        Path(argv[-1]).write_bytes(b"recoverable input\r\n")
+        Path(argv[-1]).write_bytes(raw_input)
         return SimpleNamespace(returncode=0)
 
-    # editor の起動・引数は専用 test が検証する。ここでは保存失敗後の CLI 制御を扱う。
+    # editor の起動・引数は専用 test が検証する。ここでは入力中断後の CLI 制御を扱う。
     # module 内の境界だけを置換し、他の subprocess.run は実行する。
     monkeypatch.setattr(
         prompt_editor_input_module, "subprocess", SimpleNamespace(run=edit_input)
@@ -131,23 +142,44 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     real_replace = prompt_editor_input_module.os.replace
     save_destinations: list[Path] = []
 
-    def fail_input_save(source, destination):
+    def save_input(source, destination):
         if Path(destination).parent == root / ".cmoc/gu/log/editor_input":
             handoff_start.return_value.close.assert_called_once_with()
             save_destinations.append(Path(destination))
-            raise OSError("input save failed")
+            assert Path(source).read_bytes() == raw_input
+            if save_fails:
+                raise OSError("input save failed")
         return real_replace(source, destination)
 
+    builders = []
+    for module, name in (
+        (tui_module, "build_tui_launch_tui_parameter"),
+        (investigation_module, "build_oracle_investigation_launch_tui_parameter"),
+        (oracle_edit_module, "build_oracle_edit_main_launch_exec_parameter"),
+    ):
+        builder = Mock(wraps=getattr(module, name))
+        builders.append(builder)
+        monkeypatch.setattr(module, name, builder)
+
     agent_call = Mock()
-    monkeypatch.setattr(prompt_editor_input_module.os, "replace", fail_input_save)
+    monkeypatch.setattr(prompt_editor_input_module.os, "replace", save_input)
     monkeypatch.setattr(tui_module, "run_codex_tui", agent_call)
     monkeypatch.setattr(investigation_module, "run_codex_tui", agent_call)
     monkeypatch.setattr(oracle_edit_module, "run_codex_exec", agent_call)
+    notify = Mock()
+    open_report = Mock()
+    monkeypatch.setattr(runtime_cli_module, "notify_terminal_result", notify)
+    monkeypatch.setattr(
+        runtime_cli_module, "open_primary_report_in_editor", open_report
+    )
 
     result = runner.invoke(app, command, catch_exceptions=False)
 
     # CLI は BaseException も終了 code へ変換するため、call の有無を外から検査する。
     agent_call.assert_not_called()
+    assert [call.args for builder in builders for call in builder.call_args_list] == [
+        (prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER,)
+    ]
     assert result.exit_code == 1
     assert ignored_roots == [root]
     files = list((root / ".cmoc/gu/log/editor_input").iterdir())
@@ -156,7 +188,33 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     assert handoff_start.call_args.args[:2] == (root, files[0])
     assert save_destinations == files
     assert files[0].name.endswith("_orig.md")
-    assert files[0].read_bytes() == b"recoverable input\r\n"
+    assert files[0].read_bytes() == raw_input
+
+    # 入力の中断でも、共通の終端ログ・通知と oracle edit 固有の report を保つ。
+    notify.assert_called_once_with(" ".join(command), root, "failed")
+    [log_path] = (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    finished = json.loads(log_path.read_text(encoding="utf-8").splitlines()[-1])
+    assert finished["event"] == "command_finished"
+    assert finished["classification"] == "error"
+    assert finished["returncode"] == 1
+    if not save_fails:
+        assert "プロンプトが空" in result.output
+        assert "Traceback" not in result.output
+        assert finished["failure"]["classification"] == "handled_failure"
+    if command == ["oracle", "edit"]:
+        report_path = terminal_primary_report(result)
+        open_report.assert_called_once_with(report_path)
+        assert report_path.parent == root / ".cmoc/gu/report/oracle_edit"
+        report = report_path.read_text(encoding="utf-8")
+        metadata = report_metadata(report)
+        assert metadata["terminal_classification"] == "error"
+        assert metadata["exit_code"] == 1
+        assert metadata["first_agent_call_status"] == "not_started"
+        assert metadata["second_agent_call_status"] == "not_started"
+        if not save_fails:
+            assert original_report_input(report) == ""
+    else:
+        open_report.assert_not_called()
 
 
 def test_tui_runs_editor_and_launches_codex_directly(

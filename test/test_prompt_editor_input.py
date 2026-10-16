@@ -103,13 +103,23 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     assert handoff_lines == [expected_handoff_line] * 2
 
 
+@pytest.mark.parametrize(
+    "raw_input",
+    [
+        "  <!-- note -->\r\n確定した入力\r\n".encode("utf-8"),
+        b" \r\n<!-- note -->\n ",
+        b"",
+        " \t\r\n\u3000\u00a0\n".encode("utf-8"),
+    ],
+    ids=["text", "comment-only", "empty", "whitespace"],
+)
 def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     input_path: Path,
+    raw_input: bytes,
 ) -> None:
-    """最終読み取り後の再編集にかかわらず、保存と抽出に固定した原文を使う。"""
-    raw_input = "  <!-- note -->\r\n確定した入力\r\n".encode("utf-8")
+    """再編集にかかわらず、保存・抽出・空入力の判定には固定した原文を使う。"""
     input_path.write_bytes(raw_input)
     original_read_bytes = Path.read_bytes
     final_reads = 0
@@ -123,13 +133,18 @@ def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
         return content
 
     monkeypatch.setattr(Path, "read_bytes", read_then_edit)
-    original_prompt = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path, input_path
-    )
+    expected_prompt = raw_input.decode("utf-8").strip()
+    if expected_prompt:
+        original_prompt = prompt_editor_input_module.collect_prompt_editor_input(
+            tmp_path, input_path
+        )
+        assert original_prompt == expected_prompt
+    else:
+        with pytest.raises(CmocError, match="プロンプトが空"):
+            prompt_editor_input_module.collect_prompt_editor_input(tmp_path, input_path)
 
     assert final_reads == 1
     assert original_read_bytes(input_path) == raw_input
-    assert original_prompt == raw_input.decode("utf-8").strip()
 
 
 @pytest.mark.parametrize(
