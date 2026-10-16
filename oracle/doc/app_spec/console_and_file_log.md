@@ -1,6 +1,6 @@
 # コンソール・ファイル、ログ出力規則
 
-本書は、最外側のサブコマンド実行の識別とサブコマンドログ、TUI の実行記録、および非対話サブコマンドの console、primary report、terminal result に関する共通契約の正本とする。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、primary report の形式・保存先・追加項目・要約方法、次の操作、および終了コードを定義する。
+本書は、最外側のサブコマンド実行の識別とサブコマンドログ、TUI の実行記録、および非対話サブコマンドの console、primary report、terminal result に関する共通契約の正本とする。primary report の構成・配置・可読性と共通掲載内容は本書が所有する。個別サブコマンド仕様は、サブコマンド固有の `result`、`completion_reason`、report の固有項目と意味・生成方法・掲載時点・保存先・再開時の扱い、次の操作、および終了コードを定義する。
 
 ## 共通規則
 
@@ -61,9 +61,9 @@ realization refactor の巡回・確定成果・比較可能なテスト時間�
 
 ## primary report
 
-primary report は、その invocation で確定した作業内容と終端結果を人間向けに要約する。ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
+primary report は、冒頭だけで、何を依頼した実行か、どこまで終わったか、注意すべき点、および次に必要な操作を人間が読み取れるものとする。その invocation で確定した作業内容と終端結果を要約し、根拠となる詳細結果と実行記録を続ける。ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
 
-ただし、feedback の publication で確定する report の掲載時点と、保存後に確定する処理結果の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。再開で引き継ぐ report の保存確認、掲載対象、および実行情報の帰属は、同文書の「再開時の report と実行記録」または `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」に従う。
+ただし、feedback の publication で確定する report の掲載時点と、保存後に確定する処理結果の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。再開で引き継ぐ report の保存確認、掲載対象、および入力・実行情報の帰属は、同文書の「再開時の report と実行記録」または `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」に従う。
 
 - `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
 - primary report 作成専用の追加 agent call は、個別仕様が report 生成手順として明示する場合に限る。
@@ -82,17 +82,52 @@ primary report の保存に失敗し、完了契約を確定できない場合�
 
 ### 共通掲載内容
 
-primary report には、内部処理を含むその invocation の実行記録として、次の内容を一覧で掲載する。
+primary report は Markdown とし、「人間向けタイトルと冒頭の要約 → 元の指示 → 詳細結果・実行記録 → 実行情報」の順序で構成する。
 
-- 本書の「実行 ID の開始表示」で定める実行 ID と、対応する診断用サブコマンドログへの参照。
+ファイル先頭に YAML Front Matter を置かない。実行情報を YAML で表す場合は、その章内のコードブロックにする。見出しの正確な名前、抜粋の長さ、および細かな装飾は、上記の読み順と以下の要件を満たす範囲で実装に委ねる。
+
+cmoc が生成する Markdown 見出しの前後には、少なくとも 1 行の空行を設ける。ただし、ファイル先頭の見出しの直前は例外とする。引用する指示原文や Structured Output の文字列には、この整形のための空行挿入や書き換えを行わず、report 側の見出しと区切りで読みやすくする。
+
+構成・要約・表示加工は cmoc の report 生成が担い、agent 向け prompt や Structured Output schema に表示責務を追加しない。
+
+#### 実行の識別と入力
+
+冒頭にコマンド名、実行目的、および対象を示す。ユーザー指示や理由などの自由記述入力を受け取る実行では、その実行で使用するものとして確定した入力の短い抜粋を冒頭に載せ、全文を直後の「元の指示」へ加工せず掲載する。長い指示全文によって冒頭の結果要約を押し下げない。
+
+editor input の掲載元は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「ファイルの役割」「editor input の確定手順」で確定したオリジナルプロンプトとする。同節の再読禁止は report 作成時にも適用し、保存ファイルから指示を復元しない。report 用に別の入力の正本を設けない。
+
+入力確定後なら agent call 開始前の失敗でもその入力を掲載し、未開始の処理を区別する。入力確定前に失敗した場合は、冒頭の要約と「元の指示」に「入力未確定」と示し、編集中の本文を確定済み指示として掲載しない。自由記述入力を受け取らないコマンドでは、「元の指示」にも操作目的と対象の commit 範囲・案件 ID など、実際に確定した対象情報を示す。対象を特定できなかった場合も未確定と分かるようにする。
+
+#### 冒頭の要約
+
+冒頭の要約には、次の内容を含める。
+
+| 項目 | 示す内容 |
+|---|---|
+| 実行結果 | 完了・中断完了・失敗の別と、確定した処理の範囲。掲載時点で未確定の終端結果や、未開始・未実行・未完了の処理を区別する |
+| 要注意事項 | 確認できたエラー、warning、未解決事項、および未確認事項。注意事項がないと示す場合も、確認できた範囲を越えて問題なしと断定しない |
+| 次の操作 | 必要な確認・操作。必要な操作がなければ、その旨 |
+
+実行の成否と問題の有無は分ける。終了コード 0 を問題なしと読み替えず、未確認を確認済みとして扱わない。サブコマンド固有の結果分類と、その結果に応じた注意事項・次の操作は個別仕様に従う。
+
+要約は既存の確定情報から cmoc が作成し、要約のための追加 agent call は行わない。realization apply と realization refactor の変更要約の可否・生成方法は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「fork report と終了コード」と `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「変更要約」に従う。oracle edit の差分と成果の帰属は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に従う。
+
+#### 詳細結果と実行記録
+
+個別仕様が定める詳細結果に加え、内部処理を含む掲載対象の実行記録として、次の内容を一覧で掲載する。
+
 - 各 `codex exec`（`codex exec resume` による再開・補正を含む）で取得できた最終出力の本文と、元の出力ファイルへの参照。取得・保存先は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `--output-last-message` を正本とする。
 - 実行中に新規受理された feedback observation の問題内容。掲載対象は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」における observation とする。
 
-共通掲載対象の本文を、省略・要約または原本への参照だけで置き換えてはならない。
+共通掲載対象の本文を、省略・要約または原本への参照だけで置き換えてはならない。冒頭の要約を設けても、個別仕様の必須情報と実行記録本文は省略しない。
+
+#### 実行情報
+
+末尾の実行情報には、本書の「実行 ID の開始表示」で定める実行 ID と対応する診断用サブコマンドログへの参照、および個別仕様が定める command、生成日時、root、branch、commit、state、終了コードなどの補足項目を掲載する。未確定値の表現は個別仕様に従い、存在しない値や実行していない処理の成功結果を補わない。
 
 #### Structured Output の表示
 
-共通掲載対象の各呼び出しで取得した Structured Output には、本書が primary report の対象とするすべての終了経路で、次の表示要件を適用する。表示加工は cmoc の primary report 生成が担い、report 内の表現だけを対象とする。agent 向け指示や schema に表示責務を追加せず、この加工のための追加 agent call は行わない。
+共通掲載対象の各呼び出しで取得した Structured Output には、本書が primary report の対象とするすべての終了経路で、次の表示要件を適用する。表示加工は report 内の表現だけを対象とし、この加工のための追加 agent call は行わない。
 
 JSON として解析できる場合は、次を満たす表示にする。
 

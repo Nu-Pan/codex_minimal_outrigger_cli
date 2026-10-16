@@ -194,11 +194,11 @@ full test 1 回の所要時間と、検査の実行回数などによる orchest
 
 ### 保存と掲載内容
 
-実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+実行 ID と primary report の共通表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」に従う。
 
 すべての終了経路で、`{{repo-root}}/.cmoc/gu/report/realization/refactor/fork/{{execution-id}}.md` に primary report を保存する。共通 fork 事前条件違反など、run や通常の report 生成処理より前のエラーも対象とする。共通 run 項目に加え、refactor state のフル path と `completion_reason` を含める。`completion_reason` は `user_interruption | error` とする。
 
-本文には次の内容を含める。
+詳細結果には次の内容を含める。
 
 - 完了した巡の数、終了時の巡・処理段階、その巡の対象数・確定調査数・未処理数・保留数。
 - current fork で 1 回以上処理単位を確定した target path の重複のない件数と、確定した処理単位の件数。

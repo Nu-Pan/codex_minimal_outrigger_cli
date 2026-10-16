@@ -39,7 +39,7 @@ realization refactor では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/rea
 確定済みの部分結果を保持したまま、次の順序で完了処理を行う。
 
 1. 個別仕様が定める state 更新と後処理を行う。
-2. 確定済みの部分作業と中断による終端結果を要約した primary report を、個別仕様が定める形式と保存先へ保存する。
+2. 確定済みの部分作業と中断による終端結果を要約した primary report を、個別仕様が定める保存先へ保存する。表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「primary report」に従う。
 3. `user_interruption` の terminal result をサブコマンドログと console へ出力する。
 
 共通の保存・出力規則は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。primary report、個別仕様が保存を認める再開 state、および terminal result を含むサブコマンド終了イベントから、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。

@@ -91,18 +91,18 @@ cmoc が自動構築する方針・指示文は、過去の agent の会話、�
 
 ## primary report
 
-実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+実行 ID と primary report の共通表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」に従う。
 
 - agent call 開始前を含むすべての終了経路で、oracle edit 実行要約を primary report として保存する。
-- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/oracle_edit/{{execution-id}}.md` に保存する。
-- front matter には、次の実行情報を含める。
+- report は `{{repo-root}}/.cmoc/gu/report/oracle_edit/{{execution-id}}.md` に保存する。
+- 実行情報には、次の項目を含める。
     - command
     - 生成日時
     - repo root
     - terminal result の共通分類
     - 終了コード
     - 1 回目・2 回目の agent call の実行状況。それぞれについて、未開始、開始済み、成功、および失敗を判別可能にする。
-- 本文には、各 agent call の実行状況と確定結果、terminal result の要約、warning またはエラー、必要な次の操作、診断用サブコマンドログ、および実行した agent call に対応する Codex call log を含める。
+- 詳細結果には、各 agent call の実行状況と確定結果、warning またはエラー、および実行した agent call に対応する Codex call log を含める。差分と成果の帰属は、本書の「終了と差分」に従う。
 
 ## console、ログ、および Windows toast
 

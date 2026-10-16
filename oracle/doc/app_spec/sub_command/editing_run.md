@@ -181,15 +181,15 @@ self-joining 経路の join がすでに成功した `feedback_report` は、`cm
 
 ## report と terminal result
 
-実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+実行 ID と primary report の共通表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」に従う。
 
 ### 共通内容
 
-fork、self-joining workload、join、および abandon の report は Markdown と YAML Front Matter で構成する。report から、run kind、branch、worktree、fork commit、実行前後の state、warning、および cleanup 結果を判別可能にする。同じ commit を workload 固有の別名でも重複掲載してはいけない。
+fork、self-joining workload、join、および abandon の report から、run kind、branch、worktree、fork commit、実行前後の state、warning、および cleanup 結果を判別可能にする。同じ commit を workload 固有の別名でも重複掲載してはいけない。
 
 ### fork と self-joining workload の report
 
-fork report の YAML Front Matter は、少なくとも次の項目を含む。
+fork report の実行情報には、少なくとも次の項目を含める。
 
 - workload：`run_kind`
 - branch：`session_branch`、`run_branch`
@@ -207,7 +207,7 @@ join と self-joining workload の report には、`{{cmoc-root}}/oracle/doc/app
 
 ### join と abandon の report
 
-join と abandon は、`natural_completion` と `error` のすべての終了経路で report を保存する。共通事前条件に違反して開始できなかった場合も対象とする。両 report の YAML Front Matter は、少なくとも次の項目を含む。
+join と abandon は、`natural_completion` と `error` のすべての終了経路で report を保存する。共通事前条件に違反して開始できなかった場合も対象とする。両 report の実行情報には、少なくとも次の項目を含める。
 
 - 実行情報：command、生成日時、repo root、terminal result の共通分類、終了コード
 - workload：`run_kind`
@@ -215,9 +215,9 @@ join と abandon は、`natural_completion` と `error` のすべての終了経
 - fork commit と worktree：`run_fork_commit`、`run_worktree`
 - 実行前後の state：`state_before`、`state_after`
 
-join report の YAML Front Matter には `{{cmoc-run-join-commit}}` も含め、no-op join の場合は `null` とする。その他の確定できない項目も `null` とする。
+join report の実行情報には `{{cmoc-run-join-commit}}` も含め、no-op join の場合は `null` とする。その他の確定できない項目も `null` とする。
 
-| report | 保存先と役割 | 本文で要約する内容 |
+| report | 保存先と役割 | 詳細結果に含める内容 |
 |---|---|---|
 | join report | `{{repo-root}}/.cmoc/gu/report/run/join/{{execution-id}}.md` に保存し、`cmoc run join` の primary report とする。 | 差分検査、想定外差分の扱い、merge と merge commit または no-op join、post-join hook、refactor state 同期、state 遷移、cleanup、エラー、および関連ログ。 |
 | abandon report | `{{repo-root}}/.cmoc/gu/report/run/abandon/{{execution-id}}.md` に保存し、`cmoc run abandon` の primary report とする。 | 停止した process、破棄対象、state 遷移、cleanup、残存資源、エラー、および関連ログ。 |

@@ -247,7 +247,7 @@ publication と workload 固有 cleanup が完了するまで `run.state=joinabl
 
 全 issue の採用結果が有効であり、自動 join と join 後検査が成功した場合だけ publication を行う。`inconclusive` も、その判定不能の根拠が有効であることを確認する。state の確定と cleanup の順序は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「最新状態の atomic publication」に従う。
 
-report の `result` は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「最新状態の要約」に従う。
+report の `result` と invocation の成否の区別は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「最新状態の要約」に従う。
 
 ### 正常 publication
 
@@ -322,17 +322,15 @@ quota と一時障害の分類・回復待ち・再開は、`{{cmoc-root}}/oracl
 
 ## report の保存と表示
 
-実行 ID は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う。
-
-primary report の実行記録には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「共通掲載内容」を適用し、以下の issue 一覧とは区別する。
+実行 ID と、本節の各 report の共通表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」に従う。共通掲載内容の実行記録は、以下の issue 一覧とは区別する。
 
 自動 join の競合解消については、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める判断、付随編集、検証、および未解消理由を実行記録に含める。封印済み結果への影響と検証結果、publication completion record との対応、または publication を停止した理由も判別可能にする。自動修正済み issue を人間向け issue 一覧に再掲載するためには用いない。
 
 ### publication report と終了時の記録
 
-current pointer に結び付ける report は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「最新状態の atomic publication」に従って、切替前に保存する immutable な publication artifact である。掲載する最新一覧はその generation に対応させ、実行記録には保存時点までに確定した処理を載せる。保存後に行う publication、cleanup、および run state の終了処理を、実行済みの成功として先取りして記載してはならない。
+current pointer に結び付ける report は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「最新状態の atomic publication」に従って、切替前に保存する immutable な publication artifact である。掲載する一覧は publication 対象の generation に対応させ、冒頭の要約にも report 保存時点の記録であることを明示する。要約と実行記録には保存時点までに確定した処理を載せ、保存後に行う publication、cleanup、および run state の終了処理を、実行済みの成功として先取りして記載してはならない。
 
-report には、それらが保存時点では未完了であることと、結果を記録する元の実行のサブコマンドログへの参照を示す。保存後に確定した処理結果と最終 state は、そのログと terminal result に記録し、report を書き換えない。完了できなかった場合は、個別コマンドが定める今回の invocation report を primary report とする。report 保存までの共通掲載内容は省略しない。
+冒頭の要約では、それらが保存時点では未完了であることと、必要な確認・操作を示す。保存後の結果の確認先として元の実行のサブコマンドログを案内する。保存後に確定した処理結果と最終 state は、そのログと terminal result に記録し、report を書き換えない。完了できなかった場合は、個別コマンドが定める今回の invocation report を primary report とする。report 保存までの共通掲載内容は省略しない。
 
 この掲載時点と記録先の分担は、正常 report、`incomplete` 診断 report、および `cmoc feedback close` が publication する report に共通して適用する。再開した実行の記録と帰属は、本書の「再開時の report と実行記録」または `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」に従う。
 
@@ -342,25 +340,25 @@ report には、それらが保存時点では未完了であることと、結�
 
 current evidence には、人間が report から確認できる path、subject、probe、location、fingerprint、または finding を記載する。証拠を得られなかった場合はその旨を示し、削除予定の wave または checkpoint への link だけで済ませてはならない。
 
-generation ID、確定日時と作成元、入力の確認境界、および history の保存先・該当履歴への参照を示す。未取り込みの観測や確定後の変化まで確認済みとは表示しない。旧判定や終了案件は現在の一覧へ混在させず、経緯は history から確認できるようにする。共通掲載内容の実行記録は省略せず、現在の一覧と区別して掲載する。
+generation ID、確定日時と作成元、入力の確認境界、および history の保存先・該当履歴への参照を示す。未取り込みの観測や確定後の変化まで確認済みとは表示しない。旧判定や終了案件は現在の一覧へ混在させず、経緯は history から確認できるようにする。
 
 ### 再開時の report と実行記録
 
 publication または cleanup の再開で引き継ぐ正常 report と `incomplete` 診断 report の実行情報は、report cut で保存先を固定した実行に帰属させる。再開した実行の ID に付け替えず、掲載する個々の呼び出しや observation も実際に属する実行に対応付ける。
 
-report の保存段階では、未保存なら固定済み target へ保存し、保存済みなら path と hash を検証して再利用する。recovery を正常に完了した場合は、その report を primary report とし、保存済み report の再利用も primary report の保存要件を満たすものとして扱う。
+report の保存段階では、未保存なら固定済み target へ保存し、保存済みなら path と hash を検証して再利用する。保存済み report は、冒頭の要約や元の指示も含めて元の入力と掲載時点を維持し、再開した実行の入力や結果に置き換えない。recovery を正常に完了した場合は、その report を primary report とし、保存済み report の再利用も primary report の保存要件を満たすものとして扱う。
 
 再開した実行の作業内容、終端結果、および共通掲載対象の本文を含む実行記録は、再開した実行のサブコマンドログへ残す。引き継ぐ report にその実行記録を追記してはならない。再開した実行が `error` で終わる場合は、本書の「中断・エラー時の invocation report」に従って今回の primary report を保存し、今回の実行 ID と共通掲載内容を載せる。
 
 ### 正常 report
 
-正常 report は Markdown と YAML Front Matter で構成する。`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って固定する保存先は次のとおりとする。
+正常 report の保存先は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」に従って次に固定する。
 
 ```text
 {{repo-root}}/.cmoc/gu/report/feedback/{{execution-id}}.md
 ```
 
-保存した正常 report を primary report とする。front matter には、少なくとも次の情報を含める。
+保存した正常 report を primary report とする。実行情報には、少なくとも次の情報を含める。
 
 - command、生成日時、repo root、および session branch
 - feedback run ID、run branch、run fork commit、および run join commit。no-op join では run join commit を `null` とする
@@ -374,9 +372,9 @@ report の保存段階では、未保存なら固定済み target へ保存し�
 
 `incomplete` 診断 report の durable 保存と state 境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「`incomplete` 診断 report」を正本とする。保存した診断 report を primary report とし、terminal result に `result: incomplete` を含める。
 
-front matter には、正常 report と同じ実行・run・report cut・generation・入力境界の情報、各終端結果の件数、および `result: incomplete` を含める。
+実行情報には、正常 report と同じ実行・run・report cut・generation・入力境界の情報、各終端結果の件数、および `result: incomplete` を含める。
 
-本文の先頭で、この generation に判定不能の案件が含まれ、要約が `incomplete` であることを明示する。本書の「現在の案件一覧」に従い、次の区分を分けて示す。
+冒頭の要約で、この generation に判定不能の案件が含まれ、最新状態の要約が `incomplete` であることを明示する。詳細結果には、本書の「現在の案件一覧」に従い、次の区分を分けて示す。
 
 1. `human_required の案件`
 2. `inconclusive の案件`
@@ -385,16 +383,19 @@ front matter には、正常 report と同じ実行・run・report cut・generat
 
 ### 中断・エラー時の invocation report
 
-`user_interruption` と `error` では、今回の invocation report を primary report として次へ保存する。
+`user_interruption` と `error` では、今回の invocation report を primary report として次へ保存する。事前条件違反など、run や agent call の開始前に確定したエラーも対象とする。
 
 ```text
 {{repo-root}}/.cmoc/gu/report/feedback/invocation/{{execution-id}}.md
 ```
 
-front matter と本文から、少なくとも次の情報を判別可能にする。
+実行情報には、少なくとも次の項目を含める。
 
 - command、生成日時、repo root、session branch、および terminal result
 - run kind、run branch、run fork commit、run worktree、state before、および state after
+
+詳細結果には、次の内容を含める。
+
 - 完了した wave、high-watermark、処理済み issue、確定済み commit、および rollback
 - 未実行の処理、維持した state、中断またはエラーの理由、次の操作、および関連ログ
 
