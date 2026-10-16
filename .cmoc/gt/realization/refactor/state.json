@@ -1131,7 +1131,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "d6d2ca470e50cfd6872e3d6ceaaf3a134b7f0dc8205826c843ca70d79352d5f7",
-    "last_investigated_at": "2026-10-12_16-15-16_305"
+    "last_investigated_at": "2026-10-16_14-06-43_891"
   },
   "src/sub_commands/realization/apply/fork.py": {
     "investigation_required": true,

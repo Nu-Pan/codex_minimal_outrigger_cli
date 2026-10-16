@@ -935,12 +935,13 @@ def test_apply_join_hook_selects_diff_base(
 
 
 def test_apply_join_preserves_diff_base_for_error_run(
-    ready_content_session: tuple[Path, str, Path],
+    join_after_preprocess: tuple[Path, str, Path],
 ) -> None:
     """error run の成果物を merge しても、未追従の oracle 変更を比較範囲に残す。"""
     # hook の全 8 条件は軽量 test、成功 merge/no-op は fork→join test に残す。
+    # doctor と join の結合も fork→join test に残し、ここでは修復・索引同期を重ねない。
     # 既存の比較始点と異なる fork commit を用意し、未追従の変更が残るか確かめる。
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = join_after_preprocess
     state = _state(state_path)
     previous_base = run_git(root, "rev-parse", "HEAD").stdout.strip()
     state["session"]["last_joined_apply_fork_commit"] = previous_base
@@ -948,7 +949,7 @@ def test_apply_join_preserves_diff_base_for_error_run(
     (root / "oracle" / "spec.md").write_text("pending oracle change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "pending oracle change")
-    context = _prepare_run(ready_content_session, run_state="error")
+    context = _prepare_run(join_after_preprocess, run_state="error")
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
 
