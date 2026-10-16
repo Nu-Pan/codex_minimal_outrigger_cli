@@ -18,7 +18,6 @@ from _codex_support import (
     setup_codex_home,
     stub_codex_overrides,
 )
-from _command_support import write_python_executable
 from oracle.acp_builder.quota_probe import (
     build_quota_availability_probe_parameter as build_canonical_quota_probe_parameter,
 )
@@ -104,10 +103,12 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """相対 HOME と cwd を保持して代表 probe・元 session の resume を実行する。"""
+    """相対 HOME と cwd の受け渡し、probe・元 session の resume を検証する。"""
     root = cli_repository
     codex_home = setup_codex_home(tmp_path, monkeypatch)
-    # 初回・probe・resume の相対 HOME も、この代表起動で検査する。
+    # 実 process の stdin・出力捕捉は test_codex_runtime_exec.py、相対 HOME の
+    # cwd 基準の解決は test_codex_runtime_paths.py に残し、3 回の子起動を省く。
+    # 初回・probe・resume には、呼び出し時に渡された cwd と env を照合する。
     relative_codex_home = "../codex_home"
     monkeypatch.setenv("CODEX_HOME", relative_codex_home)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
@@ -120,34 +121,19 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     monkeypatch.setattr(runtime_codex_exec, "timestamp", lambda: next(timestamps))
     probe_prompt = quota_probe_prompt(root)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    calls = tmp_path / "calls.jsonl"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
+    call_records = script_codex_calls(
+        monkeypatch,
         [
-            "import json, os, pathlib, sys",
-            f"calls = pathlib.Path({str(calls)!r})",
-            "args = sys.argv[1:]",
-            "stdin = sys.stdin.read()",
-            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin, 'cwd': os.getcwd(), 'codex_home': os.environ['CODEX_HOME'], 'resolved_home': str(pathlib.Path(os.environ['CODEX_HOME']).resolve())}) + '\\n')",
-            "if 'resume' in args:",
-            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "    output.write_text(json.dumps({'ok': True}))",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "    sys.exit(0)",
-            f"if stdin == {probe_prompt!r}:",
-            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "    output.write_text(json.dumps({'probe': True}))",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "    sys.exit(0)",
-            "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
-            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-            "sys.exit(1)",
+            (
+                1,
+                '{"type": "thread.started", "thread_id": "sess-1"}\n'
+                '{"type": "error", "message": "Quota exceeded"}\n',
+                None,
+            ),
+            (0, '{"type": "turn.completed"}\n', '{"probe": true}'),
+            (0, '{"type": "turn.completed"}\n', '{"ok": true}'),
         ],
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         "build_realization_apply_fork_launch_exec_parameter",
         FileAccessMode.PURE_ORACLE_READ,
@@ -170,16 +156,18 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         subcommand_logger=logger,
     )
 
-    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    argv_calls = [record["args"] for record in call_records]
+    assert len(call_records) == 3
+    argv_calls = [record["argv"][1:] for record in call_records]
     assert all(args.count("--no-daemon") == 1 for args in argv_calls)
     assert argv_calls[0][-1] == "-"
     for record in call_records:
-        assert record["cwd"] == str(root)
-        assert codex_arg_value(record["args"], "--cd") == str(root)
-        assert record["codex_home"] == relative_codex_home
-        assert Path(record["resolved_home"]) == codex_home
-    assert call_records[1]["stdin"] == probe_prompt
+        assert Path(record["cwd"]) == root
+        assert codex_arg_value(record["argv"], "--cd") == str(root)
+        assert record["env"]["CODEX_HOME"] == relative_codex_home
+        assert (
+            Path(record["cwd"]) / record["env"]["CODEX_HOME"]
+        ).resolve() == codex_home
+    assert call_records[1]["prompt"] == probe_prompt
     assert argv_calls[1][:3] == [
         "--ask-for-approval",
         "on-request",

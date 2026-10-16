@@ -1220,8 +1220,8 @@
   "test/_codex_support.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "439fe989e5b015e32498abf2e012af50722bd5966391ea97434fdc495fcae8b1",
-    "last_investigated_at": "2026-10-13_03-35-26_123"
+    "last_investigated_sha256": "725132b980066458498546405dc0b0445197bfd0a6a55cc6800560a89bafc7c7",
+    "last_investigated_at": "2026-10-16_16-01-08_983"
   },
   "test/_command_support.py": {
     "investigation_required": true,

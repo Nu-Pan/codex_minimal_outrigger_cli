@@ -111,6 +111,7 @@ def script_codex_calls(monkeypatch, responses, *, on_call=None, stderr=""):
             {
                 "argv": argv,
                 "prompt": prompt,
+                "cwd": kwargs["cwd"],
                 "env": kwargs["env"],
                 "timeout": kwargs["timeout"],
             }
