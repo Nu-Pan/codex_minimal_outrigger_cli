@@ -6,6 +6,7 @@ import select
 import signal
 import subprocess
 import sys
+import time
 from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
@@ -400,6 +401,15 @@ def test_tui_driver_exchanges_input_and_shutdown_over_a_real_pty(
         ],
     )
     monkeypatch.setattr(production_cli, "_PRODUCTION_COMMAND_TIMEOUT", 10)
+    # Fake は描画・paste burst の待機を要しないので、child へ実行機会だけ譲る。
+    # 操作順と poll の境界は上の決定論的 test で検証する。
+    monkeypatch.setattr(
+        production_cli,
+        "time",
+        SimpleNamespace(
+            monotonic=time.monotonic, sleep=lambda _seconds: time.sleep(0.001)
+        ),
+    )
     response, transcript = production_cli._run_cmoc_tui(
         cmoc,
         tmp_path,
