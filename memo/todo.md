@@ -45,6 +45,7 @@
 
 - レイアウトを仕様化したので、しばらく様子見
 - primary report 内に LLM が生成したサマリーが欲しいかも？
+- `&#96;` とか出ちゃってる (`.cmoc/gu/report/doctor/exec_00004v_2026-10-16_21-54.md`)
 
 ## fork, run join を消したい
 
