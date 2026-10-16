@@ -84,7 +84,7 @@ def directory(tmp_path, monkeypatch, toast_clock, nonpersistent_execution_ids):
         runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
     )
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", lambda _root: None)
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    # 保存設定は公開 resume のケースで用意し、制御検査には設定を直接渡す。
     fake_tui(monkeypatch)
     return root
 
@@ -812,6 +812,7 @@ def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch
 def test_public_resume_accepts_fixed_id_after_initial_success(
     directory, monkeypatch, builder, command, outcome
 ):
+    write_config(directory / ".cmoc/gt/config.json", CmocConfig())
     fake_initial(monkeypatch)
     notifications = []
 
@@ -903,7 +904,9 @@ def test_notification_failure_preserves_tui_execution(directory, monkeypatch, fa
     with call_log(directory):
         assert (
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"), root=directory
+                build_tui_launch_tui_parameter("request"),
+                root=directory,
+                config=CmocConfig(),
             ).returncode
             == 0
         )
@@ -954,7 +957,9 @@ def test_initial_and_tui_keep_separate_process_resources(directory, monkeypatch)
     fake_tui(monkeypatch, on_call=observe)
     with call_log(directory):
         tui_module.run_codex_tui(
-            build_tui_launch_tui_parameter("request"), root=directory
+            build_tui_launch_tui_parameter("request"),
+            root=directory,
+            config=CmocConfig(),
         )
     assert initial[0]["env"]["CALL_CONTEXT"] == "0"
     assert closed == [0, 1]
@@ -963,6 +968,7 @@ def test_initial_and_tui_keep_separate_process_resources(directory, monkeypatch)
 def test_session_lease_covers_initial_transition_and_public_validation(
     directory, monkeypatch
 ):
+    write_config(directory / ".cmoc/gt/config.json", CmocConfig())
     home = tui_module.resolve_codex_home(directory)
 
     def contested(_call):
@@ -1007,7 +1013,9 @@ def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
     with call_log(directory) as logger:
         with pytest.raises(OSError, match="exit cannot be confirmed"):
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"), root=directory
+                build_tui_launch_tui_parameter("request"),
+                root=directory,
+                config=CmocConfig(),
             )
         final = [row for row in events(logger) if row.get("phase") == "tui_failed"][-1]
         assert final["tui_process_state"] == "unknown"
@@ -1060,6 +1068,7 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
             tui_module.run_codex_tui,
             build_tui_launch_tui_parameter("request"),
             root=directory,
+            config=CmocConfig(),
         )
         try:
             deadline = time.monotonic() + 5
