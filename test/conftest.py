@@ -18,6 +18,7 @@ import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
 import commons.runtime_download_asset_cache as asset_cache_module
+import commons.runtime_editor_input_handoff_protocol as handoff_protocol
 import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
@@ -160,6 +161,17 @@ def nonpersistent_codex_ids(
     # 永続採番は test_runtime_ids.py、実採番と log の結合・process 間の共有は
     # test_codex_runtime_paths.py に残し、ログ間の ID 対応はここでも検査する。
     monkeypatch.setattr(runtime_codex_exec, "new_id", runtime_logging.new_id)
+
+
+@pytest.fixture
+def nonpersistent_handoff_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """採番を検査しない handoff test で、実行・target ID の永続保存を省く。"""
+    # 永続採番は test_runtime_ids.py、実採番と target の結合は
+    # test_editor_input_handoff.py の editor 待機ケースに残す。
+    # route の保存・解決・削除と TCP lifecycle は実処理を通す。
+    monkeypatch.setattr(handoff_protocol, "new_id", runtime_logging.new_id)
 
 
 @pytest.fixture

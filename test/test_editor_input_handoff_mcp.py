@@ -85,8 +85,8 @@ def get_guide_result():
     return get_result
 
 
-# 実行 ID の永続化は専用テストへ委ね、target・route・実接続の検査を保つ。
-@pytest.mark.usefixtures("nonpersistent_execution_ids")
+# 実行・target ID の永続化は専用テストへ委ね、target・route・実接続の検査を保つ。
+@pytest.mark.usefixtures("nonpersistent_handoff_ids")
 def test_handoff_guide_returns_complete_large_receiver_template(
     tmp_path, monkeypatch, get_guide_result
 ):
@@ -115,7 +115,7 @@ def test_handoff_guide_returns_complete_large_receiver_template(
     assert not target.handoff_guide_path.exists()
 
 
-@pytest.mark.usefixtures("nonpersistent_execution_ids")
+@pytest.mark.usefixtures("nonpersistent_handoff_ids")
 def test_unavailable_guide_never_returns_editor_content(
     tmp_path, monkeypatch, get_guide_result
 ):
@@ -359,7 +359,7 @@ def test_handoff_mcp_rejects_invalid_input_without_returning_content(
         assert "private content" not in json.dumps(response, ensure_ascii=True)
 
 
-@pytest.mark.usefixtures("nonpersistent_execution_ids")
+@pytest.mark.usefixtures("nonpersistent_handoff_ids")
 def test_handoff_response_loss_reports_unknown_while_write_completes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

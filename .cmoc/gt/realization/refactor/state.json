@@ -1394,8 +1394,8 @@
   "test/test_editor_input_handoff.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "be355bb9d6714c11c2e2d7ec5b0c2186fc9cbb6bd909e8fa535d2643ff632bd7",
-    "last_investigated_at": "2026-10-13_07-19-25_049"
+    "last_investigated_sha256": "aa0e7830288b29df2b64820096713b6db352da99b1caf5d153e0156ef15b5938",
+    "last_investigated_at": "2026-10-16_18-33-18_613"
   },
   "test/test_editor_input_handoff_mcp.py": {
     "investigation_required": true,
