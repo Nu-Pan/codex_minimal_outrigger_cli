@@ -642,33 +642,26 @@ def test_run_codex_exec_rechecks_schema_source_and_each_output(
     assert len(calls) == 3
 
 
-@pytest.mark.parametrize(
-    "failure_event",
-    [
-        {"type": "error", "message": "Selected model is at capacity"},
-        {
-            "type": "turn.failed",
-            "error": {"message": "Selected model is at capacity"},
-        },
-    ],
-)
 @pytest.mark.parametrize("failure_returncode", [0, 1])
 def test_run_codex_exec_logs_capacity_recovery_calls(
     failure_control_root: Path,
     monkeypatch: pytest.MonkeyPatch,
-    failure_event: dict[str, object],
     failure_returncode: int,
 ) -> None:
-    """capacity 診断と終了 code の組合せごとに、待機・probe・再実行を記録する。"""
+    """終了 code ごとに、capacity の待機・probe・再実行を記録する。"""
     root = failure_control_root
-    # JSONL 分類と log は実処理し、process 受け渡しは既存の結合テストへ委ねる。
+    # 診断形式の組合せは recovery の test_failure_diagnostic_classification に集約する。
+    # ここでは分類から回復・log 保存までを通し、終了 code の記録も検査する。
     prompts = []
 
     def fake_run(argv, **kwargs):
         prompts.append(kwargs["stdin"].read())
         if len(prompts) == 1:
             return subprocess.CompletedProcess(
-                argv, failure_returncode, json.dumps(failure_event) + "\n", ""
+                argv,
+                failure_returncode,
+                '{"type":"error","message":"Selected model is at capacity"}\n',
+                "",
             )
         output = Path(argv[argv.index("--output-last-message") + 1])
         output.write_text(json.dumps({"ok": True}), encoding="utf-8")
@@ -709,26 +702,26 @@ def test_run_codex_exec_logs_capacity_recovery_calls(
     assert "Selected model is at capacity" in codex_events[0]["error"]
 
 
-@pytest.mark.parametrize(
-    "event",
-    [
-        {"type": "error", "message": "unexpected failure"},
-        {"type": "turn.failed", "error": {"message": "unexpected failure"}},
-    ],
-)
 @pytest.mark.parametrize("structured_output", [False, True])
 def test_run_codex_exec_fails_on_unknown_jsonl_error_with_zero_returncode(
     failure_control_root: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    event: dict[str, object],
     structured_output: bool,
 ) -> None:
     """未知の JSONL error は終了コード 0 でも即時失敗させ、再試行しない。"""
     root = failure_control_root
-    # JSONL の読み取り・分類と log は実処理し、process 起動は結合テストに残す。
+    # 診断形式の組合せは recovery の test_failure_diagnostic_classification に集約する。
+    # schema の有無によらず、分類から即時失敗・診断の非公開化までを検査する。
     calls = script_codex_calls(
-        monkeypatch, [(0, json.dumps(event) + "\n", '{"ok": true}')]
+        monkeypatch,
+        [
+            (
+                0,
+                '{"type":"turn.failed","error":{"message":"unexpected failure"}}\n',
+                '{"ok": true}',
+            )
+        ],
     )
     schema: Path | None = None
     if structured_output:
