@@ -2421,23 +2421,35 @@ def test_recover_started_run_rejects_unreadable_process_tracking(
     assert context.run_worktree.exists()
 
 
-def test_run_join_allows_oracle_change_on_session_branch(
+def test_run_join_accepts_realization_changes_with_session_oracle_change(
     ready_join_session: tuple[Path, str, Path],
 ) -> None:
-    """session branch の oracle change を run join が保持する。"""
+    """run の変更・rename・削除を受理し、session の oracle 更新も保持する。"""
+    # 想定内の差分を同じ run に揃え、repository・doctor・merge の準備を共有する。
+    # rename 元と削除対象は fork 前に追跡し、欠落 path の分類も実 Git で検査する。
     root, _session_branch, state_path = ready_join_session
+    (root / "rename.md").write_text("rename source\n")
+    (root / "delete.md").write_text("delete source\n")
+    commit_work_unit(root, "seed rename and delete sources")
     _mark_refactor_target_no_findings(root, "oracle/spec.md")
     context = _prepare_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
+    (context.run_worktree / "rename.md").rename(context.run_worktree / "renamed.md")
+    (context.run_worktree / "delete.md").unlink()
+    commit_work_unit(
+        context.run_worktree, "modify, rename and delete realization files"
+    )
     (root / "oracle" / "spec.md").write_text("session oracle change\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session oracle change")
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert (root / "README.md").read_text() == "realized\n"
+    assert not (root / "rename.md").exists()
+    assert (root / "renamed.md").read_text() == "rename source\n"
+    assert not (root / "delete.md").exists()
     assert (root / "oracle" / "spec.md").read_text() == "session oracle change\n"
     diff_base = _state(state_path)["session"]["last_joined_apply_fork_commit"]
     assert diff_base == context.run_fork_commit
@@ -2523,29 +2535,6 @@ def test_run_join_preserves_existing_non_search_config_shape(
     assert result.exit_code == 0, result.output
     assert config.is_file()
     assert "num_parallel" not in json.loads(config.read_text())
-
-
-@pytest.mark.parametrize("change", ["rename", "delete"])
-def test_run_join_accepts_realization_rename_and_delete(
-    ready_content_session: tuple[Path, str, Path],
-    change: str,
-) -> None:
-    """run join が fork 時点の realization path の rename と削除を許可する。"""
-    # 開始前の HEAD 固定は不要なので、doctor の修復は join 本体に任せる。
-    root, _session_branch, _state_path = ready_content_session
-    context = _prepare_run(ready_content_session)
-    readme = context.run_worktree / "README.md"
-    if change == "rename":
-        readme.rename(context.run_worktree / "renamed.md")
-    else:
-        readme.unlink()
-    commit_work_unit(context.run_worktree, f"run {change}")
-
-    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert result.exit_code == 0
-    assert not (root / "README.md").exists()
-    assert (root / "renamed.md").exists() is (change == "rename")
 
 
 def test_ready_session_reuses_root_queries_but_refreshes_conditions(
