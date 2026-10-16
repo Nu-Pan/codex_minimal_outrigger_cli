@@ -99,16 +99,35 @@ def test_history_load_rejects_duplicate_paths(saved_history):
         load_history(root, [reference, reference])
 
 
-def test_history_load_rejects_nested_paths(history_input):
+@pytest.mark.parametrize(
+    "field, value, message",
+    [
+        ("path", None, "path"),
+        ("path", "/outside.json", "path"),
+        ("path", ".cmoc/gu/feedback/history/nested/record.json", "path"),
+        ("path", ".cmoc/gu/feedback/history/../record.json", "path"),
+        ("path", ".cmoc/gu/feedback/elsewhere/record.json", "path"),
+        ("sha256", None, "SHA256"),
+        ("sha256", "invalid", "SHA256"),
+    ],
+)
+def test_history_load_rejects_invalid_references_before_reading(
+    history_input, monkeypatch, field, value, message
+):
     root, path, record = history_input
-    nested = path.parent / "nested" / path.name
-    # path は内容の読込前に拒否されるため、directory と file は不要。
+    # 参照は内容の読込前に拒否されるため、directory と file は不要。
     reference = {
-        "path": nested.relative_to(root).as_posix(),
+        "path": path.relative_to(root).as_posix(),
         "sha256": sha256_bytes(canonical_json_bytes(record)),
+        field: value,
     }
+    monkeypatch.setattr(
+        Path,
+        "read_bytes",
+        lambda _path: pytest.fail("invalid reference must not be read"),
+    )
 
-    with pytest.raises(CmocError, match="path が重複または不正"):
+    with pytest.raises(CmocError, match=message):
         load_history(root, [reference])
 
 

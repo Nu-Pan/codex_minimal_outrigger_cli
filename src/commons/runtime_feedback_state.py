@@ -684,7 +684,11 @@ def _read_canonical_object(
     path: Path, description: str, *, expected_sha256: str | None = None
 ) -> _JsonObject:
     """通常 file の canonical JSON object を読む。"""
-    if _has_symlink_component(path) or not path.is_file():
+    if _has_symlink_component(path):
+        raise _corruption(
+            f"{description} path が symlink を含むため通常 file ではありません。", path
+        )
+    if not path.is_file():
         raise _corruption(f"{description} が通常 file ではありません。", path)
     try:
         content = path.read_bytes()
