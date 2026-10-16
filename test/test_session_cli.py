@@ -23,6 +23,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 from _cli_support import (
@@ -1023,6 +1024,29 @@ def session_completion_repository(
     return root
 
 
+@pytest.fixture
+def session_conflict_parameter(
+    session_completion_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[AgentCallParameter]:
+    """失敗後の状態検査には、完全 prompt を構築せず parameter を渡す。"""
+    # 文面と起動値は test_acp_builder_session_join_parameters.py、実 builder と
+    # linked worktree の結合は merges_conflict_and_incidental_changes に残す。
+    parameter = AgentCallParameter(
+        agent_call_kind="build_session_join_conflict_resolution_parameter",
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        prompt="conflict resolution",
+        structured_output_schema_path=None,
+        agent_call_cwd=session_completion_repository,
+        enable_document_search_mcp=True,
+    )
+    builder = Mock(return_value=parameter)
+    monkeypatch.setattr(
+        session_join_module, "build_session_join_conflict_resolution_parameter", builder
+    )
+    yield parameter
+    builder.assert_called_once()
+
+
 def test_session_join_preserves_repository_local_feedback_state(
     session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1051,6 +1075,7 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
     session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
+    session_conflict_parameter: AgentCallParameter,
 ) -> None:
     """付随編集先の未解消 marker で停止し、stderr と保持した作業状態を検査する。"""
     root = session_completion_repository
@@ -1086,6 +1111,7 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         """両側の仕様を保持し、関連実装を整理する agent の結果を再現する。"""
+        assert parameter is session_conflict_parameter
         target.write_text("home change\nsession change\n")
         modified.write_text("related implementation\n")
         deleted.unlink()
@@ -1556,6 +1582,7 @@ def test_session_join_codex_failure_reports_unresolved_merge(
     session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
+    session_conflict_parameter: AgentCallParameter,
 ) -> None:
     """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
     root = session_completion_repository
@@ -1573,6 +1600,7 @@ def test_session_join_codex_failure_reports_unresolved_merge(
 
     def failing_codex_exec(parameter: object, **kwargs: object) -> object:
         """Codex CLIの既知の失敗を再現する。"""
+        assert parameter is session_conflict_parameter
         raise CmocError(
             "Codex CLI 呼び出しが失敗しました。",
             ["stderr/stdout log を確認して原因を解消してください。"],
