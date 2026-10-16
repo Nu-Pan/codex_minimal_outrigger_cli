@@ -1490,8 +1490,8 @@
   "test/test_production_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "e54641ae6d4e7eaeb7ba78e5f3a59d805c75044233581527b2ad75a495073557",
-    "last_investigated_at": "2026-10-13_08-48-39_691"
+    "last_investigated_sha256": "06fa08dc7c370824b31ab87d8ad0e66f45335ab766b5a42d151b5aaf526fb6fb",
+    "last_investigated_at": "2026-10-16_19-36-57_577"
   },
   "test/test_production_cli_support.py": {
     "investigation_required": true,

@@ -245,15 +245,130 @@ def test_resumed_tui_completion_requires_a_new_turn(tmp_path) -> None:
 def test_tui_driver_waits_for_the_composer_and_the_requested_turn(
     tmp_path, monkeypatch, input_message
 ) -> None:
-    """二段階起動と追加入力を Fake process の実 PTY で操作する。"""
+    """描画と完了の境界を、process の scheduling や固定待機に依存せず確認する。"""
+    # driver が観測する file と描画を poll ごとに進め、早すぎる入力・終了を検出する。
+    call = tmp_path / ".cmoc/gu/log/codex/current/tui_call.json"
+    call.parent.mkdir(parents=True)
+    payload = {
+        "argv": ["codex", "resume", _SESSION_ID],
+        "fixed_session_id": _SESSION_ID,
+        "process_state": "prepared",
+    }
+    rollout = tmp_path / "sessions/rollout-initial.jsonl"
+    rollout.parent.mkdir()
+    rollout.write_text(
+        json.dumps({"type": "session_meta", "payload": {"id": _SESSION_ID}})
+        + "\n"
+        + json.dumps(
+            {
+                "type": "event_msg",
+                "payload": {
+                    "type": "task_complete",
+                    "turn_id": "initial-turn",
+                    "last_agent_message": "initial answer",
+                },
+            }
+        )
+        + "\n"
+    )
+    writes = []
+    screen = []
+    polls = 0
+    stopped = []
+
+    def spawn(*_args, **_kwargs):
+        # previous_calls の取得後に作り、実際の call log の選別も通す。
+        call.write_text(json.dumps(payload))
+        return process
+
+    def read_pty(_fd, transcript):
+        received = b"".join(screen)
+        screen.clear()
+        transcript.extend(received)
+        return received
+
+    def advance(_seconds):
+        nonlocal polls
+        polls += 1
+        if polls <= 3:
+            assert writes == [], "input or shutdown before TUI is ready"
+            if polls == 1:
+                payload["process_state"] = "started"
+                call.write_text(json.dumps(payload))
+            elif polls == 2:
+                screen.append(b"? for shortcuts")
+        elif input_message is not None and polls <= 6:
+            if polls == 4:
+                assert writes == [b"\x1b[200~" + input_message.encode() + b"\x1b[201~"]
+            elif polls == 5:
+                assert writes == [b"\r"]
+            else:
+                assert writes == [], "shutdown based on the previous completion"
+                with rollout.open("a") as output:
+                    output.write(
+                        json.dumps(
+                            {
+                                "type": "event_msg",
+                                "payload": {
+                                    "type": "task_complete",
+                                    "turn_id": "new-turn",
+                                    "last_agent_message": "new answer",
+                                },
+                            }
+                        )
+                        + "\n"
+                    )
+        else:
+            assert polls == (4 if input_message is None else 7)
+            assert writes == [b"\x03"]
+        writes.clear()
+
+    def wait(timeout):
+        assert writes == [b"\x03"]
+        screen.append(b"Shutting down")
+        return 0
+
+    process = SimpleNamespace(poll=lambda: None, wait=wait)
+    monkeypatch.setattr(production_cli, "subprocess", SimpleNamespace(Popen=spawn))
+    monkeypatch.setattr(
+        production_cli, "time", SimpleNamespace(monotonic=lambda: 0, sleep=advance)
+    )
+    monkeypatch.setattr(
+        production_cli,
+        "os",
+        SimpleNamespace(
+            write=lambda _fd, data: writes.append(data),
+            close=os.close,
+            set_blocking=os.set_blocking,
+        ),
+    )
+    monkeypatch.setattr(production_cli, "_read_pty", read_pty)
+    monkeypatch.setattr(production_cli, "_stop_tui_process_group", stopped.append)
+    response, transcript = production_cli._run_cmoc_tui(
+        tmp_path / "fake-cmoc",
+        tmp_path,
+        {},
+        tmp_path,
+        "resume" if input_message is not None else "tui",
+        input_message=input_message,
+    )
+    assert polls == (4 if input_message is None else 7)
+    assert response == ("initial answer" if input_message is None else "new answer")
+    assert "Shutting down" in transcript
+    assert stopped == [process]
+
+
+def test_tui_driver_exchanges_input_and_shutdown_over_a_real_pty(
+    tmp_path, monkeypatch
+) -> None:
+    """実 process への paste・Enter・終了操作と PTY の回収は一つの結合ケースで保つ。"""
     cmoc = tmp_path / "fake-cmoc"
     write_python_executable(
         cmoc,
         [
-            "import json, os, pathlib, select, sys, time, tty",
+            "import json, os, pathlib, select, sys, tty",
             "tty.setraw(sys.stdin.fileno())",
             f"session_id = {_SESSION_ID!r}",
-            f"input_message = {input_message!r}",
             "rollout = pathlib.Path('sessions/rollout-initial.jsonl')",
             "rollout.parent.mkdir()",
             "def append(event):",
@@ -267,14 +382,8 @@ def test_tui_driver_waits_for_the_composer_and_the_requested_turn(
             "call = pathlib.Path('.cmoc/gu/log/codex/current/tui_call.json')",
             "call.parent.mkdir(parents=True)",
             "payload = {'argv': ['codex', 'resume', session_id],",
-            "           'fixed_session_id': session_id, 'process_state': 'prepared'}",
+            "           'fixed_session_id': session_id, 'process_state': 'started'}",
             "call.write_text(json.dumps(payload))",
-            "time.sleep(0.2)",
-            "assert not select.select([sys.stdin], [], [], 0)[0], 'before spawn'",
-            "payload['process_state'] = 'started'",
-            "call.write_text(json.dumps(payload))",
-            "time.sleep(0.2)",
-            "assert not select.select([sys.stdin], [], [], 0)[0], 'before composer'",
             "print('? for shortcuts', flush=True)",
             "def read_until(suffix):",
             "    received = b''",
@@ -282,14 +391,10 @@ def test_tui_driver_waits_for_the_composer_and_the_requested_turn(
             "        assert select.select([sys.stdin], [], [], 5)[0], 'input timeout'",
             "        received += os.read(sys.stdin.fileno(), 1)",
             "    return received",
-            "if input_message is not None:",
-            "    assert read_until(b'\\r') == (",
-            "        b'\\x1b[200~' + input_message.encode() + b'\\x1b[201~\\r')",
-            "    time.sleep(0.2)",
-            "    assert not select.select([sys.stdin], [], [], 0)[0], 'old completion'",
-            "    append({'type': 'event_msg', 'payload': {",
-            "        'type': 'task_complete', 'turn_id': 'new-turn',",
-            "        'last_agent_message': 'new answer'}})",
+            "assert read_until(b'\\r') == b'\\x1b[200~follow-up\\x1b[201~\\r'",
+            "append({'type': 'event_msg', 'payload': {",
+            "    'type': 'task_complete', 'turn_id': 'new-turn',",
+            "    'last_agent_message': 'new answer'}})",
             "assert read_until(b'\\x03\\x03') == b'\\x03\\x03'",
             "print('Shutting down', flush=True)",
         ],
@@ -300,10 +405,10 @@ def test_tui_driver_waits_for_the_composer_and_the_requested_turn(
         tmp_path,
         dict(os.environ),
         tmp_path,
-        "resume" if input_message is not None else "tui",
-        input_message=input_message,
+        "resume",
+        input_message="follow-up",
     )
-    assert response == ("initial answer" if input_message is None else "new answer")
+    assert response == "new answer"
     assert "Shutting down" in transcript
 
 
