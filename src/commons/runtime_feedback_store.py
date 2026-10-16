@@ -857,22 +857,32 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
                 f"feedback observation root is not a regular directory: {root}"
             )
         current = os.path.dirname(current)
-    # 検査した inventory をそのまま使い、再列挙と同じ path の再検査を避ける。
+    # 親は directory ごとに検査し、各 file から同じ祖先を再走査しない。
+    # scandir の失敗を伝播させ、読めない subtree を空の inventory にしない。
     validated_paths: list[Path] = []
-    if root.exists():
-        for path in root.rglob("*"):
-            if path.is_dir() and not path.is_symlink():
-                continue
-            if (
-                _has_symlink_component(path)
-                or not path.is_file()
-                or path.suffix != ".json"
-                or not path.name.startswith("fbo_")
-            ):
-                raise ValueError(
-                    f"feedback observation store has an invalid artifact: {path}"
-                )
-            validated_paths.append(path)
+    directories = [root] if root.exists() else []
+    while directories:
+        directory = directories.pop()
+        if _has_symlink_component(directory):
+            raise ValueError(
+                f"feedback observation store has an invalid artifact: {directory}"
+            )
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                path = Path(entry.path)
+                mode = entry.stat(follow_symlinks=False).st_mode
+                if stat.S_ISDIR(mode):
+                    directories.append(path)
+                elif (
+                    not stat.S_ISREG(mode)
+                    or path.suffix != ".json"
+                    or not path.name.startswith("fbo_")
+                ):
+                    raise ValueError(
+                        f"feedback observation store has an invalid artifact: {path}"
+                    )
+                else:
+                    validated_paths.append(path)
     processed_ids = published_cleanup_observation_ids(repo)
     return sorted(path for path in validated_paths if path.stem not in processed_ids)
 

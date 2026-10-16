@@ -964,7 +964,7 @@ def test_raw_observation_reader_uses_one_snapshot(
         "sha256": sha256_bytes(content),
     }
     original_read = Path.read_bytes
-    original_inventory = Path.rglob
+    original_inventory = os.scandir
     reads = []
     inventories = []
 
@@ -975,10 +975,10 @@ def test_raw_observation_reader_uses_one_snapshot(
             path.write_bytes(canonical_json_bytes(changed))
         return value
 
-    def inventory(path, pattern):
-        if path == feedback_root(root) / "observation/v1":
+    def inventory(path):
+        if path == raw.parent:
             inventories.append(path)
-        return original_inventory(path, pattern)
+        return original_inventory(path)
 
     def load():
         if reader == "pending":
@@ -990,7 +990,7 @@ def test_raw_observation_reader_uses_one_snapshot(
         )
 
     monkeypatch.setattr(Path, "read_bytes", replace_after_read)
-    monkeypatch.setattr(Path, "rglob", inventory)
+    monkeypatch.setattr(os, "scandir", inventory)
 
     # hash・canonical・schema を検査した byte 列を使い、読込後の置換を混ぜない。
     assert load() == {raw.stem: original}
@@ -2661,14 +2661,28 @@ def test_state_reference_cleanup_relaxes_only_file_existence(
         validate(reference)
 
 
-def test_completion_count_warns_instead_of_ignoring_unknown_raw_artifact(
-    feedback_directory: Path,
+@pytest.mark.parametrize(
+    "artifact", ["unknown", "file_symlink", "directory_symlink", "dangling", "fifo"]
+)
+def test_completion_count_warns_instead_of_ignoring_invalid_raw_artifact(
+    feedback_directory: Path, artifact: str
 ) -> None:
     """raw store inventory が不正なら件数を推測せず unavailable warning を返す。"""
     root = feedback_directory
-    invalid = feedback_root(root) / "observation" / "v1" / "unexpected.tmp"
+    invalid = feedback_root(root) / "observation" / "v1" / "2030/01/02/fbo_invalid.json"
     invalid.parent.mkdir(parents=True, exist_ok=True)
-    invalid.write_text("partial")
+    if artifact == "unknown":
+        invalid = invalid.with_name("unexpected.tmp")
+        invalid.write_text("partial")
+    elif artifact == "fifo":
+        os.mkfifo(invalid)
+    else:
+        target = root / "target"
+        if artifact == "file_symlink":
+            target.write_text("{}\n")
+        elif artifact == "directory_symlink":
+            target.mkdir()
+        invalid.symlink_to(target, target_is_directory=artifact == "directory_symlink")
 
     pending, warnings = feedback_completion_counts(root)
 
@@ -2699,6 +2713,33 @@ def test_completion_count_rejects_invalid_observation_parent(
 
     assert pending is None
     assert warnings
+
+
+@pytest.mark.parametrize("location", ["root", "nested"])
+def test_pending_inventory_rejects_unreadable_directory(
+    feedback_directory, monkeypatch, location
+):
+    """列挙失敗を空の入力として通知・report に渡さない。"""
+    root = feedback_directory
+    raw_root = feedback_store_module.observation_root(root)
+    nested = raw_root / "2030/01/02"
+    nested.mkdir(parents=True)
+    (nested / "fbo_invalid.json").write_text("{}\n")
+    blocked = raw_root if location == "root" else nested
+    original_scan = os.scandir
+
+    def scan(path):
+        if path == blocked:
+            raise PermissionError(13, "injected unreadable directory", str(path))
+        return original_scan(path)
+
+    monkeypatch.setattr(os, "scandir", scan)
+
+    pending, warnings = feedback_completion_counts(root)
+    assert pending is None
+    assert warnings
+    with pytest.raises(CmocError, match="raw store の検査"):
+        feedback_report_module._pending_observations(root)
 
 
 def test_feedback_writer_lock_rejects_concurrent_writer(
