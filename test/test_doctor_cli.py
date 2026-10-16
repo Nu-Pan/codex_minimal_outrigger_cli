@@ -323,11 +323,12 @@ def test_doctor_preprocess_repairs_git_state(
 
 @pytest.mark.parametrize("explicit_doctor", [False, True])
 def test_doctor_preprocess_restores_empty_work_directories(
-    committed_repository, explicit_doctor
+    cli_repository, explicit_doctor
 ):
     """親ごとの不足を補完し、既存の内容を保って再実行時の差分を増やさない。"""
     # 修復済みの管理 file だけ用意し、配置先を作るための doctor 全体を重ねない。
-    root = committed_repository
+    # 初期内容を最初の commit に揃え、参照しない空 commit を準備しない。
+    root = cli_repository
     preserved = root / "src/kept.txt"
     preserved.parent.mkdir()
     preserved.write_text("kept content\n")
