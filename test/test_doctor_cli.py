@@ -159,10 +159,11 @@ def test_refactor_preprocess_interruption_preserves_user_changes(
 
 
 def test_refactor_preprocess_interruption_keeps_committed_repairs(
-    tmp_path, monkeypatch
+    cli_repository, monkeypatch
 ):
     """短い確定区間中の SIGINT は commit と index 復元を一体として完了する。"""
-    root = make_repo(tmp_path)
+    # 検査する refactor 対象の commit で HEAD を用意し、準備だけの初期 commit を省く。
+    root = cli_repository
     monkeypatch.chdir(root)
     # 設定と既存 state だけを用意し、state 更新の修復 commit は前処理に任せる。
     seed_search_config(root)
@@ -1295,11 +1296,12 @@ def test_doctor_does_not_commit_preexisting_staged_config_change(
 
 
 def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """両 worktree の非追跡保証と current の tracked runtime を修復する。"""
 
-    root = make_repo(tmp_path)
+    # worktree 分離には HEAD だけあれば足り、初期 file の内容は参照しない。
+    root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-doctor"
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
@@ -1420,11 +1422,11 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
 
 
 def test_doctor_preserves_existing_untracked_gitkeep_content(
-    tmp_path: Path,
+    committed_repository: Path,
 ) -> None:
     """既存の未追跡 `.agents/.gitkeep` を空内容へ置き換えず追跡する。"""
 
-    root = make_repo(tmp_path)
+    root = committed_repository
     gitkeep = root / ".agents" / ".gitkeep"
     gitkeep.parent.mkdir()
     gitkeep.write_text("human content\n")
@@ -1536,11 +1538,11 @@ def test_doctor_rejects_symlinked_agents_paths(
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """doctor の `.gitignore` 修復 commit が事前の stage 内容を上書きしないことを検証する。"""
 
-    root = make_repo(tmp_path)
+    root = committed_repository
     gitignore = root / ".gitignore"
     gitignore.write_text("human-rule\n")
     run_git(root, "add", ".gitignore")
@@ -1559,11 +1561,11 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
 
 
 def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """修復対象 path にある staged と unstaged の差分をそれぞれ保つことを検証する。"""
 
-    root = make_repo(tmp_path)
+    root = committed_repository
     gitignore = root / ".gitignore"
     gitignore.write_text("staged-rule\n")
     run_git(root, "add", ".gitignore")
@@ -1694,15 +1696,16 @@ def test_doctor_preserves_preexisting_staged_gitignore_deletion(
     [("MODEL_FAILURE", "failed"), ("CANCELLED", "cancelled")],
 )
 def test_doctor_reports_persisted_chunks_when_sync_fails(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     failure_code: str,
     expected_status: str,
 ) -> None:
     """doctor の同期失敗は未完了とし、保存済み chunk の進捗を示す。"""
-    root = make_repo(tmp_path)
+    # 索引対象の文書を初回 commit に置き、参照しない README と仕様 file を準備しない。
+    root = cli_repository
     docs = root / "oracle/doc"
-    docs.mkdir()
+    docs.mkdir(parents=True)
     (docs / "sample.md").write_text("# 検索用の原文\n")
     run_git(root, "add", "oracle/doc")
     run_git(root, "commit", "-m", "add document")
@@ -1790,10 +1793,10 @@ def test_normal_preprocess_requires_validated_materials(
 
 
 def test_doctor_repairs_shared_cmoc_root_in_its_own_repository(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """別 installation の共有資材書込み前に、その所有 repository の非追跡を修復する。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     installation_parent = tmp_path / "installation"
     installation_parent.mkdir()
     installation = make_repo(installation_parent)
