@@ -3,7 +3,6 @@
 import json
 import re
 import stat
-import string
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 
@@ -69,20 +68,13 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
             entry = state.get(relative)
             if entry is None:
                 entry = new_refactor_entry()
-            else:
-                entry = {
-                    "investigation_required": entry["investigation_required"],
-                    "last_investigation_result": entry["last_investigation_result"],
-                    "last_investigated_sha256": entry["last_investigated_sha256"],
-                    "last_investigated_at": entry["last_investigated_at"],
-                }
-                # 新規・要求済み file は内容比較で state が変わらない。比較先が null
-                # の entry も必ず再調査になるため、必要な hash だけを読み取る。
-                if not entry["investigation_required"] and (
-                    entry["last_investigated_sha256"] is None
-                    or entry["last_investigated_sha256"] != file_sha256(root / relative)
-                ):
-                    entry["investigation_required"] = True
+            # 新規・要求済み file は内容比較が不要。変更する entry だけをコピーし、
+            # original との差分比較を保ちながら、同じ履歴の再構築を省く。
+            elif not entry["investigation_required"] and (
+                entry["last_investigated_sha256"] is None
+                or entry["last_investigated_sha256"] != file_sha256(root / relative)
+            ):
+                entry = {**entry, "investigation_required": True}
             synchronized[relative] = entry
         state = synchronized
     if not path.exists() or original != state:
@@ -230,8 +222,7 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
     if digest is not None:
         if (
             not isinstance(digest, str)
-            or len(digest) != 64
-            or any(character not in string.hexdigits for character in digest)
+            or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None
         ):
             raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
         # file_sha256 は小文字を返すため、既存 state の大文字 hex も

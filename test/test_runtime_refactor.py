@@ -268,6 +268,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
 
     synchronized = sync_refactor_state(root)
 
+    assert load_refactor_state(root) == synchronized
     assert hashed_paths == [root / "README.md"]
     assert synchronized[requested_path.name] == requested_entry
     assert synchronized["oracle/spec.md"] == state["oracle/spec.md"]
@@ -351,7 +352,21 @@ def test_refactor_state_update_requeues_changes_without_redundant_io(
     assert set(hashed_paths).isdisjoint(root / relative for relative in changed)
 
 
-def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("last_investigation_result", []),
+        ("last_investigated_sha256", []),
+        ("last_investigated_sha256", "0" * 63),
+        ("last_investigated_sha256", "0" * 65),
+        ("last_investigated_sha256", "g" * 64),
+        ("last_investigated_sha256", "0" * 63 + "\n"),
+        ("last_investigated_sha256", "０" * 64),
+    ],
+)
+def test_refactor_state_writer_rejects_invalid_entry(
+    tmp_path: Path, field: str, value: object
+) -> None:
     """state writer が schema 不正値を保存しない。"""
     root = tmp_path
     state = cast(
@@ -359,9 +374,10 @@ def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
         {
             "README.md": {
                 "investigation_required": True,
-                "last_investigation_result": [],
+                "last_investigation_result": "no_findings",
                 "last_investigated_sha256": None,
                 "last_investigated_at": None,
+                field: value,
             }
         },
     )
