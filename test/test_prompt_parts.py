@@ -25,7 +25,6 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/routing.py
 """
 
-from collections.abc import Callable
 from pathlib import Path
 
 import oracle.other.path_model as path_model_module
@@ -115,80 +114,20 @@ def customized_prompt_markdown(path_context: AgentCallPathContext) -> str:
     return render_sd_node_as_markdown(*prompt)
 
 
-def _render_policy(builder_result: tuple[PlaceholderMap, SDHeader]) -> str:
-    """policy builder の SDHeader を complete prompt と同じ経路で render する。"""
-    return render_sd_node_as_markdown(builder_result[1])
-
-
-@pytest.mark.parametrize(
-    ("builder", "categories", "policy_count"),
-    [
-        pytest.param(
-            lambda _context: _build_oracle_policy(),
-            (
-                "**必須**",
-                "**禁止**",
-                "**例外**",
-                "**補足情報**",
-                "**必須**",
-                "**禁止**",
-            ),
-            2,
-            id="oracle",
-        ),
-        pytest.param(
-            _build_realization_policy,
-            ("**必須**", "**禁止**", "**例外**"),
-            1,
-            id="realization",
-        ),
-        pytest.param(
-            lambda _context: _build_realization_findings_policy(),
-            ("**必須**", "**禁止**"),
-            1,
-            id="realization-findings",
-        ),
-        pytest.param(
-            lambda _context: _build_conflict_resolution_policy(),
-            ("**必須**", "**禁止**"),
-            3,
-            id="conflict-resolution",
-        ),
-        pytest.param(
-            _build_feedback_reporting_policy,
-            ("**必須**", "**禁止**", "**補足情報**"),
-            1,
-            id="feedback-reporting",
-        ),
-        pytest.param(
-            lambda _context: _build_editor_input_handoff_policy(),
-            ("**必須**", "**禁止**", "**補足情報**"),
-            1,
-            id="editor-input-handoff",
-        ),
-        pytest.param(
-            lambda context: _build_file_access_policy(FileAccessMode.READONLY, context),
-            ("**禁止**", "**例外**", "**補足情報**"),
-            1,
-            id="file-access",
-        ),
-    ],
-)
-def test_category_policy_blocks_are_flat_and_keep_category_order(
-    builder: Callable[[AgentCallPathContext], tuple[PlaceholderMap, SDHeader]],
+def _render_policy(
+    builder_result: tuple[PlaceholderMap, SDHeader],
     categories: tuple[str, ...],
-    policy_count: int,
-    path_context: AgentCallPathContext,
-) -> None:
-    """全 policy builder が flat な SDPolicy と順序付きカテゴリだけを持つ。"""
-    builder_result = builder(path_context)
+    *,
+    policy_count: int = 1,
+) -> str:
+    """文面検査に使う描画を一度だけ行い、構造とカテゴリ順序も検証する。"""
     policy_header = builder_result[1]
     assert len(policy_header.children) == policy_count
     assert isinstance(policy_header.children[0], SDPolicy)
     if policy_count != 3:
         assert all(isinstance(child, SDPolicy) for child in policy_header.children)
 
-    rendered = _render_policy(builder_result)
+    rendered = render_sd_node_as_markdown(policy_header)
     lines = rendered.splitlines()
 
     assert len([line for line in lines if line.startswith("# ")]) == 1
@@ -200,6 +139,7 @@ def test_category_policy_blocks_are_flat_and_keep_category_order(
         for line in lines
         if line in {"**必須**", "**禁止**", "**許容**", "**例外**", "**補足情報**"}
     ] == list(categories)
+    return rendered
 
 
 _POLICY_FLAG_HEADINGS = (
@@ -242,7 +182,11 @@ def test_each_policy_flag_adds_only_its_block_once(
 
 def test_oracle_policy_keeps_reference_and_authority_boundaries() -> None:
     """oracle policy が参照形式、正本責務、未定義事項を区別する。"""
-    rendered = _render_policy(_build_oracle_policy())
+    rendered = _render_policy(
+        _build_oracle_policy(),
+        ("**必須**", "**禁止**", "**例外**", "**補足情報**", "**必須**", "**禁止**"),
+        policy_count=2,
+    )
 
     assert "root path placeholder を起点とする path、安定した locator" in rendered
     assert "合わせて読む必要がある oracle file への参照に行番号を含めてはいけない" in (
@@ -264,7 +208,7 @@ def test_build_realization_findings_policy_renders_core_review_aspects() -> None
 
     assert isinstance(builder_result[1], SDHeader)
 
-    rendered = _render_policy(builder_result)
+    rendered = _render_policy(builder_result, ("**必須**", "**禁止**"))
     assert "realization findings policy" in rendered
     assert "oracle file の具体的な要求と realization file の具体的な挙動" in rendered
     assert "realization file 上に明確に存在する致命的な問題" in rendered
@@ -279,7 +223,9 @@ def test_build_realization_findings_policy_renders_core_review_aspects() -> None
 def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
     """conflict 解消結果の保持・報告・変更境界を伝える。"""
     builder_result = _build_conflict_resolution_policy()
-    rendered_doc = _render_policy(builder_result)
+    rendered_doc = _render_policy(
+        builder_result, ("**必須**", "**禁止**"), policy_count=3
+    )
     assert "両 branch の変更を整合したマージ結果" in rendered_doc
     assert "両 branch の両立する意図と挙動" in rendered_doc
     assert "新しい人間意図の選択が必要な場合" in rendered_doc
@@ -396,7 +342,10 @@ def test_complete_prompt_includes_feedback_instruction_exactly_once(
     fundamental_policy = default_prompt_markdown.split(
         '<cmoc_block id="fundamental_policy">', 1
     )[1].split("</cmoc_block>", 1)[0]
-    expected_policy = _render_policy(_build_feedback_reporting_policy(path_context))
+    expected_policy = _render_policy(
+        _build_feedback_reporting_policy(path_context),
+        ("**必須**", "**禁止**", "**補足情報**"),
+    )
     assert fundamental_policy.count(expected_policy) == 1
 
 
@@ -489,8 +438,11 @@ def test_file_access_policy_titles_and_bodies_match_modes(
     }
 
     for mode, fragments in mode_specific_denials.items():
-        doc = _build_file_access_policy(mode, path_context)[1]
-        rendered = render_sd_node_as_markdown(doc)
+        builder_result = _build_file_access_policy(mode, path_context)
+        doc = builder_result[1]
+        rendered = _render_policy(
+            builder_result, ("**禁止**", "**例外**", "**補足情報**")
+        )
         assert doc.title == f"file access policy ({mode.value})"
         assert (
             "この policy は deny list で記述しており、禁止されていない読み書きは暗に許容される"
@@ -544,7 +496,9 @@ def test_file_access_policy_keeps_same_boundaries_in_linked_worktree(
 
 def test_editor_input_handoff_keeps_context_and_scope_boundaries() -> None:
     """明示された相手へ単独で理解できる依頼を渡し、経緯や権限を補わない。"""
-    rendered = _render_policy(_build_editor_input_handoff_policy())
+    rendered = _render_policy(
+        _build_editor_input_handoff_policy(), ("**必須**", "**禁止**", "**補足情報**")
+    )
     requirements, prohibitions = rendered.split("**禁止**\n", 1)
 
     assert (
@@ -655,7 +609,7 @@ def test_build_realization_policy_renders_core_conformance_requirements(
     assert isinstance(builder_result[1], SDHeader)
     assert builder_result[0] == path_context.root_placeholder_definitions()
 
-    rendered = _render_policy(builder_result)
+    rendered = _render_policy(builder_result, ("**必須**", "**禁止**", "**例外**"))
     assert "realization policy" in rendered
     assert "関連する oracle file を先に確認し、その明示要求と矛盾しない" in rendered
     assert (
