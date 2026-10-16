@@ -1979,28 +1979,27 @@ def test_apply_report_failure_after_joinable_publication_sets_error_state(
 
 
 def test_refactor_report_failure_after_joinable_publication_sets_error_state(
-    ready_run_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor の fork report failure でも run state と report を一致させる。"""
-    _root, _session_branch, state_path = ready_run_session
+    _root, _session_branch, state_path = refactor_after_preprocess
     monkeypatch.setattr(
         refactor_module,
         "_initialize_cycle",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(KeyboardInterrupt()),
     )
     original_write_report = refactor_module.write_fork_report
-    calls = 0
+    report_states: list[str] = []
 
-    def fail_completed_report(*args: object, **kwargs: object) -> Path:
-        """最初の completed report だけを失敗させる。"""
-        nonlocal calls
-        calls += 1
-        if calls == 1:
-            raise RuntimeError("completed report failed")
+    def fail_first_report(*args: object, **kwargs: object) -> Path:
+        """joinable 公開後の最初の report 保存だけを失敗させる。"""
+        report_states.append(_state(state_path)["run"]["state"])
+        if len(report_states) == 1:
+            raise RuntimeError("joinable report failed")
         return original_write_report(*args, **kwargs)
 
-    monkeypatch.setattr(refactor_module, "write_fork_report", fail_completed_report)
+    monkeypatch.setattr(refactor_module, "write_fork_report", fail_first_report)
 
     result = runner.invoke(
         app,
@@ -2009,7 +2008,7 @@ def test_refactor_report_failure_after_joinable_publication_sets_error_state(
     )
 
     assert result.exit_code == 1
-    assert calls == 2
+    assert report_states == ["joinable", "error"]
     assert _state(state_path)["run"]["state"] == "error"
     report = terminal_primary_report(result)
     assert 'state_after: "error"' in report.read_text()
@@ -2049,18 +2048,13 @@ def test_apply_error_preserves_unreadable_process_tracking(
 @pytest.mark.parametrize("interrupted", [False, True])
 @pytest.mark.parametrize("inspection", ["changes", "state"])
 def test_refactor_terminal_report_survives_change_inspection_failure(
-    ready_join_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     interrupted: bool,
     inspection: str,
 ) -> None:
     """確認不能な差分・履歴を空として扱わず terminal report と state を保存する。"""
-    root, _session_branch, state_path = ready_join_session
-    # doctor の修復・索引同期は test_doctor_cli.py、実際の fork との結合は
-    # mixed_results_until_user_interruption に残す。ここでは同期済み state を使い、
-    # 終了 report の参照失敗ごとに前処理を繰り返さない。
-    preprocess = Mock()
-    monkeypatch.setattr(refactor_module, "run_doctor_preprocess", preprocess)
+    root, _session_branch, state_path = refactor_after_preprocess
     agent_failed = False
 
     def fail_agent(*_args: object, **_kwargs: object) -> NoReturn:
@@ -2102,7 +2096,6 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
         catch_exceptions=False,
     )
 
-    preprocess.assert_called_once_with(root, rollback_on_interruption=True)
     assert agent_failed
     expected_state = "joinable" if interrupted else "error"
     expected_reason = "user_interruption" if interrupted else "error"
@@ -3129,13 +3122,13 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
 
 
 def test_run_join_keeps_completed_merge_when_final_report_update_fails(
-    ready_content_session: tuple[Path, str, Path],
+    join_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 後の report 更新失敗でも保存済み report と merge を保持する。"""
-    # cleanup 後の結果を検査するため、doctor 済み HEAD の事前固定は不要。
-    root, _session_branch, state_path = ready_content_session
-    context = _prepare_run(ready_content_session)
+    # doctor の修復は代表の fork→join test に残し、report 更新失敗の前提だけ用意する。
+    root, _session_branch, state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     original_write_report = run_join_module.write_lifecycle_report
