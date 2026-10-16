@@ -1,7 +1,7 @@
 """feedback の根拠変更・再確認・封印と publication artifact の整合性を検証する。
 
-Git・Codex・共通 ID 発行・ディスク同期の境界を置き換え、
-wave、checkpoint、根拠検査には実装を使う。
+Git・Codex・共通 ID 発行・ディスク同期・pending store 列挙の境界を置き換え、
+wave、checkpoint、固定入力と判定根拠の検査には実装を使う。
 """
 
 import copy
@@ -182,6 +182,11 @@ def feedback_run(tmp_path, monkeypatch):
         remediation, "validate_run_join", lambda *_args, **_kwargs: None
     )
     monkeypatch.setattr(remediation, "capture_high_watermark", lambda *_args: (0, []))
+    # intake は境界値と候補を直接渡すため、wave ごとの store 列挙を重ねない。
+    # raw の破損拒否・publication 阻止は test_feedback.py の pending reader と
+    # invalid_raw_observation_blocks_publication、実 intake との結合は wave test に残す。
+    # 固定した observation の読込・hash・schema 検査と manifest の検証は実行する。
+    monkeypatch.setattr(report, "_pending_observations", lambda _root: ([], {}))
     monkeypatch.setattr(
         report, "_build_candidates", lambda *_args, **_kwargs: (harness.candidates, {})
     )
