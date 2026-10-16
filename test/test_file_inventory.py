@@ -20,6 +20,7 @@ import commons.runtime_refactor as runtime_refactor
 from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import (
     enumerate_oracle_and_realization_files,
+    is_oracle_file_path,
     is_realization_file_path,
 )
 from commons.runtime_refactor import (
@@ -399,20 +400,23 @@ def test_inventory_rejects_ignored_fifo_in_unpruned_area(tmp_path: Path) -> None
 
 
 @pytest.mark.parametrize("status", ["tracked", "unignored"])
-def test_inventory_rejects_symlink_not_confirmed_untracked_and_ignored(
+def test_inventory_and_state_sync_reject_unignored_or_tracked_symlink(
     cli_repository: Path, status: str
 ) -> None:
-    """tracked または unignored な symlink を列挙エラーにする。"""
+    """tracked または unignored な oracle symlink を分類・state 同期で拒否する。"""
     root = cli_repository
-    link = root / "candidate.link"
+    (root / "oracle").mkdir()
+    link = root / "oracle" / "candidate.link"
     if status == "tracked":
         (root / ".gitignore").write_text("*.link\n")
     link.symlink_to(root / "missing-target")
     if status == "tracked":
-        run_git(root, "add", "-f", ".gitignore", "candidate.link")
+        run_git(root, "add", "-f", ".gitignore", "oracle/candidate.link")
 
+    # 列挙の拒否が state 同期まで伝わることも、同じ実 index と link で検査する。
+    assert not is_oracle_file_path(root, link)
     with pytest.raises(CmocError, match="oracle/realization file"):
-        enumerate_oracle_and_realization_files(root)
+        sync_refactor_state(root)
 
 
 def test_inventory_rejects_symlink_when_ignore_status_is_unknown(

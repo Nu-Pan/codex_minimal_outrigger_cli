@@ -1562,8 +1562,8 @@
   "test/test_runtime_refactor.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "9087ce80e0496b260df15812efbec134eafda2467cd1180204a1f0b539c77395",
-    "last_investigated_at": "2026-10-13_10-24-25_652"
+    "last_investigated_sha256": "a4e0deb3dcb6301b2df77c346fba0a0b4bf8e13b408bd96929dea9872ab9e780",
+    "last_investigated_at": "2026-10-16_20-19-24_739"
   },
   "test/test_runtime_state.py": {
     "investigation_required": true,

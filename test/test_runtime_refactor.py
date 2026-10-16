@@ -166,11 +166,11 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
 
 
 def test_refactor_target_classifiers_require_file_entries(
-    committed_repository: Path,
+    cli_repository: Path,
 ) -> None:
     """通常・削除済み file を受理し、directory・欠落 path・Gitlink を拒否する。"""
     # 特殊文字 path の blob と Gitlink を同じ tree に用意し、履歴の準備を共有する。
-    root = committed_repository
+    root = cli_repository
     (root / "oracle").mkdir()
     realization_directory = root / "src"
     realization_directory.mkdir()
@@ -178,9 +178,10 @@ def test_refactor_target_classifiers_require_file_entries(
     realization_file.write_text("VALUE = 1\n")
     gitlink = root / "module"
     gitlink.mkdir()
-    commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "add", "src/module[1].py")
-    run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{commit},module")
+    # Gitlink の参照先 object は親 repository に不要。分類用の mode と OID だけを
+    # 用意し、参照先を作るためだけの空 commit と HEAD 照会を省く。
+    run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{'a' * 40},module")
     run_git(root, "commit", "-m", "add classifier entries")
 
     assert not is_oracle_file_path(root, root / "oracle")
@@ -190,6 +191,8 @@ def test_refactor_target_classifiers_require_file_entries(
     assert is_realization_file_path(root, realization_file, branch="HEAD")
     assert not is_realization_file_path(root, root / "missing.py")
     assert gitlink.is_dir()
+    assert not is_realization_file_path(root, gitlink, branch="HEAD")
+    gitlink.rmdir()
     assert not is_realization_file_path(root, gitlink, branch="HEAD")
 
     realization_file.unlink()
@@ -265,22 +268,6 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     assert not is_realization_file_path(
         root, path, branch="HEAD", fallback_branch="unused-invalid-ref"
     )
-
-
-def test_refactor_state_sync_rejects_oracle_symlink(
-    cli_repository: Path,
-) -> None:
-    """state 同期が regular file ではない oracle symlink を拒否する。"""
-    root = cli_repository
-    (root / "oracle").mkdir()
-    link = root / "oracle" / "dangling.md"
-    link.symlink_to("../missing.md")
-    # ignore 規則のない link の拒否に index 登録は不要。tracked かつ ignored な
-    # symlink の拒否は test_file_inventory.py の実 index を使うケースに残す。
-
-    assert not is_oracle_file_path(root, link)
-    with pytest.raises(CmocError, match="oracle/realization file"):
-        sync_refactor_state(root)
 
 
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
