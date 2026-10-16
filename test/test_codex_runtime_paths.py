@@ -175,6 +175,8 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
             child.close()
 
 
+# 実採番と log の結合は上の並行 test に残す。以下の cwd・home・schema の検査では
+# nonpersistent_codex_ids を使い、採番のたびの SQLite transaction と同期を省く。
 @pytest.mark.parametrize(
     "agent_call_cwd_relative",
     [".", "oracle"],
@@ -184,6 +186,7 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_codex_ids: None,
     agent_call_cwd_relative: str,
 ) -> None:
     """パラメータの cwd と pure-oracle read の権限境界を検証する。
@@ -253,7 +256,10 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
 
 
 def test_run_codex_exec_uses_linked_worktree_context(
-    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_codex_ids: None,
 ) -> None:
     """linked worktree の cwd・sandbox と main repository の schema 保存先を検証する。
 
