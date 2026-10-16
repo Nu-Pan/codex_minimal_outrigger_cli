@@ -119,7 +119,7 @@ def join_after_preprocess(ready_join_session, monkeypatch):
 
 @pytest.fixture
 def refactor_after_preprocess(ready_join_session, monkeypatch):
-    """異常終了の検査には、修復・同期済みの session から本処理を実行する。"""
+    """終了・復旧の検査には、修復・同期済みの session から本処理を実行する。"""
     # doctor の修復・索引同期・中断は test_doctor_cli.py、fork との結合は
     # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
     # 管理 file は ready_join_session の初期 commit に揃え、前処理を重ねない。
@@ -3362,12 +3362,11 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(
-    ready_run_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 公開直後の中断を joinable state として report する。"""
-    # 巡の開始前に中断するため、レビュー対象の初期内容は不要。
-    _root, _session_branch, state_path = ready_run_session
+    _root, _session_branch, state_path = refactor_after_preprocess
     original_start = refactor_module.start_editing_run
 
     def interrupt_after_start(kind: str) -> EditingRunContext:
@@ -3558,11 +3557,11 @@ def test_start_run_interrupt_after_state_write_restores_ready_state(
 
 
 def test_refactor_start_failure_after_run_publish_is_reported(
-    ready_run_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 公開後の初期化失敗を error report として保存する。"""
-    _root, _session_branch, state_path = ready_run_session
+    _root, _session_branch, state_path = refactor_after_preprocess
     original_start = refactor_module.start_editing_run
 
     def fail_after_start(kind: str) -> EditingRunContext:
@@ -3586,10 +3585,10 @@ def test_refactor_start_failure_after_run_publish_is_reported(
 
 
 def test_refactor_start_interruption_with_broken_tracking_reports_existing_run(
-    ready_run_session, monkeypatch
+    refactor_after_preprocess, monkeypatch
 ):
     """成立済み run の追跡失敗を「run 未成立」とせず、資源を残して error にする。"""
-    root, session_branch, state_path = ready_run_session
+    root, session_branch, state_path = refactor_after_preprocess
     session_id = session_branch.removeprefix("cmoc/session/")
     tracking = run_process_id_path(root, session_id)
 
@@ -3894,11 +3893,11 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
 
 
 def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
-    ready_run_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断時 cleanup 失敗を error state と report に反映する。"""
-    _root, _session_branch, state_path = ready_run_session
+    _root, _session_branch, state_path = refactor_after_preprocess
     monkeypatch.setattr(
         refactor_module,
         "run_codex_exec",
@@ -3925,11 +3924,11 @@ def test_refactor_interrupt_cleanup_failure_sets_error_and_reports(
 
 
 def test_refactor_interrupt_during_completion_is_joinable(
-    ready_run_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """completion 中の中断を joinable state と user interruption report にする。"""
-    _root, _session_branch, state_path = ready_run_session
+    _root, _session_branch, state_path = refactor_after_preprocess
     monkeypatch.setattr(
         refactor_module,
         "_initialize_cycle",
