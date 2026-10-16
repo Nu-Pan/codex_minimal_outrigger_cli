@@ -9,16 +9,7 @@ import pytest
 from sub_commands.feedback import decision
 
 
-@pytest.mark.parametrize(
-    "changed",
-    [
-        ".cmoc/gt/config.json",
-        "nested/source.py",
-    ],
-)
-def test_basis_captures_tracked_configuration_and_nested_inputs(
-    tmp_path, monkeypatch, changed
-):
+def test_basis_captures_tracked_configuration_and_nested_inputs(tmp_path, monkeypatch):
     paths = [
         "README.md",
         ".cmoc/gt/config.json",
@@ -49,10 +40,13 @@ def test_basis_captures_tracked_configuration_and_nested_inputs(
     )
     before = decision.worktree_inputs(tmp_path)
     assert set(before) == set(paths) - {".cmoc/gt/realization/refactor/state.json"}
-    (tmp_path / changed).write_text("new\n")
-    after = decision.worktree_inputs(tmp_path)
-    assert before["README.md"] == after["README.md"]
-    assert before[changed] != after[changed]
+    # 準備と初回収集を共有し、各入力の変更は一つずつ検出する。
+    for changed in (".cmoc/gt/config.json", "nested/source.py"):
+        (tmp_path / changed).write_text("new\n")
+        after = decision.worktree_inputs(tmp_path)
+        assert set(after) == set(before)
+        assert {name for name in before if before[name] != after[name]} == {changed}
+        before = after
 
 
 def test_basis_uses_git_modes_across_atomic_write_and_checkout(tmp_path, monkeypatch):
@@ -72,32 +66,7 @@ def test_basis_uses_git_modes_across_atomic_write_and_checkout(tmp_path, monkeyp
     assert decision.worktree_inputs(tmp_path) != before
 
 
-def test_basis_includes_nonmetadata_nested_git_named_inputs(tmp_path, monkeypatch):
-    path = tmp_path / "nested" / "fake" / ".git" / "kept.txt"
-    path.parent.mkdir(parents=True)
-    path.write_text("old\n")
-
-    def fake_run_git(args, *_args, **_kwargs):
-        if args[0] == "ls-files":
-            return SimpleNamespace(stdout="nested/fake/.git/kept.txt\0", returncode=0)
-        return SimpleNamespace(stdout="", returncode=1)
-
-    monkeypatch.setattr(decision, "run_git", fake_run_git)
-    monkeypatch.setattr(
-        decision,
-        "enumerate_oracle_and_realization_files",
-        lambda _root: ([], [path]),
-    )
-
-    before = decision.worktree_inputs(tmp_path)
-    path.write_text("new\n")
-    after = decision.worktree_inputs(tmp_path)
-
-    assert set(before) == {"nested/fake/.git/kept.txt"}
-    assert before != after
-
-
-def test_basis_excludes_verified_nested_git_metadata(tmp_path, monkeypatch):
+def test_basis_excludes_only_verified_nested_git_metadata(tmp_path, monkeypatch):
     metadata = tmp_path / "nested" / ".git" / "config"
     kept = tmp_path / "nested" / "fake" / ".git" / "kept.txt"
     metadata.parent.mkdir(parents=True)
@@ -122,7 +91,12 @@ def test_basis_excludes_verified_nested_git_metadata(tmp_path, monkeypatch):
         lambda _root: ([], [kept]),
     )
 
-    assert set(decision.worktree_inputs(tmp_path)) == {"nested/fake/.git/kept.txt"}
+    before = decision.worktree_inputs(tmp_path)
+    assert set(before) == {"nested/fake/.git/kept.txt"}
+    kept.write_text("changed\n")
+    after = decision.worktree_inputs(tmp_path)
+    assert set(after) == set(before)
+    assert before != after
 
 
 def test_basis_ignores_deleted_tracked_nested_git_named_input(tmp_path, monkeypatch):
