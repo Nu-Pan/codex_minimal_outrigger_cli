@@ -1038,10 +1038,10 @@
     "last_investigated_at": "2026-10-16_12-40-26_732"
   },
   "src/config/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
     "last_investigated_sha256": "2df099916bfadae1547b9bb803be4606e032bc2d738c77e453dddf5756e2dece",
-    "last_investigated_at": "2026-10-12_13-08-37_615"
+    "last_investigated_at": "2026-10-16_12-42-31_490"
   },
   "src/config/cmoc_config.py": {
     "investigation_required": true,
