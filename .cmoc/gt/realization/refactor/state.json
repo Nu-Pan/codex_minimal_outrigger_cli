@@ -1466,8 +1466,8 @@
   "test/test_oracle_edit_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "724a1cd17ef7ed8c0a66a4b16a24ee388101cd43ca61cffa88f687f658640903",
-    "last_investigated_at": "2026-10-13_08-21-25_284"
+    "last_investigated_sha256": "e0ca2028f72e2aa2e480575a2df0002c81088105efc256217e66be8896dcfa88",
+    "last_investigated_at": "2026-10-16_19-18-20_294"
   },
   "test/test_oracle_investigation_cli.py": {
     "investigation_required": true,

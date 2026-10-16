@@ -8,6 +8,7 @@
 """
 
 import json
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -58,14 +59,25 @@ def _write_session_state(
     return path
 
 
-def _prepared_repo(
+@pytest.fixture(scope="module")
+def oracle_edit_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """各ケースへコピーする初期履歴を一度だけ作成する。"""
+    seed = tmp_path_factory.mktemp("oracle-edit-seed")
+    with pytest.MonkeyPatch.context() as patch:
+        setup_codex_home(seed, patch)
+        return make_repo(seed, initial_branch=SESSION_BRANCH)
+
+
+@pytest.fixture
+def oracle_edit_repository(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    oracle_edit_repository_seed: Path,
 ) -> Path:
     """session branch・履歴・Codex HOME を持つ repository を準備する。"""
     setup_codex_home(tmp_path, monkeypatch)
-    # 元の branch からの移動履歴は使わず、両回で保持する branch・HEAD だけ用意する。
-    root = make_repo(tmp_path, initial_branch=SESSION_BRANCH)
+    # cmoc は各ケースの tmp_path 内でだけ起動し、index・履歴もケース間で共有しない。
+    root = shutil.copytree(oracle_edit_repository_seed, tmp_path / "repo")
     monkeypatch.chdir(root)
     return root
 
@@ -92,7 +104,7 @@ def _assert_exec_parameter(
     ],
 )
 def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
-    tmp_path: Path,
+    oracle_edit_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     nonpersistent_execution_ids: None,
     failure_stage: str | None,
@@ -104,7 +116,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     # collector の受理・drain は test_feedback.py に残し、exec 制御と差分保持を検証する。
     # 永続採番と logger の結合は test_runtime_ids.py と test_runtime_cli.py に残す。
     # ここでは実行 ID の受け渡しと editor input・report・log の保存を実検査する。
-    root = _prepared_repo(tmp_path, monkeypatch)
+    root = oracle_edit_repository
     integrated_case = failure_stage is None and first_changes
     if not integrated_case:
         # root 探索の結合は edit-success と専用テストに残す。
