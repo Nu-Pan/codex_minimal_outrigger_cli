@@ -16,6 +16,7 @@ from cmoc_runtime import (
 )
 from commons.prompt_editor_input import (
     ORIGINAL_PROMPT_PLACEHOLDER,
+    EmptyPromptInput,
     collect_prompt_editor_input,
     edit_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
@@ -66,10 +67,15 @@ def _cmoc_oracle_edit_body() -> None:
     )
 
     start_subcommand_step(4, "入力結果を保存・抽出", "save and extract input")
-    instruction = collect_prompt_editor_input(
-        repository,
-        input_path,
-    )
+    try:
+        instruction = collect_prompt_editor_input(
+            repository,
+            input_path,
+        )
+    except EmptyPromptInput:
+        # 空として確定した入力も、未確定の入力と区別して終了 report に残す。
+        update_primary_report_input("")
+        raise
     update_primary_report_input(instruction)
 
     start_subcommand_step(5, "共用する入力と設定を確定", "prepare edit calls")

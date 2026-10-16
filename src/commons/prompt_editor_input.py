@@ -27,6 +27,19 @@ from .runtime_paths import (
 ORIGINAL_PROMPT_PLACEHOLDER = "{{original-prompt-here}}"
 
 
+class EmptyPromptInput(CmocError):
+    """空として確定した入力の中断を、入力確定前の失敗と区別する。"""
+
+    def __init__(self, input_path: Path) -> None:
+        """保存済み本文の場所と、再入力の手順を保持する。"""
+        # 呼び出し元は確定済みの空入力を使い、固有の終了処理を行う。
+        super().__init__(
+            "オリジナルプロンプトが空のため、サブコマンドを中断しました。",
+            ["cmoc コマンドを再実行し、エディタに依頼本文を入力してください。"],
+            f"input_path: {input_path}",
+        )
+
+
 def reserve_prompt_editor_input(root: Path) -> Path:
     """編集から確定保存まで共用する空の本文 file を予約する。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
@@ -84,13 +97,18 @@ def collect_prompt_editor_input(
     root: Path,
     input_path: Path,
 ) -> str:
-    """本文を一度だけ読み、同じ path へ確定保存して入力を返す。"""
+    """本文を一度だけ読んで確定保存し、空なら中断、非空なら入力を返す。"""
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     # 最終時点の通常 file を一度だけ読み、同じ結果を保存と入力抽出に使う。
     validate_editor_input_file(root, input_path)
     final_read_result = input_path.read_bytes()
     _save_editor_input(root, input_path, final_read_result)
-    return final_read_result.decode("utf-8").strip()
+    original_prompt = final_read_result.decode("utf-8").strip()
+
+    # 空入力は保存後に中断し、呼び出し元の本命処理を開始させない。
+    if not original_prompt:
+        raise EmptyPromptInput(input_path)
+    return original_prompt
 
 
 def _save_editor_input(root: Path, input_path: Path, content: bytes) -> None:
