@@ -37,6 +37,7 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
+from _report_support import report_metadata
 
 from commons.runtime_config import load_config, write_config
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
@@ -66,6 +67,7 @@ from commons.runtime_feedback_store import (
     write_immutable_json,
 )
 from commons.runtime_ids import new_id
+from commons.runtime_run_lifecycle import set_run_state, start_editing_run
 from config.cmoc_config import CmocConfig
 
 _WORK_ROOT = Path(__file__).resolve().parents[1]
@@ -88,8 +90,8 @@ NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("feedback", "report"),
     ("feedback", "close"),
     ("oracle", "edit"),
-    ("realization", "apply", "fork"),
-    ("realization", "refactor", "fork"),
+    ("realization", "apply"),
+    ("realization", "refactor"),
     ("run", "abandon"),
     ("run", "join"),
     ("session", "abandon"),
@@ -392,7 +394,7 @@ def _run_cmoc(
 ) -> subprocess.CompletedProcess[str]:
     """利用者向け console script を独立 process で正常完了まで実行する。"""
     # 個々の command hang は pytest 全体の timeout より早く局所化する。
-    if args == ("realization", "refactor", "fork"):
+    if args == ("realization", "refactor"):
         result = _run_refactor_until_confirmed([str(cmoc), *args], root, environment)
     else:
         result = subprocess.run(
@@ -591,15 +593,6 @@ def _load_session_state(root: Path, branch: str) -> tuple[Path, dict[str, Any]]:
     state = json.loads(path.read_text())
     assert isinstance(state, dict)
     return path, state
-
-
-def _run_worktree_from_state(root: Path, state: dict[str, Any]) -> Path:
-    """共通 run branch 名から仕様上の managed worktree path を復元する。"""
-    branch = state["run"]["branch"]
-    assert isinstance(branch, str)
-    parts = branch.split("/")
-    assert len(parts) == 4 and parts[:2] == ["cmoc", "run"]
-    return root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
 
 
 def _completed_tui_turn(
@@ -886,6 +879,7 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
 def test_all_noninteractive_leaf_commands_use_production_process_paths(
     tmp_path: Path,
     isolated_cmoc_installation: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """非対話の全末端を独立 process の代表正常系で完了させる。"""
     root = make_repo(tmp_path)
@@ -1082,37 +1076,38 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert case in terminal_primary_report(closed.stdout).read_text()
     assert "- result: `closed`" in closed.stdout
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # 2 workload と共通 join/abandon を本番 Codex 経路で観測する。
+    # workload の正常終了は、同じ invocation での取り込みと回収まで含む。
     for command, kind in [
-        (("realization", "apply", "fork"), "realization_apply"),
-        (("realization", "refactor", "fork"), "realization_refactor"),
+        (("realization", "apply"), "realization_apply"),
+        (("realization", "refactor"), "realization_refactor"),
     ]:
         before_calls = _codex_call_logs(root)
-        run_production(*command)
+        completed = run_production(*command)
         assert _codex_call_logs(root) - before_calls
         _state_path, completed_state = _load_session_state(root, session_branch)
-        assert completed_state["run"]["state"] == "joinable"
-        assert completed_state["run"]["kind"] == kind
-        joined_worktree = _run_worktree_from_state(root, completed_state)
-        assert joined_worktree.is_dir()
-        run_without_codex("run", "join")
-        _state_path, joined_state = _load_session_state(root, session_branch)
-        assert joined_state["run"] == {
+        assert completed_state["run"] == {
             "state": "ready",
             "kind": None,
             "branch": None,
             "fork_commit": None,
         }
-        assert not joined_worktree.exists()
+        report = report_metadata(terminal_primary_report(completed.stdout).read_text())
+        assert report["run_kind"] == kind
+        assert report["state_after"] == "ready"
+        assert report["cleanup"] == "completed"
+        assert not Path(report["run_worktree"]).exists()
 
-    run_production("realization", "apply", "fork")
-    _state_path, abandoned_state = _load_session_state(root, session_branch)
-    abandoned_worktree = _run_worktree_from_state(root, abandoned_state)
-    abandon_result = run_without_codex("run", "abandon")
-    _state_path, ready_state = _load_session_state(root, session_branch)
-    assert ready_state["run"]["state"] == "ready"
-    assert not abandoned_worktree.exists()
-    assert "cleanup: `completed`" in abandon_result.stdout
+    # 復旧用の末端には停止済み run を用意し、本番 entrypoint で機械的に終了する。
+    for operation in ("join", "abandon"):
+        with monkeypatch.context() as setup:
+            setup.chdir(root)
+            context = start_editing_run("realization_apply")
+            set_run_state(context, "joinable")
+        finished = run_without_codex("run", operation)
+        _state_path, ready_state = _load_session_state(root, session_branch)
+        assert ready_state["run"]["state"] == "ready"
+        assert not context.run_worktree.exists()
+        assert "cleanup: `completed`" in finished.stdout
 
     # 同じ home branch で join と abandon の両 session 完了経路を観測する。
     state_path, _state = _load_session_state(root, session_branch)

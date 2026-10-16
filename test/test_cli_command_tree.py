@@ -66,8 +66,8 @@ def test_public_cli_leaf_commands_match_oracle(cli_command: click.Command) -> No
         ("feedback", "close"),
         ("oracle", "edit"),
         ("oracle", "investigation"),
-        ("realization", "apply", "fork"),
-        ("realization", "refactor", "fork"),
+        ("realization", "apply"),
+        ("realization", "refactor"),
         ("run", "abandon"),
         ("run", "join"),
         ("session", "abandon"),
@@ -104,6 +104,25 @@ def test_help_renders_without_typer_click_compatibility_error(
     for command_path in (("oracle", "edit"), ("run", "join")):
         result = runner.invoke(cli_command, [*command_path, "--help"])
         assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("workload", ["apply", "refactor"])
+def test_removed_realization_fork_entry_is_rejected_without_runtime(
+    cli_command,
+    tmp_path,
+    monkeypatch,
+    workload,
+):
+    """旧 fork を alias にせず、help と実行の双方を新しい末端に揃える。"""
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    help_result = runner.invoke(cli_command, ["realization", workload, "--help"])
+    assert help_result.exit_code == 0
+    assert "fork" not in help_result.output
+    removed = runner.invoke(cli_command, ["realization", workload, "fork"])
+    assert removed.exit_code != 0
+    assert "fork" in removed.output
+    assert not (tmp_path / ".cmoc").exists()
 
 
 def test_shared_cli_runner_reuses_tree_with_independent_invocations(

@@ -15,7 +15,6 @@ from _report_support import (
     assert_report_layout,
     original_report_input,
     report_metadata,
-    report_section,
 )
 from test_feedback import (
     _context,
@@ -88,14 +87,13 @@ def reported_case(ready_content_session, monkeypatch):
     text = terminal_primary_report(result).read_text()
     assert_report_layout(text)
     overview = text.split("## 元の指示", 1)[0]
-    assert "report 保存時点の記録" in overview
+    assert "完了" in overview
     assert "inconclusive" in overview and "incomplete" in overview
-    assert "未完了" in overview and "未確定" in overview
-    assert "元の実行ログ" in report_section(text, "次の操作")
+    assert "cleanup: completed" in overview
     assert issue["case_id"] in text
-    assert "active_generation_id:" in text
+    assert "published_generation:" in text
     assert "正常 publication ではありません" not in text
-    assert "保存時点では publication・cleanup・終了処理は未完了" in text
+    assert "保存時点では publication・cleanup・終了処理は未完了" not in text
     monkeypatch.setattr(
         report_module,
         "run_codex_exec",
@@ -370,7 +368,7 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
         run_git(root, "switch", "-c", SESSION_BRANCH)
         write_state(state_path(root, session_id), session)
         monkeypatch.setattr(
-            remediation_module, "doctor_preprocess_for_join", lambda: None
+            remediation_module, "doctor_preprocess_for_join", lambda **_kwargs: None
         )
     _, late = store_agent_observation(
         root,

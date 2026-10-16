@@ -47,7 +47,7 @@ def render_primary_report(
     # 表示順と入力原文は全 writer と共通にし、固有結果だけを template で描画する。
     field_values = dict(fields)
     if spec.template == "feedback_invocation":
-        body = _feedback_invocation_body(
+        body = feedback_invocation_lines(
             classification,
             result,
             logger,
@@ -73,6 +73,8 @@ def render_primary_report(
         body = _run_abandon_body(classification, result, logger, field_values)
     else:
         body = _summary_body(classification, result, logger)
+    if "join_status" in field_values:
+        body.extend(join_result_lines(field_values))
     return render_report_document(
         spec.title,
         field_values,
@@ -137,9 +139,10 @@ def _report_summary(
                 ("last_confirmed_generation", "最後に確定した generation"),
             )
         )
-        attention.append(
-            "今回の invocation report は publication された案件一覧ではありません。未確定の判定は最新状態へ反映していません。"
-        )
+        if fields.get("publication_established") is not True:
+            attention.append(
+                "今回の invocation では最新状態を publication していません。"
+            )
     elif spec.template in {"apply_fork", "refactor_fork", "run_join", "run_abandon"}:
         scope.append(
             f"run state: {_field_status(fields.get('state_before'))} → {_field_status(fields.get('state_after'))}"
@@ -182,6 +185,34 @@ def observation_count_notice(count: int) -> str:
     return (
         f"新規 feedback observation: {count} 件。問題内容は実行記録を確認してください。"
     )
+
+
+def join_result_lines(fields: dict[str, object]) -> list[str]:
+    """最外側の report に、実際の join 段階と回収結果を掲載する。"""
+    # null の commit と未実行を混同せず、処理の status を併記する。
+    names = (
+        "join_status",
+        "join_preconditions",
+        "join_diff_validation",
+        "merge_status",
+        "run_join_commit",
+        "post_join_hook",
+        "refactor_state_sync_status",
+        "refactor_state_sync_commit",
+        "workload_post_join",
+        "state_reset",
+        "state_after",
+        "cleanup",
+        "process_stop",
+        "merge_rollback",
+        "failure_stage",
+        "remaining_resources",
+        "conflict_resolution",
+    )
+    return [
+        "## Join と終了処理",
+        *(f"- {name}: {inline_code(_inline_text(fields.get(name)))}" for name in names),
+    ]
 
 
 def execution_notices(
@@ -636,7 +667,7 @@ def _session_fork_body(
     ]
 
 
-def _feedback_invocation_body(
+def feedback_invocation_lines(
     classification: TerminalClassification,
     result: TerminalResult,
     logger: SubcommandLogger,
@@ -649,9 +680,9 @@ def _feedback_invocation_body(
         "## 実行段階",
         *_step_lines(logger, classification),
         "## 確定済みの部分結果",
-        f"- 正常 publication: `{fields['normal_publication_status']}`",
-        f"- incomplete 診断: `{fields['incomplete_diagnostic_status']}`",
-        f"- current pointer 更新: `{fields['current_pointer_update_status']}`",
+        f"- 正常 publication: `{_field_status(fields.get('normal_publication_status'))}`",
+        f"- incomplete 診断: `{_field_status(fields.get('incomplete_diagnostic_status'))}`",
+        f"- current pointer 更新: `{_field_status(fields.get('current_pointer_update_status'))}`",
         "## checkpoint と部分結果",
         f"- report cut: `{_field_status(fields.get('report_cut_id'))}`",
         "- normalization checkpoint: "
@@ -869,7 +900,7 @@ def _apply_fork_body(
     logger: SubcommandLogger,
     fields: dict[str, object],
 ) -> list[str]:
-    """realization apply fork の run、差分、Codex、feedback を描画する。"""
+    """realization apply の run、差分、Codex、feedback を描画する。"""
     return [
         "## run",
         f"- run kind: `{_field_status(fields.get('run_kind'))}`",

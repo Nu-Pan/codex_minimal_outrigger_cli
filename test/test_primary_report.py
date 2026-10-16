@@ -296,8 +296,8 @@ _EARLY_ERROR_REPORTS = [
         ("first_agent_call_status", "second_agent_call_status"),
     ),
     (
-        "realization apply fork",
-        "realization/apply/fork",
+        "realization apply",
+        "realization/apply",
         (
             "run_kind",
             "session_branch",
@@ -316,8 +316,8 @@ _EARLY_ERROR_REPORTS = [
         ),
     ),
     (
-        "realization refactor fork",
-        "realization/refactor/fork",
+        "realization refactor",
+        "realization/refactor",
         (
             "run_kind",
             "session_branch",
@@ -398,12 +398,12 @@ _EARLY_ERROR_SECTIONS = {
         "## rollback と残存資源",
     ),
     "oracle edit": ("## agent call", "first agent call", "second agent call"),
-    "realization apply fork": (
+    "realization apply": (
         "## run",
         "## 追従差分と Codex result",
         "## feedback observation",
     ),
-    "realization refactor fork": ("## Current fork", "## Refactor state"),
+    "realization refactor": ("## Current fork", "## Refactor state"),
     "run join": (
         "## run join",
         "## 差分検査と merge / no-op join",
@@ -483,7 +483,7 @@ def test_early_error_saves_command_specific_primary_report(
         assert 'second_agent_call_status: "not_started"' in information
         assert "入力未確定" in report_section(rendered, "元の指示")
         assert "入力未確定" in rendered.split("## 元の指示", 1)[0]
-    if command_name == "realization refactor fork":
+    if command_name == "realization refactor":
         assert 'completion_reason: "error"' in information
         assert "## Current fork" in rendered
         assert "- processed targets: not_fixed" in rendered
@@ -493,7 +493,7 @@ def test_early_error_saves_command_specific_primary_report(
         assert "## Processing units" in rendered
         assert "## Refactor state" in rendered
         assert "## Change summary" in rendered
-    if command_name == "realization apply fork":
+    if command_name == "realization apply":
         assert 'completion_reason: "error"' in information
         assert "feedback_observation_count: 0" in information
         assert "feedback_observations: []" in information
@@ -816,8 +816,8 @@ def test_refactor_fallback_records_user_interruption_reason(
 
     runtime_cli.run_cli_subcommand(
         interrupt_without_report,
-        command_name="realization refactor fork",
-        command_argv=("cmoc", "realization", "refactor", "fork"),
+        command_name="realization refactor",
+        command_argv=("cmoc", "realization", "refactor"),
         doctor_preprocess=False,
         interruptible=True,
     )

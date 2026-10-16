@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,7 @@ def resolve_merge_conflicts(
     codex_exec: CodexExecCallable | None = None,
     purpose: str,
     initial_conflicts: list[str] | None = None,
+    before_commit: Callable[[], None] | None = None,
 ) -> dict[str, Any]:
     """内容を agent に委ね、refactor state と全変更を merge commit に収める。"""
     # report 用の初期一覧を受け取った場合は、同じ index を再照会しない。
@@ -56,6 +58,7 @@ def resolve_merge_conflicts(
         "call_log": None,
         "incidental_paths": [],
     }
+    update_primary_report_fields(conflict_resolution=result)
     if content_conflicts:
         if parameter is None:
             raise CmocError(
@@ -67,6 +70,8 @@ def resolve_merge_conflicts(
         output = (codex_exec or run_codex_exec)(
             parameter, root=repo_root(root), purpose=purpose
         )
+        if before_commit is not None:
+            before_commit()
         report = getattr(output, "output_text", "")
         result["agent_report"] = report
         log = getattr(output, "call_log_path", None)

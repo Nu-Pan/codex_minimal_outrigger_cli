@@ -1,4 +1,4 @@
-"""realization apply fork の正本 builder を再公開する互換入口。
+"""realization apply の正本 builder を再公開する互換入口。
 
 対応する oracle file:
 `{{work-root}}/oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py`。

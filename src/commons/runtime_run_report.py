@@ -15,6 +15,7 @@ from .runtime_paths import (
     timestamp,
 )
 from .runtime_primary_report import (
+    current_primary_report_fields,
     prepare_primary_report,
     rewrite_primary_report,
     write_reserved_primary_report,
@@ -35,7 +36,7 @@ from .runtime_report_markdown import (
 from .runtime_run_lifecycle import EditingRunContext
 
 
-def write_fork_report(
+def write_workload_report(
     context: EditingRunContext,
     command_path: str,
     *,
@@ -46,14 +47,16 @@ def write_fork_report(
     codex_returncode: int | None = None,
     extra_fields: dict[str, object] | None = None,
     body_lines: list[str] | None = None,
+    report_path: Path | None = None,
 ) -> Path:
-    """workload 共通項目を持つ fork report を保存する。"""
+    """workload の成果と終了処理を同じ invocation の report に保存する。"""
     directory = reports_dir(context.repo, command_path)
     directory.mkdir(parents=True, exist_ok=True)
     generated_at = timestamp()
     execution_id = current_execution_id(context.repo)
-    path = directory / f"{execution_id}.md"
-    path.open("x").close()
+    path = report_path or directory / f"{execution_id}.md"
+    if report_path is None:
+        path.open("x").close()
     terminal_classification: TerminalClassification = (
         "error"
         if completion_reason == "error"
@@ -82,6 +85,24 @@ def write_fork_report(
         ("codex_returncode", codex_returncode),
     ]
     fields.extend((extra_fields or {}).items())
+    fields = list(
+        {
+            **dict(fields),
+            **current_primary_report_fields(),
+            "state_after": state_after,
+            "completion_reason": completion_reason,
+        }.items()
+    )
+    if state_after != "ready" and completion_reason != "error":
+        # 結果保存後に行う state 初期化・cleanup の成功を先取りしない。
+        fields = [
+            (name, None if name in {"terminal_classification", "exit_code"} else value)
+            for name, value in fields
+        ]
+        summary = replace(
+            summary,
+            outcome="取り込み後の終了処理は未完了です。state 初期化と cleanup の結果を確認してください。",
+        )
     observation_count = (extra_fields or {}).get("feedback_observation_count")
     if isinstance(observation_count, int) and observation_count > 0:
         summary = replace(
@@ -119,11 +140,14 @@ def write_fork_report(
         *related_logs,
         "",
     ]
-    write_reserved_primary_report(
+    writer = (
+        write_reserved_primary_report if report_path is None else rewrite_primary_report
+    )
+    writer(
         path,
         prepare_primary_report(
             path,
-            f"cmoc {context.kind.replace('_', ' ')} fork report",
+            f"cmoc {context.kind.replace('_', ' ')} report",
             dict(fields),
             summary,
             markdown_sections(content),
@@ -177,6 +201,16 @@ def write_lifecycle_report(
     # detail の YAML 表現は実行情報と本文で共有する。
     detail_fields = [f"{name}: {yaml_scalar(value)}" for name, value in details.items()]
     fields.extend(details.items())
+    pending = (
+        operation == "join"
+        and state_after != "ready"
+        and terminal_classification != "error"
+    )
+    if pending:
+        fields = [
+            (name, None if name in {"terminal_classification", "exit_code"} else value)
+            for name, value in fields
+        ]
     logger = current_subcommand_logger()
     if logger is not None:
         fields.append(("subcommand_log_path", str(logger.path.resolve())))
@@ -205,7 +239,9 @@ def write_lifecycle_report(
     if details.get("unexpected_paths"):
         attention.append(f"想定外差分: {details['unexpected_paths']}")
     summary = ReportSummary(
-        terminal_outcome(terminal_classification),
+        "取り込み後の終了処理は未完了です。"
+        if pending
+        else terminal_outcome(terminal_classification),
         (
             f"run state: {context.state_before} → {state_after}",
             *(
@@ -232,7 +268,7 @@ def write_lifecycle_report(
         markdown_sections(
             [
                 "## Outcome",
-                terminal_classification,
+                "finalizing" if pending else terminal_classification,
                 "## Details",
                 *([f"- {field}" for field in detail_fields] or ["- none"]),
                 "## Warnings",

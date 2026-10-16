@@ -34,6 +34,10 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_codex_recovery import (
+    check_recovery_interruption,
+    install_recovery_interruption,
+)
 from commons.runtime_feedback_intake import capture_high_watermark
 from commons.runtime_feedback_run_state import (
     new_run_identity,
@@ -66,7 +70,11 @@ from commons.runtime_feedback_store import (
 from commons.runtime_ids import new_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
 from commons.runtime_paths import codex_log_dir
-from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_primary_report import (
+    current_primary_report_fields,
+    primary_report_finalization_lock,
+    update_primary_report_fields,
+)
 from commons.runtime_primary_report_render import execution_record_markdown
 from commons.runtime_refactor import sync_refactor_state
 from commons.runtime_results import StructuredOutputValidationIssue
@@ -78,6 +86,8 @@ from commons.runtime_run import (
 )
 from commons.runtime_run_join import (
     doctor_preprocess_for_join,
+    join_editing_run,
+    join_recovery_actions,
     merge_run,
     validate_run_join,
 )
@@ -111,7 +121,8 @@ def run_feedback_report() -> TerminalResult:
     starting = False
     try:
         # doctor の修復を完了してから clean を判定する。
-        doctor_preprocess_for_join()
+        update_primary_report_fields(feedback_stage="doctor preprocess")
+        doctor_preprocess_for_join(rollback_on_interruption=True)
         branch = current_branch(session_worktree)
         update_primary_report_fields(session_branch=branch)
         if not branch.startswith("cmoc/session/"):
@@ -164,7 +175,10 @@ def run_feedback_report() -> TerminalResult:
                 # 同じ run の wave loop は再開しない。join 成功を証明できる場合だけ再開する。
                 context = candidate_context
                 finalizing = True
-                with _indivisible_finalization():
+                with (
+                    primary_report_finalization_lock(repository, context.session_id),
+                    _indivisible_finalization(),
+                ):
                     if (
                         state.current is None
                         or state.current["report_cut_id"] != manifest["report_cut_id"]
@@ -186,16 +200,29 @@ def run_feedback_report() -> TerminalResult:
             manifest_path, _ = write_report_cut_manifest(repository, manifest)
             _update_progress(context, manifest, "running")
             with run_process_tracking(repository, context.session_id):
+                update_primary_report_fields(feedback_stage="intake wave loop")
                 candidates, aggregates = _wave_loop(context, manifest, state)
                 stop_tracked_codex_children(repository, context.session_id)
             # 自動 join に必要な doctor の機械更新を seal 前に確定する。
             warnings: list[str] = []
             validate_run_join(context, warnings)
-            _seal(context, manifest, candidates, aggregates)
-            set_run_state(context, "joinable")
-            _update_progress(context, manifest, "joinable")
-            with _indivisible_finalization():
+            check_recovery_interruption()
+            with (
+                primary_report_finalization_lock(repository, context.session_id),
+                _indivisible_finalization(),
+            ):
                 finalizing = True
+                update_primary_report_fields(
+                    feedback_stage="seal report cut", join_status="not_run"
+                )
+                _seal(context, manifest, candidates, aggregates)
+                set_run_state(context, "joinable")
+                _update_progress(context, manifest, "joinable")
+                # merge 時点にも doctor を実行し、開始時の成功で代用しない。
+                doctor_preprocess_for_join()
+                update_primary_report_fields(
+                    feedback_stage="join preconditions", join_status="started"
+                )
                 save_run_artifact(
                     repository,
                     manifest,
@@ -212,6 +239,11 @@ def run_feedback_report() -> TerminalResult:
                         repository, context.session_branch
                     )
                     validate_run_join(context, warnings)
+                    update_primary_report_fields(
+                        join_preconditions="completed",
+                        join_diff_validation="completed",
+                        feedback_stage="merge and post-join",
+                    )
                     before = head_commit(context.session_worktree)
 
                     def merged(
@@ -231,7 +263,9 @@ def run_feedback_report() -> TerminalResult:
                         feedback_report_cut_path=context.repo
                         / manifest["run"]["sealed"]["path"],
                     )
+                    update_primary_report_fields(feedback_stage="join verification")
                     _complete_join(context, manifest)
+                update_primary_report_fields(feedback_stage="publication")
                 result = _publish(context, manifest, manifest_path, state)
                 return finish_feedback_run(context, manifest, result)
     except KeyboardInterrupt as interruption:
@@ -384,7 +418,7 @@ def _wave_loop(
             }
         if manifest["run"]["waves"] and not pending:
             if not prepared:
-                doctor_preprocess_for_join()
+                doctor_preprocess_for_join(rollback_on_interruption=True)
                 validate_run_join(context, [])
                 prepared = True
                 # 機械更新と、その間の intake を最終境界の検査へ含める。
@@ -1240,12 +1274,13 @@ def _complete_feedback_interruption(
         stop_tracked_codex_children(context.repo, context.session_id)
     except BaseException as cleanup_error:
         cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
-    try:
-        # issue commit は HEAD に残し、未確定の working tree だけを戻す。
-        rollback_work_unit(context.run_worktree)
-        require_clean_worktree(context.run_worktree)
-    except BaseException as cleanup_error:
-        cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
+    if not cleanup_errors:
+        try:
+            # issue commit は HEAD に残し、未確定の working tree だけを戻す。
+            rollback_work_unit(context.run_worktree)
+            require_clean_worktree(context.run_worktree)
+        except BaseException as cleanup_error:
+            cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
     if cleanup_errors:
         _raise_feedback_error(
             context,
@@ -1254,15 +1289,6 @@ def _complete_feedback_interruption(
             cleanup_errors,
         )
 
-    try:
-        set_run_state(context, "joinable")
-    except BaseException as state_error:
-        _raise_feedback_error(
-            context,
-            manifest,
-            "feedback の中断処理に失敗しました。",
-            [f"state update failed: {state_error!r}"],
-        )
     if manifest is not None and manifest_path is not None:
         try:
             # checkpoint file の write と manifest reference の write の間で止まっても、
@@ -1279,7 +1305,7 @@ def _complete_feedback_interruption(
                 [f"interruption manifest update failed: {manifest_error!r}"],
             )
         try:
-            _update_progress(context, manifest, "joinable")
+            _update_progress(context, manifest, "running")
         except BaseException as progress_error:
             _raise_feedback_error(
                 context,
@@ -1289,7 +1315,7 @@ def _complete_feedback_interruption(
             )
     else:
         try:
-            _update_context_progress(context, "joinable")
+            _update_context_progress(context, "running")
         except BaseException as progress_error:
             _raise_feedback_error(
                 context,
@@ -1297,19 +1323,38 @@ def _complete_feedback_interruption(
                 "feedback の中断処理に失敗しました。",
                 [f"interruption report state failed: {progress_error!r}"],
             )
+
+    # 本命処理への停止要求とは別に、join の finalization を開始する。
+    def save_report(
+        state_after: str, terminal: report.TerminalClassification, warnings: list[str]
+    ) -> Path:
+        update_primary_report_fields(
+            state_after=state_after, publication_established=False
+        )
+        return report.save_feedback_invocation_report(
+            context.repo, terminal, TerminalResult(warnings=tuple(warnings))
+        )
+
+    restore_interruption = install_recovery_interruption()
     try:
-        return report._record_feedback_interruption(
-            manifest,
-            manifest_path,
-            retained_run_path=context.run_worktree,
-        )
-    except BaseException as report_error:
-        _raise_feedback_error(
-            context,
-            manifest,
-            "feedback の中断処理に失敗しました。",
-            [f"interruption report failed: {report_error!r}"],
-        )
+        with _indivisible_finalization():
+            joined = join_editing_run(
+                context,
+                automatic=True,
+                save_report=save_report,
+                classification="user_interruption",
+            )
+    finally:
+        restore_interruption()
+    report._record_feedback_interruption(manifest, manifest_path)
+    return replace(
+        joined,
+        primary_report_role="feedback invocation report",
+        completion_reason="user_interruption",
+        next_actions=(
+            "保持した観測と active record は、次の新しい `cmoc feedback report` で再確認してください。",
+        ),
+    )
 
 
 def _record_feedback_error(
@@ -1405,6 +1450,19 @@ def _set_feedback_error_state(
         update_primary_report_fields(
             last_confirmed_generation=current.current,
             publication_established=established,
+            failure_stage=current_primary_report_fields().get("feedback_stage"),
+        )
+        run = manifest["run"] if manifest is not None else {}
+        joined = run.get("merged") is not None
+        if not joined and run.get("join_intent") is not None:
+            intent = read_run_artifact(context.repo, run["join_intent"])
+            joined = _is_ancestor(context, intent["run_head"])
+        update_primary_report_fields(
+            recovery_next_actions=(
+                "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+            )
+            if joined
+            else join_recovery_actions(context)
         )
         logger = current_subcommand_logger()
         if logger is not None:
@@ -1512,11 +1570,15 @@ def _confirmed_issue_commits(
 @contextmanager
 def _indivisible_finalization() -> Iterator[None]:
     """SIGINT を finalization 中だけ保留し、merge と publication を整合した境界まで進める。"""
+    # 子 process にも mask を引き継ぎ、途中の commit を SIGINT で分断しない。
+    check_recovery_interruption()
     previous = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, lambda _signum, _frame: None)
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT})
     try:
         yield
     finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
         signal.signal(signal.SIGINT, previous)
 
 

@@ -135,7 +135,9 @@ def feedback_publication_session(
     # 上記の wave test に残す。write・rename・hash 検査と recovery は実行する。
     monkeypatch.setattr("os.fsync", lambda _fd: None)
     # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
-    monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", lambda: None)
+    monkeypatch.setattr(
+        remediation_module, "doctor_preprocess_for_join", lambda **_kwargs: None
+    )
     root, _session_branch, _state_path = ready_join_session
     return root
 
