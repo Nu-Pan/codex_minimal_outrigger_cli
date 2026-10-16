@@ -263,11 +263,16 @@ def _end_tui_callback_lease(marker: Path | None) -> None:
 
 def _has_active_tui_callback(state_root: Path) -> bool:
     """state root に callback の実行中 marker が残っているか返す。"""
-    resolved_root = _resolved_state_root(state_root)
-    if resolved_root is None:
-        return False
+    # 各 poll で同じ root の絶対パス解決と stat を繰り返さず、名前だけを走査する。
     try:
-        return any(resolved_root.glob(f"{_TUI_CALLBACK_MARKER_PREFIX}*.active"))
+        with os.scandir(state_root) as entries:
+            return any(
+                entry.name.startswith(_TUI_CALLBACK_MARKER_PREFIX)
+                and entry.name.endswith(".active")
+                for entry in entries
+            )
+    except (FileNotFoundError, NotADirectoryError):
+        return False
     except OSError:
         # state を安全に drain できない場合は timeout まで保持する。
         return True
