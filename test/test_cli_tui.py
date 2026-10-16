@@ -29,7 +29,11 @@ from main import app
 
 # agent 起動は全ケースでダブルを使うため、利用しない feedback transport は準備しない。
 # TCP の受付・保存・drain は test_feedback.py、doctor の検査順序は test_doctor_cli.py に残す。
-pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+# 採番の永続性は test_runtime_ids.py、logger との結合は test_runtime_cli.py に残す。
+# 入力保存・root・起動順の検査では、採番 DB の作成・同期を省く。
+pytestmark = pytest.mark.usefixtures(
+    "feedback_without_transport", "nonpersistent_execution_ids"
+)
 
 
 @pytest.fixture
