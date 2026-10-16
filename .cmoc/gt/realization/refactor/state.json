@@ -1302,10 +1302,10 @@
     "last_investigated_at": "2026-10-16_16-53-46_526"
   },
   "test/test_codex_runtime_home.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "dbf659dd5705d81983b1234b9392a00bbf61734dde2277cbe5160894e8db6199",
-    "last_investigated_at": "2026-10-13_05-12-02_823"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "1062c06f99ce39c06202482214bf0bcdcfbd17408b7733b4617307b32b2da3d8",
+    "last_investigated_at": "2026-10-16_16-56-08_602"
   },
   "test/test_codex_runtime_paths.py": {
     "investigation_required": true,
