@@ -430,8 +430,9 @@ setInterval(() => {}, 1000);
         SimpleNamespace(monotonic=lambda: time.monotonic() + clock_offset),
     )
     observation, events = _observation(tmp_path)
+    # 停止 handler の準備は ready で確認するため、強制停止までの猶予を短くする。
     config = replace(
-        _tuning(), sync_no_progress_timeout_seconds=10, shutdown_grace_seconds=0.15
+        _tuning(), sync_no_progress_timeout_seconds=10, shutdown_grace_seconds=0.02
     )
     observation.configure(config, bounded=True)
     observation.begin_sync()
@@ -492,7 +493,7 @@ setInterval(() => {}, 1000);
                 break
             assert time.monotonic() < until, f"descendant is still running: {state}"
             time.sleep(0.001)
-        assert events[-1]["cleanup_seconds"] >= 0.1
+        assert events[-1]["cleanup_seconds"] >= config.shutdown_grace_seconds
         assert events[-1]["decision_seconds"]["post_sync_search"] is None
         assert (
             events[-1]["elapsed_seconds"]
