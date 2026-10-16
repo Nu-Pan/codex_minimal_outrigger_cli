@@ -19,23 +19,12 @@ from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
-import commons.runtime_logging as runtime_logging
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_results import StructuredOutputValidationIssue
 from config.cmoc_config import CmocConfig
-
-
-@pytest.fixture
-def nonpersistent_codex_ids(
-    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Git の使用有無にかかわらず、補正・回復の検査で永続採番を省く。"""
-    # 永続採番は test_runtime_ids.py、実採番と log の結合・process 間の共有は
-    # test_codex_runtime_paths.py に残し、ログ間の ID 対応はここでも検査する。
-    monkeypatch.setattr(runtime_codex_exec, "new_id", runtime_logging.new_id)
 
 
 @pytest.fixture

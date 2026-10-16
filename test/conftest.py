@@ -13,6 +13,7 @@ from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli
+import commons.runtime_codex_exec as runtime_codex_exec
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
@@ -149,6 +150,16 @@ def nonpersistent_execution_ids(monkeypatch: pytest.MonkeyPatch) -> None:
         "new_id",
         lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
     )
+
+
+@pytest.fixture
+def nonpersistent_codex_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """永続採番を検査しない exec test で、実行・agent・Codex call ID を生成する。"""
+    # 永続採番は test_runtime_ids.py、実採番と log の結合・process 間の共有は
+    # test_codex_runtime_paths.py に残し、ログ間の ID 対応はここでも検査する。
+    monkeypatch.setattr(runtime_codex_exec, "new_id", runtime_logging.new_id)
 
 
 @pytest.fixture

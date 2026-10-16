@@ -112,6 +112,7 @@ def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capfd: pytest.CaptureFixture[str],
+    nonpersistent_codex_ids: None,
 ) -> None:
     """provider・path policy の受け渡しと schema-less 出力の読み取りを検証する。"""
     # schema-less exec は履歴を参照しない。root 探索と Fake CLI の書き込み先だけ用意する。
