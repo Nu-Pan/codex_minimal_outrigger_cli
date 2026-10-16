@@ -707,6 +707,24 @@ def test_reporter_availability_rejects_invalid_input_schema(
         feedback_store_module.reporter_input_schema.cache_clear()
 
 
+def test_reporter_availability_propagates_schema_interrupt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """schema 読み込み中の中断を reporter 利用不能へ変換せず伝播する。"""
+    # doctor 側の中断伝播は test_doctor_cli.py で確認し、修復・索引同期を重ねない。
+    interruption = KeyboardInterrupt()
+
+    def interrupt() -> None:
+        raise interruption
+
+    monkeypatch.setattr(feedback_store_module, "reporter_input_schema", interrupt)
+
+    with pytest.raises(KeyboardInterrupt) as caught:
+        feedback_module.validate_feedback_reporter_availability()
+
+    assert caught.value is interruption
+
+
 def test_reporter_probe_rejects_non_object_mcp_response(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, real_stdio_reporter_probe
 ) -> None:

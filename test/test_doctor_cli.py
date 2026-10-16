@@ -35,7 +35,6 @@ from _git_support import init_repo, make_repo, run_git
 
 import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
-import commons.runtime_feedback_store as feedback_store_module
 from commons.runtime_config import config_to_dict
 from commons.runtime_document_search import DocumentSearch, SearchError
 from commons.runtime_document_search_types import SEARCH_MATERIALS
@@ -873,27 +872,6 @@ def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
     )
 
     with pytest.raises(RuntimeError, match="unexpected reporter probe failure"):
-        doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
-
-
-def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """reporter schema の予期しない中断も利用不能 warning に変換しない。"""
-    root = committed_repository
-
-    def interrupt() -> None:
-        """reporter schema 読み込み中の Ctrl+C を再現する。"""
-        raise KeyboardInterrupt()
-
-    monkeypatch.setattr(feedback_store_module, "reporter_input_schema", interrupt)
-    monkeypatch.setattr(
-        doctor_module,
-        "validate_feedback_reporter_availability",
-        validate_feedback_reporter_availability,
-    )
-
-    with pytest.raises(KeyboardInterrupt):
         doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
 

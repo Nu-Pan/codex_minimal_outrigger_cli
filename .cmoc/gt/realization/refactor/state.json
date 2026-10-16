@@ -1352,8 +1352,8 @@
   "test/test_doctor_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "fb01e19fc8fe4a89c003751211f921ae0d92f4846b21b43a97d9037022fd2858",
-    "last_investigated_at": "2026-10-13_06-17-34_735"
+    "last_investigated_sha256": "f1d0458dffd694bc8b7c27b1fd19e1c1a5a313c335c0c931a7e007726874918c",
+    "last_investigated_at": "2026-10-16_17-45-02_333"
   },
   "test/test_document_search.py": {
     "investigation_required": true,
