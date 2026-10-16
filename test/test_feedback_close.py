@@ -599,14 +599,12 @@ def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
     assert state.current["result"] == "attention"
     assert state.issues[issue["issue_id"]]["case_id"] == issue["case_id"]
     assert state.history[-1]["events"][0]["before"] == issue
-    assert _close(issue).exit_code == 1
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(issue["issue_id"], "already_resolved")
-    )
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-    assert feedback_state.load_active_state(root).issues == {}
-    assert _close(issue).exit_code == 1
+    # 終了後の close 拒否は、両終了判定を publication する
+    # test_agent_issues_are_compacted_then_removed_for_terminal_verdicts に集約する。
+    rejected = _close(issue)
+    assert rejected.exit_code == 1, rejected.output
+    assert "human_required の案件は手動 close の対象外" in rejected.output
+    assert feedback_state.load_active_state(root) == state
 
 
 def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(

@@ -909,7 +909,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "9e1805ef83b4ae26703c29d0dbc2f178bac8c8c59155fa4ed2518c436692c6ea",
-    "last_investigated_at": "2026-10-12_09-11-05_240"
+    "last_investigated_at": "2026-10-16_10-13-32_440"
   },
   "src/commons/runtime_feedback_reporter.py": {
     "investigation_required": true,
@@ -1438,6 +1438,12 @@
     "last_investigation_result": "findings",
     "last_investigated_sha256": "877329bf30d51a5899649fba47db5a2179c3e2b7f658a5e0d579eb98244da37f",
     "last_investigated_at": "2026-10-13_07-53-50_167"
+  },
+  "test/test_feedback_render.py": {
+    "investigation_required": true,
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "test/test_feedback_store.py": {
     "investigation_required": true,

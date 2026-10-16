@@ -54,6 +54,7 @@ import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
 import commons.runtime_feedback_store as feedback_store_module
 import commons.runtime_logging as logging_module
+import sub_commands.feedback.close as feedback_close_module
 import sub_commands.feedback.decision as decision_module
 import sub_commands.feedback.recovery as recovery_module
 import sub_commands.feedback.remediation as remediation_module
@@ -3219,7 +3220,7 @@ def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
     feedback_publication_session: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """両方の終了判定で active と一覧から除き、各案件の履歴を残す。"""
+    """両終了判定で active・一覧から除き、履歴を残して手動 close を拒否する。"""
     # 異なる subject の案件を同時に用意し、Git/session と二回の publication を共有する。
     root = feedback_publication_session
     cases = {}
@@ -3304,6 +3305,20 @@ def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
         (feedback_root(root) / "active" / "generation").iterdir()
     )
     assert len(generation_directories) == 1
+    # 終了 publication を共有し、close の拒否だけのために report を重ねない。
+    # close と doctor の結合は test_feedback_close.py の reported_case に残す。
+    monkeypatch.setattr(
+        feedback_close_module, "run_doctor_preprocess", lambda _root: None
+    )
+    for issue in first_state.issues.values():
+        rejected = runner.invoke(
+            app,
+            ["feedback", "close", issue["case_id"], "--reason", "外部で解決を確認した"],
+            catch_exceptions=False,
+        )
+        assert rejected.exit_code == 1, rejected.output
+        assert "agent の判定により終了しており close の対象外" in rejected.output
+        assert load_active_state(root) == second_state
 
 
 def test_feedback_basis_includes_oracle_changes_but_ignores_refactor_state(
