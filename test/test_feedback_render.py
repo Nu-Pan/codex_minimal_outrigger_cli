@@ -1,10 +1,11 @@
 """案件一覧の順序と判定ごとの情報を Git・publication の準備なしで検証する。"""
 
 import pytest
-from _report_support import report_section
+from _report_support import report_section, report_text
 
 from commons.runtime_feedback_render import (
     feedback_report_summary,
+    publication_notice,
     render_current_cases,
 )
 from commons.runtime_report_markdown import render_report_document
@@ -43,6 +44,8 @@ def test_current_cases_follow_case_id_order_and_keep_verdict_details():
     third = _case(2, "human_required")
     secret = "ghp_123456789012345678901234"
     first["representative_evidence"] = [{"path": "README.md", "text": secret}]
+    first["summary"] = "`cmoc` <summary> & value\n次の行"
+    first["verification"]["reason"] = "literal &#96; &amp; `value`"
     first["verification"]["current_evidence"].extend(
         [
             {"probe_id": "probe-1", "finding": "probe result"},
@@ -53,6 +56,7 @@ def test_current_cases_follow_case_id_order_and_keep_verdict_details():
     rendered = render_current_cases(
         {case["issue_id"]: case for case in (third, second, first)}
     )
+    visible = report_text(rendered)
     headings = [
         line.split(maxsplit=1)[1]
         for line in rendered.splitlines()
@@ -63,16 +67,19 @@ def test_current_cases_follow_case_id_order_and_keep_verdict_details():
         assert f"- Issue ID: {case['issue_id']}" in rendered
     assert rendered.count("- Latest result: human_required") == 2
     assert rendered.count("- Latest result: inconclusive") == 1
-    assert rendered.count("- Human action: 設定を確認する") == 2
+    assert visible.count("Human action: 設定を確認する") == 2
     assert f"cmoc feedback close {second['case_id']} --reason" in rendered
     assert "確認できた current evidence はありません" in rendered
-    assert "- Category: tooling" in rendered
-    assert "- Summary: &lt;summary&gt; 次の行" in rendered
-    assert "- Impact: &lt;impact&gt;" in rendered
-    assert "- Reason: &lt;reason&gt;" in rendered
-    assert "README.md / line 2: &lt;finding&gt;" in rendered
-    assert "probe-1 / : probe result" in rendered
-    assert "observation-1 / : observed result" in rendered
+    assert "Category: tooling" in visible
+    assert "Summary: <summary> 次の行" in visible
+    assert "Impact: <impact>" in visible
+    assert "Reason: <reason>" in visible
+    assert "README.md / line 2: <finding>" in visible
+    assert "probe-1 / : probe result" in visible
+    assert "observation-1 / : observed result" in visible
+    for text in ("`cmoc` <summary> & value 次の行", "literal &#96; &amp; `value`"):
+        assert text in rendered
+        assert text in visible
     assert "- Verified at: 2026-10-08T01:00:00Z" in rendered
     assert "- Occurrences: 5" in rendered
     assert "- Affected sessions: 4+" in rendered
@@ -82,6 +89,13 @@ def test_current_cases_follow_case_id_order_and_keep_verdict_details():
     assert secret not in rendered
     assert "[REDACTED:credential]" in rendered
     assert "- Representative evidence:\n  - none" in rendered
+
+
+def test_publication_notice_preserves_log_path_symbols():
+    path = "/repo/<target>&value/log`name.jsonl"
+    rendered = publication_notice(path)
+    assert path in rendered
+    assert path in report_text(rendered)
 
 
 def test_empty_current_cases_explains_absence():

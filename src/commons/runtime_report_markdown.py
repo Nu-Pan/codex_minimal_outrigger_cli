@@ -1,6 +1,5 @@
 """primary report の読み順と、確定済み情報の Markdown 表示を共有する。"""
 
-import html
 import json
 import re
 from dataclasses import dataclass
@@ -164,6 +163,24 @@ def fenced_text(value: str, language: str = "text") -> str:
     return f"{fence}{language}\n{value}\n{fence}"
 
 
+def inline_code(value: str) -> str:
+    """一行の文字列を、本文の記号を変えずに code span として示す。"""
+    # 本文中の backtick と衝突しない区切りを使い、境界の空白も保持する。
+    if not value:
+        return ""
+    delimiter = "`" * max(
+        1, 1 + max((len(run) for run in re.findall(r"`+", value)), default=0)
+    )
+    padding = (
+        " "
+        if value.startswith("`")
+        or value.endswith("`")
+        or (value.startswith(" ") and value.endswith(" ") and value.strip(" "))
+        else ""
+    )
+    return f"{delimiter}{padding}{value}{padding}{delimiter}"
+
+
 def yaml_scalar(value: object) -> str:
     """report の実行情報を YAML の値として安全に表示する。"""
     # JSON の表記を使い、改行を含む値も metadata の構造から分離する。
@@ -204,7 +221,7 @@ def _brief(value: str, limit: int = 240) -> str:
     text = " ".join(safe_text(value).split())
     if len(text) > limit:
         text = text[:limit] + "…（全文は後続の詳細を参照）"
-    return html.escape(text, quote=False).replace("`", "&#96;")
+    return inline_code(text)
 
 
 def _safe_json_value(value: object) -> object:

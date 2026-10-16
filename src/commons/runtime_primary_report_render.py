@@ -17,6 +17,7 @@ from .runtime_logging import SubcommandLogger, current_subcommand_logger
 from .runtime_primary_report_specs import PrimaryReportSpec, TerminalClassification
 from .runtime_report_markdown import (
     ReportSummary,
+    inline_code,
     markdown_sections,
     render_report_document,
     terminal_outcome,
@@ -401,13 +402,8 @@ def _code_fence(value: str) -> str:
 
 def _path_code_span(path: Path) -> str:
     """元の出力 path の backtick も保持して参照として示す。"""
-    # code span の delimiter を path に含まれる backtick より長くする。
-    value = safe_text(path.resolve(strict=False))
-    delimiter = "`" * max(
-        1, 1 + max((len(run) for run in re.findall(r"`+", value)), default=0)
-    )
-    padding = " " if value.startswith("`") or value.endswith("`") else ""
-    return f"{delimiter}{padding}{value}{padding}{delimiter}"
+    # report 内の他の一行表示と同じ区切りを使う。
+    return inline_code(safe_text(path.resolve(strict=False)))
 
 
 def oracle_edit_statuses(logger: SubcommandLogger) -> dict[str, object]:

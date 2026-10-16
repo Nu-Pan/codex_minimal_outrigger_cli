@@ -1,12 +1,11 @@
 """最新の案件一覧を report と close に共通の形式で描画する。"""
 
-import html
 import json
 from typing import Any
 
 from .runtime_feedback_history import state_summary
 from .runtime_feedback_store import mask_feedback_text
-from .runtime_report_markdown import ReportSummary
+from .runtime_report_markdown import ReportSummary, inline_code
 
 
 def feedback_report_summary(
@@ -134,10 +133,12 @@ def publication_notice(log_path: str) -> str:
     # Immutable report へ後続処理の成功を先取りしない。
     return (
         "保存時点では publication・cleanup・終了処理は未完了です。\n"
-        f"それらの処理結果と最終 state は元の実行ログ `{_text(log_path)}` と terminal result に記録します。\n"
+        f"それらの処理結果と最終 state は元の実行ログ {_text(log_path)} と terminal result に記録します。\n"
         "この一覧は対応する generation の確定範囲を示します。未取り込みの観測や確定後の変化は確認していません。\n"
     )
 
 
 def _text(value: object) -> str:
-    return html.escape(mask_feedback_text(str(value)), quote=False).replace("\n", " ")
+    # マスク済みの本文を一行へ収め、HTML 文字参照へ変換せず表示する。
+    text = mask_feedback_text(str(value)).replace("\r\n", " ")
+    return inline_code(text.replace("\r", " ").replace("\n", " "))

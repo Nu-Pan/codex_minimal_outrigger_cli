@@ -4,6 +4,19 @@ import yaml
 from markdown_it import MarkdownIt
 
 
+def report_text(content):
+    """Markdown の装飾・HTML tag を除いた、読み手に見える本文を取り出す。"""
+    return "\n".join(
+        "".join(
+            child.content
+            for child in token.children or ()
+            if child.type in {"text", "code_inline"}
+        )
+        for token in MarkdownIt().parse(content)
+        if token.type == "inline"
+    )
+
+
 def report_metadata(content):
     tokens = MarkdownIt().parse(content)
     information = next(

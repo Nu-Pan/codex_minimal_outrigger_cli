@@ -4,7 +4,6 @@
 に従っている。
 """
 
-import html
 import json
 import re
 from dataclasses import replace
@@ -28,6 +27,7 @@ from .runtime_primary_report_render import (
 from .runtime_primary_report_specs import TerminalClassification
 from .runtime_report_markdown import (
     ReportSummary,
+    inline_code,
     markdown_sections,
     terminal_outcome,
     yaml_scalar,
@@ -259,14 +259,8 @@ def _render_changed_path(path: str, indent: str = "", label: str = "") -> str:
     Git path には Markdown の code span 境界や行構造を壊す文字を含められる。
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
-    if not any(character in path for character in ("`", "|", "\r", "\n")):
-        return f"{indent}- {label}`{path}`"
-    escaped = html.escape(path, quote=False)
-    escaped = (
-        escaped.replace("`", "&#96;")
-        .replace("|", "&#124;")
-        .replace("\r\n", "&#13;&#10;")
-        .replace("\r", "&#13;")
-        .replace("\n", "&#10;")
+    # 改行を持つ path だけ JSON 文字列で区別し、他の記号はそのまま残す。
+    value = (
+        json.dumps(path, ensure_ascii=False) if "\r" in path or "\n" in path else path
     )
-    return f"{indent}- {label}<code>{escaped}</code>"
+    return f"{indent}- {label}{inline_code(value)}"

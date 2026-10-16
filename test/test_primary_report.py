@@ -24,7 +24,13 @@ from unittest.mock import Mock
 import pytest
 import typer
 from _cli_support import terminal_primary_report
-from _report_support import assert_report_layout, report_metadata, report_section
+from _report_support import (
+    assert_report_layout,
+    original_report_input,
+    report_metadata,
+    report_section,
+    report_text,
+)
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_primary_report as primary_report_module
@@ -33,7 +39,48 @@ from cmoc_runtime import CmocError, TerminalResult
 from commons.runtime_logging import SubcommandLogger
 from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
-from commons.runtime_report_markdown import ReportSummary
+from commons.runtime_report_markdown import ReportSummary, render_report_document
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        '`cmoc` <target> & "value" | [label](file.md) *literal* \\path',
+        "``quoted`` と `trailing`",
+        "literal &#96; &lt;tag&gt; &amp; &#10;",
+        "# 入力の見出し\n- 項目\n```text\n本文\n```",
+    ],
+)
+def test_report_summary_preserves_symbols_in_source_and_markdown(source):
+    """抜粋・要約は元の記号を保ち、Markdown として読んでも本文を欠落させない。"""
+    rendered = render_report_document(
+        "cmoc oracle edit report",
+        {
+            "command": "cmoc oracle edit",
+            "execution_id": "test-execution",
+            "repo_root": "/repo/<target>&value",
+            "session_branch": "session",
+        },
+        ReportSummary("完了", (source,), (source,), (source,)),
+        "詳細結果なし",
+        original_input=source,
+        execution_record="## 実行記録\n\n実行なし",
+    )
+    assert_report_layout(rendered)
+    assert original_report_input(rendered) == source
+    excerpt = " ".join(source.split())
+    intro = rendered.split("## 実行結果", 1)[0]
+    for section in (
+        intro,
+        *(
+            report_section(rendered, name)
+            for name in ("実行結果", "要注意事項", "次の操作")
+        ),
+    ):
+        assert excerpt in section
+        assert excerpt in report_text(section)
+    assert "/repo/<target>&value" in intro
+    assert "/repo/<target>&value" in report_text(intro)
 
 
 @pytest.fixture

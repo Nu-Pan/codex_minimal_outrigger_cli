@@ -29,7 +29,12 @@ from _git_support import (
     make_repo,
     run_git,
 )
-from _report_support import assert_report_layout, report_metadata, report_section
+from _report_support import (
+    assert_report_layout,
+    report_metadata,
+    report_section,
+    report_text,
+)
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_git as git_module
@@ -368,10 +373,9 @@ def test_run_reports_keep_execution_ids_generated_time_and_content(
     # 既に保存する fork report で空・通常・特殊文字の path を検証する。
     assert "## Changed paths\n\n- none\n" in contents[fork_paths[0]]
     assert "- `plain.md`" in contents[fork_paths[1]]
-    assert (
-        "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>"
-        in contents[fork_paths[1]]
-    )
+    changed = report_section(contents[fork_paths[1]], "Changed paths")
+    assert '"line\\nbreak`|<&.md"' in changed
+    assert report_text(changed) == 'plain.md\n"line\\nbreak`|<&.md"'
 
 
 @pytest.mark.parametrize("occupied", ["branch", "worktree", "dangling_symlink"])
@@ -648,40 +652,45 @@ def test_refactor_change_summary_keeps_only_actual_changed_paths(
     )
 
 
-def test_refactor_change_summary_escapes_special_changed_paths() -> None:
-    """change summary の path が Markdown の構造を壊さない。"""
-    assert refactor_module._render_summary(
+@pytest.mark.parametrize(
+    ("path", "display"),
+    [
+        ("line\nbreak`|<&.md", '"line\\nbreak`|<&.md"'),
+        ("line\r\nbreak.md", '"line\\r\\nbreak.md"'),
+        ("name`|<&.md", "name`|<&.md"),
+        ("`edge`", "`edge`"),
+        (" space ", " space "),
+        ("   ", "   "),
+        ("literal&#96;.md", "literal&#96;.md"),
+    ],
+)
+def test_refactor_change_summary_preserves_special_changed_paths(path, display):
+    """path の記号は文字参照にせず保持し、改行を含んでも一覧の構造を壊さない。"""
+    summary = refactor_module._render_summary(
         [
             {
                 "category": "rename",
                 "summary": "file renamed",
-                "changed_paths": ["line\nbreak`|<&.md"],
+                "changed_paths": [path],
             }
         ],
-        ["line\nbreak`|<&.md"],
-    ) == [
-        "- rename: file renamed",
-        "  - <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>",
-    ]
-    assert refactor_module._render_summary(
-        None,
-        ["line\nbreak`|<&.md"],
-    ) == ["- committed path: <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>"]
-    assert refactor_module._render_unresolved_findings(
-        {
-            "line\nbreak`|<&.md": [
-                (
-                    "title",
-                    "reason",
-                    Path("log`|<&.md"),
-                )
-            ]
-        }
-    ) == [
-        "- <code>line&#10;break&#96;&#124;&lt;&amp;.md</code>: title",
-        "  - resolution.summary: reason",
-        "  - Codex call log: <code>log&#96;&#124;&lt;&amp;.md</code>",
-    ]
+        [path],
+    )
+    committed = refactor_module._render_summary(None, [path])
+    unresolved = refactor_module._render_unresolved_findings(
+        {path: [("title", "reason", Path("log`|<&.md"))]}
+    )
+    for lines, expected in (
+        (summary, f"rename: file renamed\n{display}"),
+        (committed, f"committed path: {display}"),
+        (
+            unresolved,
+            f"{display}: title\nresolution.summary: reason\nCodex call log: log`|<&.md",
+        ),
+    ):
+        rendered = "\n".join(lines)
+        assert display in rendered
+        assert report_text(rendered) == expected
 
 
 def test_realization_apply_fork_and_run_join_use_common_state(
