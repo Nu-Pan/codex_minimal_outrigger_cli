@@ -5,7 +5,8 @@ agent-facing reporter から raw store、intake wave、remediation、current poi
 残ることを外部境界として検証する。
 
 session fork と live collector の結合は後続 wave の test に残す。保存済み入力を使う
-publication・中断・破損検査は ready session fixture から始め、TCP を準備しない。
+publication・中断・破損検査は feedback_publication_session から始め、doctor の修復、
+TCP と実 fsync を繰り返さない。
 
 対応する oracle file:
 
@@ -101,6 +102,7 @@ from commons.runtime_feedback_store import (
     validate_agent_payload,
 )
 from commons.runtime_logging import SubcommandLogger
+from commons.runtime_state import state_path
 from main import app
 
 
@@ -2766,12 +2768,11 @@ def test_feedback_writer_lock_rejects_concurrent_writer(
                 pass
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
 def test_empty_report_publishes_current_generation(
-    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
+    feedback_publication_session: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """candidate がなくても ok report と空 active generation を atomic publication する。"""
-    root, _session_branch, _state_path = ready_run_session
+    root = feedback_publication_session
     log_dir = root / ".cmoc/gu/log/sub_command"
     previous_logs = set(log_dir.glob("*.jsonl"))
     monkeypatch.setattr(
@@ -3074,12 +3075,12 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
     assert load_report_cut(root) is None
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_after_run_start_reports_retained_run(
-    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
+    feedback_publication_session: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """run 公開直後の中断でも joinable state と run identity を report する。"""
-    root, _session_branch, session_path = ready_run_session
+    root = feedback_publication_session
+    session_path = state_path(root, SESSION_ID)
     original_start = remediation_module.start_editing_run
 
     def start_then_interrupt(kind: str) -> Any:
@@ -3101,12 +3102,12 @@ def test_feedback_interrupt_after_run_start_reports_retained_run(
     assert "保持した feedback run" in result.output
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
-    ready_run_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
+    feedback_publication_session: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """manifest 保存直後の中断を記録し、未完了の cut を close で追い越さない。"""
-    root, _session_branch, session_path = ready_run_session
+    root = feedback_publication_session
+    session_path = state_path(root, SESSION_ID)
     original_write = remediation_module.write_report_cut_manifest
 
     def write_then_interrupt(repository: Path, manifest: dict[str, Any]) -> NoReturn:
@@ -3152,12 +3153,12 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
     assert session_path.read_bytes() == saved_session
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
-    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
+    feedback_publication_session: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """中断 cleanup の失敗を user interruption へ変換せず error にする。"""
-    root, _session_branch, session_path = ready_content_session
+    root = feedback_publication_session
+    session_path = state_path(root, SESSION_ID)
     _store_agent_issue(root, SESSION_ID)
 
     def interrupting_agent(parameter: Any, **_kwargs: Any) -> NoReturn:
@@ -3635,12 +3636,11 @@ def test_machine_threshold_excludes_expired_scope_in_boundary_bucket() -> None:
     assert aggregate is None
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
 def test_invalid_raw_observation_blocks_publication(
-    ready_run_session: tuple[Path, str, Path],
+    feedback_publication_session: Path,
 ) -> None:
     """validation 不通過 raw を処理済みにせず、正常 report を publication しない。"""
-    root, _session_branch, _state_path = ready_run_session
+    root = feedback_publication_session
     observation_id = "fbo_000099_2026-08-01_00-00"
     raw_path = observation_path(root, observation_id, "2030-01-02T00:00:00Z")
     raw_path.parent.mkdir(parents=True, exist_ok=True)
@@ -3659,12 +3659,11 @@ def test_invalid_raw_observation_blocks_publication(
     assert 'terminal_classification: "error"' in invocation_report.read_text()
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
 def test_cleanup_corruption_is_a_required_recovery_failure(
-    ready_content_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
+    feedback_publication_session: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """publication 後の state corruption は warning ではなく終了コード 1 にする。"""
-    root, _session_branch, _state_path = ready_content_session
+    root = feedback_publication_session
     _observation_id, _raw_path, candidate_id = _store_agent_issue(root, SESSION_ID)
     _install_codex_outputs(
         monkeypatch, _remediation_output(candidate_id, "human_required")
