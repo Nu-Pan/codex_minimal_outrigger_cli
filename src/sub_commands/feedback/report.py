@@ -1985,32 +1985,40 @@ def _publication_history(
                 ),
             }
         )
+    # 消費先と固定参照を逆引きし、各 observation で全候補・全入力を再走査しない。
+    issues_by_observation: dict[str, set[str]] = {}
+    issues_by_key: dict[str, set[str]] = {}
+    for identity, candidate in candidates.items():
+        for observation_id_value in candidate["source_observation_ids"]:
+            issues_by_observation.setdefault(observation_id_value, set()).add(identity)
+        issues_by_key.setdefault(candidate["canonical_key"], set()).add(identity)
+    input_references = {
+        entry["observation_id"]: entry for entry in manifest["inputs"]["observations"]
+    }
     observations = []
     for identity, observation in _read_cut_observations(repo, manifest).items():
-        selected = sorted(
-            key
-            for key, candidate in candidates.items()
-            if identity in candidate["source_observation_ids"]
-            or (
-                observation["source"] == "machine_rule"
-                and candidate["canonical_key"] == machine_canonical_key(observation)
-            )
-        )
-        keys = (
-            [machine_canonical_key(observation)]
+        selected = set(issues_by_observation.get(identity, ()))
+        canonical_key = (
+            machine_canonical_key(observation)
             if observation["source"] == "machine_rule"
-            and machine_canonical_key(observation) in aggregates
+            else None
+        )
+        if canonical_key is not None:
+            selected.update(issues_by_key.get(canonical_key, ()))
+        keys = (
+            [canonical_key]
+            if canonical_key is not None
+            and canonical_key in aggregates
             and not selected
             else []
         )
         if selected or keys:
-            reference = next(
-                entry
-                for entry in manifest["inputs"]["observations"]
-                if entry["observation_id"] == identity
-            )
             observations.append(
-                {**reference, "issue_ids": selected, "aggregate_keys": keys}
+                {
+                    **input_references[identity],
+                    "issue_ids": sorted(selected),
+                    "aggregate_keys": keys,
+                }
             )
     record = {
         "schema_version": 1,

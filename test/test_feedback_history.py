@@ -7,7 +7,14 @@ import pytest
 
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback_history import load_history
+from commons.runtime_feedback_state import (
+    ActiveState,
+    agent_canonical_key,
+    issue_id,
+    machine_canonical_key,
+)
 from commons.runtime_feedback_store import canonical_json_bytes, sha256_bytes
+from sub_commands.feedback import report
 
 
 @pytest.fixture
@@ -181,3 +188,129 @@ def test_history_load_rejects_symlink_before_reading(
 
     with pytest.raises(CmocError, match="symlink"):
         load_history(root, [reference])
+
+
+def test_publication_history_maps_consumed_inputs_without_repeated_scans(
+    history_input, monkeypatch
+):
+    """入力の採用先を保ち、観測ごとの候補・入力一覧の再走査を検出する。"""
+    root, _, record = history_input
+    scan_steps = 0
+
+    class ScannedList(list):
+        def __iter__(self):
+            nonlocal scan_steps
+            for value in super().__iter__():
+                scan_steps += 1
+                yield value
+
+        def __contains__(self, value):
+            return any(item == value for item in self)
+
+    # hash・schema の検証と破損時の publication 阻止は test_feedback.py に残す。
+    # ここでは検証済み入力の対応付けと、実 history の schema・canonical byte 列を検査する。
+    observations = {}
+    entries = ScannedList()
+    for index in range(69):
+        identity = f"fbo_{index:06d}_2026-10-08_00-00"
+        observations[identity] = {"source": "agent_report"}
+        entries.append(
+            {
+                "observation_id": identity,
+                "path": f".cmoc/gu/feedback/observation/v1/2026-10-08/{identity}.json",
+                "sha256": f"{index:064x}",
+            }
+        )
+    agent_ids = list(observations)[:64]
+    machine_ids = list(observations)[64:68]
+    for identity, subject in zip(
+        machine_ids,
+        (
+            "reporter:missing",
+            "reporter:missing",
+            "collector:missing",
+            "transport:missing",
+        ),
+        strict=True,
+    ):
+        observations[identity] = {
+            "source": "machine_rule",
+            "payload": {
+                "rule_id": "feedback.reporter_unavailable.v1",
+                "subject_type": "reporter_component",
+                "normalized_subject_id": subject,
+            },
+        }
+    machine_key = machine_canonical_key(observations[machine_ids[0]])
+    aggregate_key = machine_canonical_key(observations[machine_ids[2]])
+    agent_key = agent_canonical_key(agent_ids[0])
+    agent_issue, machine_issue = issue_id(agent_key), issue_id(machine_key)
+    candidates = {
+        agent_issue: {
+            "canonical_key": agent_key,
+            "summary": "agent issue",
+            "source_observation_ids": ScannedList(reversed(agent_ids)),
+        },
+        machine_issue: {
+            "canonical_key": machine_key,
+            "summary": "machine issue",
+            # 一件は source ID と key の両方に一致し、もう一件は key だけに一致する。
+            "source_observation_ids": ScannedList(machine_ids[:1]),
+        },
+    }
+    manifest = {
+        "inputs": {"references": [], "observations": entries},
+        "run": {
+            "invocation_log": record["log"],
+            "targets": {"case_ids": dict.fromkeys(candidates)},
+        },
+    }
+    verdicts = {
+        identity: {
+            "status": "not_actionable",
+            "reason": "確認済み",
+            "current_evidence": [],
+        }
+        for identity in candidates
+    }
+    # 読込順に依存せず canonical order へ並べ、未採用の machine／agent 入力を残す。
+    monkeypatch.setattr(
+        report,
+        "_read_cut_observations",
+        lambda *_args: dict(reversed(observations.items())),
+    )
+
+    _, content, reference = report._publication_history(
+        root,
+        manifest,
+        ActiveState(None, None, {}, {}, None, None),
+        candidates,
+        verdicts,
+        {},
+        {aggregate_key: {}},
+        record["source"],
+        record["generation_id"],
+        record["created_at"],
+        root / record["report"],
+    )
+
+    history = json.loads(content)
+    expected = [
+        {
+            **entry,
+            "issue_ids": [agent_issue]
+            if entry["observation_id"] in agent_ids
+            else [machine_issue]
+            if entry["observation_id"] in machine_ids[:2]
+            else [],
+            "aggregate_keys": [aggregate_key]
+            if entry["observation_id"] == machine_ids[2]
+            else [],
+        }
+        for entry in entries[:-2]
+    ]
+    assert history["observations"] == expected
+    assert reference["sha256"] == sha256_bytes(content)
+    assert content == canonical_json_bytes(history)
+    # 時間閾値ではなく走査量で、入力数に比例する処理と二乗の再走査を区別する。
+    assert scan_steps <= 4 * (len(entries) + len(agent_ids) + 1)
