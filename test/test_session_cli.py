@@ -76,16 +76,6 @@ def session_state_path(root: Path, session_branch: str) -> Path:
     return root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
 
 
-def session_home_branch(root: Path, session_branch: str) -> str:
-    """session state から fork 元かつ join 先の home branch を読む。
-
-    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
-    """
-
-    state = json.loads(session_state_path(root, session_branch).read_text())
-    return state["session"]["session_home_branch"]
-
-
 def _seed_session_management_files(root: Path) -> None:
     """session test の clean な管理ファイルを、doctor CLI を実行せず用意する。"""
     # 管理物の検証・修復は各 command 自身の doctor と専用ケースに残す。
@@ -567,32 +557,6 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     assert "session state file が不正です。" in result.stderr
     assert "active session が既に存在します。" not in result.stderr
     assert current_branch(root) == home_branch
-
-
-def test_session_fork_uses_linked_worktree_branch_and_head(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree上のbranchとHEADからsessionをforkすることを検証する。"""
-    root = committed_repository
-    monkeypatch.chdir(root)
-    _seed_session_management_files(root)
-    root_branch = current_branch(root)
-    linked = root / ".cmoc" / "gu" / "worktree" / "linked"
-    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
-    run_git(linked, "commit", "--allow-empty", "-m", "linked change")
-    linked_commit = run_git(linked, "rev-parse", "HEAD").stdout.strip()
-    monkeypatch.chdir(linked)
-
-    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
-
-    assert result.exit_code == 0
-    session_branch = current_branch(linked)
-    assert session_branch.startswith("cmoc/session/")
-    assert current_branch(root) == root_branch
-    state = json.loads(session_state_path(root, session_branch).read_text())
-    assert state["session"]["session_home_branch"] == "linked-home"
-    assert state["session"]["session_fork_commit"] == linked_commit
-    assert run_git(linked, "rev-parse", session_branch).stdout.strip() == linked_commit
 
 
 def test_session_abandon_repairs_linked_worktree_before_failure_and_completion(
@@ -1359,11 +1323,12 @@ def test_session_join_checks_staged_text_conflict_markers(
     assert error.value.detail == relative
 
 
-def test_session_join_repairs_linked_worktree_before_failure_and_completion(
+def test_session_fork_and_join_repair_linked_worktree_before_failure_and_completion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """linked worktree の修復・失敗時の停止・正常終了を同じ session で検証する。"""
-    # repository・linked worktree・公開 fork の準備を共有し、前処理と join を検査する。
+    """linked worktree の fork・join 前の修復・失敗時の停止・正常終了を検証する。"""
+    # fork の branch/HEAD/state 検査と join で repository・linked worktree を共有する。
+    # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     root = make_repo(tmp_path)
@@ -1372,12 +1337,22 @@ def test_session_join_repairs_linked_worktree_before_failure_and_completion(
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    # main worktree と異なる HEAD を用意し、fork 元の取り違えも検出する。
+    run_git(linked, "commit", "--allow-empty", "-m", "linked change")
+    linked_commit = run_git(linked, "rev-parse", "HEAD").stdout.strip()
     monkeypatch.chdir(linked)
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
+
+    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0
     session_branch = current_branch(linked)
-    home_branch = session_home_branch(root, session_branch)
+    assert session_branch.startswith("cmoc/session/")
+    assert current_branch(root) == root_branch
+    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert state["session"]["session_home_branch"] == "linked-home"
+    assert state["session"]["session_fork_commit"] == linked_commit
+    assert run_git(linked, "rev-parse", session_branch).stdout.strip() == linked_commit
+    home_branch = state["session"]["session_home_branch"]
     home_commit = run_git(linked, "rev-parse", home_branch).stdout.strip()
 
     # feedback state は repo-root 所有なので、doctor を含む両終了経路でも保持する。
