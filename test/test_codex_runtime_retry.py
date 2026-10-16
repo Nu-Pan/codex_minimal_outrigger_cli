@@ -2,7 +2,6 @@
 
 import json
 import subprocess
-from itertools import count
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -30,27 +29,32 @@ from config.cmoc_config import CmocConfig
 
 
 @pytest.fixture
-def failure_control_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def nonpersistent_codex_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Git の使用有無にかかわらず、補正・回復の検査で永続採番を省く。"""
+    # 永続採番は test_runtime_ids.py、実採番と log の結合・process 間の共有は
+    # test_codex_runtime_paths.py に残し、ログ間の ID 対応はここでも検査する。
+    monkeypatch.setattr(runtime_codex_exec, "new_id", runtime_logging.new_id)
+
+
+@pytest.fixture
+def failure_control_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_codex_ids: None,
+) -> Path:
     """応答・回復制御の検査では Git 探索と永続採番を準備しない。"""
     root = tmp_path / "repo"
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    # cwd・linked worktree と process 間の採番は test_codex_runtime_paths.py、
-    # 採番の永続性は test_runtime_ids.py、probe の実結合は quota_retry に残す。
+    # cwd・linked worktree の解決は test_codex_runtime_paths.py、
+    # probe の実結合は quota_retry に残す。
     # 成果物の差分取得・復元を検査するケースは実 Git の cli_repository を使う。
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
-    ids = count()
-
-    def in_memory_id(_root: Path, prefix: str) -> str:
-        return f"{prefix}_{next(ids):06d}_2000-01-01_00-00"
-
-    # exec ID は logger・current_execution_id 経由でも発行される。
-    # logger と実採番の結合は test_runtime_cli.py に残し、ログの検証は維持する。
-    for module in (runtime_codex_exec, runtime_logging):
-        monkeypatch.setattr(module, "new_id", in_memory_id)
     return root
 
 
@@ -250,7 +254,10 @@ def test_structured_output_parse_failure_stops_before_schema_and_postcondition(
 
 
 def test_run_codex_exec_corrects_declared_postcondition(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_codex_ids: None,
 ) -> None:
     """初回 call の実差分で決定論的事後条件を検証し、出力だけを補正する。"""
     root = cli_repository
@@ -360,7 +367,10 @@ def test_run_codex_exec_does_not_replace_missing_correction_session(
 
 
 def test_run_codex_exec_restores_artifacts_changed_by_correction(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_codex_ids: None,
 ) -> None:
     """補正 turn が変動させた成果物を初回 call 完了時へ戻して失敗する。"""
     root = cli_repository
