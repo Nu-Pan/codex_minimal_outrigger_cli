@@ -241,10 +241,14 @@ def _publish_prepared_cases(root, statuses, machine_aggregates):
 
 
 @pytest.fixture
-def open_case(close_repository):
+def open_case(close_repository, monkeypatch):
     root = close_repository
-    _, _, identity = _store_agent_issue(root, None)
-    issues = _publish_prepared_cases(root, {identity: "inconclusive"}, {})
+    # 同期の順序・失敗は test_feedback_store.py で検査する。初期状態の準備だけ
+    # ディスク同期待ちを省き、close 本体の保存・recovery では実 fsync に戻す。
+    with monkeypatch.context() as preparation:
+        preparation.setattr("os.fsync", lambda _fd: None)
+        _, _, identity = _store_agent_issue(root, None)
+        issues = _publish_prepared_cases(root, {identity: "inconclusive"}, {})
     return root, issues[identity]
 
 
