@@ -672,7 +672,7 @@ def test_remediation_state_validation_rechecks_schema_and_value(
         "files",
         lambda package: (
             schema_directory
-            if package == "oracle.acp_builder.feedback"
+            if package == "oracle.acp_builder.feedback.remediate_issue"
             else original_files(package)
         ),
     )
