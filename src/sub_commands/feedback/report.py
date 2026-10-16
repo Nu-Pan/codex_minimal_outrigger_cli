@@ -38,7 +38,11 @@ from cmoc_runtime import (
     run_codex_exec,
 )
 from commons.runtime_feedback_history import history_artifact
-from commons.runtime_feedback_render import publication_notice, render_current_cases
+from commons.runtime_feedback_render import (
+    feedback_report_summary,
+    publication_notice,
+    render_current_cases,
+)
 from commons.runtime_feedback_state import (
     ActiveState,
     agent_canonical_key,
@@ -74,6 +78,12 @@ from commons.runtime_json_schema import checked_schema_validator
 from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_paths import reports_dir
 from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_primary_report_render import saved_execution_notices
+from commons.runtime_report_markdown import (
+    fenced_text,
+    markdown_sections,
+    render_report_document,
+)
 from commons.runtime_results import StructuredOutputValidationIssue
 
 _JsonObject = dict[str, Any]
@@ -1915,30 +1925,33 @@ def _render_feedback_report(
         ("result", result),
     )
     lines = [
-        "---",
-        *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
-        "---",
-        "# cmoc feedback report",
+        publication_notice(str(repo / manifest["run"]["invocation_log"])),
         "",
+        f"作成元: report cut `{manifest['report_cut_id']}`。入力確認境界: `{manifest['run']['high_watermark']}`。",
+        "",
+        f"History: `{feedback_root(repo) / 'history'}`。今回の履歴: `{repo / history[-1]['path']}`。",
+        "",
+        render_current_cases(issues),
     ]
-    if result == "incomplete":
-        lines.extend(
-            ["この generation には判定不能の案件が含まれ、要約は incomplete です。", ""]
-        )
-    lines.extend(
-        [
-            publication_notice(str(repo / manifest["run"]["invocation_log"])),
-            "",
-            f"作成元: report cut `{manifest['report_cut_id']}`。入力確認境界: `{manifest['run']['high_watermark']}`。",
-            "",
-            f"History: `{feedback_root(repo) / 'history'}`。今回の履歴: `{repo / history[-1]['path']}`。",
-            "",
-            render_current_cases(issues),
-            "",
-            manifest["run"]["execution_record"] or "",
-        ]
+    notices = saved_execution_notices(
+        repo / manifest["run"]["invocation_log"],
+        manifest["run"]["targets"]["execution_id"],
     )
-    return "\n".join(lines)
+    if notices:
+        lines.extend(["## warning と実行上の注意", fenced_text("\n".join(notices))])
+    return render_report_document(
+        "cmoc feedback report",
+        dict(fields),
+        feedback_report_summary(
+            issues,
+            "report 保存時点の記録です。案件の判定と generation の準備までを掲載しています。",
+            scope=("issue の検証と自動 join 後の検査は完了しています。",),
+            publication_pending=True,
+            notices=notices,
+        ),
+        markdown_sections(lines),
+        execution_record=manifest["run"]["execution_record"] or "",
+    )
 
 
 def _publication_history(
@@ -2057,17 +2070,6 @@ def _new_report_path(
     if path.exists() or path.is_symlink():
         raise FileExistsError(path)
     return path
-
-
-def _yaml_scalar(value: object) -> str:
-    """YAML 1.2 と互換な JSON scalar を返す。"""
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        return str(value)
-    if value is None:
-        return "null"
-    return json.dumps(str(value), ensure_ascii=False)
 
 
 def _markdown_text(value: object) -> str:

@@ -1,8 +1,8 @@
 """非対話サブコマンドの primary report を保存してエディタで開く。
 
-個別処理が正常な primary report を既に保存した場合は、その report を再利用する。
-doctor preprocess や事前条件など、個別処理が report を作る前の終了経路だけを
-確定済みの runtime 情報から機械的に要約する。
+個別 writer の確定情報を引き継ぎ、最外側で終端結果と実行記録を合わせて保存する。
+固定済みの feedback publication report は再利用し、個別 report がない早期終了は
+確定済みの runtime 情報から要約する。
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
@@ -20,9 +20,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .runtime_editor import select_editor
-from .runtime_logging import SubcommandLogger
+from .runtime_logging import SubcommandLogger, current_subcommand_logger
 from .runtime_paths import reports_dir, timestamp
 from .runtime_primary_report_render import (
+    execution_notices,
     execution_record_markdown,
     feedback_statuses,
     oracle_edit_statuses,
@@ -32,6 +33,12 @@ from .runtime_primary_report_specs import (
     PrimaryReportSpec,
     TerminalClassification,
     primary_report_spec,
+)
+from .runtime_report_markdown import (
+    ReportSummary,
+    fenced_text,
+    render_report_document,
+    terminal_outcome,
 )
 from .runtime_results import TerminalResult
 
@@ -45,12 +52,25 @@ class PrimaryReportSaveError(RuntimeError):
         self.target_path = target_path
 
 
+@dataclass(frozen=True)
+class _PreparedReport:
+    """個別 writer の確定情報を、最外側の終了結果と合わせて描画する。"""
+
+    path: Path
+    title: str
+    fields: dict[str, object]
+    summary: ReportSummary
+    details: str
+
+
 @dataclass
 class PrimaryReportContext:
     """invocation 中に確定した report 項目を保持する。"""
 
     spec: PrimaryReportSpec
     fields: dict[str, object]
+    original_input: str | None = None
+    prepared_report: _PreparedReport | None = None
 
 
 _PRIMARY_REPORT_CONTEXT: ContextVar[PrimaryReportContext | None] = ContextVar(
@@ -105,10 +125,37 @@ def update_primary_report_fields(**fields: object) -> None:
         context.fields.update(fields)
 
 
+def update_primary_report_input(original_input: str) -> None:
+    """実行で使うと確定した自由記述入力を、保存記録の再読なしで引き継ぐ。"""
+    # 入力の正本は呼び出し元が確定した文字列であり、report 用に file を作らない。
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    if context is not None:
+        context.original_input = original_input
+
+
 def current_primary_report_fields() -> dict[str, object]:
     """同じ invocation の先行 preprocess が確定した項目を参照する。"""
     context = _PRIMARY_REPORT_CONTEXT.get()
     return dict(context.fields) if context is not None else {}
+
+
+def prepare_primary_report(
+    path: Path,
+    title: str,
+    fields: dict[str, object],
+    summary: ReportSummary,
+    details: str,
+) -> str:
+    """個別 report を描画し、終了時に追加される結果の反映に備える。"""
+    # 保存が失敗しても既存 report を保ったまま、最外側で最新の確定情報を再保存できる。
+    notices = execution_notices(current_subcommand_logger())
+    summary = replace(
+        summary, attention=tuple(dict.fromkeys((*summary.attention, *notices)))
+    )
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    if context is not None:
+        context.prepared_report = _PreparedReport(path, title, fields, summary, details)
+    return render_report_document(title, fields, summary, details)
 
 
 def ensure_primary_report(
@@ -121,6 +168,7 @@ def ensure_primary_report(
     logger: SubcommandLogger,
 ) -> TerminalResult:
     """保存済み report を検証し、未作成の終了経路へ fallback を保存する。"""
+    context = _PRIMARY_REPORT_CONTEXT.get()
     if result.primary_report is not None:
         report_path = result.primary_report
         try:
@@ -132,9 +180,33 @@ def ensure_primary_report(
                 if "\n## 実行記録\n" not in content:
                     raise PrimaryReportSaveError(report_path)
             else:
+                prepared = context.prepared_report if context is not None else None
+                if prepared is not None and prepared.path == report_path:
+                    updated = _finish_prepared_report(
+                        prepared,
+                        context.fields if context else {},
+                        classification,
+                        exit_code,
+                        result,
+                        logger,
+                    )
+                else:
+                    # 描画情報を伴わない保存済み report でも、実行情報は末尾に保つ。
+                    body, separator, information = content.rpartition("\n## 実行情報\n")
+                    record = execution_record_markdown(logger)
+                    updated = (
+                        body.rstrip()
+                        + "\n\n"
+                        + record.rstrip()
+                        + "\n"
+                        + separator
+                        + information
+                        if separator
+                        else content.rstrip() + "\n\n" + record
+                    )
                 rewrite_primary_report(
                     report_path,
-                    content.rstrip() + "\n\n" + execution_record_markdown(logger),
+                    updated,
                 )
         except PrimaryReportSaveError:
             raise
@@ -144,7 +216,6 @@ def ensure_primary_report(
             raise PrimaryReportSaveError(report_path) from exc
         return result
 
-    context = _PRIMARY_REPORT_CONTEXT.get()
     spec = context.spec if context is not None else primary_report_spec(command_name)
     if spec is None:
         return result
@@ -170,7 +241,14 @@ def ensure_primary_report(
             spec,
             context,
         )
-        content = render_primary_report(spec, fields, classification, result, logger)
+        content = render_primary_report(
+            spec,
+            fields,
+            classification,
+            result,
+            logger,
+            original_input=context.original_input if context is not None else None,
+        )
         write_reserved_primary_report(target, content)
     except BaseException as exc:
         if reserved and target is not None:
@@ -185,6 +263,41 @@ def ensure_primary_report(
         result,
         primary_report=target.resolve(),
         primary_report_role=spec.role,
+    )
+
+
+def _finish_prepared_report(
+    prepared: _PreparedReport,
+    context_fields: dict[str, object],
+    classification: TerminalClassification,
+    exit_code: int,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+) -> str:
+    # 個別保存の後で確定した warning・エラー・次操作も、原文を再解析せず反映する。
+    fields = {**prepared.fields, **context_fields}
+    fields.update(terminal_classification=classification, exit_code=exit_code)
+    notices = execution_notices(logger)
+    if classification in {"error", "user_interruption"}:
+        notices += tuple(f"{name}: {value}" for name, value in result.details)
+    actions = result.next_actions or prepared.summary.next_actions
+    if not actions and classification == "error":
+        actions = ("診断ログと失敗した処理を確認してから再実行してください。",)
+    summary = replace(
+        prepared.summary,
+        outcome=terminal_outcome(classification),
+        attention=tuple(dict.fromkeys((*prepared.summary.attention, *notices))),
+        next_actions=actions,
+    )
+    details = prepared.details
+    if notices:
+        details += "\n\n## 終了時の確認事項\n\n" + fenced_text("\n".join(notices))
+    return render_report_document(
+        prepared.title,
+        fields,
+        summary,
+        details,
+        execution_record=execution_record_markdown(logger),
     )
 
 
@@ -289,7 +402,7 @@ def _report_fields(
     spec: PrimaryReportSpec,
     context: PrimaryReportContext | None,
 ) -> list[tuple[str, object]]:
-    """共通項目と、確定できた個別項目を front matter 順に並べる。"""
+    """共通項目と、確定できた個別項目を実行情報の順に並べる。"""
     context_values = dict(context.fields) if context is not None else {}
     detail_values = {name: value for name, value in result.details}
     known = dict(context_values)

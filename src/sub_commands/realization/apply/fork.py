@@ -18,6 +18,7 @@ from cmoc_runtime import (
 )
 from commons.runtime_feedback import accepted_feedback_observations
 from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_report_markdown import ReportSummary, terminal_outcome
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -182,6 +183,19 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
         report = write_fork_report(
             context,
             "realization/apply/fork",
+            summary=ReportSummary(
+                terminal_outcome("natural_completion"),
+                (
+                    "run state: joinable",
+                    f"Codex 終了コード: {codex_returncode}",
+                    f"確定済みの変更 path: {len(changed_paths)} 件",
+                ),
+                tuple(cleanup_warnings),
+                (
+                    "`cmoc run join` で確定済み成果物を取り込んでください。",
+                    "`cmoc run abandon` で run 全体を破棄できます。",
+                ),
+            ),
             state_after="joinable",
             completion_reason="completed",
             changed_paths=changed_paths,
@@ -352,6 +366,17 @@ def _record_error(
     return write_fork_report(
         context,
         "realization/apply/fork",
+        summary=ReportSummary(
+            terminal_outcome("error"),
+            (
+                f"Codex 終了結果: {codex_returncode if codex_returncode is not None else '未確定'}",
+                f"確定済みの変更 path: {len(changed_paths) if changed_paths is not None else '未確認'}",
+            ),
+            (repr(exc), *cleanup_errors),
+            (
+                "run report と残存資源を確認し、`cmoc run join` または `cmoc run abandon` を実行してください。",
+            ),
+        ),
         state_after="error",
         completion_reason="error",
         changed_paths=changed_paths,

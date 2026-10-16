@@ -23,6 +23,7 @@ from _git_support import (
     make_repo,
     run_git,
 )
+from _report_support import assert_report_layout, original_report_input, report_section
 
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.edit as oracle_edit_module
@@ -117,6 +118,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     # 永続採番と logger の結合は test_runtime_ids.py と test_runtime_cli.py に残す。
     # ここでは実行 ID の受け渡しと editor input・report・log の保存を実検査する。
     root = oracle_edit_repository
+    instruction = (
+        "oracle spec を更新する\n# 指示中の見出し\n空行を挿入しない\n"
+        "````text\n```\n## 実行情報\n````\n"
+        + "長い指示の続きです。\n" * 180
+        + "指示全文の末尾"
+    )
     integrated_case = failure_stage is None and first_changes
     if not integrated_case:
         # root 探索の結合は edit-success と専用テストに残す。
@@ -206,7 +213,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         events.append("editor")
         assert target_root == root
         editor_calls.append((work_path, complete_prompt_skeleton))
-        work_path.write_text("oracle spec を更新する", encoding="utf-8")
+        work_path.write_text(" \n" + instruction + "\n ", encoding="utf-8")
 
     real_collect_prompt_editor_input = oracle_edit_module.collect_prompt_editor_input
 
@@ -297,7 +304,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         }
         if len(calls) == 1:
             events.append("first")
-            assert input_path.read_text(encoding="utf-8") == "oracle spec を更新する"
+            assert input_path.read_text(encoding="utf-8") == " \n" + instruction + "\n "
             input_path.write_text("later human edit", encoding="utf-8")
             if first_changes:
                 (root / "oracle" / "spec.md").write_text("# first edit\n")
@@ -348,7 +355,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     spec_before = (root / "oracle" / "spec.md").read_text()
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
-    assert result.exit_code == (0 if failure_stage is None else 1)
+    assert result.exit_code == (0 if failure_stage is None else 1), result.output
     assert len(built_main_parameters) == 2
     assert editor_calls[0][0] == input_path
     complete_prompt_skeleton = editor_calls[0][1]
@@ -440,6 +447,14 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     report_path = terminal_primary_report(result)
     assert terminal_output.count(str(report_path)) == 1
     report = report_path.read_text(encoding="utf-8")
+    assert_report_layout(report)
+    assert original_report_input(report) == instruction
+    assert instruction in report
+    assert "later human edit" not in report_section(report, "元の指示")
+    overview = report.split("## 元の指示", 1)[0]
+    assert "oracle spec を更新する" in overview
+    assert "指示全文の末尾" not in overview
+    assert len(overview) < 2000
     expected_classification = "natural_completion" if failure_stage is None else "error"
     expected_first_status = "failed" if failure_stage == "first" else "succeeded"
     expected_second_status = {
@@ -510,6 +525,9 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
     assert result.exit_code == 1
     assert "builder failed" in result.output
     assert not list((root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md"))
+    report = terminal_primary_report(result).read_text()
+    assert "入力未確定" in report.split("## 元の指示", 1)[0]
+    assert "入力未確定" in report_section(report, "元の指示")
 
 
 @pytest.mark.parametrize("failure_stage", ["config", "preconditions"])
@@ -558,6 +576,9 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
     stages = ["config", "preconditions"]
     assert events == stages[: stages.index(failure_stage) + 1]
     report = terminal_primary_report(result).read_text()
+    assert_report_layout(report)
+    assert original_report_input(report) == "edit oracle"
+    assert "edit oracle" in report.split("## 元の指示", 1)[0]
     for pass_name in ("first", "second"):
         assert f'{pass_name}_agent_call_status: "not_started"' in report
 

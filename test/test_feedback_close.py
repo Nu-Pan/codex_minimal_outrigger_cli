@@ -11,6 +11,12 @@ from _git_support import (
     current_branch,
     run_git,
 )
+from _report_support import (
+    assert_report_layout,
+    original_report_input,
+    report_metadata,
+    report_section,
+)
 from test_feedback import (
     _context,
     _install_codex_outputs,
@@ -80,6 +86,12 @@ def reported_case(ready_content_session, monkeypatch):
     assert feedback_completion_counts(root)[0] == 0
     assert state.history[-1]["observations"][0]["observation_id"] == observation_id
     text = terminal_primary_report(result).read_text()
+    assert_report_layout(text)
+    overview = text.split("## 元の指示", 1)[0]
+    assert "report 保存時点の記録" in overview
+    assert "inconclusive" in overview and "incomplete" in overview
+    assert "未完了" in overview and "未確定" in overview
+    assert "元の実行ログ" in report_section(text, "次の操作")
     assert issue["case_id"] in text
     assert "active_generation_id:" in text
     assert "正常 publication ではありません" not in text
@@ -276,7 +288,10 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
     run_git(root, "checkout", "-b", "outside-session")
     (root / "README.md").write_text("external fix, still dirty\n")
     state_before = list((root / ".cmoc/gu/session").glob("*.json"))
-    result = _close(issue)
+    reason = (
+        "外部で修正を確認した\n# 理由中の見出し\n空行を挿入しない\n```text\n原文\n```"
+    )
+    result = _close(issue, reason)
     assert result.exit_code == 0, result.output
     assert "closed" in result.output
     assert "latest_state_summary: `ok`" in result.output
@@ -297,6 +312,12 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
     assert feedback_completion_counts(root)[0] == 1
     report = terminal_primary_report(result)
     report_bytes = report.read_bytes()
+    text = report_bytes.decode()
+    assert_report_layout(text)
+    assert original_report_input(text) == reason
+    assert "他の案件の再確認" in text.split("## 元の指示", 1)[0]
+    assert "未完了" in text.split("## 元の指示", 1)[0]
+    assert report_metadata(text)["history_path"]
     pointer = canonical_json_bytes(state.current)
     history = list(state.history)
     repeated = _close(issue, "別の理由")
@@ -309,6 +330,11 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
     assert after.history == history
     assert report.read_bytes() == report_bytes
     assert terminal_primary_report(repeated) != report
+    replay = terminal_primary_report(repeated).read_text()
+    assert_report_layout(replay)
+    assert original_report_input(replay) == "別の理由"
+    assert report_metadata(replay)["original_human_reason"] == reason
+    assert "already_closed" in replay.split("## 元の指示", 1)[0]
     assert state_before == list((root / ".cmoc/gu/session").glob("*.json"))
 
 
@@ -409,13 +435,16 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     monkeypatch.setattr(close_state, name, original)
     if published:
         (root / "README.md").write_text("state changed after publication\n")
-    resumed = _close(issue)
+    resumed_reason = "再開した実行の別の理由" if published else fixed["reason"]
+    resumed = _close(issue, resumed_reason)
     assert resumed.exit_code == 0, resumed.output
     assert "latest_state_summary: `ok`" in resumed.output
     assert "remaining_cases: `0`" in resumed.output
     assert terminal_primary_report(resumed) == target
     if saved is not None:
         assert target.read_bytes() == saved
+    assert original_report_input(target.read_text()) == fixed["reason"]
+    assert "report 保存時点の記録" in target.read_text().split("## 元の指示", 1)[0]
     assert close_state.load_close_work(root) is None
     final = feedback_state.validate_feedback_state(root)
     assert len(final.history) == len(old.history) + 1
