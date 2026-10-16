@@ -4063,11 +4063,11 @@ def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
 
 @pytest.mark.parametrize("during_commit", [False, True])
 def test_refactor_cycle_interruption_respects_state_commit_boundary(
-    ready_join_session, monkeypatch, during_commit
+    refactor_after_preprocess, monkeypatch, during_commit
 ):
     """巡開始の state 準備は rollback、確定区間の停止要求は記録まで完了する。"""
-    # session 作成の公開 CLI は統合 test に残し、巡開始前の clean な履歴だけ用意する。
-    root, _, state_path = ready_join_session
+    # doctor の停止・rollback は test_doctor_cli.py に残し、巡開始の境界を検査する。
+    root, _, state_path = refactor_after_preprocess
     _mark_refactor_target_no_findings(root, "README.md")
     if during_commit:
         commit = refactor_module.commit_work_unit
@@ -4110,13 +4110,13 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
 
 @pytest.mark.parametrize("interrupt_next_cycle_start", [False, True])
 def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
-    ready_join_session,
+    refactor_after_preprocess,
     monkeypatch,
     interrupt_next_cycle_start,
     refactor_unit_diff_queries,
 ):
     """旧履歴を調査機会にせず、未解決を次巡で再検討して全対象を公平に処理する。"""
-    root, _, state_path = ready_join_session
+    root, _, state_path = refactor_after_preprocess
     _mark_refactor_target_no_findings(root, "README.md")
     reviewed = []
     if interrupt_next_cycle_start:

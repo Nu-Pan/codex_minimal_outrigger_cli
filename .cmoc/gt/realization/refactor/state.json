@@ -1388,8 +1388,8 @@
   "test/test_editing_run_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "1c7f8cdfb78778259c91f32f63c93a0ea4f89902bf239ec249856fe4ae2aaf07",
-    "last_investigated_at": "2026-10-13_07-12-47_972"
+    "last_investigated_sha256": "9521a60a500c018aac1a9faa99694bacbb9e6904f71efe3cea6626d96a4e7f87",
+    "last_investigated_at": "2026-10-16_18-26-28_770"
   },
   "test/test_editor_input_handoff.py": {
     "investigation_required": true,
