@@ -1358,8 +1358,8 @@
   "test/test_document_search.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "cbfc9758d909e6fb84f5f3259d67560ff083623be4ee20421d9bc4fa139c0266",
-    "last_investigated_at": "2026-10-13_06-28-58_559"
+    "last_investigated_sha256": "b6afe0d74c909526b7c0c0b8ae0288540662f924c68276363423839cdd27a81d",
+    "last_investigated_at": "2026-10-16_17-52-01_107"
   },
   "test/test_document_search_deadlines.py": {
     "investigation_required": true,

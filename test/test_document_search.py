@@ -1143,6 +1143,17 @@ def candidate_worker(monkeypatch):
         replace(SEARCH_MATERIALS, embedding_dimensions=2),
     )
 
+    # 候補の検査では障害後の永続化を扱わないため、索引の fsync だけを省く。
+    # 実 sqlite-vec と commit/rollback は保ち、途中保存・復旧の test は通常設定で通す。
+    open_database = module._open_database
+
+    def open_candidate_database(path):
+        connection = open_database(path)
+        connection.execute("pragma synchronous = off")
+        return connection
+
+    monkeypatch.setattr(module, "_open_database", open_candidate_database)
+
     class _CandidateWorker:
         def __init__(self, ranges, *, vectors=None):
             self.operations = []
