@@ -776,7 +776,7 @@ def _join_and_publish(harness, monkeypatch):
     remediation._seal(h.context, h.manifest, h.candidates, {})
     for source in h.context.run_worktree.iterdir():
         (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
-    monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
+    monkeypatch.setattr(remediation, "_is_ancestor", Mock(return_value=True))
     monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
     monkeypatch.setattr(
         report, "current_branch", lambda *_args: h.context.session_branch
@@ -889,6 +889,20 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
     ]
     assert audit_diffs
     assert all(args[-2] != args[-1] for args in audit_diffs)
+    # 同じ commit を使う再確認 checkpoint でも、到達可能性の Git 起動は共有する。
+    ancestor = remediation._is_ancestor
+    assert Counter(call.args[1] for call in ancestor.call_args_list) == {
+        commit: 1 for commit in h.commits
+    }
+    # 次の検証へ結果を持ち越さず、run HEAD 以外の到達不能な commit も拒否する。
+    ancestor.reset_mock()
+    ancestor.side_effect = lambda _context, commit: commit != h.commits[0]
+    with pytest.raises(CmocError, match="issue commit または net 差分 hash"):
+        remediation._complete_join(h.context, h.manifest)
+    assert [call.args[1] for call in ancestor.call_args_list] == [
+        h.head,
+        h.commits[0],
+    ]
 
 
 @pytest.mark.parametrize("fault", ["head", "forbidden_path"])
