@@ -131,12 +131,39 @@ def test_subcommand_logger_keeps_one_file_per_execution(
     assert [line for line in second.path.read_text().splitlines() if line]
 
 
+def test_current_execution_id_reuses_only_the_matching_repository_logger(
+    tmp_path: Path,
+    nonpersistent_execution_ids: None,
+) -> None:
+    """同じ root と symlink alias は ID を共有し、単独・別 repository は分離する。"""
+    # 実採番は直前の test に残し、ここでは logger の所有範囲を検査する。
+    root = tmp_path / "repo"
+    root.mkdir()
+    alias = tmp_path / "alias"
+    alias.symlink_to(root, target_is_directory=True)
+    standalone_id = runtime_logging.current_execution_id(root)
+    logger = SubcommandLogger(root, "probe")
+    assert logger.execution_id != standalone_id
+
+    token = runtime_logging.set_current_subcommand_logger(logger)
+    try:
+        assert (
+            runtime_logging.current_execution_id(Path(str(root))) == logger.execution_id
+        )
+        assert runtime_logging.current_execution_id(alias) == logger.execution_id
+        other_id = runtime_logging.current_execution_id(tmp_path / "other")
+        assert other_id not in {standalone_id, logger.execution_id}
+    finally:
+        runtime_logging.reset_current_subcommand_logger(token)
+
+
 def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     tmp_path: Path,
     nonpersistent_execution_ids: None,
 ) -> None:
     """並列記録の保存順・待機時間と、呼び出し別 snapshot の独立性を保つ。"""
-    # 実採番との結合は直前の test に残し、追記の検査では SQLite を準備しない。
+    # 実採番との結合は test_subcommand_logger_keeps_one_file_per_execution に残し、
+    # 追記の検査では SQLite を準備しない。
     logger = SubcommandLogger(tmp_path, "parallel_logging")
     worker_count = 8
     barrier = threading.Barrier(worker_count)
