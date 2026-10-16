@@ -1075,7 +1075,7 @@ def test_run_abandon_prunes_missing_registered_run_worktree(
 def test_run_abandon_requires_process_stop_confirmation(
     ready_abandon_run: EditingRunContext,
 ) -> None:
-    """running run の process tracking がない場合は cleanup を開始しない。"""
+    """tracking の不在・破損で停止を確認できなければ run 資源を保持する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     context = ready_abandon_run
     root, state_path = context.repo, context.state_path
@@ -1087,6 +1087,25 @@ def test_run_abandon_requires_process_stop_confirmation(
     assert _state(state_path)["run"]["state"] == "running"
     assert context.run_worktree.exists()
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+
+    # 拒否後も資源が残るため、破損 tracking の各停止分岐も同じ実 worktree で検査する。
+    tracking_path = run_process_id_path(root, context.session_id)
+    tracking_path.parent.mkdir(parents=True, exist_ok=True)
+    tracking_path.write_bytes(b"\xff")
+    for run_state in ("joinable", "error"):
+        state = SessionState.from_dict(_state(state_path))
+        state.run.state = run_state
+        write_state(state_path, state)
+        run_before = _state(state_path)["run"]
+
+        result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
+
+        assert result.exit_code == 1, run_state
+        assert "process tracking を検証できません" in result.output, run_state
+        assert _state(state_path)["run"] == run_before, run_state
+        assert context.run_worktree.exists(), run_state
+        assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+        assert tracking_path.read_bytes() == b"\xff", run_state
 
 
 @pytest.mark.parametrize("ready_abandon_run", ["error"], indirect=True)
@@ -1121,33 +1140,6 @@ def test_run_abandon_stops_tracked_process_for_error_run(
     assert _state(state_path)["run"]["state"] == "ready"
     assert not context.run_worktree.exists()
     assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
-
-
-def test_run_abandon_rejects_unreadable_process_tracking(
-    ready_abandon_run: EditingRunContext,
-) -> None:
-    """破損した process tracking を無視して run 資源を削除しない。"""
-    context = ready_abandon_run
-    root, state_path = context.repo, context.state_path
-    tracking_path = run_process_id_path(root, context.session_id)
-    tracking_path.parent.mkdir(parents=True)
-    tracking_path.write_bytes(b"\xff")
-
-    # 拒否後も資源が残るため、両 state の停止分岐を同じ実 worktree で検査する。
-    for run_state in ("joinable", "error"):
-        state = SessionState.from_dict(_state(state_path))
-        state.run.state = run_state
-        write_state(state_path, state)
-        run_before = _state(state_path)["run"]
-
-        result = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
-
-        assert result.exit_code == 1, run_state
-        assert "process tracking を検証できません" in result.output, run_state
-        assert _state(state_path)["run"] == run_before, run_state
-        assert context.run_worktree.exists(), run_state
-        assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
-        assert tracking_path.read_bytes() == b"\xff", run_state
 
 
 def test_run_abandon_reports_stale_child_stop_warning(
