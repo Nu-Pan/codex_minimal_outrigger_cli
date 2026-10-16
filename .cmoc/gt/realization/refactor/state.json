@@ -1280,8 +1280,8 @@
   "test/test_cli_command_tree.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "6b16e87f94976329d1125a7665837a63ebbe3f8bf6ddeef20aae296d0b8a9579",
-    "last_investigated_at": "2026-10-13_04-27-21_411"
+    "last_investigated_sha256": "478eea76f017246ce18dd3793e3cf2fed9b0ba5b2dc1581a268b1a8d21bc7e21",
+    "last_investigated_at": "2026-10-16_16-34-03_639"
   },
   "test/test_cli_tui.py": {
     "investigation_required": true,

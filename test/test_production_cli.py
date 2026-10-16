@@ -29,7 +29,6 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-import click
 import pytest
 from _cli_support import terminal_primary_report
 from _codex_support import (
@@ -142,20 +141,6 @@ plain text
 
 追加作業は不要。
 """
-
-
-def _registered_leaf_commands(
-    command: click.Command, prefix: tuple[str, ...] = ()
-) -> set[tuple[str, ...]]:
-    """Click command tree から実行可能な末端 command path を列挙する。"""
-    # 新しい公開末端の追加時に、本番経路試験の追加漏れを同じ変更で検出する。
-    commands = getattr(command, "commands", None)
-    if commands is not None:
-        leaves: set[tuple[str, ...]] = set()
-        for name, child in commands.items():
-            leaves.update(_registered_leaf_commands(child, (*prefix, name)))
-        return leaves
-    return {prefix}
 
 
 def _write_close_fixture(root: Path, decision_basis: dict[str, Any]) -> str:

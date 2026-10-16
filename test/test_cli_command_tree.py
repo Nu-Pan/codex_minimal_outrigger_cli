@@ -12,6 +12,7 @@
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+- {{work-root}}/oracle/doc/dev_rule/test_rule.md
 """
 
 import inspect
@@ -75,6 +76,16 @@ def test_public_cli_leaf_commands_match_oracle(cli_command: click.Command) -> No
         ("tui",),
         ("resume",),
     }
+
+
+def test_public_leaf_commands_have_production_scenarios(
+    cli_command: click.Command,
+) -> None:
+    """実 CLI を実行しない通常検証でも、公開末端のケース追加漏れを検出する。"""
+    from test_production_cli import PRODUCTION_SCENARIO_COMMANDS
+
+    # 仕様との一致検査と同じ tree を使い、構築と末端列挙の実装を重ねない。
+    assert _leaves(cli_command) == PRODUCTION_SCENARIO_COMMANDS
 
 
 def test_help_renders_without_typer_click_compatibility_error(

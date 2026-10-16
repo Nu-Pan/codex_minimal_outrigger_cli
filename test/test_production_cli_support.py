@@ -18,19 +18,8 @@ from test_production_cli import (
     _completed_tui_turn,
     _run_refactor_until_confirmed,
 )
-from typer.main import get_command
-
-from main import app
 
 _SESSION_ID = "019efe07-4886-7423-b252-625febbe31eb"
-
-
-def test_public_leaf_commands_have_production_scenarios() -> None:
-    """実 CLI を実行しない通常検証でも、公開末端のケース追加漏れを検出する。"""
-    assert (
-        production_cli._registered_leaf_commands(get_command(app))
-        == production_cli.PRODUCTION_SCENARIO_COMMANDS
-    )
 
 
 def test_refactor_driver_interrupts_after_a_confirmed_unit(tmp_path) -> None:
