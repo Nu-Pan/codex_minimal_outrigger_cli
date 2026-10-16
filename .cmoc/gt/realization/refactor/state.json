@@ -1524,10 +1524,10 @@
     "last_investigated_at": "2026-10-16_19-56-18_364"
   },
   "test/test_runtime_codex_profile.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "1827aae3a806e5d90f8248fb93a7d4108bad3ee758f29e4a85df37aeeee79c26",
-    "last_investigated_at": "2026-10-13_09-35-14_280"
+    "investigation_required": false,
+    "last_investigation_result": "no_findings",
+    "last_investigated_sha256": "ad469c81a27df87178e192547cf1a60fb900c31d96fb58f8bb08ad5e63dceb2a",
+    "last_investigated_at": "2026-10-16_19-58-23_721"
   },
   "test/test_runtime_config.py": {
     "investigation_required": true,
