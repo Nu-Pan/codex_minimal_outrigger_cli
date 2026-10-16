@@ -89,7 +89,7 @@ def run_fixed_codex_exec(
 def test_codex_call_ids_are_process_safe_on_same_timestamp(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """並行・連続発行の通番を共有し、同一時刻でもログを分離する。"""
+    """並行・連続発行とログ分離、終了・ログ削除後の通番維持を検査する。"""
     root = tmp_path / "repo"
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
@@ -161,8 +161,10 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
             all_log_paths.extend(related_paths)
 
         assert len(all_log_paths) == len(set(all_log_paths))
-        # 実採番の共有と、子の終了後に親で再利用されないことを同じ起動で検査する。
         assert sorted(cc_sequences) == list(range(4))
+        # 子の終了・実ログの削除後の非再利用を、同じ起動で検査する。
+        for path in all_log_paths:
+            path.unlink()
         assert new_id(root, "cc").startswith("cc_000004_")
     finally:
         for process in started_processes:
