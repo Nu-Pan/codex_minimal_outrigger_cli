@@ -730,13 +730,23 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
         root / CMOC_IGNORE_PROBE,
         strict_local=True,
     )
-    tracked = run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
-    ignored = run_git(
+    return _cmoc_tracked_paths(root), _cmoc_ignore_returncode(root)
+
+
+def _cmoc_tracked_paths(root: Path) -> str:
+    """.cmoc/gu の index 内容を取得し、修復後も取り直せるようにする。"""
+    # ignore の成否とは分けて問い合わせ、index 修復の要否を決める。
+    return run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
+
+
+def _cmoc_ignore_returncode(root: Path) -> int:
+    """将来の管理 file に対する ignore probe の結果を返す。"""
+    # 修復経路では .gitignore と index を更新した後に一度だけ実行する。
+    return run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
         root,
         check=False,
-    )
-    return tracked, ignored.returncode
+    ).returncode
 
 
 def with_cmoc_ignore_pattern(content: str) -> str:
@@ -789,20 +799,22 @@ def _validate_ignore_path(path: Path, description: str) -> None:
 
 def ensure_cmoc_ignored(root: Path) -> None:
     """.gitignore と index を更新できる場面で .cmoc/gu を追跡対象外にする。"""
-    tracked, ignored_returncode = _cmoc_ignore_status(root)
+    # 更新・Git 実行の前に全 source を検証し、内容と index の修復を先に済ませる。
+    _validate_git_ignore_sources(root, root / CMOC_IGNORE_PROBE, strict_local=True)
+    tracked = _cmoc_tracked_paths(root)
     gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
         gitignore.write_text(updated_content)
 
-    if not tracked and ignored_returncode == 0:
-        return
-
     # 追跡対象がなければ、ignore 修復だけで済むため index 更新は起動しない。
     if tracked:
         run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"], root)
-    tracked, ignored_returncode = _cmoc_ignore_status(root)
+        tracked = _cmoc_tracked_paths(root)
+
+    # 修復前の probe と重複した source 検証を省き、最終状態だけで完了を判定する。
+    ignored_returncode = _cmoc_ignore_returncode(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
             ".cmoc/gu を git 追跡対象外にできませんでした。",

@@ -170,7 +170,7 @@ def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
     assert queries[("rev-parse", "--git-path", "info/exclude")] == 1
     assert queries[("config", "--path", "--get-all", "core.excludesFile")] == 1
     assert queries[("ls-files", "--", ".cmoc/gu")] == 2
-    assert queries[("check-ignore", "-q", git_module.CMOC_IGNORE_PROBE)] == 2
+    assert queries[("check-ignore", "-q", git_module.CMOC_IGNORE_PROBE)] == 1
     assert tracked.read_text() == "preserve input\n"
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
