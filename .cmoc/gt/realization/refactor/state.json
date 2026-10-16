@@ -1316,8 +1316,8 @@
   "test/test_codex_runtime_quota_retry.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "0faeeaf9dda4d90aa655e228c111f30d660c71fcce6b621a33a99787ae9fc99f",
-    "last_investigated_at": "2026-10-13_05-29-23_689"
+    "last_investigated_sha256": "af92c3797d66ff00099009c8a67a1c5d74a8efab1fba4e3f8f9485916b16040b",
+    "last_investigated_at": "2026-10-16_17-08-45_355"
   },
   "test/test_codex_runtime_recovery.py": {
     "investigation_required": true,

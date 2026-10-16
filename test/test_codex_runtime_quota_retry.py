@@ -3,7 +3,6 @@
 import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
-from itertools import count
 from pathlib import Path
 from threading import Event, Lock
 from typing import TextIO, cast
@@ -22,7 +21,6 @@ from oracle.acp_builder.quota_probe import (
     build_quota_availability_probe_parameter as build_canonical_quota_probe_parameter,
 )
 
-import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import SubcommandLogger
@@ -36,7 +34,7 @@ def quota_prompt_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """prompt・parameter の検査では root 探索結果だけを置換する。"""
     root = tmp_path / "repo"
     root.mkdir()
-    # 実 Git の root 導出は test_basic_runtime.py と polls_and_resumes に残し、
+    # 実 Git の root 導出は test_basic_runtime.py と test_codex_runtime_paths.py に残し、
     # context と正本 probe builder は実物を使う。
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
@@ -49,21 +47,14 @@ def quota_control_root(
     quota_prompt_root: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    nonpersistent_execution_ids: None,
+    nonpersistent_codex_ids: None,
 ) -> Path:
     """回復制御に必要な HOME・設定を隔離し、execution・call ID の永続採番を省く。"""
     root = quota_prompt_root
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
-    # logger・current_execution_id の採番も共通 fixture で置き換える。
-    # 実採番の結合は polls_and_resumes に残す。
+    # logger・current_execution_id・agent・Codex call の採番は共通 fixture を使う。
     # 永続性・process 間の採番は test_runtime_ids.py と test_codex_runtime_paths.py で検証する。
-    ids = count()
-    monkeypatch.setattr(
-        runtime_codex_exec,
-        "new_id",
-        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
-    )
     return root
 
 
@@ -99,19 +90,19 @@ def test_session_id_is_read_from_persisted_stdout_jsonl_log(tmp_path: Path) -> N
 
 def test_run_codex_exec_polls_and_resumes_after_quota(
     tmp_path: Path,
-    cli_repository: Path,
+    quota_prompt_root: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    nonpersistent_codex_ids: None,
 ) -> None:
     """相対 HOME と cwd の受け渡し、probe・元 session の resume を検証する。"""
-    root = cli_repository
+    root = quota_prompt_root
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     # 実 process の stdin・出力捕捉は test_codex_runtime_exec.py、相対 HOME の
     # cwd 基準の解決は test_codex_runtime_paths.py に残し、3 回の子起動を省く。
     # 初回・probe・resume には、呼び出し時に渡された cwd と env を照合する。
     relative_codex_home = "../codex_home"
     monkeypatch.setenv("CODEX_HOME", relative_codex_home)
-    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     timestamps = iter(
         [
             "2099-01-01_00-00-30_000",
@@ -396,7 +387,7 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
     """session ID がない quota 復帰で同じ prompt を再実行する。"""
     root = quota_control_root
     probe_prompt = quota_probe_prompt(root)
-    # 実 process の stdin・argv・出力保存は polls_and_resumes の代表ケースに残す。
+    # argv・cwd とログ保存の結合は polls_and_resumes の代表ケースに残す。
     calls = script_codex_calls(
         monkeypatch,
         [
