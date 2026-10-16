@@ -4,9 +4,15 @@ import json
 
 import pytest
 from _cli_support import runner, seed_search_config, terminal_primary_report
-from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_git
+from _git_support import (
+    RUN_BRANCH,
+    SESSION_BRANCH,
+    SESSION_ID,
+    current_branch,
+    make_repo,
+    run_git,
+)
 from test_feedback import (
-    _active_session,
     _context,
     _install_codex_outputs,
     _payload,
@@ -19,6 +25,7 @@ import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
 import sub_commands.feedback.close as close_module
 import sub_commands.feedback.decision as decision
+import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as report_module
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback_history import history_artifact, state_summary
@@ -314,15 +321,30 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     open_case, monkeypatch, fault
 ):
     root, issue = open_case
+    old = feedback_state.load_active_state(root)
     # report の拒否は current 切替前後で確認し、他の保存障害では同じ検査を重ねない。
     checks_report_refusal = fault in {"pointer_before", "partial_cleanup"}
-    session_id = _active_session(root, monkeypatch) if checks_report_refusal else None
+    session_id = None
+    if checks_report_refusal:
+        # 拒否の前提だけを保存する。session fork・doctor 修復との結合は
+        # test_feedback.py の後続 wave test と reported_case に残す。
+        session_id = SESSION_ID
+        session = SessionState(
+            session=SessionPart(
+                session_home_branch=current_branch(root),
+                session_fork_commit=old.generation_manifest["session_commit"],
+            )
+        )
+        run_git(root, "switch", "-c", SESSION_BRANCH)
+        write_state(state_path(root, session_id), session)
+        monkeypatch.setattr(
+            remediation_module, "doctor_preprocess_for_join", lambda: None
+        )
     _, late = store_agent_observation(
         root,
         _context(root, session_id=session_id),
         _payload(text="recovery の対象外の新規入力"),
     )
-    old = feedback_state.load_active_state(root)
     published = fault in {"pointer_after", "cleanup", "partial_cleanup"}
     if fault in {"history", "report"}:
         name = "write_immutable_bytes"
