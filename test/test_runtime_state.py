@@ -115,6 +115,11 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert active_session_for_home(tmp_path, "main") == path
     assert active_session_for_home(tmp_path, "other") is None
 
+    # 既存 file の更新でも run payload を消去し、session branch から復元できる。
+    state.run = RunPart()
+    write_state(path, state)
+    assert load_state_for_branch(tmp_path, SESSION_BRANCH) == (SESSION_ID, path, state)
+
 
 @pytest.mark.parametrize("branch", [None, 1])
 def test_load_state_rejects_non_string_branch(tmp_path: Path, branch: object) -> None:

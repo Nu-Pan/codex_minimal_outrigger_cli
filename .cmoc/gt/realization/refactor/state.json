@@ -1028,8 +1028,8 @@
   "src/commons/runtime_state.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "8466f2e9e6a8f85121ea694cf73ae9fe9d92086e103837b9de9f96e866b2b72e",
-    "last_investigated_at": "2026-10-12_12-48-14_461"
+    "last_investigated_sha256": "d13a609b2ae6c9789fa9dde1b8389019c80e14086a7a3fd19a1c43817c48da33",
+    "last_investigated_at": "2026-10-16_12-33-58_079"
   },
   "src/commons/runtime_windows_toast.py": {
     "investigation_required": true,
