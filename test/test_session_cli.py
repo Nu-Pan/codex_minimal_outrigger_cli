@@ -54,7 +54,11 @@ from main import app
 
 # session state を検査し、観測を送信しないため、collector の起動・probe は準備しない。
 # TCP/stdio の受理・拒否・drain と CLI との結合は test_feedback.py に残す。
-pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+# 実行 ID の永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py の
+# test_subcommand_logger_keeps_one_file_per_execution に残す。session ID の発行・衝突は実検査する。
+pytestmark = pytest.mark.usefixtures(
+    "feedback_without_transport", "nonpersistent_execution_ids"
+)
 
 
 def _seed_remote_tracking_branch(root: Path, branch: str, commit: str) -> None:
@@ -955,14 +959,11 @@ def test_session_completion_rejects_missing_state_fields(
 
 
 @pytest.fixture
-def session_preprocess(
-    monkeypatch: pytest.MonkeyPatch, nonpersistent_execution_ids: None
-) -> list[Path]:
+def session_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
     """session 固有の競合・失敗検査では doctor を省き、呼び出し先を記録する。"""
     # fork の競合・失敗検査は実 Git と pre-log の exclude 修復を使い、設定を準備しない。
     # fork→abandon/join の結合と doctor の修復・順序は正常系・linked worktree と
     # test_doctor_cli.py に残す。
-    # ログの exec ID だけ永続採番を省き、session ID の発行・衝突検査は実経路を通す。
     roots: list[Path] = []
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", roots.append)
     return roots

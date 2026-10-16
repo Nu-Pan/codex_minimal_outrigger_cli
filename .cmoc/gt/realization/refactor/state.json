@@ -1580,8 +1580,8 @@
   "test/test_session_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "7dac5c797eb85087395d7a02dec4657920e12a59aeff65be70d0162818fe9bac",
-    "last_investigated_at": "2026-10-13_10-56-11_585"
+    "last_investigated_sha256": "e92204f977d17009c9ac16e42854e6a05d1efd6c293db96ef72ba5e3f4bc68b6",
+    "last_investigated_at": "2026-10-16_20-34-52_330"
   },
   "test/test_skill_metadata.py": {
     "investigation_required": true,
