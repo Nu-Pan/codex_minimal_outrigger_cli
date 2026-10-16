@@ -262,12 +262,9 @@ def complete_close(repo: Path, record: dict[str, Any]) -> tuple[Path, ActiveStat
         )
         from .runtime_feedback_history import state_summary
 
-        next_issues = {
-            json.loads(item["content"])["issue_id"]: json.loads(item["content"])
-            for item in record["artifacts"]
-            if (repo / item["path"]).parent
-            == generation_directory(repo, generation["generation_id"]) / "issue"
-        }
+        # 検証済み base から対象だけを除き、publication 側で保存済み generation と照合する。
+        next_issues = dict(state.issues)
+        del next_issues[record["before"]["issue_id"]]
         publish_current_pointer(
             repo,
             generation_id=generation["generation_id"],
