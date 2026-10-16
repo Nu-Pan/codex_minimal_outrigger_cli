@@ -33,12 +33,7 @@ from unittest.mock import Mock
 import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
-from _cli_support import (
-    run_doctor,
-    runner,
-    seed_search_config,
-    terminal_primary_report,
-)
+from _cli_support import runner, seed_search_config, terminal_primary_report
 from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from oracle.acp_builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter as _build_canonical_normalize_parameter,
@@ -2831,19 +2826,23 @@ def test_empty_report_publishes_current_generation(
 
 @pytest.mark.usefixtures("feedback_without_transport")
 def test_feedback_preconditions_preserve_existing_changes_and_raw(
-    tmp_path: Path,
+    ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """不適合な session から run を開始せず、既存差分をそのまま保持する。"""
-    root = make_repo(tmp_path)
-    monkeypatch.chdir(root)
-    run_doctor(root)
+    # doctor の修復・公開 session fork との結合は後続 wave test に残す。
+    # ここでは準備済み session を使い、doctor 成功後の事前条件と保持を検査する。
+    root, session_branch, _state_path = ready_content_session
+    doctor = Mock()
+    monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", doctor)
+    run_git(root, "switch", "-c", "outside-session")
     session_id = None
     # 拒否後の保持を確認してから同じ入力を次の境界へ進め、Git/session の準備を共有する。
     # collector の受理・拒否・保存は transport と後続 wave の結合 test で検証する。
     for condition in ("inactive", "dirty_worktree", "dirty_index"):
         if condition == "dirty_worktree":
-            session_id = _active_session(root, monkeypatch)
+            run_git(root, "switch", session_branch)
+            session_id = SESSION_ID
             (root / "README.md").write_text("user change\n")
         elif condition == "dirty_index":
             run_git(root, "add", "README.md")
@@ -2856,6 +2855,8 @@ def test_feedback_preconditions_preserve_existing_changes_and_raw(
 
         result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
+        doctor.assert_called_once_with()
+        doctor.reset_mock()
         assert result.exit_code == 1, (condition, result.output)
         expected_error = (
             "feedback report は active session branch 上で実行してください。"
