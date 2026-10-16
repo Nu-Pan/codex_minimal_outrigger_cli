@@ -103,6 +103,21 @@ def apply_after_preprocess(monkeypatch):
 
 
 @pytest.fixture
+def join_after_preprocess(ready_join_session, monkeypatch):
+    """差分検査と復旧の検査は、修復済み session から join 本処理を実行する。"""
+    # doctor の修復・索引同期は test_doctor_cli.py、join との結合は
+    # test_realization_apply_fork_and_run_join_use_common_state と
+    # test_run_join_from_run_worktree_* に残す。merge 後の state 同期は実行する。
+    preprocess = Mock(return_value={})
+    monkeypatch.setattr(
+        run_join_module, "doctor_preprocess_changes_for_join", preprocess
+    )
+    yield ready_join_session
+    # CLI が join 前の doctor 呼び出しを省略する回帰も検出する。
+    preprocess.assert_called_with()
+
+
+@pytest.fixture
 def refactor_after_preprocess(ready_join_session, monkeypatch):
     """異常終了の検査には、修復・同期済みの session から本処理を実行する。"""
     # doctor の修復・索引同期・中断は test_doctor_cli.py、fork との結合は
@@ -2685,13 +2700,13 @@ def test_set_run_state_rejects_overwriting_terminal_state(
 
 
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
-    ready_join_session: tuple[Path, str, Path],
+    join_after_preprocess: tuple[Path, str, Path],
 ) -> None:
     """force-resolve が run branch の想定外 path だけを戻すことを確認する。"""
     # 通常名と glob 文字を含む名前を同じ run で検査し、Git 準備と join を共有する。
     unexpected_paths = ("oracle/unexpected.md", "oracle/unexpected[1].md")
-    root, _session_branch, state_path = ready_join_session
-    context = _prepare_run(ready_join_session)
+    root, _session_branch, state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
     (context.run_worktree / "README.md").write_text("allowed\n")
     for unexpected_path in unexpected_paths:
         (context.run_worktree / unexpected_path).write_text("unexpected\n")
@@ -2721,12 +2736,12 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
 
 
 def test_run_join_force_resolve_restores_realization_source_of_rename(
-    ready_join_session: tuple[Path, str, Path],
+    join_after_preprocess: tuple[Path, str, Path],
 ) -> None:
     """force-resolve が想定外 rename の realization 側を失わせないことを確認する。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    root, _session_branch, _state_path = ready_join_session
-    context = _prepare_run(ready_join_session)
+    root, _session_branch, _state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
     destination = context.run_worktree / "oracle" / "unexpected.md"
     destination.parent.mkdir(exist_ok=True)
     (context.run_worktree / "README.md").rename(destination)
@@ -2920,12 +2935,12 @@ def test_run_join_conflict_abort_failure_still_restores_session_tree(
 
 
 def test_run_join_keeps_merge_when_post_join_sync_fails(
-    ready_join_session: tuple[Path, str, Path],
+    join_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """post-join 同期失敗時は確定済み merge と run 資源を保持する。"""
-    root, _session_branch, state_path = ready_join_session
-    context = _prepare_run(ready_join_session)
+    root, _session_branch, state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
@@ -3041,14 +3056,14 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
 
 
 def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
-    ready_join_session: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
+    join_after_preprocess: tuple[Path, str, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """未解消時は付随編集も戻し、同じ run の再実行で統合と付随編集を確定する。"""
     # rollback 後の clean tree を成功経路にも使い、Git 競合の準備を重ねない。
     # joinable/error による hook の違いは test_apply_join_hook_selects_diff_base と
     # 公開 CLI の代表例で検査する。
-    root, _session_branch, state_path = ready_join_session
-    context = _prepare_run(ready_join_session)
+    root, _session_branch, state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
     (context.run_worktree / "README.md").write_text("run change\n")
     commit_work_unit(context.run_worktree, "run change")
     (root / "README.md").write_text("session change\n")
