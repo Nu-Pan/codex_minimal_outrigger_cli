@@ -39,6 +39,8 @@ def test_oracle_investigation_has_no_session_precondition(
         path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
     )
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    instruction = "oracle の根拠を調査する"
+    later_editor_content = "確定後に人間が再編集した本文"
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
@@ -65,6 +67,10 @@ def test_oracle_investigation_has_no_session_precondition(
         user_instruction: str,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の builder 呼び出しを記録する。"""
+        assert user_instruction in (
+            investigation_module.ORIGINAL_PROMPT_PLACEHOLDER,
+            instruction,
+        )
         events.append(
             "build-skeleton"
             if user_instruction == investigation_module.ORIGINAL_PROMPT_PLACEHOLDER
@@ -88,19 +94,21 @@ def test_oracle_investigation_has_no_session_precondition(
         events.append("editor")
         assert target_root == root
         editor_calls.append((work_path, complete_prompt_skeleton))
-        work_path.write_text("oracle の根拠を調査する", encoding="utf-8")
+        work_path.write_text(instruction, encoding="utf-8")
 
-    real_collect_prompt_editor_input = investigation_module.collect_prompt_editor_input
-
+    # 一回の読み取り・原文保存は test_prompt_editor_input.py、保存失敗時の
+    # CLI 停止は test_cli_tui.py に残す。ここでは保存を繰り返さず、
+    # 再編集後の file でなく確定済みの戻り値を builder に渡すことを検証する。
     def fake_collect_prompt_editor_input(
         target_root: Path,
         work_path: Path,
     ) -> str:
-        """一回の最終読み取りから抽出した入力を返す。"""
+        """確定後の人間による再編集を模し、固定した入力を返す。"""
         events.append("collect")
         assert target_root == root
         assert work_path == input_path
-        return real_collect_prompt_editor_input(target_root, work_path)
+        work_path.write_text(later_editor_content, encoding="utf-8")
+        return instruction
 
     monkeypatch.setattr(
         runtime_cli_module,
@@ -192,6 +200,7 @@ def test_oracle_investigation_has_no_session_precondition(
     assert "# oracle policy" in complete_prompt
     assert "# routing policy" in complete_prompt
     assert "# editor input handoff" in complete_prompt
-    assert "oracle の根拠を調査する" in complete_prompt
-    assert input_path.read_text(encoding="utf-8") == "oracle の根拠を調査する"
+    assert instruction in complete_prompt
+    assert later_editor_content not in complete_prompt
+    assert input_path.read_text(encoding="utf-8") == later_editor_content
     assert not list(input_path.parent.glob("*_cmpl.md"))
