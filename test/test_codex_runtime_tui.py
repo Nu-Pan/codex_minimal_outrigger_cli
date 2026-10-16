@@ -15,7 +15,12 @@ from uuid import NAMESPACE_URL, uuid5
 import oracle.other.path_model as path_model_module
 import pytest
 import typer
-from _codex_support import codex_arg_value, codex_override_config, setup_codex_home
+from _codex_support import (
+    codex_arg_value,
+    codex_override_config,
+    setup_codex_home,
+    stub_codex_overrides,
+)
 from _command_support import write_python_executable
 from _handoff_support import handoff_input
 from oracle.acp_builder.oracle.investigation.launch_tui import (
@@ -284,6 +289,9 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
 def test_initial_terminal_failure_never_retries_or_transitions(
     directory, monkeypatch, stdout, returncode
 ):
+    # argv・MCP 設定の結合は complete_prompt と share_start_time_settings のケースに残す。
+    # ここでは終端判定・ログ保存・移行禁止を検査し、起動設定の構築を繰り返さない。
+    stub_codex_overrides(monkeypatch)
     calls = fake_initial(monkeypatch, stdout=stdout, returncode=returncode)
     transition = Mock(side_effect=AssertionError("must not resume TUI"))
     recovery = Mock(side_effect=AssertionError("must not probe or wait"))
@@ -321,6 +329,8 @@ def test_initial_terminal_failure_never_retries_or_transitions(
 def test_initial_success_requires_saved_output_and_unique_uuid(
     directory, monkeypatch, stdout, output
 ):
+    # 起動設定は上の結合ケースに残し、保存出力と UUID の受理条件を検査する。
+    stub_codex_overrides(monkeypatch)
     calls = fake_initial(monkeypatch, stdout=stdout, output=output)
     transition = Mock()
     monkeypatch.setattr(tui_module, "_run_codex_tui_process", transition)
@@ -575,6 +585,9 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
 def test_public_resume_rejects_ineligible_source(
     directory, monkeypatch, tmp_path, condition
 ):
+    # current_settings と separate_process_resources のケースが設定・MCP の結合を検査する。
+    # 不適格な記録を用意するためだけの初回起動・TUI 移行には固定設定を使う。
+    stub_codex_overrides(monkeypatch)
     calls, source = failed_initial_success(directory, monkeypatch)
     rows = [json.loads(line) for line in source.read_text().splitlines()]
     record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
