@@ -11,6 +11,7 @@ import json
 import os
 import signal
 from collections import Counter
+from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -188,11 +189,20 @@ def _prepare_run(
 def ready_abandon_run(
     ready_run_session: tuple[Path, str, Path],
     request: pytest.FixtureRequest,
-) -> EditingRunContext:
-    """abandon の検査で使う run state を param から選ぶ。"""
-    return _prepare_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[EditingRunContext]:
+    """停止・cleanup の検査には、前処理後の active run を用意する。"""
+    # doctor の修復・索引同期は test_doctor_cli.py、abandon との実結合は
+    # test_run_join_preserves_active_state_when_cleanup_fails に残す。
+    # Git の資源解決・削除、state・tracking・report は製品の処理を通す。
+    context = _prepare_run(
         ready_run_session, run_state=getattr(request, "param", "joinable")
     )
+    preprocess = Mock()
+    monkeypatch.setattr(run_abandon_module, "run_doctor_preprocess", preprocess)
+    yield context
+    # 前処理の省略や、別 worktree を対象にする回帰も検出する。
+    preprocess.assert_called_with(context.session_worktree)
 
 
 @pytest.fixture
@@ -3203,9 +3213,14 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
     assert context.run_worktree.exists()
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
+    # 停止・cleanup test で省いた doctor と abandon の結合をここで検査する。
+    preprocess = Mock(wraps=run_abandon_module.run_doctor_preprocess)
+    monkeypatch.setattr(run_abandon_module, "run_doctor_preprocess", preprocess)
+
     abandoned = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
 
     assert abandoned.exit_code == 0, abandoned.output
+    preprocess.assert_called_once_with(root)
     assert _state(state_path)["run"]["state"] == "ready"
     assert not context.run_worktree.exists()
     assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
