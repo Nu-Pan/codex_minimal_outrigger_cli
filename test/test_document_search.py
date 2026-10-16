@@ -190,12 +190,14 @@ def _fake_node_model(base: Path, *, tokens_per_character: float = 1.0) -> None:
     (package / "package.json").write_text(
         json.dumps({"type": "module", "exports": "./index.mjs"})
     )
+    # 入力ログは終了後に読むため、破棄時に一括追記し、複数起動分は保持する。
     (package / "index.mjs").write_text(
         f"const tokensPerCharacter = {tokens_per_character};\n"
         """import { appendFileSync, writeFileSync } from "node:fs";
 export async function getLlama() {
   return { async loadModel() {
     let tokenizedCharacters = 0;
+    const embeddingInputs = [];
     return {
       tokenize(text) {
         const length = Array.from(text).length;
@@ -204,11 +206,14 @@ export async function getLlama() {
       },
       async dispose() {
         writeFileSync("tokenized-characters.json", String(tokenizedCharacters));
+        if (embeddingInputs.length) {
+          appendFileSync("embedding-inputs.jsonl", embeddingInputs.join("\\n") + "\\n");
+        }
       },
       async createEmbeddingContext() {
         return {
           async getEmbeddingFor(text) {
-            appendFileSync("embedding-inputs.jsonl", JSON.stringify(text) + "\\n");
+            embeddingInputs.push(JSON.stringify(text));
             const dimensions = Number(process.env.CMOC_TEST_DIMENSIONS || 2);
             return { vector: [1, ...Array(dimensions - 1).fill(0.125)] };
           },
