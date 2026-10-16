@@ -218,17 +218,15 @@ def _render_structured_value(value: Any) -> str:
             fragments.append(str(current))
         else:
             fragments.append(_DISPLAY_JSON_ENCODER.encode(current))
-    return "".join(fragments)
+    # surrogate の可視化は描画全体で一度だけ行い、キー・文字列の各行で反復しない。
+    return "".join(fragments).encode("utf-8", errors="backslashreplace").decode("utf-8")
 
 
 def _display_json_string(value: str) -> str:
     """引用符とバックスラッシュを区切りと区別して一度だけ表示する。"""
     # 改行で先に分割し、元のリテラル \\n を再解釈しない。
     segments = [
-        _DISPLAY_JSON_ENCODER.encode(segment)[1:-1]
-        .encode("utf-8", errors="backslashreplace")
-        .decode("utf-8")
-        for segment in value.split("\n")
+        _DISPLAY_JSON_ENCODER.encode(segment)[1:-1] for segment in value.split("\n")
     ]
     return '"' + "\n".join(segments) + '"'
 

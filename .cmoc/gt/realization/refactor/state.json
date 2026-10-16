@@ -980,8 +980,8 @@
   "src/commons/runtime_primary_report_render.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "7fca6c7a1eb06c9b25aafacda57d4d0a5780282b157fc10c5b79657023391dfe",
-    "last_investigated_at": "2026-10-12_11-00-58_926"
+    "last_investigated_sha256": "5332ff063e7119010783d83321cd160e970b54b0e9b0a15984c82f2320d7aee4",
+    "last_investigated_at": "2026-10-16_11-42-55_985"
   },
   "src/commons/runtime_primary_report_specs.py": {
     "investigation_required": true,
