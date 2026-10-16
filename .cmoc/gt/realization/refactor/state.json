@@ -1056,10 +1056,10 @@
     "last_investigated_at": "2026-10-16_12-52-16_990"
   },
   "src/oracle.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "e476648f073484004b64741d40d6d373fab223e001be01ac8051f9c5ab15e095",
-    "last_investigated_at": "2026-10-12_13-31-45_341"
+    "last_investigated_at": "2026-10-16_12-54-36_046"
   },
   "src/sub_commands/doctor.py": {
     "investigation_required": true,
