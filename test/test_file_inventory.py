@@ -540,13 +540,21 @@ def test_inventory_accepts_linked_worktree_git_file(
 
 
 def test_inventory_and_classifier_use_owning_repository_ignore_sources(
-    tmp_path: Path, cli_repository: Path
+    tmp_path: Path,
+    cli_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """列挙と単一 path 分類が owning repository の ignore source を反映する。"""
+    """owning repository の ignore source を反映し、重複 source は一度だけ検証する。"""
     root = cli_repository
     outer_global = tmp_path / "outer-global-ignore"
     outer_global.write_text("outer-global.txt\n")
     run_git(root, "config", "core.excludesFile", str(outer_global))
+    # 同じ source の同一表記・別表記も、この repository の列挙で検証する。
+    alias_directory = tmp_path / "alias-directory"
+    alias_directory.mkdir()
+    alias = alias_directory / ".." / outer_global.name
+    for source in (outer_global, alias):
+        run_git(root, "config", "--local", "--add", "core.excludesFile", str(source))
     (root / ".gitignore").write_text("outer-root.txt\n*.outer\n")
     subdirectory = root / "subdirectory"
     subdirectory.mkdir()
@@ -585,6 +593,18 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     (nested / "outer-root.txt").write_text("outer rules must not leak\n")
     (nested / "kept.outer").write_text("kept\n")
 
+    validated: list[Path] = []
+    original_validate = runtime_git._validate_global_git_ignore_path
+
+    def counting_validate(path: Path) -> None:
+        """検証された global ignore source を記録する。"""
+        validated.append(path)
+        original_validate(path)
+
+    monkeypatch.setattr(
+        runtime_git, "_validate_global_git_ignore_path", counting_validate
+    )
+
     _, realization_files = _relative_sets(
         root, enumerate_oracle_and_realization_files(root)
     )
@@ -603,47 +623,14 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     assert ignored_paths.isdisjoint(realization_files)
     assert "nested/outer-root.txt" in realization_files
     assert "nested/kept.outer" in realization_files
+    validated_sources = [path.resolve() for path in validated]
+    assert validated_sources.count(outer_global.resolve()) == 1
+    assert validated_sources.count(nested_global.resolve()) == 1
 
     # 同じ nested index と ignore source で、単一 path 分類の境界も検証する。
     assert is_realization_file_path(root, nested / "kept.outer")
     assert not is_realization_file_path(root, nested / "dropped.nested")
     assert not is_realization_file_path(root, nested / ".git" / "config")
-
-
-def test_inventory_validates_duplicate_global_ignore_source_once(
-    tmp_path: Path,
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """同一表記と別表記の重複が混在しても、同じ source は一度だけ検証する。"""
-    root = cli_repository
-    global_ignore = tmp_path / "global-ignore"
-    global_ignore.write_text("ignored.txt\n")
-    alias_directory = tmp_path / "alias-directory"
-    alias_directory.mkdir()
-    alias = alias_directory / ".." / global_ignore.name
-    for source in (global_ignore, global_ignore, alias):
-        run_git(root, "config", "--local", "--add", "core.excludesFile", str(source))
-    (root / "ignored.txt").write_text("ignored\n")
-
-    validated: list[Path] = []
-    original_validate = runtime_git._validate_global_git_ignore_path
-
-    def counting_validate(path: Path) -> None:
-        """検証された global ignore source を記録する。"""
-        validated.append(path)
-        original_validate(path)
-
-    monkeypatch.setattr(
-        runtime_git, "_validate_global_git_ignore_path", counting_validate
-    )
-
-    _, realization_files = _relative_sets(
-        root, enumerate_oracle_and_realization_files(root)
-    )
-
-    assert "ignored.txt" not in realization_files
-    assert [path.resolve() for path in validated].count(global_ignore.resolve()) == 1
 
 
 def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
@@ -694,18 +681,14 @@ def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
     monkeypatch.setattr(runtime_git, "_validate_git_ignore_sources", counting_validate)
     monkeypatch.setattr(runtime_git.os, "scandir", counting_scandir)
 
-    # repository だけを共有し、候補集合と基準値は種別ごとに作り直す。
+    # 混在する候補集合を基準に、一度に一方の種別だけ増やして比較する。
+    add_candidate("regular-file", "one")
+    add_candidate("ignored-symlink", "one")
+    enumerate_oracle_and_realization_files(root)
+    first_counts = (git_calls, source_validations, traversals)
+    assert source_validations == 1
+
     for kind in ("regular-file", "ignored-symlink"):
-        for path in source.iterdir():
-            path.unlink()
-        add_candidate(kind, "one")
-        git_calls = 0
-        source_validations = 0
-        traversals = 0
-
-        enumerate_oracle_and_realization_files(root)
-        first_counts = (git_calls, source_validations, traversals)
-
         for index in range(50):
             add_candidate(kind, f"candidate-{index}")
         git_calls = 0
