@@ -199,20 +199,20 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
     tmp_path, document_repository, document_search_clock
 ):
     root = document_repository
-    # 8 文書を 40 秒間隔で処理し、無進捗の期限内で同期全体を 600 秒超にする。
-    for number in range(7):
-        (root / f"oracle/doc/extra_{number}.md").write_text(f"# 原文 {number}\n")
+    # 1 文書の埋め込み保存・確認完了を 400 秒間隔にし、無進捗期限内で 600 秒を超す。
     observation, events = _observation(root)
 
     class ProgressingWorker(_InferenceDouble):
         def stream_chunks(self, documents, resumes, on_event, **kwargs):
             def progress(event):
-                document_search_clock.advance(40)
+                document_search_clock.advance(400)
                 on_event(event)
 
             super().stream_chunks(documents, resumes, progress, **kwargs)
 
-    config = replace(_tuning(), request_timeout_seconds=1)
+    config = replace(
+        _tuning(), request_timeout_seconds=1, sync_no_progress_timeout_seconds=500
+    )
     with closing(
         DocumentSearch(
             root,
@@ -223,13 +223,13 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
     ) as search:
         result = search.search("原文", observation=observation)
     assert result["status"] == "ok" and result["hits"]
-    assert events[-1]["elapsed_seconds"] == 640
+    assert events[-1]["elapsed_seconds"] == 800
     assert events[-1]["deadline_limits"]["search_request"] == 3600
     sync = next(e for e in events if e["event"] == "document_search_sync_finished")
-    assert sync["checked_document_count"] == 8
-    assert sync["persisted_chunk_count"] == 8
+    assert sync["checked_document_count"] == 1
+    assert sync["persisted_chunk_count"] == 1
     assert sync["no_progress_seconds"] == 0
-    assert sync["longest_no_progress_seconds"] == 40
+    assert sync["longest_no_progress_seconds"] == 400
 
 
 def test_doctor_sync_has_no_search_deadlines(
@@ -430,8 +430,9 @@ setInterval(() => {}, 1000);
         SimpleNamespace(monotonic=lambda: time.monotonic() + clock_offset),
     )
     observation, events = _observation(tmp_path)
+    # 停止 handler の準備は ready で確認するため、強制停止までの猶予を短くする。
     config = replace(
-        _tuning(), sync_no_progress_timeout_seconds=10, shutdown_grace_seconds=0.15
+        _tuning(), sync_no_progress_timeout_seconds=10, shutdown_grace_seconds=0.02
     )
     observation.configure(config, bounded=True)
     observation.begin_sync()
@@ -492,7 +493,7 @@ setInterval(() => {}, 1000);
                 break
             assert time.monotonic() < until, f"descendant is still running: {state}"
             time.sleep(0.001)
-        assert events[-1]["cleanup_seconds"] >= 0.1
+        assert events[-1]["cleanup_seconds"] >= config.shutdown_grace_seconds
         assert events[-1]["decision_seconds"]["post_sync_search"] is None
         assert (
             events[-1]["elapsed_seconds"]

@@ -1,4 +1,4 @@
-"""immutable feedback artifact の durability と再保存を検証する。
+"""feedback artifact と mutable state の durability・再保存を検証する。
 
 対応する oracle file:
 
@@ -14,7 +14,45 @@ from pathlib import Path
 
 import pytest
 
+import commons.runtime_feedback_state as state
 import commons.runtime_feedback_store as store
+
+
+@pytest.mark.parametrize("failure", [None, "file", "directory"])
+def test_mutable_write_flushes_before_publication_and_preserves_failure_state(
+    tmp_path, monkeypatch, failure
+):
+    """pointer の切替前後を区別し、同期失敗を隠さず回復用の内容を保つ。"""
+    path = tmp_path / "current.json"
+    previous = store.canonical_json_bytes({"generation": "previous"})
+    value = {"generation": "next"}
+    content = store.canonical_json_bytes(value)
+    path.write_bytes(previous)
+    events = []
+    real_fsync = os.fsync
+
+    def fsync(fd):
+        metadata = os.fstat(fd)
+        kind = "directory" if stat.S_ISDIR(metadata.st_mode) else "file"
+        events.append(kind)
+        if kind == "file":
+            assert metadata.st_size == len(content)
+        assert path.read_bytes() == (previous if kind == "file" else content)
+        if kind == failure:
+            raise OSError("injected flush failure")
+        real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+
+    if failure is None:
+        assert state._atomic_write_json(path, value) == store.sha256_bytes(content)
+    else:
+        with pytest.raises(OSError, match="injected flush failure"):
+            state._atomic_write_json(path, value)
+
+    assert events == (["file"] if failure == "file" else ["file", "directory"])
+    assert path.read_bytes() == (previous if failure == "file" else content)
+    assert list(tmp_path.iterdir()) == [path]
 
 
 def test_immutable_write_flushes_new_data_and_reuses_published_inode(

@@ -684,7 +684,11 @@ def _read_canonical_object(
     path: Path, description: str, *, expected_sha256: str | None = None
 ) -> _JsonObject:
     """通常 file の canonical JSON object を読む。"""
-    if _has_symlink_component(path) or not path.is_file():
+    if _has_symlink_component(path):
+        raise _corruption(
+            f"{description} path が symlink を含むため通常 file ではありません。", path
+        )
+    if not path.is_file():
         raise _corruption(f"{description} が通常 file ではありません。", path)
     try:
         content = path.read_bytes()
@@ -767,8 +771,10 @@ def _resolve_reference_path(
         )
     # symlink を含まない絶対 path は、同じ祖先を再走査せず .. だけ正規化する。
     candidate = Path(os.path.normpath(lexical_candidate))
-    expected = expected_root.resolve(strict=False)
-    if candidate != expected and expected not in candidate.parents:
+    # 字句上の配下なら期待 root の祖先も検査済み。別表記の場合だけ解決する。
+    if not candidate.is_relative_to(
+        expected_root.absolute()
+    ) and not candidate.is_relative_to(expected_root.resolve(strict=False)):
         raise _corruption(f"{description} path が期待 root 外です。", candidate)
     return candidate
 

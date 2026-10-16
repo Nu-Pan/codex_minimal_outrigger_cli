@@ -215,13 +215,11 @@ def _has_symlink_component(path: Path) -> bool:
     """path の lexical component に symlink が含まれるかを返す。"""
     # resolve せず祖先を調べ、存在しない子の親 symlink も拒否する。
     current = path.absolute()
-    while True:
-        parent = current.parent
-        if current == parent:
-            return False
+    while current.name:
         if current.is_symlink():
             return True
-        current = parent
+        current = current.parent
+    return False
 
 
 def _atomic_create(path: Path, content: bytes) -> bool:
@@ -527,8 +525,9 @@ def _normalized_evidence_path(repo: Path, raw_path: str) -> Path:
     return normalized
 
 
-def _fingerprint(path: Path, evidence_index: int) -> dict[str, object]:
+def _fingerprint(path: Path) -> dict[str, object]:
     """evidence file の現在 fingerprint と取得状態を返す。"""
+    # 内容を取得できない場合も、その時点の状態を保持する。
     state = "missing"
     digest: str | None = None
     try:
@@ -543,7 +542,6 @@ def _fingerprint(path: Path, evidence_index: int) -> dict[str, object]:
         state = "unreadable"
         digest = None
     return {
-        "evidence_index": evidence_index,
         "normalized_path": str(path),
         "state": state,
         "sha256": digest,
@@ -631,8 +629,9 @@ def validate_agent_payload(
             "suspected_secret", "required evidence has no meaning after redaction"
         )
 
-    # path evidence だけを正規化し、payload 本文と fingerprint の両方へ反映する。
+    # path は毎回再検査し、同じ正規化先の内容取得だけ submission 内で共有する。
     fingerprints: list[dict[str, object]] = []
+    fingerprints_by_path: dict[Path, dict[str, object]] = {}
     for index, item in enumerate(masked_evidence):
         if not isinstance(item, dict):
             continue
@@ -642,7 +641,11 @@ def validate_agent_payload(
         if not isinstance(raw_path, str):
             raise FeedbackRejected("evidence_empty", "path evidence requires a path")
         normalized = _normalized_evidence_path(repo, raw_path)
-        fingerprints.append(_fingerprint(normalized, index))
+        if normalized not in fingerprints_by_path:
+            fingerprints_by_path[normalized] = _fingerprint(normalized)
+        fingerprints.append(
+            {"evidence_index": index, **fingerprints_by_path[normalized]}
+        )
     return masked_value, fingerprints, redaction_count
 
 
@@ -854,22 +857,32 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
                 f"feedback observation root is not a regular directory: {root}"
             )
         current = os.path.dirname(current)
-    # 検査した inventory をそのまま使い、再列挙と同じ path の再検査を避ける。
+    # 親は directory ごとに検査し、各 file から同じ祖先を再走査しない。
+    # scandir の失敗を伝播させ、読めない subtree を空の inventory にしない。
     validated_paths: list[Path] = []
-    if root.exists():
-        for path in root.rglob("*"):
-            if path.is_dir() and not path.is_symlink():
-                continue
-            if (
-                _has_symlink_component(path)
-                or not path.is_file()
-                or path.suffix != ".json"
-                or not path.name.startswith("fbo_")
-            ):
-                raise ValueError(
-                    f"feedback observation store has an invalid artifact: {path}"
-                )
-            validated_paths.append(path)
+    directories = [root] if root.exists() else []
+    while directories:
+        directory = directories.pop()
+        if _has_symlink_component(directory):
+            raise ValueError(
+                f"feedback observation store has an invalid artifact: {directory}"
+            )
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                path = Path(entry.path)
+                mode = entry.stat(follow_symlinks=False).st_mode
+                if stat.S_ISDIR(mode):
+                    directories.append(path)
+                elif (
+                    not stat.S_ISREG(mode)
+                    or path.suffix != ".json"
+                    or not path.name.startswith("fbo_")
+                ):
+                    raise ValueError(
+                        f"feedback observation store has an invalid artifact: {path}"
+                    )
+                else:
+                    validated_paths.append(path)
     processed_ids = published_cleanup_observation_ids(repo)
     return sorted(path for path in validated_paths if path.stem not in processed_ids)
 

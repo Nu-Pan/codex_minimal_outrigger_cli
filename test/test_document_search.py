@@ -180,8 +180,8 @@ def _test_node_runtime(base: Path) -> None:
     node.symlink_to(shutil.which("node"))
 
 
-def _fake_node_model(base: Path) -> None:
-    """実 chunker に文字単位 tokenizer と記録可能な推論を与える。"""
+def _fake_node_model(base: Path, *, tokens_per_character: float = 1.0) -> None:
+    """実 chunker に処理量を記録する tokenizer と推論を与える。"""
     source = resources.files("commons.document_search_worker").joinpath("worker.mjs")
     (base / "worker.mjs").write_bytes(source.read_bytes())
     _test_node_runtime(base)
@@ -190,17 +190,30 @@ def _fake_node_model(base: Path) -> None:
     (package / "package.json").write_text(
         json.dumps({"type": "module", "exports": "./index.mjs"})
     )
+    # 入力ログは終了後に読むため、破棄時に一括追記し、複数起動分は保持する。
     (package / "index.mjs").write_text(
-        """import { appendFileSync } from "node:fs";
+        f"const tokensPerCharacter = {tokens_per_character};\n"
+        """import { appendFileSync, writeFileSync } from "node:fs";
 export async function getLlama() {
   return { async loadModel() {
+    let tokenizedCharacters = 0;
+    const embeddingInputs = [];
     return {
-      tokenize: (text) => Array.from(text),
-      async dispose() {},
+      tokenize(text) {
+        const length = Array.from(text).length;
+        tokenizedCharacters += length;
+        return Array(Math.ceil(length * tokensPerCharacter));
+      },
+      async dispose() {
+        writeFileSync("tokenized-characters.json", String(tokenizedCharacters));
+        if (embeddingInputs.length) {
+          appendFileSync("embedding-inputs.jsonl", embeddingInputs.join("\\n") + "\\n");
+        }
+      },
       async createEmbeddingContext() {
         return {
           async getEmbeddingFor(text) {
-            appendFileSync("embedding-inputs.jsonl", JSON.stringify(text) + "\\n");
+            embeddingInputs.push(JSON.stringify(text));
             const dimensions = Number(process.env.CMOC_TEST_DIMENSIONS || 2);
             return { vector: [1, ...Array(dimensions - 1).fill(0.125)] };
           },
@@ -279,41 +292,45 @@ def test_search_only_reads_oracle_doc_markdown(
     assert opened == ["oracle/doc/allowed.md"]
 
 
-def test_search_syncs_edits_and_reuses_unchanged_embeddings(tmp_path: Path) -> None:
+def test_search_syncs_edits_and_reuses_unchanged_embeddings(
+    tmp_path: Path, document_repository: Path
+) -> None:
     """編集・空白化・削除後の旧本文を返さず、無変更推論を再実行しない。"""
     pytest.importorskip("sqlite_vec")
-    root = _repo_with_docs(tmp_path)
+    # Git 分類・ignore は直前の読取り範囲 test と実 worktree の再利用 test に残す。
+    root = document_repository
     worker = _InferenceDouble()
-    search = DocumentSearch(root, _tuning(), worker=worker, installation_root=tmp_path)
-    first = search.search("内容")
-    assert first["status"] == "ok"
-    assert [hit["path"] for hit in first["hits"]] == ["oracle/doc/allowed.md"]
-    assert first["hits"][0]["ranges"] == [
-        {"start_line": 1, "end_line": 2, "max_similarity": 1.0}
-    ]
-    assert worker.operations == ["chunk_embed", "embed_query"]
+    with closing(
+        DocumentSearch(root, _tuning(), worker=worker, installation_root=tmp_path)
+    ) as search:
+        first = search.search("内容")
+        assert first["status"] == "ok"
+        assert [hit["path"] for hit in first["hits"]] == ["oracle/doc/allowed.md"]
+        assert first["hits"][0]["ranges"] == [
+            {"start_line": 1, "end_line": 2, "max_similarity": 1.0}
+        ]
+        assert worker.operations == ["chunk_embed", "embed_query"]
 
-    unchanged = search.search("内容")
-    assert unchanged == first
-    assert len(worker.operations) == 2
-    (root / "oracle/doc/allowed.md").write_text("# 変更後\n次の内容\n追加の行\n")
-    changed = search.search("内容")
-    assert changed["hits"] == [
-        {
-            "path": "oracle/doc/allowed.md",
-            "ranges": [{"start_line": 1, "end_line": 3, "max_similarity": 1.0}],
-        }
-    ]
-    assert worker.texts[-1] == "# 変更後\n次の内容\n追加の行\n"
-    assert worker.operations.count("chunk_embed") == 2
-    assert worker.operations.count("embed_query") == 1
+        unchanged = search.search("内容")
+        assert unchanged == first
+        assert len(worker.operations) == 2
+        (root / "oracle/doc/allowed.md").write_text("# 変更後\n次の内容\n追加の行\n")
+        changed = search.search("内容")
+        assert changed["hits"] == [
+            {
+                "path": "oracle/doc/allowed.md",
+                "ranges": [{"start_line": 1, "end_line": 3, "max_similarity": 1.0}],
+            }
+        ]
+        assert worker.texts[-1] == "# 変更後\n次の内容\n追加の行\n"
+        assert worker.operations.count("chunk_embed") == 2
+        assert worker.operations.count("embed_query") == 1
 
-    (root / "oracle/doc/allowed.md").write_text(" \n\t")
-    assert search.search("内容") == {"status": "ok", "hits": []}
-    (root / "oracle/doc/allowed.md").unlink()
-    sync = search.synchronize()
-    assert sync.deleted == 1 and sync.chunk_count == 0
-    assert "非公開の本文" not in str(worker.texts)
+        (root / "oracle/doc/allowed.md").write_text(" \n\t")
+        assert search.search("内容") == {"status": "ok", "hits": []}
+        (root / "oracle/doc/allowed.md").unlink()
+        sync = search.synchronize()
+        assert sync.deleted == 1 and sync.chunk_count == 0
 
 
 @pytest.mark.parametrize("edit_after_stream", [False, True])
@@ -692,10 +709,13 @@ def test_worker_reports_closed_output_pipe(tmp_path: Path, operation: str) -> No
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
-    """一括応答が Unicode の原文位置を保ち、overlap を節内に限る。"""
-    _fake_node_model(tmp_path)
-    body = "冒頭 éあ😀\n# A\n" + "長い本文" * 8 + "\n## B\n短い本文é😀\n"
+@pytest.mark.parametrize("tokens_per_character", [0.25, 1.0, 2.0])
+def test_worker_limits_overlap_and_tokenization_to_heading_sections(
+    tmp_path: Path, tokens_per_character: float
+) -> None:
+    """長い節を過剰に tokenize せず、token 上限・Unicode の位置・overlap を保つ。"""
+    _fake_node_model(tmp_path, tokens_per_character=tokens_per_character)
+    body = "冒頭 éあ😀\n# A\n" + "長い本文" * 256 + "\n## B\n短い本文é😀\n"
     tuning = replace(_tuning(), chunk_tokens=12, chunk_overlap_tokens=3)
     request = NodeSearchWorker(tmp_path, tuning)._request(
         "chunk_embed", {"documents": {"doc.md": body}, "config": asdict(tuning)}
@@ -725,14 +745,26 @@ def test_worker_limits_overlap_to_heading_sections(tmp_path: Path) -> None:
             start <= chunk["start"] < chunk["end"] <= end for start, end in sections
         )
         assert body[chunk["start"] : chunk["end"]] == excerpt
-        assert len(excerpt) <= tuning.chunk_tokens
-    assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文é😀\n"
+        assert math.ceil(len(excerpt) * tokens_per_character) <= tuning.chunk_tokens
+    if tokens_per_character <= 1.0:
+        assert body[chunks[-1]["start"] : chunks[-1]["end"]] == "## B\n短い本文é😀\n"
+    for previous, current in zip(chunks, chunks[1:]):
+        overlap = max(0, previous["end"] - current["start"])
+        assert math.ceil(overlap * tokens_per_character) <= tuning.chunk_overlap_tokens
+        if any(
+            start <= previous["start"] < current["end"] <= end
+            for start, end in sections
+        ):
+            assert overlap > 0
     covered = {
         index for chunk in chunks for index in range(chunk["start"], chunk["end"])
     }
     assert all(
         index in covered for index, char in enumerate(body) if not char.isspace()
     )
+    # 実時間のばらつきに依存せず、残り全文の反復 token 化への回帰を検出する。
+    tokenized_characters = int((tmp_path / "tokenized-characters.json").read_text())
+    assert tokenized_characters < 32 * len(body)
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
@@ -1098,81 +1130,110 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
     assert "result" not in response
 
 
-class _CandidateWorker(_InferenceDouble):
-    """候補位置と文書・query の embedding を制御し、製品経路で検証する。"""
+@pytest.fixture
+def candidate_worker(monkeypatch):
+    """候補の順位・上限・統合は、零埋めを省いた同じコサイン類似度で検査する。"""
+    from commons import runtime_document_search as module
 
-    def __init__(self, ranges, *, vectors=None):
-        super().__init__()
-        self.ranges = ranges
-        self.vectors = vectors
-        self.query_vector = (1, 0)
+    # この検査のベクトルは元から先頭二成分だけを使う。
+    # 実次元数での連携は worker の小容量 pipe・部分編集と資材検証に残す。
+    monkeypatch.setattr(
+        module,
+        "SEARCH_MATERIALS",
+        replace(SEARCH_MATERIALS, embedding_dimensions=2),
+    )
 
-    def run(self, operation, payload, **kwargs):
-        vector = super().run(operation, payload, **kwargs)
-        vector[: len(self.query_vector)] = self.query_vector
-        return vector
+    # 候補の検査では障害後の永続化を扱わないため、索引の fsync だけを省く。
+    # 実 sqlite-vec と commit/rollback は保ち、途中保存・復旧の test は通常設定で通す。
+    open_database = module._open_database
 
-    def stream_chunks(self, documents, resumes, on_event, **kwargs):
-        vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
-        for path, source in documents.items():
-            lines = source.splitlines(keepends=True)
-            ranges = self.ranges[path]
-            for ordinal in range(resumes[path], len(ranges)):
-                start, end = ranges[ordinal]
-                embedding = vector
-                if self.vectors is not None:
-                    components = self.vectors[path][ordinal]
-                    embedding = [*components] + [0.0] * (
-                        SEARCH_MATERIALS.embedding_dimensions - len(components)
+    def open_candidate_database(path):
+        connection = open_database(path)
+        connection.execute("pragma synchronous = off")
+        return connection
+
+    monkeypatch.setattr(module, "_open_database", open_candidate_database)
+
+    class _CandidateWorker:
+        def __init__(self, ranges, *, vectors=None):
+            self.operations = []
+            self.ranges = ranges
+            self.vectors = vectors
+            self.query_vector = (1, 0)
+
+        def run(self, operation, payload, **kwargs):
+            self.operations.append(operation)
+            assert operation == "embed_query"
+            return list(self.query_vector)
+
+        def stream_chunks(self, documents, resumes, on_event, **kwargs):
+            for path, source in documents.items():
+                lines = source.splitlines(keepends=True)
+                ranges = self.ranges[path]
+                for ordinal in range(resumes[path], len(ranges)):
+                    start, end = ranges[ordinal]
+                    embedding = list(
+                        self.vectors[path][ordinal]
+                        if self.vectors is not None
+                        else (1, 0)
+                    )
+                    on_event(
+                        {
+                            "kind": "chunk",
+                            "path": path,
+                            "ordinal": ordinal,
+                            "start": len("".join(lines[: start - 1])),
+                            "end": len("".join(lines[:end])),
+                            "embedding": embedding,
+                        }
                     )
                 on_event(
                     {
-                        "kind": "chunk",
+                        "kind": "document_complete",
                         "path": path,
-                        "ordinal": ordinal,
-                        "start": len("".join(lines[: start - 1])),
-                        "end": len("".join(lines[:end])),
-                        "embedding": embedding,
+                        "chunk_count": len(ranges),
                     }
                 )
-            on_event(
-                {"kind": "document_complete", "path": path, "chunk_count": len(ranges)}
-            )
+
+    return _CandidateWorker
 
 
 @pytest.mark.parametrize(
-    "candidate_count,available,similarities,limit_cases",
+    "candidate_count,candidates,limit_cases",
     [
         # 上限を一件超える候補で切捨てを検出し、同じ検証のための余分な保存を省く。
         # 件数条件は負の同点候補で通し、類似度の境界を全上限と直積にしない。
         # 引数の最大値 50 は設定上限 20 のケースで検査し、同じ 50 件の検索を重ねない。
-        (50, 51, [((-3, 4), -0.6)], [(None, 50), (20, 20)]),
-        (20, 21, [((-3, 4), -0.6)], [(None, 20), (50, 20)]),
-        # -1・0・1 は候補不足時に検査する。順位と件数による値の不変性は専用ケースで保つ。
-        (50, 7, [((1, 0), 1.0), ((0, 1), 0.0), ((-1, 0), -1.0)], [(None, 7)]),
-        (50, 0, [((1, 0), 1.0)], [(None, 0)]),
+        (50, [((1, 0), -0.6)] * 51, [(None, 50), (20, 20)]),
+        (20, [((1, 0), -0.6)] * 21, [(None, 20), (50, 20)]),
+        # -1・0・1 は三候補の一検索で検査し、境界値ごとの同期・query 保存を重ねない。
+        # 順位と件数による値の不変性は専用ケースで保つ。
+        (50, [((-3, 4), 1.0), ((-4, -3), 0.0), ((3, -4), -1.0)], [(None, 3)]),
+        (50, [], [(None, 0)]),
     ],
     ids=["candidate-cap", "configured-cap", "similarity-boundaries", "empty"],
 )
 def test_mcp_success_schema_and_candidate_limits(
     tmp_path,
     document_repository,
+    candidate_worker,
     candidate_count,
-    available,
-    similarities,
+    candidates,
     limit_cases,
 ):
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
+    # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     root = document_repository
     path = "oracle/doc/allowed.md"
-    # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
-    (root / path).write_text("候補\n" * available)
-    worker = _CandidateWorker({path: [(i + 1, i + 1) for i in range(available)]})
-    cases = [
-        (vector, similarity, limit, expected)
-        for vector, similarity in similarities
-        for limit, expected in limit_cases
-    ]
+    available = len(candidates)
+    similarities = sorted((similarity for _, similarity in candidates), reverse=True)
+    (root / path).write_text("".join(f"候補 {vector}\n" for vector, _ in candidates))
+    worker = candidate_worker(
+        {path: [(i + 1, i + 1) for i in range(available)]},
+        vectors={path: [vector for vector, _ in candidates]},
+    )
+    # 負の成分を含む非単位 query で、query 側の正規化も検証する。
+    worker.query_vector = (-3, 4)
     with closing(
         DocumentSearch(
             root,
@@ -1182,11 +1243,8 @@ def test_mcp_success_schema_and_candidate_limits(
         )
     ) as search:
         tool = _listed_search_tool(search)
-        # query を変え、各類似度・上限の組合せで推論経路を残す。
-        for request_id, (vector, similarity, limit, expected) in enumerate(
-            cases, start=1
-        ):
-            worker.query_vector = vector
+        # query を変え、各上限で推論経路を残す。
+        for request_id, (limit, expected) in enumerate(limit_cases, start=1):
             worker.operations.clear()
             arguments = {"query": f"候補 {request_id}"}
             if limit is not None:
@@ -1210,16 +1268,20 @@ def test_mcp_success_schema_and_candidate_limits(
                 assert len(ranges) == expected
                 assert all(
                     1 <= location["start_line"] == location["end_line"] <= available
-                    and location["max_similarity"] == pytest.approx(similarity)
+                    and location["max_similarity"]
+                    == pytest.approx(candidates[location["start_line"] - 1][1])
                     for location in ranges
                 )
+                assert [
+                    location["max_similarity"] for location in ranges
+                ] == pytest.approx(similarities[:expected])
             else:
                 assert result["hits"] == []
             assert worker.operations == (["embed_query"] if expected else [])
 
 
 def test_mcp_aggregates_current_locations_without_excerpts(
-    tmp_path, document_repository
+    tmp_path, document_repository, candidate_worker
 ):
     """重複・入れ子・連鎖する重なりの最大値を保ち、ファイルと範囲を類似度順に返す。"""
     root = document_repository
@@ -1227,7 +1289,7 @@ def test_mcp_aggregates_current_locations_without_excerpts(
     other = "oracle/doc/second.md"
     (root / other).write_text("別の原文\n")
     (root / path).write_text("".join(f"原文 {i}\n" for i in range(81)))
-    worker = _CandidateWorker(
+    worker = candidate_worker(
         {
             path: [(10, 24), (20, 30), (10, 24), (70, 81), (1, 1), (29, 40), (12, 12)],
             other: [(1, 1)],
@@ -1310,7 +1372,7 @@ def test_mcp_search_failures_match_output_schema(tmp_path, monkeypatch, code):
 
 
 def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
-    tmp_path, document_repository
+    tmp_path, document_repository, candidate_worker
 ):
     """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
     root = document_repository
@@ -1320,7 +1382,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
     available = candidate_count + 1
     (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
     vectors = [(i - available // 2, 20) for i in range(available)]
-    worker = _CandidateWorker(
+    worker = candidate_worker(
         {path: [(i + 1, i + 1) for i in range(available)]}, vectors={path: vectors}
     )
     expected = {i + 1: x / math.hypot(x, y) for i, (x, y) in enumerate(vectors)}
@@ -1371,18 +1433,20 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
 
 
 def test_mcp_candidate_limit_applies_before_range_merging(
-    tmp_path, document_repository
+    tmp_path, document_repository, candidate_worker
 ):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
     root = document_repository
     path = "oracle/doc/allowed.md"
     # 20・21 件の採用で統合前の上限違反を検出する。50 の境界は別ケースで保つ。
     candidate_count = 21
-    available = candidate_count + 1
-    (root / path).write_text("".join(f"候補 {i}\n" for i in range(available)))
-    worker = _CandidateWorker(
-        {path: [(i + 1, available) for i in range(available)]},
-        vectors={path: [(i + 1, 1) for i in range(available)]},
+    # 上位 20 件は同じ本文片にし、22 件の候補を三種類の cache 保存だけで用意する。
+    # 21 位は上位と重なり、22 位は離す。統合後の補充や上限無視で結果が変わる。
+    # 異なる embedding の厳密な順位は直前の専用ケースに残す。
+    (root / path).write_text("上限外\n重なる候補\n上位の重複候補\n")
+    worker = candidate_worker(
+        {path: [(1, 1), (2, 3)] + [(3, 3)] * 20},
+        vectors={path: [(0, 1), (3, 4)] + [(1, 0)] * 20},
     )
     with closing(
         DocumentSearch(
@@ -1394,7 +1458,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(
     ) as search:
         tool = _listed_search_tool(search)
         # 同じ query の上限だけを変え、索引と query embedding を再利用する。
-        for limit in (20, candidate_count):
+        for limit, start_line in ((20, 3), (candidate_count, 2)):
             response = _response(
                 {
                     "jsonrpc": "2.0",
@@ -1413,11 +1477,9 @@ def test_mcp_candidate_limit_applies_before_range_merging(
                     "path": path,
                     "ranges": [
                         {
-                            "start_line": available - limit + 1,
-                            "end_line": available,
-                            "max_similarity": pytest.approx(
-                                available / math.hypot(available, 1)
-                            ),
+                            "start_line": start_line,
+                            "end_line": 3,
+                            "max_similarity": 1.0,
                         }
                     ],
                 }
@@ -1425,7 +1487,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(
 
 
 def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
-    tmp_path, monkeypatch, document_repository
+    tmp_path, monkeypatch, document_repository, candidate_worker
 ):
     """採用上限外へ隠れる異常値や演算失敗も、成功を併記せず MODEL_FAILURE にする。"""
     from commons import runtime_document_search as module
@@ -1437,7 +1499,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
     available = candidate_count + 1
     # 同じ正常ベクトルの本文も共有し、位置・件数を保って余分な cache 保存を省く。
     (root / path).write_text("異常候補\n" + "正常候補\n" * candidate_count)
-    worker = _CandidateWorker(
+    worker = candidate_worker(
         {path: [(i + 1, i + 1) for i in range(available)]},
         vectors={path: [(0, 1)] + [(1, 0)] * candidate_count},
     )

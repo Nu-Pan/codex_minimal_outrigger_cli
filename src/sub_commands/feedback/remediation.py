@@ -367,7 +367,8 @@ def _wave_loop(
             previous_aggregates=aggregates,
             observed_at=captured_at,
         )
-        files = decision.worktree_inputs(context.run_worktree)
+        # 候補がない反復では照合する判定根拠がない。次の intake では改めて判断する。
+        files = decision.worktree_inputs(context.run_worktree) if candidates else {}
         pending = {}
         for identity, candidate in sorted(candidates.items()):
             history = decision.issue_history(context.repo, manifest, identity)
@@ -839,6 +840,8 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
         context, seal["run_head"]
     ):
         raise _failure("feedback run HEAD が join 後 session tree から到達できません。")
+    # 到達可能性はこの join 検証内で commit ごとに共有し、再実行時は取り直す。
+    reachable_commits = {seal["run_head"]}
     files = decision.worktree_inputs(context.session_worktree)
     merged_reference = manifest["run"]["merged"]
     merged = (
@@ -876,8 +879,11 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
             or artifact_reference(context.repo, call_path) != call_log
         ):
             raise _failure("feedback issue の call log hash が一致しません。")
+        reachable = audit["after_commit"] in reachable_commits or _is_ancestor(
+            context, audit["after_commit"]
+        )
         if (
-            not _is_ancestor(context, audit["after_commit"])
+            not reachable
             or _diff_hash(
                 context.session_worktree, audit["before_commit"], audit["after_commit"]
             )
@@ -886,6 +892,7 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
             raise _failure(
                 "feedback issue commit または net 差分 hash を確認できません。"
             )
+        reachable_commits.add(audit["after_commit"])
         paths.update(audit["changed_paths"])
     # 後続 issue が同じ path を編集できるため、最終 run tree と session tree を比較する。
     different = {

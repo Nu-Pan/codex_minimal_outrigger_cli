@@ -13,10 +13,12 @@ from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli
+import commons.runtime_codex_exec as runtime_codex_exec
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
 import commons.runtime_download_asset_cache as asset_cache_module
+import commons.runtime_editor_input_handoff_protocol as handoff_protocol
 import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
 import commons.runtime_windows_toast as runtime_windows_toast
@@ -126,9 +128,12 @@ def feedback_publication_session(
     feedback_without_transport: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
-    """案件の publication 検査には、修復不要の session を用意する。"""
+    """案件の publication 検査には、修復不要の session と同期を待たない保存を使う。"""
     # doctor の修復・設定検査は test_doctor_cli.py、feedback との結合は
     # test_feedback.py の repairs_sequential_waves_and_preserves_late_intake に残す。
+    # fsync の順序・失敗・再保存は test_feedback_store.py、実同期との結合は
+    # 上記の wave test に残す。write・rename・hash 検査と recovery は実行する。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
     # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
     monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", lambda: None)
     root, _session_branch, _state_path = ready_join_session
@@ -149,6 +154,27 @@ def nonpersistent_execution_ids(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def nonpersistent_codex_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """永続採番を検査しない exec test で、実行・agent・Codex call ID を生成する。"""
+    # 永続採番は test_runtime_ids.py、実採番と log の結合・process 間の共有は
+    # test_codex_runtime_paths.py に残し、ログ間の ID 対応はここでも検査する。
+    monkeypatch.setattr(runtime_codex_exec, "new_id", runtime_logging.new_id)
+
+
+@pytest.fixture
+def nonpersistent_handoff_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """採番を検査しない handoff test で、実行・target ID の永続保存を省く。"""
+    # 永続採番は test_runtime_ids.py、実採番と target の結合は
+    # test_editor_input_handoff.py の editor 待機ケースに残す。
+    # route の保存・解決・削除と TCP lifecycle は実処理を通す。
+    monkeypatch.setattr(handoff_protocol, "new_id", runtime_logging.new_id)
+
+
+@pytest.fixture
 def cli_terminal_directory(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -164,6 +190,11 @@ def cli_terminal_directory(
     monkeypatch.setattr(runtime_cli, "repo_root", lambda: root)
     monkeypatch.setattr(
         runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
+    )
+    # pending の inventory・件数・通知境界は test_feedback.py、結果の引き渡しは
+    # test_runtime_cli.py に残し、表示・report の検査で空の store を毎回検証しない。
+    monkeypatch.setattr(
+        runtime_cli, "feedback_completion_counts", lambda _root: (0, [])
     )
     return root
 

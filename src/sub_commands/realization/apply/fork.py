@@ -159,14 +159,17 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             if unexpected:
                 raise _unexpected_change_error(unexpected)
             agent_commit_check_active = False
-            # 停止後の差分検査が空なら commit の準備も不要。
+            # 停止後の HEAD・差分検査で無変更が確定したら、commit の準備と
+            # 履歴差分の再照会は不要。
             # no-op join と比較始点の更新は既存の run lifecycle に任せる。
             if post_agent_paths:
                 commit_work_unit(
                     context.run_worktree,
                     "cmoc realization apply fork",
                 )
-            changes = tree_changes(context.run_worktree, context.run_fork_commit)
+                changes = tree_changes(context.run_worktree, context.run_fork_commit)
+            else:
+                changes = []
         start_subcommand_step(6, "run を joinable に更新", "publish joinable")
         joinable_publication_attempted = True
         set_run_state(context, "joinable")

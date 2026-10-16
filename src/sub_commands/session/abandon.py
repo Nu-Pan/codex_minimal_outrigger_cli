@@ -18,6 +18,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
+from commons.runtime_paths import reuse_root_queries
 from commons.runtime_primary_report import update_primary_report_fields
 
 
@@ -34,11 +35,13 @@ def cmoc_session_abandon_impl() -> None:
 
 def _cmoc_session_abandon_body() -> TerminalResult:
     """active session を home branch へ merge せず破棄する。"""
-    repo = repo_root()
+    # 同じ起点の両 root だけを共有し、lock 待ち前に再利用の区間を閉じる。
+    with reuse_root_queries():
+        repo = repo_root()
+        work = work_root()
     # session join/fork と state の事前検証・branch cleanup が競合しないよう、
     # session lifecycle 全体を同じ repository lock で直列化する。
     with session_fork_lock(repo):
-        work = work_root()
         branch = current_branch(work)
         update_primary_report_fields(
             session_branch=branch,

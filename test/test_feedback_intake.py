@@ -133,8 +133,10 @@ def test_new_receipt_rejects_raw_outside_observation_store(tmp_path):
 
 
 @pytest.fixture
-def cleanup_receipts(tmp_path):
-    # 登録・durability は既存の intake・store test に残し、cleanup の固定入力だけ作る。
+def cleanup_receipts(tmp_path, monkeypatch):
+    # 登録は intake の正常ケース、flush の順序・失敗は test_feedback_store.py で検査する。
+    # cleanup の削除・台帳更新・再開は実行し、ディスク同期待ちだけを省く。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
     inputs = [_raw_input(tmp_path, "fbo_" + str(index) * 32) for index in (1, 2, 3)]
     _seed_receipts(tmp_path, inputs)
     return (

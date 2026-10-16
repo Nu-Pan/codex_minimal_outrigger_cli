@@ -245,6 +245,7 @@ def rewrite_primary_report(path: Path, content: str) -> None:
     """既存の primary report を更新し、失敗時も保存済み内容を保持する。"""
     temporary_path: Path | None = None
     try:
+        # close による flush 後に置換し、途中失敗では既存 report を保持する。
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
@@ -254,8 +255,6 @@ def rewrite_primary_report(path: Path, content: str) -> None:
         ) as temporary_file:
             temporary_path = Path(temporary_file.name)
             temporary_file.write(content)
-            temporary_file.flush()
-            os.fsync(temporary_file.fileno())
         os.replace(temporary_path, path)
         _require_saved_report(path)
     except BaseException as exc:

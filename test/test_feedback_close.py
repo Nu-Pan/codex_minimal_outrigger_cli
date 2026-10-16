@@ -4,9 +4,14 @@ import json
 
 import pytest
 from _cli_support import runner, seed_search_config, terminal_primary_report
-from _git_support import RUN_BRANCH, SESSION_ID, current_branch, make_repo, run_git
+from _git_support import (
+    RUN_BRANCH,
+    SESSION_BRANCH,
+    SESSION_ID,
+    current_branch,
+    run_git,
+)
 from test_feedback import (
-    _active_session,
     _context,
     _install_codex_outputs,
     _payload,
@@ -19,6 +24,7 @@ import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
 import sub_commands.feedback.close as close_module
 import sub_commands.feedback.decision as decision
+import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as report_module
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback_history import history_artifact, state_summary
@@ -87,13 +93,20 @@ def reported_case(ready_content_session, monkeypatch):
 
 
 @pytest.fixture
-def close_repository(tmp_path, monkeypatch):
+def close_repository(committed_repository, monkeypatch):
     # close 固有の検査には session を作らず、report を実行するケースだけで準備する。
     # report から close への結合と入力消費は reported_case の検査に残す。
     # doctor 内部の修復・索引同期は専用 test と reported_case で検証する。
     # close が前処理の失敗を越えて更新しないことは、この file の失敗 test に残す。
     monkeypatch.setattr(close_module, "run_doctor_preprocess", lambda _root: None)
-    root = make_repo(tmp_path)
+    # 同期の順序・失敗・再保存は test_feedback_store.py、close と実同期の結合は
+    # reported_case に残す。保存・recovery の検査で同じディスク同期待ちを重ねない。
+    # write・rename・hash 検査と、確定点前後の障害注入・cleanup は実処理を通す。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
+    # 保存済み案件には実 HEAD と README の根拠だけを用意し、追跡 file の準備を省く。
+    # 追跡済み差分・doctor との結合は reported_case に残す。
+    root = committed_repository
+    (root / "README.md").write_text("# repo\n")
     monkeypatch.chdir(root)
     seed_search_config(root)
     monkeypatch.setattr(
@@ -314,15 +327,30 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     open_case, monkeypatch, fault
 ):
     root, issue = open_case
+    old = feedback_state.load_active_state(root)
     # report の拒否は current 切替前後で確認し、他の保存障害では同じ検査を重ねない。
     checks_report_refusal = fault in {"pointer_before", "partial_cleanup"}
-    session_id = _active_session(root, monkeypatch) if checks_report_refusal else None
+    session_id = None
+    if checks_report_refusal:
+        # 拒否の前提だけを保存する。session fork・doctor 修復との結合は
+        # test_feedback.py の後続 wave test と reported_case に残す。
+        session_id = SESSION_ID
+        session = SessionState(
+            session=SessionPart(
+                session_home_branch=current_branch(root),
+                session_fork_commit=old.generation_manifest["session_commit"],
+            )
+        )
+        run_git(root, "switch", "-c", SESSION_BRANCH)
+        write_state(state_path(root, session_id), session)
+        monkeypatch.setattr(
+            remediation_module, "doctor_preprocess_for_join", lambda: None
+        )
     _, late = store_agent_observation(
         root,
         _context(root, session_id=session_id),
         _payload(text="recovery の対象外の新規入力"),
     )
-    old = feedback_state.load_active_state(root)
     published = fault in {"pointer_after", "cleanup", "partial_cleanup"}
     if fault in {"history", "report"}:
         name = "write_immutable_bytes"
@@ -599,14 +627,12 @@ def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
     assert state.current["result"] == "attention"
     assert state.issues[issue["issue_id"]]["case_id"] == issue["case_id"]
     assert state.history[-1]["events"][0]["before"] == issue
-    assert _close(issue).exit_code == 1
-    _install_codex_outputs(
-        monkeypatch, _remediation_output(issue["issue_id"], "already_resolved")
-    )
-    result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == 0, result.output
-    assert feedback_state.load_active_state(root).issues == {}
-    assert _close(issue).exit_code == 1
+    # 終了後の close 拒否は、両終了判定を publication する
+    # test_agent_issues_are_compacted_then_removed_for_terminal_verdicts に集約する。
+    rejected = _close(issue)
+    assert rejected.exit_code == 1, rejected.output
+    assert "human_required の案件は手動 close の対象外" in rejected.output
+    assert feedback_state.load_active_state(root) == state
 
 
 def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(

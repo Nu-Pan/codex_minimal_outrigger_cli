@@ -230,7 +230,10 @@ def current_subcommand_logger() -> SubcommandLogger | None:
 
 def current_execution_id(repository: Path) -> str:
     """現在の最外側実行 ID を返し、単独 runtime 利用時は新規発行する。"""
+    # 同じ表記なら探索せず、異なる表記の root だけ実パスで照合する。
     logger = current_subcommand_logger()
-    if logger is not None and logger.root.resolve() == repository.resolve():
+    if logger is not None and (
+        logger.root == repository or logger.root.resolve() == repository.resolve()
+    ):
         return logger.execution_id
     return new_id(repository, "exec")

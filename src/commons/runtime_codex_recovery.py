@@ -12,7 +12,6 @@ from types import FrameType
 from typing import Literal
 
 from .runtime_errors import CmocError
-from .runtime_feedback_store import uuid7_prefixed
 from .runtime_logging import SubcommandLogger
 from .runtime_paths import console_timestamp
 
@@ -24,9 +23,16 @@ _CANCELLATION: ContextVar[threading.Event | None] = ContextVar(
 _CONDITION = threading.Condition()
 
 
+def _new_recovery_id() -> str:
+    # 中断制御だけを使う process では feedback store と schema 検査を読み込まない。
+    from .runtime_feedback_store import uuid7_prefixed
+
+    return uuid7_prefixed("rcv_")
+
+
 @dataclass
 class _RecoveryGroup:
-    recovery_id: str = field(default_factory=lambda: uuid7_prefixed("rcv_"))
+    recovery_id: str = field(default_factory=_new_recovery_id)
     done: bool = False
     error: BaseException | None = None
     outcome: CodexOutcome = "failed"

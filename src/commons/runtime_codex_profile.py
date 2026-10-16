@@ -121,26 +121,26 @@ def run_process_id_file_lock(path: Path) -> Iterator[None]:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def _validate_tracked_process_file(path: Path) -> None:
-    """Codex child を起動する前に tracking file の形式を検証する。"""
+def _read_tracked_process_file(path: Path) -> list[str]:
+    """tracking file を読み、形式を検証した非空行を返す。"""
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     # abandon は壊れた tracking file を停止対象なしとして扱うため、壊れた既存 state に
     # child 行だけを追記すると、実行中 process を cleanup できないまま worktree を破棄する。
     lines = [
-        line.split()
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
-    if not lines or len(lines[0]) not in {1, 2}:
+    parent = lines[0].split() if lines else []
+    if len(parent) not in {1, 2}:
         raise OSError(f"invalid run process tracking file: {path}")
     try:
-        parent_id = int(lines[0][0])
-        parent_start_time = int(lines[0][1]) if len(lines[0]) == 2 else None
+        parent_id = int(parent[0])
+        parent_start_time = int(parent[1]) if len(parent) == 2 else None
         if not _is_valid_process_id(parent_id) or (
             parent_start_time is not None and parent_start_time < 0
         ):
             raise ValueError
-        for parts in lines[1:]:
+        for line in lines[1:]:
+            parts = line.split()
             if len(parts) not in {3, 4} or parts[0] != "child":
                 raise ValueError
             child_id = int(parts[1])
@@ -157,6 +157,7 @@ def _validate_tracked_process_file(path: Path) -> None:
                 raise ValueError
     except (IndexError, ValueError) as exc:
         raise OSError(f"invalid run process tracking file: {path}") from exc
+    return lines
 
 
 def open_process_fd(process_id: int, process_name: str = "run process") -> int | None:
@@ -452,6 +453,8 @@ def _descendant_processes(
 ) -> tuple[tuple[int, int], ...]:
     # parent の starttime を再確認し、別 process の子を取り込まない。
     parent_ids = {pid for pid, start in parents if process_start_time(pid) == start}
+    if not parent_ids:
+        return ()
     descendants: list[tuple[int, int]] = []
     for path in Path("/proc").iterdir():
         if not path.name.isdigit():
@@ -1312,7 +1315,7 @@ def run_tracked_codex_subprocess(
     try:
         try:
             with run_process_id_file_lock(tracking_path):
-                _validate_tracked_process_file(tracking_path)
+                _read_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
                 # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
                 # tracking 更新に失敗しても、後から PGID を再探索して別 group を停止しない
@@ -1455,12 +1458,11 @@ def _record_tracked_child_process(
     path: Path, process_id: int, process_group_id: int | None = None
 ) -> int:
     """Codex child の identity を tracking file へ保存し、start time を返す。"""
-    _validate_tracked_process_file(path)
+    # 検証済みの行を更新にも使い、同じ tracking file の再読・再分割を省く。
+    lines = _read_tracked_process_file(path)
     start_time = process_start_time(process_id)
     if start_time is None:
         raise OSError(f"process {process_id} start time is unavailable")
-    current = path.read_text(encoding="utf-8")
-    lines = [line for line in current.splitlines() if line.strip()]
     group_id = process_id if process_group_id is None else process_group_id
     child_line = f"child {process_id} {start_time} {group_id}"
     lines = [line for line in lines if not line.startswith(f"child {process_id} ")]
@@ -1506,15 +1508,14 @@ def _remove_tracked_child_process(
         path.write_text(("\n".join(lines) + "\n") if lines else "", encoding="utf-8")
 
 
-def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
-    """Structured Output schema を指定 root の内容 hash store へ配置する。"""
-    if schema_source_path is None:
-        return None
+def prepare_schema(root: Path, schema_source_path: Path) -> tuple[Path, str]:
+    """schema を内容 hash store へ配置し、保存先と検証用の本文を返す。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # hash path と保存本文を schema source の UTF-8 bytes に一致させるため、
     # Path.read_text() の改行変換を通さない。
     schema_text = schema_source_path.read_bytes().decode("utf-8")
-    return write_hashed_file(schema_store_dir(root), "", ".json", schema_text)
+    schema_path = write_hashed_file(schema_store_dir(root), "", ".json", schema_text)
+    return schema_path, schema_text
 
 
 def codex_error_text(stdout_text: str, stderr_text: str) -> str:

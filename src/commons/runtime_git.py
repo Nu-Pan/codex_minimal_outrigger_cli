@@ -510,14 +510,13 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     # work-root の削除は .cmoc/gu/worktree/{{session-id}}/{{run-id}} に限定する。
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
+    # ID だけで拒否できる候補には、Git の worktree 一覧を取得しない。
+    expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
+    if parse_run_branch_ids(expected_branch) is None:
+        raise _unmanaged_worktree_error(worktree, base)
     # {{work-root}}/oracle/doc/branch_model.md
     # 命名規則だけでは不十分であり、削除は対応する Git linked worktree に限定する。
-    expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
-    registered_branch = _registered_worktree_branches(root).get(resolved)
-    if (
-        parse_run_branch_ids(expected_branch) is None
-        or registered_branch != expected_branch
-    ):
+    if _registered_worktree_branches(root).get(resolved) != expected_branch:
         raise _unmanaged_worktree_error(worktree, base)
     if candidate.exists() and not _has_linked_worktree_metadata(root, candidate):
         raise _unmanaged_worktree_error(worktree, base)
@@ -731,13 +730,23 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
         root / CMOC_IGNORE_PROBE,
         strict_local=True,
     )
-    tracked = run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
-    ignored = run_git(
+    return _cmoc_tracked_paths(root), _cmoc_ignore_returncode(root)
+
+
+def _cmoc_tracked_paths(root: Path) -> str:
+    """.cmoc/gu の index 内容を取得し、修復後も取り直せるようにする。"""
+    # ignore の成否とは分けて問い合わせ、index 修復の要否を決める。
+    return run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
+
+
+def _cmoc_ignore_returncode(root: Path) -> int:
+    """将来の管理 file に対する ignore probe の結果を返す。"""
+    # 修復経路では .gitignore と index を更新した後に一度だけ実行する。
+    return run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
         root,
         check=False,
-    )
-    return tracked, ignored.returncode
+    ).returncode
 
 
 def with_cmoc_ignore_pattern(content: str) -> str:
@@ -790,20 +799,22 @@ def _validate_ignore_path(path: Path, description: str) -> None:
 
 def ensure_cmoc_ignored(root: Path) -> None:
     """.gitignore と index を更新できる場面で .cmoc/gu を追跡対象外にする。"""
-    tracked, ignored_returncode = _cmoc_ignore_status(root)
+    # 更新・Git 実行の前に全 source を検証し、内容と index の修復を先に済ませる。
+    _validate_git_ignore_sources(root, root / CMOC_IGNORE_PROBE, strict_local=True)
+    tracked = _cmoc_tracked_paths(root)
     gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
         gitignore.write_text(updated_content)
 
-    if not tracked and ignored_returncode == 0:
-        return
-
     # 追跡対象がなければ、ignore 修復だけで済むため index 更新は起動しない。
     if tracked:
         run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"], root)
-    tracked, ignored_returncode = _cmoc_ignore_status(root)
+        tracked = _cmoc_tracked_paths(root)
+
+    # 修復前の probe と重複した source 検証を省き、最終状態だけで完了を判定する。
+    ignored_returncode = _cmoc_ignore_returncode(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
             ".cmoc/gu を git 追跡対象外にできませんでした。",

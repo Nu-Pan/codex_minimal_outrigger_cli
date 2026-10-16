@@ -5,9 +5,10 @@ import json
 from pathlib import Path
 from typing import Callable
 
-from acp.builder.session.join.conflict_resolution import (
+from oracle.acp_builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
+
 from cmoc_runtime import (
     CmocError,
     CommandResult,

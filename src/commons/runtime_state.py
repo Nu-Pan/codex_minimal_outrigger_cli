@@ -284,17 +284,18 @@ def _read_state_data(path: Path) -> dict[str, Any]:
 def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
     _validate_session_id(path.stem)
-    _validate_state_file_path(path)
     data = state.to_dict()
     SessionState.from_dict(data, path)
     try:
         serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     except (RecursionError, TypeError, UnicodeError, ValueError) as exc:
         raise _invalid_state(path, "state を JSON として保存できません。") from exc
+    state_exists = _validate_state_file_path(path)
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # parent の作成中に path の構成が変わっていないことを再確認する。
-        _validate_state_file_path(path)
+        if not state_exists:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # parent の作成中に path の構成が変わっていないことを再確認する。
+            _validate_state_file_path(path)
         path.write_text(serialized, encoding="utf-8")
     except (OSError, UnicodeError, ValueError) as exc:
         raise CmocError(

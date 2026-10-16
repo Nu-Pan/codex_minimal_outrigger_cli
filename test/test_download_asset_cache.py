@@ -27,7 +27,6 @@ from _download_asset_support import (
     http_distribution_opener,
     process_obtain,
 )
-from _git_support import make_repo
 
 import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
@@ -81,7 +80,10 @@ def _asset(distribution, path="/model"):
 
 
 @pytest.fixture
-def asset_logger(tmp_path):
+def asset_logger(tmp_path, nonpersistent_execution_ids):
+    """資材と実行 ID の対応を保ち、採番 DB の初期化・同期書き込みを省く。"""
+    # 採番の永続性は test_runtime_ids.py、実 logger との結合は
+    # test_runtime_cli.py の test_subcommand_logger_keeps_one_file_per_execution に残す。
     logger = SubcommandLogger(tmp_path, "doctor")
     token = set_current_subcommand_logger(logger)
     try:
@@ -92,9 +94,12 @@ def asset_logger(tmp_path):
 
 @pytest.fixture
 def asset_events(asset_logger, monkeypatch):
-    """実 logger の状態記録を保ち、資材の検査に不要なディスク追記を省く。"""
+    """実ファイルと logger の状態を検査し、重複するディスク追記・同期を省く。"""
     # 保存・report との結合は redirect と doctor の専用ケースに残す。
     monkeypatch.setattr(logging_module, "append_log_record", lambda *_args: None)
+    # 実 fsync による取得・公開は並行取得・redirect・doctor のケースに残す。
+    # ここでも write・flush・rename と保存内容・完全性の照合は実行する。
+    monkeypatch.setattr(cache_module.os, "fsync", lambda _fd: None)
     return asset_logger
 
 
@@ -340,10 +345,12 @@ def test_redirect_failure_and_report_preserve_observed_counts(
 
 
 def test_doctor_reports_asset_success_separately_from_validation_failure(
-    tmp_path, distribution, monkeypatch
+    committed_repository, distribution, monkeypatch, nonpersistent_execution_ids
 ):
     """取得・公開成功を保持し、検証失敗を報告して索引同期前に停止する。"""
-    root = make_repo(tmp_path)
+    # 前処理に必要な HEAD だけ用意し、使わない初期内容と git add は準備しない。
+    # 既存ファイルの Git 修復・commit は test_doctor_cli.py に残す。
+    root = committed_repository
     monkeypatch.chdir(root)
     # 資材準備から失敗 report までを通し、TCP 受付は test_feedback.py に残す。
     monkeypatch.setattr(

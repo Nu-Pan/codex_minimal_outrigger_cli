@@ -502,13 +502,14 @@ def _initialize_cycle(
     # 履歴と新目的での調査機会を分離し、同期・列挙は確定区間の外で行う。
     state = sync_refactor_state(context.run_worktree)
     pending = refactor_cycle_targets(state)
-    mark_all_refactor_targets_required(state)
-    write_refactor_state(context.run_worktree, state)
-    unexpected = _unexpected_refresh_paths(
-        context,
-        [],
-        worktree_change_paths(context.run_worktree, include_rename_sources=True),
+    # 同期済みの調査要求は再保存せず、要求を新たに設定する場合だけ書き込む。
+    if any(not entry["investigation_required"] for entry in state.values()):
+        mark_all_refactor_targets_required(state)
+        write_refactor_state(context.run_worktree, state)
+    pending_paths = worktree_change_paths(
+        context.run_worktree, include_rename_sources=True
     )
+    unexpected = _unexpected_refresh_paths(context, [], pending_paths)
     if unexpected:
         raise CmocError(
             "refactor cycle に想定外差分があります。",
@@ -516,7 +517,9 @@ def _initialize_cycle(
             "\n".join(unexpected),
         )
     with defer_recovery_interruption():
-        commit_work_unit(context.run_worktree, "cmoc realization refactor cycle")
+        # 同期・要求設定後の差分が空なら git add と commit 判定も不要。
+        if pending_paths:
+            commit_work_unit(context.run_worktree, "cmoc realization refactor cycle")
         if progress is not None:
             progress.cycle += 1
             progress.targets = set(pending)

@@ -10,12 +10,8 @@ import pytest
 from oracle.acp_builder.oracle.investigation.launch_tui import (
     build_oracle_investigation_launch_tui_parameter,
 )
-from oracle.acp_builder.tui.launch_tui import (
-    build_tui_launch_tui_parameter as build_canonical_tui_launch_tui_parameter,
-)
+from oracle.acp_builder.tui.launch_tui import build_tui_launch_tui_parameter
 
-import acp.builder.tui.launch_tui as tui_launch_module
-from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
 from basic.acp import FileAccessMode, TuiResumeTarget
 
 
@@ -100,15 +96,6 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     ].split("</cmoc_block>", 1)[0]
     assert original_prompt in original_block
     assert not (root / ".cmoc" / "gu" / "log" / "editor_input").exists()
-
-
-def test_tui_launch_module_exports_only_builder() -> None:
-    """互換 module の公開面を現行 builder だけに限定する。"""
-    assert tui_launch_module.__all__ == ["build_tui_launch_tui_parameter"]
-    assert {name for name in vars(tui_launch_module) if not name.startswith("_")} == {
-        "build_tui_launch_tui_parameter"
-    }
-    assert build_tui_launch_tui_parameter is build_canonical_tui_launch_tui_parameter
 
 
 @pytest.mark.parametrize(

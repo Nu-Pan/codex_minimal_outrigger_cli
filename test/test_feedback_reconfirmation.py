@@ -1,6 +1,7 @@
 """feedback の根拠変更・再確認・封印と publication artifact の整合性を検証する。
 
-Git・Codex・共通 ID 発行の境界を置き換え、wave、checkpoint、根拠検査には実装を使う。
+Git・Codex・共通 ID 発行・ディスク同期・pending store 列挙の境界を置き換え、
+wave、checkpoint、固定入力と判定根拠の検査には実装を使う。
 """
 
 import copy
@@ -58,6 +59,9 @@ from sub_commands.feedback import decision, remediation, report
 
 @pytest.fixture
 def feedback_run(tmp_path, monkeypatch):
+    # 同期順序・同期失敗時の保存状態は test_feedback_store.py、CLI・collector との結合は
+    # test_feedback.py に残す。write・rename・読込と破損検査はここでも実行する。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
     repo, worktree, session = (tmp_path / name for name in ("repo", "run", "session"))
     for directory in (repo, worktree, session):
         directory.mkdir()
@@ -178,6 +182,11 @@ def feedback_run(tmp_path, monkeypatch):
         remediation, "validate_run_join", lambda *_args, **_kwargs: None
     )
     monkeypatch.setattr(remediation, "capture_high_watermark", lambda *_args: (0, []))
+    # intake は境界値と候補を直接渡すため、wave ごとの store 列挙を重ねない。
+    # raw の破損拒否・publication 阻止は test_feedback.py の pending reader と
+    # invalid_raw_observation_blocks_publication、実 intake との結合は wave test に残す。
+    # 固定した observation の読込・hash・schema 検査と manifest の検証は実行する。
+    monkeypatch.setattr(report, "_pending_observations", lambda _root: ([], {}))
     monkeypatch.setattr(
         report, "_build_candidates", lambda *_args, **_kwargs: (harness.candidates, {})
     )
@@ -214,6 +223,39 @@ def _add_candidate(harness, letter):
 
 def _run(harness):
     return remediation._wave_loop(harness.context, harness.manifest, harness.state)
+
+
+@pytest.mark.parametrize("late_issue", [False, True], ids=["empty", "late-issue"])
+def test_empty_wave_collects_basis_only_after_an_issue_arrives(
+    feedback_run, monkeypatch, late_issue
+):
+    h = feedback_run
+    collect_inputs = decision.worktree_inputs
+
+    def collect_for_issue(worktree):
+        assert h.candidates, "an empty wave has no issue basis to collect"
+        return collect_inputs(worktree)
+
+    def prepare_join():
+        if late_issue and not h.candidates:
+            _add_candidate(h, "a")
+
+    prepare = Mock(side_effect=prepare_join)
+    monkeypatch.setattr(decision, "worktree_inputs", collect_for_issue)
+    monkeypatch.setattr(remediation, "doctor_preprocess_for_join", prepare)
+
+    candidates, aggregates = _run(h)
+
+    assert candidates == h.candidates
+    assert aggregates == {}
+    assert len(h.calls) == int(late_issue)
+    assert prepare.call_count == (2 if late_issue else 1)
+    manifest, _ = load_report_cut(h.context.repo)
+    assert len(manifest["run"]["waves"]) == (2 if late_issue else 1)
+    first_wave = run_state.read_run_artifact(
+        h.context.repo, manifest["run"]["waves"][0]
+    )
+    assert first_wave["candidates"] == {}
 
 
 def test_run_artifact_reader_uses_one_snapshot(tmp_path, monkeypatch):
@@ -668,7 +710,7 @@ def test_remediation_state_validation_rechecks_schema_and_value(
         "files",
         lambda package: (
             schema_directory
-            if package == "oracle.acp_builder.feedback"
+            if package == "oracle.acp_builder.feedback.remediate_issue"
             else original_files(package)
         ),
     )
@@ -739,7 +781,7 @@ def _join_and_publish(harness, monkeypatch):
     remediation._seal(h.context, h.manifest, h.candidates, {})
     for source in h.context.run_worktree.iterdir():
         (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
-    monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
+    monkeypatch.setattr(remediation, "_is_ancestor", Mock(return_value=True))
     monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
     monkeypatch.setattr(
         report, "current_branch", lambda *_args: h.context.session_branch
@@ -852,6 +894,20 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
     ]
     assert audit_diffs
     assert all(args[-2] != args[-1] for args in audit_diffs)
+    # 同じ commit を使う再確認 checkpoint でも、到達可能性の Git 起動は共有する。
+    ancestor = remediation._is_ancestor
+    assert Counter(call.args[1] for call in ancestor.call_args_list) == {
+        commit: 1 for commit in h.commits
+    }
+    # 次の検証へ結果を持ち越さず、run HEAD 以外の到達不能な commit も拒否する。
+    ancestor.reset_mock()
+    ancestor.side_effect = lambda _context, commit: commit != h.commits[0]
+    with pytest.raises(CmocError, match="issue commit または net 差分 hash"):
+        remediation._complete_join(h.context, h.manifest)
+    assert [call.args[1] for call in ancestor.call_args_list] == [
+        h.head,
+        h.commits[0],
+    ]
 
 
 @pytest.mark.parametrize("fault", ["head", "forbidden_path"])

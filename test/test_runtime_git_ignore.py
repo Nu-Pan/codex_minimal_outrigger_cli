@@ -42,18 +42,70 @@ def _ignore_source_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
 
 
 # pattern と tracked/untracked の判定には実 Git と index を使う。
-def test_ensure_cmoc_ignored_updates_gitignore(cli_repository: Path) -> None:
-    """`.cmoc/gu` が未 ignore の repo では literal ignore pattern を追加する。"""
+def test_ensure_cmoc_ignored_updates_gitignore(
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """未 ignore の repo を修復し、修復前の重複した Git 判定を起動しない。"""
     root = cli_repository
+    commands = []
+    original_run = runtime_git.subprocess.run
+
+    def record_command(argv, *args, **kwargs):
+        commands.append(argv)
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(runtime_git.subprocess, "run", record_command)
 
     ensure_cmoc_ignored(root)
 
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
+    # source の配置取得、index 確認、最終 probe を一度ずつに収める。
+    assert len(commands) <= 4, commands
+    assert not any(command[:2] == ["git", "rm"] for command in commands)
     ignored = subprocess.run(
         ["git", "check-ignore", "-q", ".cmoc/gu/.__cmoc_ignore_probe__"],
         cwd=root,
     )
     assert ignored.returncode == 0
+
+
+@pytest.mark.parametrize("failure", ["index", "ignore", "probe-error"])
+def test_ensure_cmoc_ignored_rejects_incomplete_repair(
+    _ignore_source_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+) -> None:
+    """index 除外や最終 probe が失敗した修復を成功とせず、実ファイルを保つ。"""
+    root = _ignore_source_directory
+    relative = ".cmoc/gu/cache.txt"
+    cache = root / relative
+    cache.parent.mkdir(parents=True)
+    cache.write_text("preserve\n")
+    tracked = True
+    probe_returncode = {"index": 0, "ignore": 1, "probe-error": 128}[failure]
+
+    def incomplete_repair(args, git_cwd, check=True):
+        nonlocal tracked
+        assert git_cwd == root
+        if args[0] == "ls-files":
+            return CommandResult(0, relative if tracked else "", "")
+        if args[0] == "rm":
+            tracked = failure == "index"
+            return CommandResult(0, "", "")
+        if args[0] == "check-ignore":
+            return CommandResult(probe_returncode, "", "")
+        pytest.fail(f"unexpected Git command: {args}")
+
+    monkeypatch.setattr(runtime_git, "run_git", incomplete_repair)
+
+    with pytest.raises(CmocError, match="追跡対象外にできません") as caught:
+        ensure_cmoc_ignored(root)
+
+    assert cache.read_text() == "preserve\n"
+    if failure == "index":
+        assert relative in caught.value.detail
+    else:
+        assert f"check-ignore returncode: {probe_returncode}" in caught.value.detail
 
 
 def test_ignore_checks_classify_literal_path_names(cli_repository: Path) -> None:
@@ -65,10 +117,12 @@ def test_ignore_checks_classify_literal_path_names(cli_repository: Path) -> None
     magic_prefix_path.write_text("probe\n")
     (root / ".gitignore").write_text("probe[[]1].txt\n:(literal)probe.txt\n")
 
-    assert is_git_ignored(root, path)
-    assert is_untracked_git_ignored(root, path)
-    assert is_git_ignored(root, magic_prefix_path)
-    assert is_untracked_git_ignored(root, magic_prefix_path)
+    # 設定・保存先は固定なので問い合わせを共有し、path ごとの判定は実 Git を使う。
+    with runtime_git.reuse_git_path_queries():
+        assert is_git_ignored(root, path)
+        assert is_untracked_git_ignored(root, path)
+        assert is_git_ignored(root, magic_prefix_path)
+        assert is_untracked_git_ignored(root, magic_prefix_path)
 
 
 def test_ignore_checks_respect_tracked_and_untracked_states(
@@ -138,6 +192,8 @@ def test_ensure_cmoc_ignored_rejects_non_file_info_exclude(
     with pytest.raises(CmocError, match="通常の file"):
         ensure_cmoc_ignored(root)
 
+    assert not (root / ".gitignore").exists()
+
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
 def test_ignore_checks_reject_non_file_global_exclude(
@@ -153,6 +209,8 @@ def test_ignore_checks_reject_non_file_global_exclude(
             checker(root, root / "probe")
     with pytest.raises(CmocError, match="global excludes"):
         ensure_cmoc_ignored(root)
+
+    assert not (root / ".gitignore").exists()
 
 
 def test_ignore_checks_reject_check_ignore_failure(
@@ -210,8 +268,9 @@ def test_ignore_checks_do_not_inspect_ignored_symlink_target(
     link = root / "candidate.link"
     link.symlink_to(target, target_is_directory=True)
 
-    for checker in (is_git_ignored, is_untracked_git_ignored):
-        assert checker(root, link)
+    with runtime_git.reuse_git_path_queries():
+        for checker in (is_git_ignored, is_untracked_git_ignored):
+            assert checker(root, link)
 
 
 def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None:

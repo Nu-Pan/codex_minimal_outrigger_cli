@@ -170,7 +170,7 @@ def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
     assert queries[("rev-parse", "--git-path", "info/exclude")] == 1
     assert queries[("config", "--path", "--get-all", "core.excludesFile")] == 1
     assert queries[("ls-files", "--", ".cmoc/gu")] == 2
-    assert queries[("check-ignore", "-q", git_module.CMOC_IGNORE_PROBE)] == 2
+    assert queries[("check-ignore", "-q", git_module.CMOC_IGNORE_PROBE)] == 1
     assert tracked.read_text() == "preserve input\n"
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
@@ -277,9 +277,8 @@ def test_root_query_reuse_retries_failed_discovery(tmp_path):
         assert work_root(root) == root
 
 
-@pytest.mark.parametrize("inspection", ["agent", "run"])
 def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
-    cli_repository, monkeypatch, inspection
+    cli_repository, monkeypatch
 ):
     """検査内の配置問い合わせを重複させず、次の検査で状態と失敗を再確認する。"""
     root = cli_repository
@@ -298,6 +297,11 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
         run_fork_commit="fork",
         run_worktree=root,
     )
+    # 読み取り専用の両入口へ同じ状態を渡し、Git の準備と状態変更だけを共有する。
+    inspections = (
+        (unexpected_agent_paths, paths),
+        (unexpected_run_paths, [GitChange("M", (path,)) for path in paths]),
+    )
 
     queries = Counter()
     original_run = git_module.subprocess.run
@@ -309,42 +313,39 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
 
     monkeypatch.setattr(git_module.subprocess, "run", record_query)
 
-    def validate():
-        queries.clear()
-        if inspection == "agent":
-            unexpected = unexpected_agent_paths(context, paths)
-        else:
-            unexpected = unexpected_run_paths(
-                context, [GitChange("M", (path,)) for path in paths]
+    def validate(expected):
+        for inspect, changes in inspections:
+            queries.clear()
+            assert inspect(context, changes) == expected, inspect.__name__
+            placement_queries = [
+                count
+                for argv, count in queries.items()
+                if argv[1] in {"rev-parse", "config"}
+            ]
+            assert max(placement_queries, default=0) <= 1, inspect.__name__
+            # 存在する ignored file も、branch/fork ごとに同じ判定を繰り返さない。
+            ignore_queries = sum(
+                count for argv, count in queries.items() if argv[1] == "check-ignore"
             )
-        placement_queries = [
-            count
-            for argv, count in queries.items()
-            if argv[1] in {"rev-parse", "config"}
-        ]
-        assert max(placement_queries, default=0) <= 1
-        # 存在する ignored file も、branch/fork ごとに同じ判定を繰り返さない。
-        assert sum(
-            count for argv, count in queries.items() if argv[1] == "check-ignore"
-        ) <= len(paths)
-        return unexpected
+            assert ignore_queries <= len(paths), inspect.__name__
 
-    assert validate() == []
+    validate([])
 
     # 判定結果や index は再利用せず、tracked な ignored file は許可範囲に残す。
     (root / ".gitignore").write_text("first.txt\n")
-    assert validate() == ["first.txt"]
+    validate(["first.txt"])
     run_git(root, "add", "-f", "first.txt")
-    assert validate() == []
+    validate([])
 
     # 設定と ignore source の検証は、成功・失敗いずれの検査後も取り直す。
     global_ignore = root / "global-ignore"
     global_ignore.write_text("second.txt\n")
     run_git(root, "config", "core.excludesFile", str(global_ignore))
-    assert validate() == ["second.txt"]
+    validate(["second.txt"])
     global_ignore.unlink()
     global_ignore.mkdir()
-    with pytest.raises(CmocError, match="global excludes"):
-        validate()
+    for inspect, changes in inspections:
+        with pytest.raises(CmocError, match="global excludes"):
+            inspect(context, changes)
     run_git(root, "config", "core.excludesFile", "/dev/null")
-    assert validate() == []
+    validate([])

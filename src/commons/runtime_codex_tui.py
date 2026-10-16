@@ -159,7 +159,6 @@ def _run_codex_tui_process(
     paths = AgentCallPathContext(parameter.agent_call_cwd)
     codex_home = resolve_codex_home(paths.agent_call_cwd)
     validate_codex_home(codex_home)
-    overrides = prepare_codex_override_args(parameter, config, path_context=paths)
     agent_call_id = new_id(root, "ac")
     codex_call_id = new_id(root, "cc")
     directory = codex_log_dir(root) / record["execution_id"]
@@ -182,6 +181,7 @@ def _run_codex_tui_process(
     call: dict[str, Any] = {}
     attempted = False
     try:
+        overrides = None
         # 通知の準備・符号化失敗は通知だけを無効化し、TUI 起動を継続する。
         try:
             callback = create_tui_notification_callback(
@@ -196,6 +196,11 @@ def _run_codex_tui_process(
                 )
         except Exception:
             pass
+        # 通知付きの構築が成功した場合は、同じ設定を再構築しない。
+        if overrides is None:
+            overrides = prepare_codex_override_args(
+                parameter, config, path_context=paths
+            )
         overrides.extend(
             document_search_mcp_override_args(
                 parameter,

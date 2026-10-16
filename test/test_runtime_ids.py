@@ -1,6 +1,6 @@
 """Repository 共通 ID の発行順と種類別採番を検証する。
 
-process 間の共有・永続性は test_codex_runtime_paths.py の
+process 間の共有・永続性とログ削除後の非再利用は test_codex_runtime_paths.py の
 test_codex_call_ids_are_process_safe_on_same_timestamp でログとの結合も検証する。
 """
 
@@ -69,20 +69,6 @@ def test_ids_keep_issue_order_when_clock_moves_backward(
     assert runtime_ids.new_id(tmp_path / "other-repository", "exec").startswith(
         "exec_000000_"
     )
-
-
-def test_sequence_survives_artifact_removal(tmp_path: Path) -> None:
-    """ログなどの成果物が存在しなくても、確定済み番号を再利用しない。"""
-    first = runtime_ids.new_id(tmp_path, "sess")
-    artifact = tmp_path / ".cmoc/gu/log/sub_command" / f"{first}.jsonl"
-    artifact.parent.mkdir(parents=True)
-    artifact.write_text("{}\n")
-    artifact.unlink()
-    second = runtime_ids.new_id(tmp_path, "sess")
-
-    assert first.startswith("sess_000000_")
-    assert second.startswith("sess_000001_")
-    assert runtime_ids.is_common_id(second, "sess")
 
 
 @pytest.mark.parametrize(

@@ -15,7 +15,12 @@ from uuid import NAMESPACE_URL, uuid5
 import oracle.other.path_model as path_model_module
 import pytest
 import typer
-from _codex_support import codex_arg_value, codex_override_config, setup_codex_home
+from _codex_support import (
+    codex_arg_value,
+    codex_override_config,
+    setup_codex_home,
+    stub_codex_overrides,
+)
 from _command_support import write_python_executable
 from _handoff_support import handoff_input
 from oracle.acp_builder.oracle.investigation.launch_tui import (
@@ -27,6 +32,7 @@ from oracle.other.cmoc_config import CodexCallConfig
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_exec as exec_module
 import commons.runtime_codex_tui as tui_module
+import commons.runtime_logging as logging_module
 from commons.runtime_codex_profile import process_group_has_running_member
 from commons.runtime_codex_recovery import install_recovery_interruption
 from commons.runtime_codex_session import CodexSessionLease
@@ -61,7 +67,11 @@ BUILDERS = [
 
 
 @pytest.fixture
-def directory(tmp_path, monkeypatch, toast_clock):
+def directory(tmp_path, monkeypatch, toast_clock, nonpersistent_execution_ids):
+    # 永続採番とログ保存の結合は test_codex_runtime_paths.py に残す。
+    # TUI の制御検査では、ログ間の ID 対応を保って採番用 DB の準備を省く。
+    for module in (exec_module, tui_module):
+        monkeypatch.setattr(module, "new_id", logging_module.new_id)
     root = tmp_path / "repo"
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
@@ -74,7 +84,7 @@ def directory(tmp_path, monkeypatch, toast_clock):
         runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
     )
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", lambda _root: None)
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    # 保存設定は公開 resume のケースで用意し、制御検査には設定を直接渡す。
     fake_tui(monkeypatch)
     return root
 
@@ -108,9 +118,10 @@ def fake_tui(monkeypatch, *, returncode=0, spawn_error=None, on_call=None):
         if spawn_error is not None:
             raise spawn_error
         kwargs["process_started_callback"]()
-        calls.append({"argv": argv, "env": kwargs["env"], "cwd": kwargs["cwd"]})
+        call = {"argv": argv, "env": kwargs["env"], "cwd": kwargs["cwd"]}
+        calls.append(call)
         if on_call is not None:
-            on_call(calls[-1])
+            on_call(call)
         return subprocess.CompletedProcess(argv, returncode, None, None)
 
     monkeypatch.setattr(tui_module, "run_codex_subprocess", run)
@@ -131,7 +142,9 @@ def fake_initial(
     def run(argv, **kwargs):
         kwargs["process_started_callback"]()
         prompt = kwargs["stdin"].read()
-        calls.append({"argv": argv, "prompt": prompt, "env": kwargs["env"]})
+        # 並行する call の追記後も、この呼び出し自身を callback へ渡す。
+        call = {"argv": argv, "prompt": prompt, "env": kwargs["env"]}
+        calls.append(call)
         stream = stdout
         if unique_sessions:
             source = json.loads(kwargs["env"][EDITOR_INPUT_SOURCE_ENV])
@@ -146,7 +159,7 @@ def fake_initial(
         if output is not None:
             Path(codex_arg_value(argv, "--output-last-message")).write_text(output)
         if on_call is not None:
-            on_call(calls[-1])
+            on_call(call)
         return subprocess.CompletedProcess(argv, returncode, None, None)
 
     monkeypatch.setattr(exec_module, "run_codex_subprocess", run)
@@ -276,6 +289,9 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
 def test_initial_terminal_failure_never_retries_or_transitions(
     directory, monkeypatch, stdout, returncode
 ):
+    # argv・MCP 設定の結合は complete_prompt と share_start_time_settings のケースに残す。
+    # ここでは終端判定・ログ保存・移行禁止を検査し、起動設定の構築を繰り返さない。
+    stub_codex_overrides(monkeypatch)
     calls = fake_initial(monkeypatch, stdout=stdout, returncode=returncode)
     transition = Mock(side_effect=AssertionError("must not resume TUI"))
     recovery = Mock(side_effect=AssertionError("must not probe or wait"))
@@ -313,6 +329,8 @@ def test_initial_terminal_failure_never_retries_or_transitions(
 def test_initial_success_requires_saved_output_and_unique_uuid(
     directory, monkeypatch, stdout, output
 ):
+    # 起動設定は上の結合ケースに残し、保存出力と UUID の受理条件を検査する。
+    stub_codex_overrides(monkeypatch)
     calls = fake_initial(monkeypatch, stdout=stdout, output=output)
     transition = Mock()
     monkeypatch.setattr(tui_module, "_run_codex_tui_process", transition)
@@ -567,6 +585,9 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
 def test_public_resume_rejects_ineligible_source(
     directory, monkeypatch, tmp_path, condition
 ):
+    # current_settings と separate_process_resources のケースが設定・MCP の結合を検査する。
+    # 不適格な記録を用意するためだけの初回起動・TUI 移行には固定設定を使う。
+    stub_codex_overrides(monkeypatch)
     calls, source = failed_initial_success(directory, monkeypatch)
     rows = [json.loads(line) for line in source.read_text().splitlines()]
     record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
@@ -791,6 +812,7 @@ def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch
 def test_public_resume_accepts_fixed_id_after_initial_success(
     directory, monkeypatch, builder, command, outcome
 ):
+    write_config(directory / ".cmoc/gt/config.json", CmocConfig())
     fake_initial(monkeypatch)
     notifications = []
 
@@ -865,22 +887,14 @@ def test_notification_failure_preserves_tui_execution(directory, monkeypatch, fa
     callback = Mock(command=["notification-helper"])
     if failure == "cleanup":
         callback.close.side_effect = OSError("cleanup failed")
+    if failure == "configure":
+        # 実際の TOML 符号化を失敗させ、通知なしの設定へ戻れることを確かめる。
+        callback.command = [None]
     if failure == "prepare":
         creator = Mock(side_effect=OSError("notification context failed"))
     else:
         creator = Mock(return_value=None if failure == "unavailable" else callback)
     monkeypatch.setattr(tui_module, "create_tui_notification_callback", creator)
-    if failure == "configure":
-        prepare = tui_module.prepare_codex_override_args
-
-        def prepare_without_notification(*args, **kwargs):
-            if kwargs.get("notification_command"):
-                raise ValueError("notification setting failed")
-            return prepare(*args, **kwargs)
-
-        monkeypatch.setattr(
-            tui_module, "prepare_codex_override_args", prepare_without_notification
-        )
     if failure == "send":
         monkeypatch.setattr(
             tui_module,
@@ -890,13 +904,17 @@ def test_notification_failure_preserves_tui_execution(directory, monkeypatch, fa
     with call_log(directory):
         assert (
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"), root=directory
+                build_tui_launch_tui_parameter("request"),
+                root=directory,
+                config=CmocConfig(),
             ).returncode
             == 0
         )
     assert len(calls) == 1
     if failure in {"prepare", "configure", "unavailable"}:
         assert codex_override_config(calls[0]["argv"])["notify"] == []
+    else:
+        assert codex_override_config(calls[0]["argv"])["notify"] == callback.command
     if failure not in {"prepare", "unavailable"}:
         callback.close.assert_called_once()
 
@@ -939,7 +957,9 @@ def test_initial_and_tui_keep_separate_process_resources(directory, monkeypatch)
     fake_tui(monkeypatch, on_call=observe)
     with call_log(directory):
         tui_module.run_codex_tui(
-            build_tui_launch_tui_parameter("request"), root=directory
+            build_tui_launch_tui_parameter("request"),
+            root=directory,
+            config=CmocConfig(),
         )
     assert initial[0]["env"]["CALL_CONTEXT"] == "0"
     assert closed == [0, 1]
@@ -948,6 +968,7 @@ def test_initial_and_tui_keep_separate_process_resources(directory, monkeypatch)
 def test_session_lease_covers_initial_transition_and_public_validation(
     directory, monkeypatch
 ):
+    write_config(directory / ".cmoc/gt/config.json", CmocConfig())
     home = tui_module.resolve_codex_home(directory)
 
     def contested(_call):
@@ -992,7 +1013,9 @@ def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
     with call_log(directory) as logger:
         with pytest.raises(OSError, match="exit cannot be confirmed"):
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"), root=directory
+                build_tui_launch_tui_parameter("request"),
+                root=directory,
+                config=CmocConfig(),
             )
         final = [row for row in events(logger) if row.get("phase") == "tui_failed"][-1]
         assert final["tui_process_state"] == "unknown"
@@ -1010,6 +1033,9 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
 ):
     import commons.runtime_codex_profile as profile
 
+    # 初回 process の終了待ちは test_initial_completion_waits_for_process_exit に残す。
+    # ここでは初回応答を既存 helper で返し、検証対象の TUI process だけを起動する。
+    initial_calls = fake_initial(monkeypatch)
     ready = tmp_path / "tui-ready"
     release = tmp_path / "tui-release"
     bin_dir = tmp_path / "bin"
@@ -1019,18 +1045,13 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
         [
             "import pathlib, sys, time",
             "args = sys.argv[1:]",
-            "if 'exec' in args:",
-            "    sys.stdin.read()",
-            f"    print({SUCCESS!r}, end='', flush=True)",
-            "    pathlib.Path(args[args.index('--output-last-message') + 1]).write_text('saved reply')",
-            "else:",
-            f"    assert args[-2:] == ['resume', {SESSION_ID!r}]",
-            "    print('fake interactive output', flush=True)",
-            f"    pathlib.Path({str(ready)!r}).touch()",
-            "    for _ in range(1000):",
-            f"        if pathlib.Path({str(release)!r}).exists(): break",
-            "        time.sleep(0.01)",
-            f"    sys.exit({returncode})",
+            f"assert args[-2:] == ['resume', {SESSION_ID!r}]",
+            "print('fake interactive output', flush=True)",
+            f"pathlib.Path({str(ready)!r}).touch()",
+            "for _ in range(1000):",
+            f"    if pathlib.Path({str(release)!r}).exists(): break",
+            "    time.sleep(0.01)",
+            f"sys.exit({returncode})",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
@@ -1047,6 +1068,7 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
             tui_module.run_codex_tui,
             build_tui_launch_tui_parameter("request"),
             root=directory,
+            config=CmocConfig(),
         )
         try:
             deadline = time.monotonic() + 5
@@ -1071,4 +1093,5 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
             assert finished["returncode"] == returncode
         finally:
             release.touch()
+    assert len(initial_calls) == 1
     assert "fake interactive output" in capfd.readouterr().out

@@ -131,12 +131,39 @@ def test_subcommand_logger_keeps_one_file_per_execution(
     assert [line for line in second.path.read_text().splitlines() if line]
 
 
+def test_current_execution_id_reuses_only_the_matching_repository_logger(
+    tmp_path: Path,
+    nonpersistent_execution_ids: None,
+) -> None:
+    """同じ root と symlink alias は ID を共有し、単独・別 repository は分離する。"""
+    # 実採番は直前の test に残し、ここでは logger の所有範囲を検査する。
+    root = tmp_path / "repo"
+    root.mkdir()
+    alias = tmp_path / "alias"
+    alias.symlink_to(root, target_is_directory=True)
+    standalone_id = runtime_logging.current_execution_id(root)
+    logger = SubcommandLogger(root, "probe")
+    assert logger.execution_id != standalone_id
+
+    token = runtime_logging.set_current_subcommand_logger(logger)
+    try:
+        assert (
+            runtime_logging.current_execution_id(Path(str(root))) == logger.execution_id
+        )
+        assert runtime_logging.current_execution_id(alias) == logger.execution_id
+        other_id = runtime_logging.current_execution_id(tmp_path / "other")
+        assert other_id not in {standalone_id, logger.execution_id}
+    finally:
+        runtime_logging.reset_current_subcommand_logger(token)
+
+
 def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     tmp_path: Path,
     nonpersistent_execution_ids: None,
 ) -> None:
     """並列記録の保存順・待機時間と、呼び出し別 snapshot の独立性を保つ。"""
-    # 実採番との結合は直前の test に残し、追記の検査では SQLite を準備しない。
+    # 実採番との結合は test_subcommand_logger_keeps_one_file_per_execution に残し、
+    # 追記の検査では SQLite を準備しない。
     logger = SubcommandLogger(tmp_path, "parallel_logging")
     worker_count = 8
     barrier = threading.Barrier(worker_count)
@@ -223,6 +250,7 @@ logger.event("warning", message="\u65e5\u672c\u8a9e warning")
 
 def test_noninteractive_success_emits_one_terminal_result_after_progress(
     cli_terminal_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout を成功 terminal result だけにし、詳細 step はログへ閉じる。"""
@@ -230,6 +258,13 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     root = cli_terminal_directory
     report_path = root / "report.md"
     report_path.write_text("# report\n")
+
+    def completion_counts(repository: Path) -> tuple[int, list[str]]:
+        """検証済みの件数・warning を正しい repository の終端処理へ渡す。"""
+        assert repository == root
+        return 123, ["feedback warning"]
+
+    monkeypatch.setattr(runtime_cli, "feedback_completion_counts", completion_counts)
 
     def succeed() -> TerminalResult:
         """トップレベルと内部 step を含む成功結果を返す。"""
@@ -275,6 +310,8 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     ]
     assert captured.out.count("# 完了: cmoc probe") == 1
     assert captured.out.count(str(report_path.resolve())) == 1
+    assert "- pending feedback observation: `123`" in captured.out
+    assert captured.out.count("- warning: feedback warning") == 1
     assert "cmoc probe を開始" in captured.err
     assert "cmoc probe: top level" in captured.err
     assert "nested" not in captured.err
@@ -283,6 +320,11 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["classification"] == "natural_completion"
+    assert events[-1]["returncode"] == 0
+    assert events[-1]["pending_feedback_observation_count"] == 123
+    assert events[-1]["warnings"] == ["feedback warning"]
+    assert events[-1]["terminal_result"]["pending_feedback_observation_count"] == 123
+    assert events[-1]["terminal_result"]["warnings"] == ["feedback warning"]
     assert events[-1]["terminal_result"]["result"] == "attention"
     assert events[-1]["terminal_result"]["details"] == [
         {"name": "target", "value": str(root / "input.json")},
@@ -816,6 +858,7 @@ def test_cli_handled_failure_is_written_to_stderr(
     committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
+    nonpersistent_execution_ids: None,
 ) -> None:
     """想定済み CLI error は簡潔な terminal result を stderr に返す。"""
     root = committed_repository
@@ -865,6 +908,7 @@ def test_cli_requires_current_directory_to_be_work_root(
     cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
+    nonpersistent_execution_ids: None,
 ) -> None:
     """work root 以外からの CLI 実行では副作用を出す前に拒否する。"""
     root = cli_repository
@@ -967,45 +1011,50 @@ def test_cli_completion_marker_skips_normal_command(
 
 
 def test_pre_log_check_failure_writes_subcommand_log(
-    cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
+    cli_terminal_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """pre-log check の失敗時にもサブコマンドログを生成する。"""
-    import sub_commands.session.fork as session_fork
-
     root = cli_terminal_directory
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     doctor_roots: list[Path] = []
-    # doctor 修復は専用 test で検証し、ここでは CLI dispatch と失敗時のログを通す。
+    # command 固有の検査から独立させ、wrapper の検査順序と失敗時のログを通す。
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", doctor_roots.append)
 
     def fail_pre_log_check(checked_root: Path) -> None:
         assert checked_root == root
         raise CmocError("pre-log check failed", ["修復して再実行してください。"], "")
 
-    monkeypatch.setattr(
-        session_fork, "ensure_cmoc_ignored_in_exclude", fail_pre_log_check
-    )
-    result = runner.invoke(app, ["session", "fork"])
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            lambda: pytest.fail("implementation must not start after pre-log failure"),
+            pre_log_check=fail_pre_log_check,
+            command_name="doctor",
+            command_argv=["cmoc", "doctor"],
+        )
 
-    assert result.exit_code == 1
+    assert exc_info.value.exit_code == 1
     assert doctor_roots == [root]
     [log_path] = log_dir.glob("*.jsonl")
-    assert result.stdout == ""
-    assert "- 診断用サブコマンドログ:" in result.stderr
-    assert "- 終了コード: `1`" in result.stderr
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "- 診断用サブコマンドログ:" in captured.err
+    assert "- 終了コード: `1`" in captured.err
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[0]["event"] == "command_invoked"
     assert any(event["event"] == "step_started" for event in events)
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["returncode"] == 1
-    assert "pre-log check failed" in result.stderr
-    assert events[0]["argv"] == ["cmoc", "session", "fork"]
+    assert "pre-log check failed" in captured.err
+    assert events[0]["argv"] == ["cmoc", "doctor"]
 
 
 def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
     committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
+    nonpersistent_execution_ids: None,
 ) -> None:
     """共通前処理と明示 doctor の対象 worktree・root 探索の再利用範囲を確認する。"""
     import sub_commands.doctor as doctor_command

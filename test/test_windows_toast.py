@@ -236,6 +236,11 @@ def test_tui_callback_state_is_invocation_local(tmp_path: Path, toast_clock) -> 
     state_root = Path(callback.command[-4])
     assert state_root.is_dir()
     assert callback.command[-3:] == ["tui", "repository", "root-session"]
+    # 重複排除 state や別用途の active file は callback の活動と見なさない。
+    (
+        state_root / f"{runtime_windows_toast._TUI_CALLBACK_MARKER_PREFIX}turn.seen"
+    ).touch()
+    (state_root / "unrelated.active").touch()
     started_at = toast_clock.now
     callback.close()
 
@@ -366,6 +371,29 @@ def test_tui_callback_drain_handles_late_start_with_finite_wait(
         assert elapsed < timeout
     else:
         assert elapsed == pytest.approx(timeout)
+
+
+@pytest.mark.parametrize("state_kind", ["missing", "file", "unreadable"])
+def test_tui_callback_drain_handles_unavailable_state(
+    tmp_path, monkeypatch, toast_clock, state_kind
+):
+    """消失した state は活動なしとし、走査不能な state は有限の期限まで保つ。"""
+    state_root = tmp_path / "callback-state"
+    started_at = toast_clock.now
+    expected_wait = runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
+    with monkeypatch.context() as patch:
+        if state_kind == "file":
+            state_root.touch()
+        elif state_kind == "unreadable":
+            state_root.mkdir()
+
+            def deny_scan(_path):
+                raise PermissionError("callback state is unreadable")
+
+            patch.setattr(runtime_windows_toast.os, "scandir", deny_scan)
+            expected_wait = runtime_windows_toast._TUI_CALLBACK_DRAIN_TIMEOUT_SEC
+        runtime_windows_toast._wait_for_tui_callback_drain(state_root)
+    assert toast_clock.now - started_at == pytest.approx(expected_wait)
 
 
 def test_tui_callback_commands_run_as_standalone_scripts(

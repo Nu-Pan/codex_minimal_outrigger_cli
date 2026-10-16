@@ -12,13 +12,9 @@ import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import codex_arg_value, codex_override_config
 from oracle.acp_builder.session.join.conflict_resolution import (
-    build_session_join_conflict_resolution_parameter as build_canonical_conflict_parameter,
-)
-
-import acp.builder.session.join.conflict_resolution as session_conflict_resolution_module
-from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
+
 from basic.acp import FileAccessMode
 from commons.runtime_codex_profile import build_codex_override_args
 from config.cmoc_config import CmocConfig
@@ -40,23 +36,6 @@ def home_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     )
     monkeypatch.chdir(tmp_path)
     return home
-
-
-def test_session_join_compatibility_module_reexports_canonical_builder() -> None:
-    """公開モジュールが正本 builder だけを加工せず再公開する。"""
-
-    assert session_conflict_resolution_module.__all__ == [
-        "build_session_join_conflict_resolution_parameter"
-    ]
-    assert {
-        name
-        for name in vars(session_conflict_resolution_module)
-        if not name.startswith("_")
-    } == {"build_session_join_conflict_resolution_parameter"}
-    assert (
-        build_session_join_conflict_resolution_parameter
-        is build_canonical_conflict_parameter
-    )
 
 
 def test_session_join_conflict_resolution_preserves_prompt_and_launch_parameters(

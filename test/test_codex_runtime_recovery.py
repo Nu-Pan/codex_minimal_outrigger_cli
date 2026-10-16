@@ -2,11 +2,11 @@
 
 import json
 import os
+import select
 import signal
 import subprocess
 import sys
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
 from dataclasses import replace
@@ -26,7 +26,7 @@ from _codex_support import (
 from commons import runtime_codex_exec as runtime
 from commons import runtime_codex_recovery as recovery
 from commons import runtime_logging
-from commons.runtime_codex_profile import classify_codex_call
+from commons.runtime_codex_profile import classify_codex_call, codex_error_text
 from commons.runtime_errors import CmocError
 from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_logging import SubcommandLogger
@@ -98,6 +98,29 @@ def jsonl(*events):
 )
 def test_final_cli_outcome(events, returncode, expected):
     assert classify_codex_call(jsonl(*events), returncode) == expected
+
+
+@pytest.mark.parametrize("event_type", ["error", "turn.failed"])
+@pytest.mark.parametrize(
+    ("message", "returncode", "expected"),
+    [
+        pytest.param("Selected model is at capacity", 0, "transient", id="capacity-0"),
+        pytest.param("Selected model is at capacity", 1, "transient", id="capacity-1"),
+        pytest.param("unexpected failure", 0, "failed", id="unknown-0"),
+    ],
+)
+def test_failure_diagnostic_classification(message, returncode, expected, event_type):
+    """診断形式と終了 code の分類・本文抽出を、回復や log の準備なしで検査する。"""
+    # 回復・即時失敗・終了 code の保存との結合は test_codex_runtime_retry.py に残す。
+    event = (
+        {"type": event_type, "message": message}
+        if event_type == "error"
+        else {"type": event_type, "error": {"message": message}}
+    )
+    stdout = jsonl(event)
+
+    assert classify_codex_call(stdout, returncode) == expected
+    assert message in codex_error_text(stdout, "")
 
 
 @pytest.fixture
@@ -505,8 +528,8 @@ import pathlib, subprocess, sys
 from commons.runtime_codex_recovery import defer_recovery_interruption
 try:
     with defer_recovery_interruption():
-        subprocess.run([sys.executable, '-c',
-            "import pathlib, sys; pathlib.Path('ready').touch(); "
+        subprocess.run([sys.executable, '-S', '-c',
+            "import pathlib, sys; print('ready', flush=True); "
             "sys.stdin.read(); pathlib.Path('artifact').write_text('committed')"],
             check=True)
         pathlib.Path('record').write_text('confirmed')
@@ -520,8 +543,9 @@ except KeyboardInterrupt:
             str(repository / path) for path in ("src", "oracle/src")
         ),
     }
+    # 明示した PYTHONPATH と標準ライブラリだけを使い、site の初期化を省く。
     with subprocess.Popen(
-        [sys.executable, "-c", script],
+        [sys.executable, "-S", "-c", script],
         cwd=tmp_path,
         env=environment,
         start_new_session=True,
@@ -531,11 +555,8 @@ except KeyboardInterrupt:
         stderr=subprocess.PIPE,
     ) as process:
         try:
-            deadline = time.monotonic() + 5
-            while not (tmp_path / "ready").exists():
-                assert process.poll() is None
-                assert time.monotonic() < deadline
-                time.sleep(0.01)
+            assert select.select([process.stdout], [], [], 5)[0], "child did not start"
+            assert process.stdout.readline() == "ready\n"
             os.killpg(process.pid, signal.SIGINT)
             # SIGINT を送ってから子を解放し、固定待機なしで確定中の中断を保証する。
             stdout, stderr = process.communicate(input="commit\n", timeout=5)

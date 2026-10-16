@@ -11,70 +11,67 @@ def render_current_cases(issues: dict[str, dict[str, Any]]) -> str:
     """案件 ID 順に最新の判定と人間が読める根拠を示す。"""
     # 終了案件と旧判定は、この一覧に混在させない。
     lines = ["## 現在の案件一覧", ""]
-    for status in ("human_required", "inconclusive"):
-        selected = sorted(
-            (
-                issue
-                for issue in issues.values()
-                if issue["verification"]["status"] == status
-            ),
-            key=lambda issue: issue["case_id"],
+    selected = sorted(
+        (
+            issue
+            for issue in issues.values()
+            if issue["verification"]["status"] in {"human_required", "inconclusive"}
+        ),
+        key=lambda issue: issue["case_id"],
+    )
+    for issue in selected:
+        verification = issue["verification"]
+        status = verification["status"]
+        session_count = str(issue["affected_session_count"])
+        if issue["session_digest"]["saturated"]:
+            session_count += "+"
+        lines.extend(
+            [
+                f"### {issue['case_id']}",
+                "",
+                f"- Issue ID: {issue['issue_id']}",
+                f"- Latest result: {status}",
+                f"- Verified at: {verification['verified_at']}",
+                f"- Category: {_text(issue['category'])}",
+                f"- Summary: {_text(issue['summary'])}",
+                f"- Impact: {_text(issue['impact'])}",
+                f"- Reason: {_text(verification['reason'])}",
+                f"- Occurrences: {issue['occurrence_count']}",
+                f"- Affected sessions: {session_count}",
+                f"- First observed: {issue['first_observed_at']}",
+                f"- Last observed: {issue['last_observed_at']}",
+            ]
         )
-        if not selected:
-            continue
-        lines.extend([f"### {status} の案件", ""])
-        for issue in selected:
-            verification = issue["verification"]
-            session_count = str(issue["affected_session_count"])
-            if issue["session_digest"]["saturated"]:
-                session_count += "+"
-            lines.extend(
-                [
-                    f"#### {issue['case_id']}",
-                    "",
-                    f"- Issue ID: {issue['issue_id']}",
-                    f"- Latest result: {status}",
-                    f"- Verified at: {verification['verified_at']}",
-                    f"- Category: {_text(issue['category'])}",
-                    f"- Summary: {_text(issue['summary'])}",
-                    f"- Impact: {_text(issue['impact'])}",
-                    f"- Reason: {_text(verification['reason'])}",
-                    f"- Occurrences: {issue['occurrence_count']}",
-                    f"- Affected sessions: {session_count}",
-                    f"- First observed: {issue['first_observed_at']}",
-                    f"- Last observed: {issue['last_observed_at']}",
-                ]
+        if status == "human_required":
+            lines.append(f"- Human action: {_text(verification['human_action'])}")
+        else:
+            lines.append(
+                "- 外部解決を人間が確認した場合: "
+                + f'`cmoc feedback close {issue["case_id"]} --reason "外部で修正し、人間が解決を確認した"`'
             )
-            if status == "human_required":
-                lines.append(f"- Human action: {_text(verification['human_action'])}")
-            else:
-                lines.append(
-                    "- 外部解決を人間が確認した場合: "
-                    + f'`cmoc feedback close {issue["case_id"]} --reason "外部で修正し、人間が解決を確認した"`'
-                )
-            lines.append("- Current evidence:")
-            for evidence in verification["current_evidence"]:
-                subject = (
-                    evidence.get("path")
-                    or evidence.get("probe_id")
-                    or evidence.get("observation_id", "unknown")
-                )
-                lines.append(
-                    f"  - {_text(subject)} / {_text(evidence.get('location', ''))}: {_text(evidence.get('finding', ''))}"
-                )
-            if not verification["current_evidence"]:
-                lines.append(
-                    "  - 確認できた current evidence はありません。判定不能の理由は Reason に記載しています。"
-                )
-            lines.append("- Representative evidence:")
-            lines.extend(
-                f"  - {_text(json.dumps(evidence, ensure_ascii=False, sort_keys=True))}"
-                for evidence in issue["representative_evidence"]
+        lines.append("- Current evidence:")
+        for evidence in verification["current_evidence"]:
+            subject = (
+                evidence.get("path")
+                or evidence.get("probe_id")
+                or evidence.get("observation_id", "unknown")
             )
-            if not issue["representative_evidence"]:
-                lines.append("  - none")
-            lines.append("")
-    if not issues:
+            lines.append(
+                f"  - {_text(subject)} / {_text(evidence.get('location', ''))}: {_text(evidence.get('finding', ''))}"
+            )
+        if not verification["current_evidence"]:
+            lines.append(
+                "  - 確認できた current evidence はありません。判定不能の理由は Reason に記載しています。"
+            )
+        lines.append("- Representative evidence:")
+        lines.extend(
+            f"  - {_text(json.dumps(evidence, ensure_ascii=False, sort_keys=True))}"
+            for evidence in issue["representative_evidence"]
+        )
+        if not issue["representative_evidence"]:
+            lines.append("  - none")
+        lines.append("")
+    if not selected:
         lines.extend(["未終了の案件はありません。", ""])
     return "\n".join(lines)
 

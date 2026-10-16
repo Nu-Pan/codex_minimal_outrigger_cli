@@ -12,6 +12,7 @@ from multiprocessing.connection import Connection
 from multiprocessing.synchronize import Barrier as BarrierType
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import (
     codex_override_config,
@@ -40,9 +41,18 @@ def run_fixed_codex_exec(
         """両 process に同じ生成時刻を与えて path の独立性を確かめる。"""
         return _FIXED_CODEX_TIMESTAMP
 
+    def resolve_test_roots(agent_call_cwd: Path) -> tuple[Path, Path]:
+        assert agent_call_cwd == root
+        return root, root
+
     try:
         with pytest.MonkeyPatch.context() as monkeypatch:
             monkeypatch.setattr(exec_module, "timestamp", timestamp_factory)
+            # Git からの導出は後続の cwd・linked worktree test に残す。
+            # 採番と log の検査では探索結果だけを固定し、実 context は使う。
+            monkeypatch.setattr(
+                path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
+            )
             # subprocess の cwd・env は後続の Fake CLI test に残す。
             # ここでは 2 process の実採番と log 保存だけを通し、孫 process を起動しない。
             script_codex_calls(
@@ -77,10 +87,11 @@ def run_fixed_codex_exec(
 
 
 def test_codex_call_ids_are_process_safe_on_same_timestamp(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """並行・連続発行の通番を共有し、同一時刻でもログを分離する。"""
-    root = cli_repository
+    """並行・連続発行とログ分離、終了・ログ削除後の通番維持を検査する。"""
+    root = tmp_path / "repo"
+    root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
     monkeypatch.setenv("PATH", "/usr/bin")
     barrier = Barrier(2)
@@ -150,8 +161,10 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
             all_log_paths.extend(related_paths)
 
         assert len(all_log_paths) == len(set(all_log_paths))
-        # 実採番の共有と、子の終了後に親で再利用されないことを同じ起動で検査する。
         assert sorted(cc_sequences) == list(range(4))
+        # 子の終了・実ログの削除後の非再利用を、同じ起動で検査する。
+        for path in all_log_paths:
+            path.unlink()
         assert new_id(root, "cc").startswith("cc_000004_")
     finally:
         for process in started_processes:
@@ -164,6 +177,8 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
             child.close()
 
 
+# 実採番と log の結合は上の並行 test に残す。以下の cwd・home・schema の検査では
+# nonpersistent_codex_ids を使い、採番のたびの SQLite transaction と同期を省く。
 @pytest.mark.parametrize(
     "agent_call_cwd_relative",
     [".", "oracle"],
@@ -173,6 +188,7 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_codex_ids: None,
     agent_call_cwd_relative: str,
 ) -> None:
     """パラメータの cwd と pure-oracle read の権限境界を検証する。
@@ -242,7 +258,10 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
 
 
 def test_run_codex_exec_uses_linked_worktree_context(
-    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_codex_ids: None,
 ) -> None:
     """linked worktree の cwd・sandbox と main repository の schema 保存先を検証する。
 

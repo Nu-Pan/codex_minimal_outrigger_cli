@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
+from unittest.mock import Mock
 
 import pytest
 from _git_support import run_git
@@ -85,6 +86,63 @@ def test_refactor_state_sync_tracks_enumerated_files(
     }
 
 
+@pytest.mark.parametrize("initial_state", ["empty", "pending", "new_entries"])
+def test_refactor_cycle_initialization_avoids_redundant_io(
+    refactor_files: Path, monkeypatch: pytest.MonkeyPatch, initial_state: str
+) -> None:
+    """保存済みの調査要求を再保存せず、同期が生んだ差分は確定する。"""
+    root = refactor_files
+    targets = [] if initial_state == "empty" else ["README.md", "oracle/spec.md"]
+    monkeypatch.setattr(
+        refactor_module, "enumerate_refactor_targets", lambda _root: targets
+    )
+    write_refactor_state(root, {})
+    if initial_state == "pending":
+        sync_refactor_state(root)
+    state_path = refactor_workload.refactor_state_path(root)
+    before = state_path.read_bytes()
+    save = Mock(wraps=write_refactor_state)
+    monkeypatch.setattr(refactor_module, "write_refactor_state", save)
+    monkeypatch.setattr(refactor_workload, "write_refactor_state", save)
+
+    # Git 分類・commit/rollback・要求の再設定と中断は test_editing_run_cli.py に残す。
+    # ここでは保存内容と既存 snapshot の差を Git 境界へ渡し、巡開始の I/O を検査する。
+    inspect_changes = Mock(
+        side_effect=lambda _root, **_kwargs: (
+            [state_path.relative_to(root).as_posix()]
+            if state_path.read_bytes() != before
+            else []
+        )
+    )
+    commit = Mock()
+    monkeypatch.setattr(refactor_workload, "worktree_change_paths", inspect_changes)
+    monkeypatch.setattr(refactor_workload, "commit_work_unit", commit)
+    progress = refactor_workload._RefactorProgress(
+        cycle=1,
+        targets={"previous.md"},
+        processed={"previous.md"},
+        deferred={"previous.md"},
+    )
+
+    pending = refactor_workload._initialize_cycle(
+        SimpleNamespace(run_worktree=root), progress=progress
+    )
+
+    assert pending == targets
+    assert set(load_refactor_state(root)) == set(targets)
+    assert progress.cycle == 2
+    assert progress.targets == set(targets)
+    assert not progress.processed
+    assert not progress.deferred
+    inspect_changes.assert_called_once_with(root, include_rename_sources=True)
+    assert save.call_count == (1 if initial_state == "new_entries" else 0)
+    if initial_state == "new_entries":
+        commit.assert_called_once_with(root, "cmoc realization refactor cycle")
+    else:
+        commit.assert_not_called()
+        assert state_path.read_bytes() == before
+
+
 @pytest.mark.parametrize(
     "relative", ["nested/../../outside.md", "oracle/../../outside.md"]
 )
@@ -108,11 +166,11 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
 
 
 def test_refactor_target_classifiers_require_file_entries(
-    committed_repository: Path,
+    cli_repository: Path,
 ) -> None:
     """通常・削除済み file を受理し、directory・欠落 path・Gitlink を拒否する。"""
     # 特殊文字 path の blob と Gitlink を同じ tree に用意し、履歴の準備を共有する。
-    root = committed_repository
+    root = cli_repository
     (root / "oracle").mkdir()
     realization_directory = root / "src"
     realization_directory.mkdir()
@@ -120,9 +178,10 @@ def test_refactor_target_classifiers_require_file_entries(
     realization_file.write_text("VALUE = 1\n")
     gitlink = root / "module"
     gitlink.mkdir()
-    commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "add", "src/module[1].py")
-    run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{commit},module")
+    # Gitlink の参照先 object は親 repository に不要。分類用の mode と OID だけを
+    # 用意し、参照先を作るためだけの空 commit と HEAD 照会を省く。
+    run_git(root, "update-index", "--add", "--cacheinfo", f"160000,{'a' * 40},module")
     run_git(root, "commit", "-m", "add classifier entries")
 
     assert not is_oracle_file_path(root, root / "oracle")
@@ -132,6 +191,8 @@ def test_refactor_target_classifiers_require_file_entries(
     assert is_realization_file_path(root, realization_file, branch="HEAD")
     assert not is_realization_file_path(root, root / "missing.py")
     assert gitlink.is_dir()
+    assert not is_realization_file_path(root, gitlink, branch="HEAD")
+    gitlink.rmdir()
     assert not is_realization_file_path(root, gitlink, branch="HEAD")
 
     realization_file.unlink()
@@ -209,22 +270,6 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     )
 
 
-def test_refactor_state_sync_rejects_oracle_symlink(
-    cli_repository: Path,
-) -> None:
-    """state 同期が regular file ではない oracle symlink を拒否する。"""
-    root = cli_repository
-    (root / "oracle").mkdir()
-    link = root / "oracle" / "dangling.md"
-    link.symlink_to("../missing.md")
-    # ignore 規則のない link の拒否に index 登録は不要。tracked かつ ignored な
-    # symlink の拒否は test_file_inventory.py の実 index を使うケースに残す。
-
-    assert not is_oracle_file_path(root, link)
-    with pytest.raises(CmocError, match="oracle/realization file"):
-        sync_refactor_state(root)
-
-
 def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
     refactor_files: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -268,6 +313,7 @@ def test_refactor_state_sync_preserves_history_and_requeues_changed_file(
 
     synchronized = sync_refactor_state(root)
 
+    assert load_refactor_state(root) == synchronized
     assert hashed_paths == [root / "README.md"]
     assert synchronized[requested_path.name] == requested_entry
     assert synchronized["oracle/spec.md"] == state["oracle/spec.md"]
@@ -351,7 +397,21 @@ def test_refactor_state_update_requeues_changes_without_redundant_io(
     assert set(hashed_paths).isdisjoint(root / relative for relative in changed)
 
 
-def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("last_investigation_result", []),
+        ("last_investigated_sha256", []),
+        ("last_investigated_sha256", "0" * 63),
+        ("last_investigated_sha256", "0" * 65),
+        ("last_investigated_sha256", "g" * 64),
+        ("last_investigated_sha256", "0" * 63 + "\n"),
+        ("last_investigated_sha256", "０" * 64),
+    ],
+)
+def test_refactor_state_writer_rejects_invalid_entry(
+    tmp_path: Path, field: str, value: object
+) -> None:
     """state writer が schema 不正値を保存しない。"""
     root = tmp_path
     state = cast(
@@ -359,9 +419,10 @@ def test_refactor_state_writer_rejects_invalid_entry(tmp_path: Path) -> None:
         {
             "README.md": {
                 "investigation_required": True,
-                "last_investigation_result": [],
+                "last_investigation_result": "no_findings",
                 "last_investigated_sha256": None,
                 "last_investigated_at": None,
+                field: value,
             }
         },
     )

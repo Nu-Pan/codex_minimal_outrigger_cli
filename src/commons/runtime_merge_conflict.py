@@ -44,9 +44,10 @@ def resolve_merge_conflicts(
     conflicts = unmerged_paths(root) if initial_conflicts is None else initial_conflicts
     if not conflicts:
         raise CmocError("merge 失敗時の競合 path を特定できません。", [], "")
+    conflict_paths = set(conflicts)
     refactor_relative = refactor_state_path(root).relative_to(root).as_posix()
-    managed = {path for path in conflicts if path == refactor_relative}
-    content_conflicts = sorted(set(conflicts) - managed)
+    managed = conflict_paths & {refactor_relative}
+    content_conflicts = sorted(conflict_paths - managed)
     result: dict[str, Any] = {
         "initial_conflicts": conflicts,
         "content_conflicts": content_conflicts,
@@ -62,7 +63,7 @@ def resolve_merge_conflicts(
                 [],
                 "\n".join(content_conflicts),
             )
-        before = _status_snapshot(root)
+        before = _status_snapshot(root, conflict_paths)
         output = (codex_exec or run_codex_exec)(
             parameter, root=repo_root(root), purpose=purpose
         )
@@ -80,7 +81,13 @@ def resolve_merge_conflicts(
             conflict_agent_report=report,
             conflict_call_log=result["call_log"],
         )
-        after = _status_snapshot(root)
+        if result["agent_status"] != "resolved":
+            raise CmocError(
+                "競合解消 agent が完了を確認できませんでした。",
+                ["Codex call log の未解消理由と検証結果を確認してください。"],
+                report,
+            )
+        after = _status_snapshot(root, conflict_paths)
         changed = {
             path
             for path in before.keys() | after.keys()
@@ -88,15 +95,7 @@ def resolve_merge_conflicts(
         }
         # 付随編集の観測は report 用。受理条件は下記正本の検証境界に従う。
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の「agent call の差分検証」
-        result["incidental_paths"] = sorted(
-            path for path in changed if path not in conflicts
-        )
-        if result["agent_status"] != "resolved":
-            raise CmocError(
-                "競合解消 agent が完了を確認できませんでした。",
-                ["Codex call log の未解消理由と検証結果を確認してください。"],
-                report,
-            )
+        result["incidental_paths"] = sorted(changed)
     if refactor_relative in managed:
         _merge_refactor_state(root, refactor_relative)
         sync_refactor_state(root)
@@ -109,13 +108,18 @@ def resolve_merge_conflicts(
     return result
 
 
-def _status_snapshot(root: Path) -> dict[str, tuple[str, str | None]]:
-    """agent の付随編集を、既に差分にある path の再編集も含めて捕捉する。"""
+def _status_snapshot(
+    root: Path, initial_conflicts: set[str]
+) -> dict[str, tuple[str, str | None]]:
+    """初期競合以外の付随編集を、差分 path の再編集も含めて捕捉する。"""
     snapshot: dict[str, tuple[str, str | None]] = {}
     for status, path in status_path_statuses(
         root, untracked_all=True, include_rename_sources=True
     ):
         name = path.relative_to(root).as_posix()
+        # 初期競合は付随編集の報告対象外。内容検査は staging 後の marker 検査が担う。
+        if name in initial_conflicts:
+            continue
         if path.is_symlink():
             content = str(path.readlink()).encode()
         elif path.is_file():

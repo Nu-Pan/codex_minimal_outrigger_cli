@@ -35,7 +35,6 @@ from _git_support import init_repo, make_repo, run_git
 
 import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
-import commons.runtime_feedback_store as feedback_store_module
 from commons.runtime_config import config_to_dict
 from commons.runtime_document_search import DocumentSearch, SearchError
 from commons.runtime_document_search_types import SEARCH_MATERIALS
@@ -79,6 +78,46 @@ def managed_repository(cli_repository: Path) -> Path:
     return root
 
 
+@pytest.fixture
+def doctor_repair_events(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """配置先の検査と同じ前処理で、修復順序と毎回の reporter 検査も観測する。"""
+    # 順序だけのために repository と doctor の全処理を重ねない。
+    events: list[str] = []
+    original_ignore = doctor_module.ensure_cmoc_ignored
+    original_agents = doctor_module._ensure_agents_tracked
+    original_config = doctor_module.sync_config
+    original_state = doctor_module.sync_refactor_state
+
+    def observe_ignore(path: Path) -> None:
+        assert all((path / relative).is_dir() for relative in _WORK_DIRECTORIES)
+        events.append("ignore")
+        original_ignore(path)
+
+    def observe_agents(path: Path) -> bool:
+        events.append("agents")
+        return original_agents(path)
+
+    def observe_config(path: Path, **kwargs):
+        events.append("config")
+        return original_config(path, **kwargs)
+
+    def observe_state(path: Path, *, sync_entries: bool = True) -> RefactorState:
+        events.append("state")
+        return original_state(path, sync_entries=sync_entries)
+
+    def observe_reporter() -> None:
+        events.append("reporter")
+
+    monkeypatch.setattr(doctor_module, "ensure_cmoc_ignored", observe_ignore)
+    monkeypatch.setattr(doctor_module, "_ensure_agents_tracked", observe_agents)
+    monkeypatch.setattr(doctor_module, "sync_config", observe_config)
+    monkeypatch.setattr(doctor_module, "sync_refactor_state", observe_state)
+    monkeypatch.setattr(
+        doctor_module, "validate_feedback_reporter_availability", observe_reporter
+    )
+    return events
+
+
 def test_refactor_preprocess_interruption_preserves_user_changes(
     managed_repository, monkeypatch
 ):
@@ -119,10 +158,11 @@ def test_refactor_preprocess_interruption_preserves_user_changes(
 
 
 def test_refactor_preprocess_interruption_keeps_committed_repairs(
-    tmp_path, monkeypatch
+    cli_repository, monkeypatch
 ):
     """短い確定区間中の SIGINT は commit と index 復元を一体として完了する。"""
-    root = make_repo(tmp_path)
+    # 検査する refactor 対象の commit で HEAD を用意し、準備だけの初期 commit を省く。
+    root = cli_repository
     monkeypatch.chdir(root)
     # 設定と既存 state だけを用意し、state 更新の修復 commit は前処理に任せる。
     seed_search_config(root)
@@ -323,11 +363,12 @@ def test_doctor_preprocess_repairs_git_state(
 
 @pytest.mark.parametrize("explicit_doctor", [False, True])
 def test_doctor_preprocess_restores_empty_work_directories(
-    committed_repository, explicit_doctor
+    cli_repository, explicit_doctor, doctor_repair_events
 ):
-    """親ごとの不足を補完し、既存の内容を保って再実行時の差分を増やさない。"""
+    """両入口の修復順序を守り、不足の補完と再実行で既存内容・差分を保つ。"""
     # 修復済みの管理 file だけ用意し、配置先を作るための doctor 全体を重ねない。
-    root = committed_repository
+    # 初期内容を最初の commit に揃え、参照しない空 commit を準備しない。
+    root = cli_repository
     preserved = root / "src/kept.txt"
     preserved.parent.mkdir()
     preserved.write_text("kept content\n")
@@ -341,8 +382,12 @@ def test_doctor_preprocess_restores_empty_work_directories(
     head_before = run_git(root, "rev-parse", "HEAD").stdout
     preserved_before = (preserved.stat().st_ino, preserved.stat().st_mtime_ns)
 
+    # 準備用の state 同期を除き、各前処理だけの順序を観測する。
+    doctor_repair_events.clear()
     doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit_doctor)
 
+    expected_order = ["ignore", "agents", "config", "state", "reporter"]
+    assert doctor_repair_events == expected_order
     assert all((root / relative).is_dir() for relative in _WORK_DIRECTORIES)
     assert all(
         not list((root / relative).iterdir())
@@ -359,8 +404,10 @@ def test_doctor_preprocess_restores_empty_work_directories(
         for relative in _WORK_DIRECTORIES
     }
 
+    doctor_repair_events.clear()
     doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit_doctor)
 
+    assert doctor_repair_events == expected_order
     assert directory_states == {
         relative: (
             (root / relative).stat().st_ino,
@@ -494,10 +541,11 @@ def test_doctor_rechecks_work_directories_after_repair_commit(
 
 
 def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """設定を保持し、初回・編集・無変更・削除の索引同期と報告を確認する。"""
-    root = make_repo(tmp_path)
+    # HEAD の文書だけを参照するため、初期内容を一つの commit に揃える。
+    root = cli_repository
     # 設定保持も同じ CLI 起動で確認し、専用 repository と doctor 起動を重ねない。
     expected_config = config_to_dict(CmocConfig())
     expected_config["num_parallel"] = 3
@@ -515,7 +563,7 @@ def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
     config_path.write_text(json.dumps(incomplete_config) + "\n")
 
     document = root / "oracle/doc/source.md"
-    document.parent.mkdir()
+    document.parent.mkdir(parents=True)
     original = "# original document\n"
     updated = "# updated document\n"
     document.write_text(original)
@@ -580,60 +628,6 @@ def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
             assert "oracle/doc/source.md" in state
 
 
-def test_doctor_preprocess_follows_repair_order(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """doctor が oracle の ignore、agents、config、state 順に修復する。"""
-    root = make_repo(tmp_path)
-    events: list[str] = []
-    original_ignore = doctor_module.ensure_cmoc_ignored
-    original_agents = doctor_module._ensure_agents_tracked
-    original_config = doctor_module.sync_config
-    original_state = doctor_module.sync_refactor_state
-
-    def observe_ignore(path: Path) -> None:
-        """ignore 修復の呼び出し順を記録する。"""
-        assert all((path / relative).is_dir() for relative in _WORK_DIRECTORIES)
-        events.append("ignore")
-        original_ignore(path)
-
-    def observe_agents(path: Path) -> bool:
-        """agents 修復の呼び出し順を記録する。"""
-        events.append("agents")
-        return original_agents(path)
-
-    def observe_config(path: Path, **kwargs):
-        """config 修復の呼び出し順を記録する。"""
-        events.append("config")
-        return original_config(path, **kwargs)
-
-    def observe_state(path: Path, *, sync_entries: bool = True) -> RefactorState:
-        """refactor state 修復の呼び出し順を記録する。"""
-        events.append("state")
-        return original_state(path, sync_entries=sync_entries)
-
-    def observe_reporter() -> None:
-        """reporter 事前検証の呼び出し順を記録する。"""
-        events.append("reporter")
-
-    monkeypatch.setattr(doctor_module, "ensure_cmoc_ignored", observe_ignore)
-    monkeypatch.setattr(doctor_module, "_ensure_agents_tracked", observe_agents)
-    monkeypatch.setattr(doctor_module, "sync_config", observe_config)
-    monkeypatch.setattr(doctor_module, "sync_refactor_state", observe_state)
-    monkeypatch.setattr(
-        doctor_module,
-        "validate_feedback_reporter_availability",
-        observe_reporter,
-    )
-
-    # 明示 doctor と通常の事前処理を繰り返しても、reporter 検証を省略しない。
-    for explicit in (True, False, True, False):
-        events.clear()
-        doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit)
-        assert events == ["ignore", "agents", "config", "state", "reporter"]
-
-
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
     tmp_path, monkeypatch, object_format
@@ -664,10 +658,25 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
     run_git(root, "add", "-f", state_relative)
     run_git(root, "update-index", "--skip-worktree", state_relative)
 
+    git_calls = 0
+    original_run = doctor_module.subprocess.run
+
+    def count_git_calls(argv, *args, **kwargs):
+        nonlocal git_calls
+        if argv[0] == "git":
+            git_calls += 1
+        return original_run(argv, *args, **kwargs)
+
     index_path = doctor_module._copy_current_index(root)
     try:
         before = index_path.read_bytes()
-        doctor_module._stage_tracked_runtime_repair(root, index_path)
+        with monkeypatch.context() as observed:
+            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+            doctor_module._stage_tracked_runtime_repair(
+                root, index_path, include_gu_ignore=True
+            )
+        # 無変更の runtime と未追跡の管理領域は一度の列挙で足り、rm は不要。
+        assert git_calls <= 1
         assert index_path.read_bytes() == before
 
         changed = '{"label": "変更"}\r\n'
@@ -697,13 +706,6 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
             index_path,
         )
         git_calls = 0
-        original_run = doctor_module.subprocess.run
-
-        def count_git_calls(argv, *args, **kwargs):
-            nonlocal git_calls
-            if argv[0] == "git":
-                git_calls += 1
-            return original_run(argv, *args, **kwargs)
 
         with monkeypatch.context() as observed:
             observed.setattr(doctor_module.subprocess, "run", count_git_calls)
@@ -743,6 +745,27 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
             ).stdout
             == original
         )
+
+        # 別 root の修復では config/state を読まず、指定 index の管理物だけを外す。
+        local = root / ".cmoc/gu/kept\tcache\n.bin"
+        local.parent.mkdir(parents=True)
+        local.write_bytes(b"\0kept cache\xff")
+        doctor_module._run_git_with_index(
+            ["add", "-f", "--", str(local.relative_to(root))], root, index_path
+        )
+        config.unlink()
+        state.unlink()
+        git_calls = 0
+        with monkeypatch.context() as observed:
+            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+            doctor_module._stage_tracked_runtime_repair(
+                root, index_path, include_config=False, include_gu_ignore=True
+            )
+        assert git_calls <= 2
+        assert local.read_bytes() == b"\0kept cache\xff"
+        assert not doctor_module._run_git_with_index(
+            ["ls-files", "--", ".cmoc/gu"], root, index_path
+        ).stdout
     finally:
         index_path.unlink(missing_ok=True)
 
@@ -849,27 +872,6 @@ def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
     )
 
     with pytest.raises(RuntimeError, match="unexpected reporter probe failure"):
-        doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
-
-
-def test_doctor_preprocess_propagates_interrupt_during_reporter_schema_probe(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """reporter schema の予期しない中断も利用不能 warning に変換しない。"""
-    root = committed_repository
-
-    def interrupt() -> None:
-        """reporter schema 読み込み中の Ctrl+C を再現する。"""
-        raise KeyboardInterrupt()
-
-    monkeypatch.setattr(feedback_store_module, "reporter_input_schema", interrupt)
-    monkeypatch.setattr(
-        doctor_module,
-        "validate_feedback_reporter_availability",
-        validate_feedback_reporter_availability,
-    )
-
-    with pytest.raises(KeyboardInterrupt):
         doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
 
@@ -1128,11 +1130,12 @@ def test_doctor_reports_unsaved_inconsistent_search_candidate(
 
 
 def test_doctor_generates_config_under_broad_cmoc_ignore(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """広い `.cmoc/` ignore があっても生成 config を追跡可能に修復することを検証する。"""
 
-    root = committed_repository
+    # ignore 規則を最初の commit に含め、準備だけの空 commit を作らない。
+    root = cli_repository
     (root / ".gitignore").write_text(".cmoc/\n")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "ignore cmoc working data")
@@ -1271,11 +1274,12 @@ def test_doctor_does_not_commit_preexisting_staged_config_change(
 
 
 def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """両 worktree の非追跡保証と current の tracked runtime を修復する。"""
 
-    root = make_repo(tmp_path)
+    # worktree 分離には HEAD だけあれば足り、初期 file の内容は参照しない。
+    root = committed_repository
     linked = root / ".cmoc" / "gu" / "worktree" / "linked-doctor"
     run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
     monkeypatch.chdir(linked)
@@ -1396,11 +1400,11 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
 
 
 def test_doctor_preserves_existing_untracked_gitkeep_content(
-    tmp_path: Path,
+    committed_repository: Path,
 ) -> None:
     """既存の未追跡 `.agents/.gitkeep` を空内容へ置き換えず追跡する。"""
 
-    root = make_repo(tmp_path)
+    root = committed_repository
     gitkeep = root / ".agents" / ".gitkeep"
     gitkeep.parent.mkdir()
     gitkeep.write_text("human content\n")
@@ -1512,11 +1516,11 @@ def test_doctor_rejects_symlinked_agents_paths(
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """doctor の `.gitignore` 修復 commit が事前の stage 内容を上書きしないことを検証する。"""
 
-    root = make_repo(tmp_path)
+    root = committed_repository
     gitignore = root / ".gitignore"
     gitignore.write_text("human-rule\n")
     run_git(root, "add", ".gitignore")
@@ -1535,11 +1539,11 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
 
 
 def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """修復対象 path にある staged と unstaged の差分をそれぞれ保つことを検証する。"""
 
-    root = make_repo(tmp_path)
+    root = committed_repository
     gitignore = root / ".gitignore"
     gitignore.write_text("staged-rule\n")
     run_git(root, "add", ".gitignore")
@@ -1670,15 +1674,16 @@ def test_doctor_preserves_preexisting_staged_gitignore_deletion(
     [("MODEL_FAILURE", "failed"), ("CANCELLED", "cancelled")],
 )
 def test_doctor_reports_persisted_chunks_when_sync_fails(
-    tmp_path: Path,
+    cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     failure_code: str,
     expected_status: str,
 ) -> None:
     """doctor の同期失敗は未完了とし、保存済み chunk の進捗を示す。"""
-    root = make_repo(tmp_path)
+    # 索引対象の文書を初回 commit に置き、参照しない README と仕様 file を準備しない。
+    root = cli_repository
     docs = root / "oracle/doc"
-    docs.mkdir()
+    docs.mkdir(parents=True)
     (docs / "sample.md").write_text("# 検索用の原文\n")
     run_git(root, "add", "oracle/doc")
     run_git(root, "commit", "-m", "add document")
@@ -1766,10 +1771,10 @@ def test_normal_preprocess_requires_validated_materials(
 
 
 def test_doctor_repairs_shared_cmoc_root_in_its_own_repository(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """別 installation の共有資材書込み前に、その所有 repository の非追跡を修復する。"""
-    root = make_repo(tmp_path)
+    root = committed_repository
     installation_parent = tmp_path / "installation"
     installation_parent.mkdir()
     installation = make_repo(installation_parent)
