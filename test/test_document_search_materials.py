@@ -51,12 +51,12 @@ def small_materials(monkeypatch: pytest.MonkeyPatch) -> dict[str, bytes]:
     return contents
 
 
-def _installed_runtime(base: Path) -> None:
-    """lock が要求する CPU native と本体の最小配置を作る。"""
-    native = base / "node_modules/@node-llama-cpp/linux-x64"
-    native.mkdir(parents=True)
-    (native / "binding.node").write_bytes(b"fixed native")
-    metadata = native / "bins/linux-x64/_nlcBuildMetadata.json"
+def _installed_native_metadata(base: Path) -> Path:
+    """revision 照合に必要な native directory と採用情報だけを配置する。"""
+    metadata = (
+        base
+        / "node_modules/@node-llama-cpp/linux-x64/bins/linux-x64/_nlcBuildMetadata.json"
+    )
     metadata.parent.mkdir(parents=True)
     metadata.write_text(
         json.dumps(
@@ -70,6 +70,15 @@ def _installed_runtime(base: Path) -> None:
             }
         )
     )
+    return metadata
+
+
+def _installed_runtime(base: Path) -> None:
+    """資材の lifecycle 検査には CPU native と Node 本体も配置する。"""
+    _installed_native_metadata(base)
+    (base / "node_modules/@node-llama-cpp/linux-x64/binding.node").write_bytes(
+        b"fixed native"
+    )
     node = base / "node/bin/node"
     node.parent.mkdir(parents=True)
     node.write_bytes(b"fixed node")
@@ -82,12 +91,8 @@ def _installed_runtime(base: Path) -> None:
 def test_native_llama_revision_must_match_adoption(tmp_path: Path, field: str) -> None:
     """同じ npm 版でも、付属 native が採用した llama.cpp を使うことを確認する。"""
     setup._copy_worker_source(tmp_path, "package-lock.json")
-    _installed_runtime(tmp_path)
+    path = _installed_native_metadata(tmp_path)
     worker._verify_lock(tmp_path)
-    path = (
-        tmp_path
-        / "node_modules/@node-llama-cpp/linux-x64/bins/linux-x64/_nlcBuildMetadata.json"
-    )
     metadata = json.loads(path.read_text())
     metadata["buildOptions"]["llamaCpp"][field] = "different"
     path.write_text(json.dumps(metadata))
