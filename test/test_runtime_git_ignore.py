@@ -117,10 +117,12 @@ def test_ignore_checks_classify_literal_path_names(cli_repository: Path) -> None
     magic_prefix_path.write_text("probe\n")
     (root / ".gitignore").write_text("probe[[]1].txt\n:(literal)probe.txt\n")
 
-    assert is_git_ignored(root, path)
-    assert is_untracked_git_ignored(root, path)
-    assert is_git_ignored(root, magic_prefix_path)
-    assert is_untracked_git_ignored(root, magic_prefix_path)
+    # 設定・保存先は固定なので問い合わせを共有し、path ごとの判定は実 Git を使う。
+    with runtime_git.reuse_git_path_queries():
+        assert is_git_ignored(root, path)
+        assert is_untracked_git_ignored(root, path)
+        assert is_git_ignored(root, magic_prefix_path)
+        assert is_untracked_git_ignored(root, magic_prefix_path)
 
 
 def test_ignore_checks_respect_tracked_and_untracked_states(
@@ -266,8 +268,9 @@ def test_ignore_checks_do_not_inspect_ignored_symlink_target(
     link = root / "candidate.link"
     link.symlink_to(target, target_is_directory=True)
 
-    for checker in (is_git_ignored, is_untracked_git_ignored):
-        assert checker(root, link)
+    with runtime_git.reuse_git_path_queries():
+        for checker in (is_git_ignored, is_untracked_git_ignored):
+            assert checker(root, link)
 
 
 def test_ensure_cmoc_ignored_rejects_symlinked_gitignore(tmp_path: Path) -> None:
