@@ -283,12 +283,12 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
     assert run_git(root, "rev-parse", session_branch).stdout.strip() == captured_head
 
 
-def test_session_fork_rechecks_branch_after_lifecycle_lock(
+def test_session_fork_rechecks_branch_and_ignore_after_lifecycle_lock(
     committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
-    """lock 待ち中に branch が切り替わっても state と分岐元を一致させる。
+    """lock 待ち中の branch・ignore の変更を反映して clean な session を作る。
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     {{work-root}}/oracle/doc/app_spec/session_state.md
@@ -303,12 +303,16 @@ def test_session_fork_rechecks_branch_after_lifecycle_lock(
     run_git(root, "switch", original_home)
 
     original_lock = session_fork_module.session_fork_lock
+    exclude = root / ".git" / "info" / "exclude"
 
     @contextmanager
     def switch_branch_while_locked(repository: Path) -> Iterator[None]:
-        """fork が lock を取得した直後の branch 切替を再現する。"""
+        """fork の lock 待ち中に branch と ignore が変わる競合を再現する。"""
         with original_lock(repository):
             run_git(repository, "switch", alternate)
+            # 取得前の検査結果では clean 判定できない状態にし、lock 内の保証を検証する。
+            exclude.parent.mkdir(exist_ok=True)
+            exclude.write_text("# reset while waiting\n")
             yield
 
     monkeypatch.setattr(

@@ -1191,7 +1191,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "c6a3ad94d7af89e435061caf6bc1f7f41d41945b4c3ad4c5fe8dcb4675d88fcd",
-    "last_investigated_at": "2026-10-12_17-59-05_618"
+    "last_investigated_at": "2026-10-16_15-07-43_659"
   },
   "src/sub_commands/session/join.py": {
     "investigation_required": true,

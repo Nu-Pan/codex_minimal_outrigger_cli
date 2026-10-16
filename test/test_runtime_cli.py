@@ -1009,39 +1009,43 @@ def test_cli_completion_marker_skips_normal_command(
 
 
 def test_pre_log_check_failure_writes_subcommand_log(
-    cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
+    cli_terminal_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """pre-log check の失敗時にもサブコマンドログを生成する。"""
-    import sub_commands.session.fork as session_fork
-
     root = cli_terminal_directory
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     doctor_roots: list[Path] = []
-    # doctor 修復は専用 test で検証し、ここでは CLI dispatch と失敗時のログを通す。
+    # command 固有の検査から独立させ、wrapper の検査順序と失敗時のログを通す。
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", doctor_roots.append)
 
     def fail_pre_log_check(checked_root: Path) -> None:
         assert checked_root == root
         raise CmocError("pre-log check failed", ["修復して再実行してください。"], "")
 
-    monkeypatch.setattr(
-        session_fork, "ensure_cmoc_ignored_in_exclude", fail_pre_log_check
-    )
-    result = runner.invoke(app, ["session", "fork"])
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            lambda: pytest.fail("implementation must not start after pre-log failure"),
+            pre_log_check=fail_pre_log_check,
+            command_name="doctor",
+            command_argv=["cmoc", "doctor"],
+        )
 
-    assert result.exit_code == 1
+    assert exc_info.value.exit_code == 1
     assert doctor_roots == [root]
     [log_path] = log_dir.glob("*.jsonl")
-    assert result.stdout == ""
-    assert "- 診断用サブコマンドログ:" in result.stderr
-    assert "- 終了コード: `1`" in result.stderr
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "- 診断用サブコマンドログ:" in captured.err
+    assert "- 終了コード: `1`" in captured.err
     events = [json.loads(line) for line in log_path.read_text().splitlines()]
     assert events[0]["event"] == "command_invoked"
     assert any(event["event"] == "step_started" for event in events)
     assert events[-1]["event"] == "command_finished"
     assert events[-1]["returncode"] == 1
-    assert "pre-log check failed" in result.stderr
-    assert events[0]["argv"] == ["cmoc", "session", "fork"]
+    assert "pre-log check failed" in captured.err
+    assert events[0]["argv"] == ["cmoc", "doctor"]
 
 
 def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
