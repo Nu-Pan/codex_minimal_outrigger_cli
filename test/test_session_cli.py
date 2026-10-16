@@ -36,7 +36,6 @@ from _git_support import (
     SESSION_BRANCH,
     SESSION_ID,
     current_branch,
-    make_repo,
     run_git,
 )
 
@@ -80,6 +79,7 @@ def _seed_session_management_files(root: Path) -> None:
     """session test の clean な管理ファイルを、doctor CLI を実行せず用意する。"""
     # 管理物の検証・修復は各 command 自身の doctor と専用ケースに残す。
     # tracked 管理物も揃え、前処理の修復 commit で検査対象の HEAD を進めない。
+    # 履歴の準備はこの seed commit だけで足りるため、呼出元では未 commit の root を使う。
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     seed_search_config(root)
     agents = root / ".agents"
@@ -88,14 +88,7 @@ def _seed_session_management_files(root: Path) -> None:
     # state 自身も列挙対象なので、空 state を置いてから entry を同期する。
     write_refactor_state(root, {})
     sync_refactor_state(root)
-    run_git(
-        root,
-        "add",
-        ".gitignore",
-        ".agents/.gitkeep",
-        ".cmoc/gt/config.json",
-        ".cmoc/gt/realization/refactor/state.json",
-    )
+    run_git(root, "add", ".")
     run_git(root, "commit", "-m", "session seed")
 
 
@@ -564,13 +557,13 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
 
 
 def test_session_abandon_repairs_linked_worktree_before_failure_and_completion(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree の修復・事前条件拒否・再実行による破棄を同じ session で検証する。"""
     # repository・管理物・linked worktree の再準備を省き、両方の CLI 経路を残す。
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    root = committed_repository
+    root = cli_repository
     monkeypatch.chdir(root)
     _seed_session_management_files(root)
     root_branch = current_branch(root)
@@ -1328,15 +1321,17 @@ def test_session_join_checks_staged_text_conflict_markers(
 
 
 def test_session_fork_and_join_repair_linked_worktree_before_failure_and_completion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree の fork・join 前の修復・失敗時の停止・正常終了を検証する。"""
     # fork の branch/HEAD/state 検査と join で repository・linked worktree を共有する。
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
     # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    root = make_repo(tmp_path)
+    root = cli_repository
     monkeypatch.chdir(root)
+    # 後半で変更する file は管理物と同じ初期 commit に揃え、追加の履歴準備を省く。
+    (root / "README.md").write_text("# repo\n")
     _seed_session_management_files(root)
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "gu" / "worktree" / "linked"
