@@ -1,5 +1,6 @@
 # CLI 自動補完規則
 
+- 公開 command の候補は、各サブコマンドの CLI 契約に一致させる。apply/refactor の入口と旧入口の廃止は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「公開コマンド名」に従う。
 - `_CMOC_COMPLETE` が環境変数として存在する呼び出しは、ユーザーによる通常の `cmoc` 実行ではなく、自動補完用プローブとして扱う
 - 自動補完用プローブでは、cmoc 独自の通常実行向け前処理・検査・副作用を、CLI ライブラリの補完処理より前に実行してはならない
     - 例：サブコマンド未指定判定、カレントディレクトリ変更、session/run 状態検査、検索設定・検索用コンポーネントの検証と準備・修復を含む doctor preprocess、`.cmoc` ログ作成、文書検索索引の同期、cmoc 形式のエラーレポート出力

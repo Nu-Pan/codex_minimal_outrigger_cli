@@ -10,7 +10,7 @@
 
 現在の中断可能サブコマンドは、次の 2 つとする。
 
-- `cmoc realization refactor fork`
+- `cmoc realization refactor`
 - `cmoc feedback report`
 
 追加できるのは、長時間実行され、かつ処理済みの範囲だけでも一貫した結果として確定できるサブコマンドに限る。ただし、この条件を満たすだけでは中断可能サブコマンドとみなさず、個別仕様への明記を必須とする。
@@ -32,13 +32,17 @@
 
 realization refactor では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「不可分な確定区間」「ユーザー中断」が定める停止・rollback を適用する。共通の完了・rollback の選択肢を根拠に、長い agent 作業や全件テストの自然完了まで待ってはならない。
 
-中断要求は、quota または一時障害による待機中と、回復確認 probe の実行中にも受け付ける。受け付けた後は待機を終了し、実行中の probe も終了処理へ移す。そのサブコマンドのための新しい Codex CLI 呼び出し、probe、retry、回復待ち、および Codex CLI session の再開を行わない。probe の成功と競合した場合も、中断要求を優先する。
+中断要求は、quota または一時障害による待機中と、回復確認 probe の実行中にも受け付ける。受け付けた後は待機を終了し、実行中の probe も終了処理へ移す。停止する本命処理のための新しい Codex CLI 呼び出し、probe、retry、回復待ち、および Codex CLI session の再開を行わない。probe の成功と競合した場合も、中断要求を優先する。
 
 この優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「回復待ちと再開」に優先する。ただし、本書の「中断要求の通知」が定める不可分な finalization 区間の扱いは維持する。待機中の中断を理由に、個別 workload が要求する処理単位の commit・rollback または確定済み部分結果の保持を省略してはならない。
 
+成立済み run では、子 process の停止確認と未確定処理単位の整合化を終えた後、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」へ進む。新しい本命作業、巡、wave、issue 処理、または要約用 call は開始しないが、この自動 join に必要な競合解消 call と検証は例外として許可する。join の事前検査、state 同期、結果保存、および cleanup も省略しない。run 成立前に終了した場合は、join を開始しない。
+
+本命処理の停止要求と、自動 join 自体の取消・失敗を区別する。正常中断の terminal result は join と必要な後処理の成功後に確定し、自動 join の取消・失敗は `error` とする。不可分な finalization 内の停止境界は個別仕様に従い、途中の強制終了を正常中断へ変換しない。
+
 確定済みの部分結果を保持したまま、次の順序で完了処理を行う。
 
-1. 個別仕様が定める state 更新と後処理を行う。
+1. 個別仕様が定める自動 join、state 更新、および後処理を行う。
 2. 確定済みの部分作業と中断による終端結果を要約した primary report を、個別仕様が定める保存先へ保存する。表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「primary report」に従う。
 3. `user_interruption` の terminal result をサブコマンドログと console へ出力する。
 

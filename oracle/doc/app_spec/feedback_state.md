@@ -12,7 +12,7 @@ feedback state は、通常の確認・操作に使う active と、経緯を確
 - active issue の compact record
 - 更新前の判定、解決・手動クローズの経緯、および入力の消費を追跡できる history
 - recurrence threshold 未満の machine observation の bounded aggregate
-- 中断・失敗後の明示 join または abandon と、join 後の publication・cleanup の recovery に必要な run manifest、intake wave、report cut、および正式な checkpoint
+- 正常中断後の次回 report による再確認、失敗後の明示 join・abandon、および自然完了経路の join 後 recovery に必要な run manifest、intake wave、report cut、および正式な checkpoint
 - close の確定と recovery に必要な固定入力・進行記録
 - publication 済み report と、最新状態を選ぶ current pointer
 
@@ -55,7 +55,7 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
 
 `{{repo-root}}/.cmoc/gu` 全体を Git 追跡対象外とする。session と run の join または abandon は、feedback state を暗黙に取り込み、巻き戻し、複製、または削除してはならない。
 
-`invocation/{{execution-id}}.md` は中断またはエラーを要約する primary report であり、feedback state または publication artifact ではない。current pointer の参照先にしない。内容と生成条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「中断・エラー時の invocation report」と、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」を正本とする。
+`invocation/{{execution-id}}.md` は最外側の実行結果を示す primary report であり、feedback state または publication artifact ではない。current pointer の参照先にしない。内容と生成条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「invocation report」と、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」を正本とする。
 
 まだ publication がない repository では、state root または current pointer が存在しない状態を有効な初期状態とする。既存の確定済み state の欠落を初期状態として扱ってはならない。空 directory や `.gitkeep` は作らない。
 
@@ -301,4 +301,6 @@ recovery は同じ target と固定入力を再利用し、案件の登録・終
 
 ## run lifecycle との整合
 
-run join と abandon が feedback state に与える影響は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。どちらも raw observation と直前の current pointer を保持し、破棄した run commit に依存する `fixed` checkpoint を publication 可能な結果として残してはならない。
+自然完了時の自動 join と publication は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「publication」に従う。正常中断時の自動 join と停止 run の明示 join は、同文書の「publication を行わない feedback join」に従い、raw observation、直前の current pointer、および必要な checkpoint を保持する。
+
+abandon が feedback state に与える影響は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「破棄と cleanup」に従う。破棄した run commit に依存する `fixed` checkpoint を publication 可能な結果として残してはならない。

@@ -1,4 +1,4 @@
-"""refactor fork のファイル単位の調査・改善 prompt 文面の構築定義。"""
+"""`cmoc realization refactor` のファイル単位の調査・改善 prompt の構築定義。"""
 
 # std
 from pathlib import Path

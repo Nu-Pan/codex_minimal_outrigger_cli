@@ -2,11 +2,11 @@
 
 ## 目的と適用範囲
 
-`cmoc run join`、`cmoc feedback report` の自動 join、および `cmoc session join` は、通常の Git merge を先に試みる。内容の競合が発生した場合は、追加フラグなしで agent に統合を委ねる。目的は、関連する oracle と両 branch の変更意図を踏まえ、必要な付随修正と検証を含む整合したマージ結果を完成させることである。
+`cmoc run join`、編集 run を作る workload の自動 join、および `cmoc session join` は、通常の Git merge を先に試みる。内容の競合が発生した場合は、追加フラグなしで agent に統合を委ねる。目的は、関連する oracle と両 branch の変更意図を踏まえ、必要な付随修正と検証を含む整合したマージ結果を完成させることである。
 
 本書は、競合解消の共通判断基準と責務を所有する。汎用 Git merge wrapper、新しい人間意図の決定、または元の workload の権限拡大を目的としない。コマンド固有の契約は次の正本に従う。
 
-- `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「cmoc run join」：run の差分検査、編集範囲、取り込み、失敗時の復旧、post-join、および cleanup。
+- `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」「cmoc run join」：自動・明示 join の差分検査、編集範囲、取り込み、失敗時の復旧、post-join、および cleanup。
 - `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「join 後の publication failure」：封印後の調整・検証と publication の境界。
 - `{{cmoc-root}}/oracle/doc/app_spec/sub_command/session_join.md` の「git merge がコンフリクトした場合」「その他、コマンドが想定外に失敗した場合」：session の編集範囲と失敗時の扱い。
 
@@ -38,7 +38,7 @@ refactor state の同期内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_comma
 
 cmoc の差分検証は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」に従う。マージ結果が片側の内容と一致すること、または編集 path が初期の競合 path 集合と一致することを受理条件にしない。元の workload の差分受理条件は維持し、マージ調整の受理条件と混同しない。機械検査に意味的な正しさの証明を要求せず、agent の判断と検証記録を、cmoc の機械検査結果と区別して扱う。
 
-各 join の report から、次を読み取れるようにする。agent は内容判断に関する情報を返し、cmoc は実際の commit、state、復旧、および cleanup の結果と結び付ける。
+各 join を行った最外側の invocation の primary report から、次を読み取れるようにする。自動 join 用の primary report は別に作らない。agent は内容判断に関する情報を返し、cmoc は実際の commit、state、復旧、および cleanup の結果と結び付ける。
 
 - 統合した両 commit と初期の競合。
 - 採用した判断、その根拠となる oracle と両側の変更意図。

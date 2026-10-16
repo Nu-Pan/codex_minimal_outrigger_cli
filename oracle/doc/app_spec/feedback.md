@@ -63,7 +63,7 @@ issue の結果分類を確定するための再確認と必要な再修正・�
 
 封印後の自動 join では、封印済み結果を維持するためのマージ調整と検証を認める。調整の範囲、検証記録、publication の停止条件、および join 後の recovery は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」と「join 後の publication failure」を正本とする。report の publication は、join 後の状態に対して有効な結果だけで確定する。
 
-自動 join と必要な検証が成功した report は、`inconclusive` を含む場合も最新状態を publication する。未終了の案件は次回の report で active の記録から再確認する。手動 close の CLI と対象判定は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「CLI 契約」「対象と理由」を正本とする。
+自然完了し、自動 join と必要な検証が成功した report は、`inconclusive` を含む場合も最新状態を publication する。正常なユーザー中断では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication を行わない feedback join」に従う。未終了の案件は次回の report で active の記録から再確認する。手動 close の CLI と対象判定は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「CLI 契約」「対象と理由」を正本とする。
 
 ## 正本仕様の分担
 

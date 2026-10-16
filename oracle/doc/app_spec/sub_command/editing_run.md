@@ -6,13 +6,15 @@
 
 | workload 固有コマンド | `run.kind` | 正常時の終了方法 |
 |---|---|---|
-| `cmoc realization apply fork` | `realization_apply` | 後続の `cmoc run join` または `cmoc run abandon` |
-| `cmoc realization refactor fork` | `realization_refactor` | 後続の `cmoc run join` または `cmoc run abandon` |
+| `cmoc realization apply` | `realization_apply` | 追従作業の確定後、同一 invocation 内で自動 join |
+| `cmoc realization refactor` | `realization_refactor` | 正常なユーザー中断の整合化後、同一 invocation 内で自動 join |
 | `cmoc feedback report` | `feedback_report` | 同一 invocation 内の自動 join |
 
-feedback report が自動 join 前のユーザー中断または続行不能な失敗で run を残した場合は、`cmoc run join` または `cmoc run abandon` で終了する。自動 join 後の publication または cleanup の失敗は、同じ run に対する `cmoc feedback report` recovery で終了する。
+feedback report の自然完了と正常なユーザー中断は、いずれも自動 join の対象とする。publication の違いは、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「ユーザー中断」に従う。
 
-汎用の `cmoc run fork` は提供しない。`cmoc session join` と `cmoc session abandon` は外側の session lifecycle であり、この仕様の対象ではない。
+`cmoc run join` と `cmoc run abandon` は、異常時の取り込み再試行、確定済み部分成果の取り込み、または隔離資源の破棄のために残す。封印済み report cut を持つ自動 join 済み feedback run の復旧は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」に従う。
+
+汎用の `cmoc run fork` は提供しない。`cmoc session fork`、`cmoc session join`、および `cmoc session abandon` は維持し、外側の session lifecycle として扱う。
 
 `cmoc oracle edit`、read-only の investigation、run を作らない cmoc 自身の機械的更新、および session join の conflict 解消は、この editing run lifecycle の対象ではない。
 
@@ -20,13 +22,21 @@ feedback report が自動 join 前のユーザー中断または続行不能な�
 
 run の隔離資源と一般 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/run_isolation.md` の「run 作業隔離規則」を正本とする。session と run の永続 state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の `{{cmoc-session-state-file}}` を正本とする。
 
+## 公開コマンド名
+
+apply と refactor の公開入口は、それぞれ `cmoc realization apply` と `cmoc realization refactor` とする。旧 `cmoc realization apply fork` と `cmoc realization refactor fork` は廃止し、alias としても受け付けない。help、自動補完、report、console、およびログの command 表記には公開コマンド名を使う。
+
+run の分岐を表す fork、`run.fork_commit`、branch model の commit 名、および委譲先の builder・agent call 種別・設定 key は、公開 CLI の階層とは区別する。
+
 ## 同時実行の境界
 
 1 session に active な編集 run は高々 1 つとする。active run の state field は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「run field」を正本とする。
 
 `run.state` が `running`、`joinable`、または `error` の間は、新しい editing run を開始しない。
 
-`joinable` または `error` の run では、原則として、その run に対する `cmoc run join` と `cmoc run abandon` だけを lifecycle 操作として許可する。ただし、自動 join 済みの `feedback_report` では、workload 固有の `cmoc feedback report` recovery だけを許可する。
+`joinable` の run は、同じ invocation の自動 join と後処理でも active なままとする。自動・明示 join または workload 固有 recovery の開始から終了処理を終えるまでは、同じ session の別の run 開始・join・abandon・recovery、および session join・abandon を重ねて開始しない。cleanup に先立つ `ready` への遷移だけで、この実行中の処理との重複を許可しない。
+
+停止して残った `joinable` または `error` の run では、その run に対する `cmoc run join` と `cmoc run abandon` を許可する。ただし、封印済み report cut を持つ自動 join 済み `feedback_report` では、workload 固有の `cmoc feedback report` recovery だけを許可する。
 
 ## 共通事前条件
 
@@ -57,25 +67,23 @@ workload は、write 権限を持つ本命 agent call の開始前に、次の�
 
 各 workload と join の call に提供する文書検索は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。検索の管理物は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「identity と保存先」に従って成果差分から分離し、cleanup 時は同節の回収責務を適用する。
 
-## 明示的な join を待つ workload
+## 正常終了時の自動 join
 
-run 成立後の `realization_apply` と `realization_refactor` が正常終了した場合は、`run.state` を `joinable` にする。利用者は後続の `cmoc run join` または `cmoc run abandon` で run を終了する。
+run を作る workload は、個別仕様に従って本命処理の成果を確定した後、`run.state=joinable` にして、同じ invocation 内で自動 join する。正常系として定義されたユーザー中断では、子 process の停止と未確定処理単位の整合化を終えてから、この境界へ進む。本命処理の続行不能な失敗では自動 join しない。
 
-realization refactor の通常の終了はユーザー中断による。joinable は確定済み成果を取り込める状態であり、全対象の調査完了や改善の収束を意味しない。join は確定済み成果物と refactor state を取り込み、次の fork はその調査要求を引き継ぐ。実行途中の同じ run を再開する操作は設けない。
+自動 join は、後述する `cmoc run join` と同じ事前条件、差分検査、merge、競合解消、post-join、および cleanup 条件を適用する。通常モードの差分検査を用い、`--force-resolve` を暗黙に有効化しない。公開 CLI を再帰的に起動する必要はない。
 
-## self-joining feedback run
+`joinable` は確定済み成果を取り込める状態であり、invocation の正常終了ではない。自動 join と必要な後処理、結果保存、`ready` への初期化、および資源の cleanup の結果を確定してから、最外側の invocation を終了する。各処理の順序と失敗時の扱いは、本書の「merge と post-join」「join の失敗と復旧」「使用済み branch と worktree の cleanup」に従う。
 
-`feedback_report` は、workload 固有仕様が定める intake wave loop と issue commit を完了した後に `run.state` を `joinable` にし、同じ invocation 内で自動 join を開始する。
+realization refactor では、全対象の調査完了や改善の収束を join の条件にしない。確定済み成果物と refactor state を取り込み、次の新しい refactor run へ調査要求を引き継ぐ。実行途中の同じ run を再開する操作は設けない。
 
-自動 join は、後述する `cmoc run join` と同じ事前検証、差分検査、merge、および post-join を使用する。公開 CLI を再帰的に起動する必要はない。
+feedback の自然完了では、`incomplete` を含む publication と workload 固有 cleanup まで必要とする。その境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication」に従う。ユーザー中断では同文書の「publication を行わない feedback join」に従う。
 
-merge または no-op join 後の tree 検査、publication、および workload 固有 cleanup が完了するまで、`run.state` を `ready` へ初期化せず、run branch と worktree を保持する。失敗時は `run.state=error` とし、join 済み run の recovery は workload 固有仕様に従う。
-
-`incomplete` を含む publication の成立条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication」に従う。report の結果分類だけを理由に、上記の lifecycle を省略しない。
+run 成立前に終了した場合は、作成途中の資源を個別仕様に従って整合させ、存在しない run、`joinable` state、または join を作らない。中断後に許す処理と自動 join 自体の取消・失敗の区別は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「共通動作」に従う。
 
 ## join と abandon の共通事前条件
 
-`cmoc run join` と `cmoc run abandon` は、次の条件を共通して検査する。
+自動 join、`cmoc run join`、および `cmoc run abandon` は、次の条件を共通して検査する。
 
 - 現在の branch が `{{cmoc-session-branch}}` または active な `{{cmoc-run-branch}}` のいずれかである。
 - 対応する `session.state` は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「`session.state`」が定める `active` である。
@@ -95,7 +103,9 @@ merge または no-op join 後の tree 検査、publication、および workload
 - `run.kind`、`run.branch`、`run.fork_commit` のいずれかを state から特定できない。
 - session worktree または run worktree に git 未コミット差分がある。
 
-realization refactor の停止失敗後は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「その他のエラー」が定める process の停止確認も満たしてから join する。
+自動 join でも、開始時点でこれらを再検査する。session 側の未コミット差分を自動 stash、commit、revert、または破棄して取り込みを強行してはならない。doctor preprocess が自身の仕様に従って作成する commit は、この禁止によって変更しない。
+
+workload または join の停止失敗後は、書き込み得る process の停止と未確定処理単位の整合化を確認してから join する。realization refactor 固有の停止確認は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「その他のエラー」に従う。
 
 ### 差分検査
 
@@ -109,12 +119,15 @@ realization refactor の停止失敗後は、`{{cmoc-root}}/oracle/doc/app_spec/
 
 ### merge と post-join
 
-1. doctor preprocess を呼び出し、事前条件と差分を検査する。
+1. doctor preprocess を呼び出し、事前条件と差分を検査し、対象 run と join 開始時点の state を確定する。自動 join でも、同期時点は `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」に従う。
 2. run branch HEAD が session branch から到達可能で取り込む commit がなければ no-op join とする。それ以外は、merge 前の両 HEAD を確定し、`{{cmoc-session-branch}}` 上で `git merge --no-ff {{cmoc-run-branch}}` を実行する。競合時は本書の「競合解消」に従い、成立した merge commit を `{{cmoc-run-join-commit}}` とする。no-op join のために競合解消 agent を呼び出さない。
 3. active workload が定める join 後 hook を実行する。
 4. join 後の session tree に対して refactor state を同期する。同期で生じた tracked 差分は cmoc が commit する。
-5. join 結果と hook の結果を保存する。
-6. 明示的な join では、`run.state` を `ready` にし、active run 情報を初期化する。`feedback_report` の自動 join では、この更新を workload 固有の publication と cleanup が確定するまで遅延する。
+5. workload 固有の取り込み後処理を完了する。feedback の自然完了では join 後検査・publication・入力と work artifact の cleanup、中断後または明示 join では publication 未実施の記録を行う。
+6. join、hook、refactor state 同期、および workload 固有処理の結果と、run identity を含む report を保存する。その後 `run.state=ready` とし、active run 情報を初期化する。
+7. 本書の「使用済み branch と worktree の cleanup」に従い隔離資源を回収する。state 更新と cleanup の実際の結果を同じ invocation の primary report に反映してから、terminal result を確定する。report に後続処理の成功を先取りして記載しない。
+
+自然完了した feedback の publication artifact は immutable のまま保ち、最外側の実行結果は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「invocation report」に保存する。
 
 apply の比較始点の更新条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「join 後 hook」を正本とする。
 
@@ -126,17 +139,23 @@ refactor state の同期規則は、`{{cmoc-root}}/oracle/doc/app_spec/sub_comma
 
 競合解消 agent は、merge target である session worktree で作業する。oracle を判断根拠として読み、realization file を統合に必要な範囲で編集する。oracle file は変更しない。run worktree の issue commit や成果物を書き換えず、進行中の merge 結果へ調整を加える。
 
-call 固有の正確な prompt 文面、builder の引数、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_parameter` へ委譲する。feedback の自動 join でもこの call を用い、封印後の入力・調整範囲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。
+call 固有の正確な prompt 文面、builder の引数、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_parameter` へ委譲する。すべての自動 join と明示 join で同じ call を使用する。feedback の封印後の入力・調整範囲は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。
 
-競合解消または merge commit 確定前の検証・管理処理に失敗した場合は、cmoc が merge を中止し、merge と競合解消が導入した作業ファイルの差分を除去する。付随する追加・変更・rename・削除と tracked な生成物も含め、session worktree と staging area を merge 開始前の clean な状態へ戻す。そのうえで `run.state=error` とし、run branch と run worktree を保持する。report とログ、および repository-local feedback state はこの作業差分の rollback 対象にせず、それぞれの保持契約に従う。report には未解消理由と復旧結果を残し、復旧自体に失敗した場合も cleanup せず、残存差分と必要な次の操作を示す。
+### join の失敗と復旧
 
-この rollback は、取り込み確定後の hook、report、publication、または cleanup の失敗には適用しない。確定した取り込み結果と未完了処理を report し、資源の削除には本書の cleanup 条件を適用する。自動 join 済み feedback run の recovery は workload 固有契約に従う。
+join の事前検査で停止した場合は、取り込みを開始せず、既存の差分と run を保持する。その invocation の対象となる停止済み run を特定できる場合は `run.state=error` とする。対象がない場合は存在しない run や state を作らず、別の実行中 invocation を妨げる state 変更も行わない。失敗・取消を本命処理の正常終了や正常なユーザー中断へ変換しない。
 
-### feedback run を明示 join した場合
+競合解消または merge commit 確定前の検証・管理処理が失敗・取消となった場合は、書き込み得る子 process の停止を確認してから、cmoc が merge を中止し、merge と競合解消が導入した作業ファイルの差分を除去する。付随する追加・変更・rename・削除と tracked な生成物も含め、session worktree と staging area を merge 開始前の clean な状態へ戻す。そのうえで `run.state=error` とし、run branch と run worktree を保持する。report とログ、および repository-local feedback state はこの作業差分の rollback 対象にせず、それぞれの保持契約に従う。report には未解消理由と、停止確認・復旧の結果を残す。停止を確認できない場合は rollback せず `error` とし、停止または復旧に失敗した場合も cleanup せず、残存資源・差分、および必要な次の操作を示す。
 
-ユーザー中断またはエラー後の `feedback_report` を `cmoc run join` した場合は、確定済み issue commit を session branch へ取り込む。feedback の publication、`incomplete` 診断 report の生成、active・history の更新、および observation の消費・cleanup は行わない。
+この rollback は、取り込み確定後の hook、refactor state 同期、report、publication、state 更新、または cleanup の失敗・取消には適用しない。確定した取り込み結果を巻き戻さず、`run.state=error` として、未完了処理、残存資源、確定済み成果、および診断を保持する。`ready` への初期化後に必須の後処理が失敗・取消となった場合も、保存した run identity に対応する active run 情報を戻し、削除済みの資源と残存資源を区別する。状態保存自体に失敗した場合は、成功と表示せず、確認できた state と復旧に必要な記録を残す。
 
-feedback work state には join 結果と publication 未実施を記録する。次回の `cmoc feedback report` は join 後の tree、pending observation、および最新の active record を再検証する。self-joining 経路ですでに join 済みの run は再度 join せず、workload 固有 recovery だけで再開する。
+手動復旧では、事前条件を満たせば `cmoc run join` で取り込みを再試行できる。取り込み済み commit を再 merge せず no-op join とし、確定した処理の結果を尊重して未完了の post-join を処理する。`cmoc run abandon` は残る隔離資源を破棄できるが、session branch に取り込み済みの commit は取り消さない。部分 cleanup 等により join に必要な資源が欠ける場合は、join を実行可能と案内せず、残存資源と可能な abandon・修復を示す。
+
+封印済み report cut を持つ自動 join 済み feedback run は、この手動 join・abandon による復旧の対象外とし、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」に従う。
+
+### feedback run の取り込み後処理
+
+自然完了時の自動 join は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「publication」に従う。ユーザー中断後の自動 join と、停止 run の明示 join は、同文書の「publication を行わない feedback join」に従う。
 
 ### 使用済み branch と worktree の cleanup
 
@@ -146,7 +165,7 @@ feedback work state には join 結果と publication 未実施を記録する�
 - run branch HEAD が `{{cmoc-session-branch}}` から到達可能である。
 - run の結果と report が保存済みである。
 
-確認に失敗した場合は削除せず、warning として report する。
+確認に失敗した場合は削除せず、warning として report する。cleanup の保留と、削除操作自体の失敗を区別し、後者は「join の失敗と復旧」に従う。`ready` であることだけで、資源削除まで完了したとは表示しない。
 
 ## `cmoc run abandon`
 
@@ -168,7 +187,7 @@ feedback work state には join 結果と publication 未実施を記録する�
 
 - run worktree、その未コミット差分、run branch、および session state 上の active run 情報を破棄してよい。
 - session branch、その commit、session home branch、保存済み report、session state file 自体を破棄してはいけない。
-- `run.state` が `running` の場合は対応する process を停止し、停止を確認してから cleanup する。realization refactor の停止失敗後も、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「その他のエラー」に従い、`error` であることを理由に停止確認を省略しない。
+- `run.state` が `running` の場合は対応する process を停止し、停止を確認してから cleanup する。停止失敗後の run も、`error` であることを理由に停止確認を省略しない。realization refactor 固有の停止確認は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「その他のエラー」に従う。
 - 現在の worktree が削除対象である場合は、削除対象外の worktree から cleanup する。
 - run worktree と run branch は未 merge でも強制削除してよい。
 - cleanup 後に `run.state` を `ready` にして active run 情報を初期化する。
@@ -177,7 +196,7 @@ feedback work state には join 結果と publication 未実施を記録する�
 
 active workload が `feedback_report` の場合は、abandon する commit に依存する `fixed` result を publication 可能な state から除外する。raw observation と直前の current pointer を保持し、破棄済み修正を適用済みとして扱ってはならない。
 
-self-joining 経路の join がすでに成功した `feedback_report` は、`cmoc run abandon` の対象にしない。run branch を削除しても、session tree 上の変更は破棄できないためである。封印済み report cut の publication または cleanup が未完了であれば、`cmoc feedback report` recovery を要求する。
+封印済み report cut を持つ自動 join 済み `feedback_report` は、`cmoc run abandon` の対象にしない。publication または cleanup が未完了であれば、`cmoc feedback report` recovery を要求する。publication を行わない中断経路の失敗では、共通の「join の失敗と復旧」に従う。
 
 ## report と terminal result
 
@@ -185,11 +204,11 @@ self-joining 経路の join がすでに成功した `feedback_report` は、`cm
 
 ### 共通内容
 
-fork、self-joining workload、join、および abandon の report から、run kind、branch、worktree、fork commit、実行前後の state、warning、および cleanup 結果を判別可能にする。同じ commit を workload 固有の別名でも重複掲載してはいけない。
+workload、明示 join、および abandon の report から、run kind、branch、worktree、fork commit、実行前後の state、warning、および cleanup 結果を判別可能にする。同じ commit を workload 固有の別名でも重複掲載してはいけない。
 
-### fork と self-joining workload の report
+### workload の report
 
-fork report の実行情報には、少なくとも次の項目を含める。
+workload の report の実行情報には、少なくとも次の項目を含める。
 
 - workload：`run_kind`
 - branch：`session_branch`、`run_branch`
@@ -197,17 +216,19 @@ fork report の実行情報には、少なくとも次の項目を含める。
 - worktree：`run_worktree`
 - 実行前後の state：`state_before`、`state_after`
 
-確定できない項目は `null` とし、存在しない branch、commit、worktree、または state を作ってはならない。fork report には変更 path と完了理由も含める。保存先と workload 固有項目は、workload 固有仕様で定める。
+確定できない項目は `null` とし、存在しない branch、commit、worktree、または state を作ってはならない。変更 path と完了理由も含める。保存先と workload 固有項目は、workload 固有仕様で定める。
 
-self-joining workload の primary report は、上記の run identity と state に加えて、自動 join、workload 固有の確定処理、および cleanup の結果を含む。保存先と追加項目は、workload 固有仕様で定める。ただし、feedback の report 保存後に確定する処理結果の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。
+最外側の invocation の primary report は、上記に加えて、自動 join の事前検査・差分検査・merge または no-op join、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、workload 固有の確定処理、state 初期化、および cleanup の実際の結果を含む。no-op join の join commit は `null` とする。未実行と失敗を区別し、失敗段階、取り込み成立の有無、残存資源、必要な復旧、および次の操作を示す。
+
+自動 join は親の実行 ID と command を引き継ぐ内部処理とし、独立した primary report、terminal result、完了時のエディタ表示、または完了通知を追加しない。正常終了後の追加の手動 join は案内しない。
 
 feedback の publication または cleanup の再開では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「再開時の report と実行記録」に従って、引き継ぐ report と再開した実行の記録を対応付ける。
 
-join と self-joining workload の report には、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める競合解消の判断・付随編集・検証・未解消理由を含める。競合解消を行わなかった場合は、その旨を示す。
+明示 join と自動 join を含む workload の report には、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める競合解消の判断・付随編集・検証・未解消理由を含める。競合解消を行わなかった場合は、その旨を示す。
 
 ### join と abandon の report
 
-join と abandon は、`natural_completion` と `error` のすべての終了経路で report を保存する。共通事前条件に違反して開始できなかった場合も対象とする。両 report の実行情報には、少なくとも次の項目を含める。
+明示 join と abandon は、`natural_completion` と `error` のすべての終了経路で report を保存する。共通事前条件に違反して開始できなかった場合も対象とする。両 report の実行情報には、少なくとも次の項目を含める。
 
 - 実行情報：command、生成日時、repo root、terminal result の共通分類、終了コード
 - workload：`run_kind`
@@ -228,7 +249,7 @@ join または abandon を開始できなかった場合は、確定できた ac
 
 terminal result の出力先、共通 field、および表示順序は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。各 lifecycle 操作では、次の内容を示す。
 
-- fork の terminal result では、成立済み run の state と残存資源・差分に応じ、`cmoc run join` と `cmoc run abandon` の実行可否および必要な復旧を示す。run 成立前に終了した場合は、その段階を示し、存在しない run の操作を案内しない。
-- join の terminal result では、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、および cleanup の結果をサブコマンド固有結果として判別可能にする。
+- workload の terminal result では、自動 join を含む終了結果を示す。異常時は成立済み run の state と残存資源・差分に応じ、手動 join・abandon または workload 固有 recovery の実行可否を示す。run 成立前に終了した場合は、その段階を示し、存在しない run の操作を案内しない。
+- 明示 join と自動 join を含む workload の terminal result では、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、および cleanup の結果をサブコマンド固有結果として判別可能にする。
 - apply の比較始点を保持した join を、report や terminal result で「比較始点を更新した」と表示してはならない。
 - abandon の terminal result では、破棄対象と cleanup の結果をサブコマンド固有結果として判別可能にする。

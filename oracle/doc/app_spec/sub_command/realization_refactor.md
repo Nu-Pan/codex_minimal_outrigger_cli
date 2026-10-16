@@ -1,10 +1,10 @@
-# `cmoc realization refactor fork`
+# `cmoc realization refactor`
 
 ## 目的
 
 realization refactor は、仕様への適合と必要な回帰検出能力を保ちながら、テストと実装のムダをファイル単位で網羅的に調査・削減し、テスト実行時間の短縮を図る workload である。全 oracle file と全 realization file を調査の起点にし、人間が `Ctrl+C` で止めるまで一巡を繰り返す。変更がない巡も継続する。
 
-長時間の反復と、任意の段階から確定済み成果を取り込める状態へ速やかに正常終了できることを、並ぶ契約とする。停止要求に対して長い調査や検証の完了を待たせず、未確定作業を取り消し、検証済みの確定成果を保持する。
+長時間の反復と、任意の段階から本命作業を速やかに停止できることを、並ぶ契約とする。停止要求に対して長い調査や検証の完了を待たせず、未確定作業を取り消す。その後、検証済みの確定成果と調査状態を同じ invocation 内で session branch へ自動 join して正常終了する。停止までの処理と、取り込みに必要な競合解消・検証は区別する。
 
 適合性の共通基準と refactor 固有の改善基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」「realization refactor の改善判断」を正本とする。installed skill の有無で判断基準を変えない。直近の oracle 変更へ素早く追従する realization apply の目的は拡張しない。
 
@@ -47,11 +47,12 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 
 ### 調査履歴と巡回の区別
 
-state は確定済みの調査履歴と再調査要求を次の fork へ引き継ぐ。`no_findings` や `investigation_required=false` は、改善余地の不存在、収束、または将来の巡での調査不要を意味しない。一巡内で調査機会を与えたかどうかは、この履歴とは区別して管理する。
+state は確定済みの調査履歴と再調査要求を次の新しい refactor run へ引き継ぐ。`no_findings` や `investigation_required=false` は、改善余地の不存在、収束、または将来の巡での調査不要を意味しない。一巡内で調査機会を与えたかどうかは、この履歴とは区別して管理する。
 
 ## 引数と想定内差分
 
 - 引数なし。
+- 公開入口と help・補完・command 表記は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「公開コマンド名」に従う。
 - agent が変更する作業成果物は realization file だけとする。起点 file に限らず、関連する複数 file の改善を一つの処理単位に含めてよい。
 - agent が変更する realization file と cmoc が更新する refactor state を想定内差分とする。
 - 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
@@ -60,7 +61,7 @@ state は確定済みの調査履歴と再調査要求を次の fork へ引き�
 
 一巡は、列挙した対象を一通り調査する区切りであり、改善余地の不存在を判定する区切りではない。
 
-1. fork の開始時は、doctor preprocess と編集 run の共通開始処理を行う。
+1. コマンドの開始時は、doctor preprocess と編集 run の共通開始処理を行う。
 2. 各巡の開始時は run worktree 上で entry 集合を同期し、全 entry をその巡の対象にする。前から残る調査要求を保持し、`false` の entry にも `investigation_required=true` を設定する。この state 更新を run branch に確定してから調査を始める。
 3. その巡の全対象に調査機会を与えたら、変更や unresolved の有無にかかわらず次巡へ進む。調査機会を与えたとは、その target の処理単位を確定したことをいい、中断・失敗で rollback した単位は数えない。
 
@@ -73,14 +74,14 @@ state は確定済みの調査履歴と再調査要求を次の fork へ引き�
 ### 調査対象の選択
 
 - その巡でまだ調査機会を与えていない対象を選び、同じ対象の再選択より優先する。
-- 前の巡または fork から引き継いだ調査要求を、新たに設定した要求より先に扱う。その中では `last_investigation_result=not_investigated` を先に選び、その後は `last_investigated_at` の古い順、同値なら path の昇順とする。日時の比較には保存したミリ秒精度の値を使う。
+- 前の巡または run から引き継いだ調査要求を、新たに設定した要求より先に扱う。その中では `last_investigation_result=not_investigated` を先に選び、その後は `last_investigated_at` の古い順、同値なら path の昇順とする。日時の比較には保存したミリ秒精度の値を使う。
 - 関連 file を編集・参照しただけでは、その file 自身を起点とする調査機会を与えたことにしない。
 
 ### 一巡内の unresolved target
 
-処理単位の確定結果に `resolution.status=unresolved` の所見が残る target を、その巡の unresolved target として保留する。保留は一巡内だけで有効とし、次巡では再検討する。current fork 全体や次の fork の選択対象から除外してはならない。
+処理単位の確定結果に `resolution.status=unresolved` の所見が残る target を、その巡の unresolved target として保留する。保留は一巡内だけで有効とし、次巡では再検討する。current run 全体や次の run の選択対象から除外してはならない。
 
-存在し続ける保留対象の entry には `last_investigation_result=findings` と `investigation_required=true` を残す。巡内の保留集合を永続的な skip・checkpoint として保存しない。終了時には、確定済みの未解決理由を report に残し、次の fork では現時点の原文を調べ直す。
+存在し続ける保留対象の entry には `last_investigation_result=findings` と `investigation_required=true` を残す。巡内の保留集合を永続的な skip・checkpoint として保存しない。終了時には、確定済みの未解決理由を report に残し、次の run では現時点の原文を調べ直す。
 
 ### 1 処理単位
 
@@ -145,16 +146,17 @@ agent 作業、全件テスト、計測、全対象の列挙・同期などの�
 
 ## ユーザー中断
 
-この fork は中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」を正本とする。
+本コマンドは中断可能サブコマンドとし、共通動作は `{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」を正本とする。
 
 - `Ctrl+C` は、開始準備、調査、編集、検証、計測、巡の切替、回復待ち、report 作成を含む任意の段階で受け付ける。
-- 停止要求を受けたら、新しい処理単位・巡・agent call・品質検査・計測を開始しない。要約のための agent call や、確定するための追加テストも行わない。
+- 停止要求を受けたら、新しい本命の処理単位・巡・agent call・品質検査・計測を開始しない。要約のための agent call や、未確定作業を確定するための追加テストも行わない。整合化後の自動 join に必要な競合解消 call と検証だけは、共通の中断契約が認める例外とする。
 - 不可分な確定区間の外では、開始準備・列挙・同期を含む実行中の処理を打ち切り、agent、test、計測、および作業用子 process を停止する。書き込み得る process の停止を確認してから、未確定の一処理単位全体を直前の確定状態へ rollback する。長い作業の自然完了を待つ経路を通常の停止処理にしない。
 - 子 process の終了待ちは、作業の自然完了に依存しない有限の猶予とし、終了しなければ停止手段を切り替えて回収する。停止を確認できないまま rollback したり `joinable` にしたりしてはならない。停止や rollback 自体が失敗した場合は「その他のエラー」に従う。
 - rollback は、その単位が導入した追加・変更・rename・削除と、巡開始の準備を含む未確定の refactor state 更新を取り消す。成果物と調査状態の片方だけを確定せず、取り消した作業を調査済み・検証済みとして数えない。確定済み commit と調査要求を保持する。
-- doctor preprocess または共通開始処理が途中の場合にも同じ確定・rollback の境界を適用し、その準備が導入した未確定の更新と作成資源を取り消す。開始前から存在する資源や人間の未コミット差分を取り消さず、未完了の前処理を成功と記録しない。run の成立前に終了した場合は、存在しない run や `joinable` state を作らず、その段階を report する。
-- 成立済みの run は、上記の整合化後に `run.state=joinable` にし、report を保存して終了コード 0 で終える。通常の中断で run worktree に未確定差分を残さない。
-- その後は `cmoc run join` で確定済み成果物と調査状態を取り込むか、`cmoc run abandon` で破棄する。続ける場合は join 後に新しい `cmoc realization refactor fork` を開始し、調査要求を引き継ぐ。同じ run branch または worktree の実行途中を復元する仕組みは設けない。
+- doctor preprocess または共通開始処理が途中の場合にも同じ確定・rollback の境界を適用し、その準備が導入した未確定の更新と作成資源を取り消す。開始前から存在する資源や人間の未コミット差分を取り消さず、未完了の前処理を成功と記録しない。run の成立前に終了した場合は、存在しない run、`joinable` state、または join を作らず、その段階を report して正常中断を完了する。
+- 成立済みの run は、上記の整合化後に `run.state=joinable` にし、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」に従って確定済み成果物と調査状態を取り込む。通常の中断で run worktree に未確定差分を残さない。
+- 自動 join と必要な後処理が完了した場合に、`user_interruption` として終了コード 0 で終える。自動 join 開始後の取消・失敗は、最初の停止要求による正常中断とは区別し、共通 join の復旧契約に従って `error` とする。本命の調査・改善を再開してはならない。
+- 続ける場合は正常終了後に新しい `cmoc realization refactor` を開始し、調査要求を引き継ぐ。同じ run branch または worktree の実行途中を復元する仕組みは設けない。
 
 ## その他のエラー
 
@@ -164,6 +166,8 @@ agent 作業、全件テスト、計測、全対象の列挙・同期などの�
 - 確定済み commit と refactor state を保持する。整合化に失敗した場合は、残存資源と未確定差分を明示し、成功や `joinable` として扱わない。
 
 停止を確認できなかった作業用 process がある場合は、`error` への遷移だけで停止済みとみなさない。後続の join は、その process の停止と未確定差分の解消を確認できるまで開始しない。abandon でも、process の停止を確認してから資源を破棄する。確認できなければ、復旧に必要な資源と診断を保持する。
+
+本命処理の失敗時は自動 join しない。確定済み成果の手動 join・abandon と、自動 join の取り込み前後の失敗に対する復旧は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「join の失敗と復旧」に従う。
 
 ## 改善の計測
 
@@ -183,6 +187,7 @@ full test 1 回の所要時間と、検査の実行回数などによる orchest
 - 確定済みの変更の要約と、現在進行中で未確定の作業の区別。
 - 比較基準と比較可能な測定済みテスト時間・短縮率。計測中または利用できる計測がない場合は、その状態。
 - 停止要求の受付と、子 process 停止・rollback または確定区間の終了を待っている状態。
+- 本命処理の停止完了後に行う自動 join、競合解消、および後処理の段階。
 
 調査数は各巡の確定実績で数え、過去の履歴や単なる関連 file の参照で進捗を増やさない。表示のために新しい agent call を行わない。
 
@@ -190,24 +195,24 @@ full test 1 回の所要時間と、検査の実行回数などによる orchest
 
 成果物と feedback の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」を正本とする。
 
-## fork report、終了 log、および終了コード
+## report、終了 log、および終了コード
 
 ### 保存と掲載内容
 
 実行 ID と primary report の共通表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」に従う。
 
-すべての終了経路で、`{{repo-root}}/.cmoc/gu/report/realization/refactor/fork/{{execution-id}}.md` に primary report を保存する。共通 fork 事前条件違反など、run や通常の report 生成処理より前のエラーも対象とする。共通 run 項目に加え、refactor state のフル path と `completion_reason` を含める。`completion_reason` は `user_interruption | error` とする。
+すべての終了経路で、`{{repo-root}}/.cmoc/gu/report/realization/refactor/{{execution-id}}.md` に primary report を保存する。共通開始条件違反など、run や通常の report 生成処理より前のエラーも対象とする。共通 run 項目と自動 join の掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「workload の report」に従う。加えて、refactor state のフル path と `completion_reason` を含める。`completion_reason` は `user_interruption | error` とする。
 
 詳細結果には次の内容を含める。
 
 - 完了した巡の数、終了時の巡・処理段階、その巡の対象数・確定調査数・未処理数・保留数。
-- current fork で 1 回以上処理単位を確定した target path の重複のない件数と、確定した処理単位の件数。
+- current run で 1 回以上処理単位を確定した target path の重複のない件数と、確定した処理単位の件数。
 - 巡内の unresolved target の件数と path。
 - 各 target の確定済みの最新結果に残る未解決所見、その理由、および対応する Codex call log または Structured Output のフル path。前の巡から再調査を待つ未解決所見も含め、巡内の保留対象と区別する。
 - 処理単位ごとの正規化後の所見数、変更と検証の結果。所見なしへ正規化した単位は 0 件とする。
 - entry 総数、調査要求あり件数、各 `last_investigation_result` の件数。これらの履歴集計を、その巡の未処理数や改善目的での調査済み実績と混同しない。
 - 確定済みの変更要約、比較基準と測定済みテスト時間・短縮率、未完了または比較不能な計測。
-- 中断・エラー時の子 process 停止と rollback・確定の結果、取り消した未確定作業、および次に可能な join/abandon または復旧操作。
+- 中断・エラー時の子 process 停止と rollback・確定の結果、取り消した未確定作業、および必要な次の操作。異常時は手動 join・abandon または修復の可否を示す。
 
 確定していない項目は `null`、未実行、または未完了として区別する。失敗した処理段階、エラー、および関連ログを記録する。
 
@@ -215,13 +220,13 @@ full test 1 回の所要時間と、検査の実行回数などによる orchest
 
 変更要約は、各処理単位で確定した変更 path、所見、対応結果、および検証記録から cmoc が作成する。取り消した単位を成果に含めず、確定済み成果物の net 差分と、途中の変更履歴を区別する。確定済み成果物に差分がなければ変更なしと示す。
 
-終了時専用の変更要約 agent call は設けない。ユーザー中断後またはエラー後にも新しい agent call や品質検査を開始せず、保存済みの記録を用いて report を作る。
+終了時専用の変更要約 agent call は設けず、保存済みの記録を用いて report を作る。ユーザー中断後に許す call と検証は、本書の「ユーザー中断」に従う。join の調整結果は本命の調査実績と区別して記録する。
 
 ### 終了 log と終了コード
 
 サブコマンド終了イベントには `completion_reason`、巡内の unresolved target の件数、および report のフル path を含める。report、terminal result、および終了イベントからユーザー中断とエラーを判別可能にする。
 
-`user_interruption` は正常系の終了コード 0、`error` は非 0 とする。一巡完了や unresolved の存在に対応する独立した終了理由は設けない。
+本書の「ユーザー中断」の完了条件を満たした `user_interruption` は正常系の終了コード 0、`error` は非 0 とする。本命処理を停止できても自動 join または必要な後処理が失敗した場合は `error` とし、停止要求を受けた事実も report に残す。一巡完了や unresolved の存在に対応する独立した終了理由は設けない。
 
 ## join 後 hook
 

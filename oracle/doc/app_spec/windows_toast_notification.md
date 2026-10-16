@@ -30,6 +30,7 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 
 非対話サブコマンドの内部にある次の処理では、Windows toast を通知しない。
 
+- 自動 join、post-join、およびその cleanup
 - `codex exec`
 - Structured Output の補正 turn
 - retry、quota または一時障害の回復確認 probe、および回復待ち後の再開

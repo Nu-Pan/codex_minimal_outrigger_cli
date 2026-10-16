@@ -2,20 +2,15 @@
 
 ## 用語
 
-run は、workload 固有の fork で開始し、join または abandon で終了する隔離作業の 1 instance である。workload は、その run が行う作業の種類を表す。fork、join、abandon は run の lifecycle 操作を指し、公開 CLI のサブコマンド名と一致するとは限らない。
+run は、workload が branch と worktree を分岐させて開始し、join または abandon で終了する隔離作業の 1 instance である。workload は、その run が行う作業の種類を表す。fork、join、abandon は run の lifecycle 操作を指し、公開 CLI のサブコマンド名と一致するとは限らない。
 
 run が使用する branch、commit、および worktree の定義と命名は、`{{cmoc-root}}/oracle/doc/branch_model.md` の「`{{cmoc-run-branch}}`」「git commit」「`{{cmoc-run-worktree}}`」を正本とする。run ID の識別単位・発行・保持は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「共通開始処理」、永続化する run state は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「run field」を正本とする。
 
 ## lifecycle
 
-run は 1 回のサブコマンド呼び出し内で fork から join または abandon まで完了してよい。run とサブコマンド呼び出しを 1:1 の概念として扱ってはいけない。
+編集 run は、正常終了前に同じ invocation 内で自動 join する。対象 workload、正常中断、失敗時の明示 join・abandon、および workload 固有 recovery の境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「対象」「正常終了時の自動 join」「join の失敗と復旧」に従う。復旧が別 invocation になるため、run とサブコマンド呼び出しを 1:1 の概念として扱ってはいけない。
 
-| workload の扱い | 開始と終了 |
-|---|---|
-| 明示的な確認を経て成果物を取り込む編集 run | workload 固有の fork サブコマンドで開始し、後続の `cmoc run join` または `cmoc run abandon` で終了する。 |
-| self-joining workload | workload 固有コマンドの同一 invocation 内で run を作成し、workload 固有の完了条件を満たした後に join してよい。 |
-
-read-only の investigation、cmoc 自身による機械的更新、および session join の conflict 解消は、明示的な join を必要とする編集 run ではない。
+session を直接編集する oracle edit、read-only の investigation、run を作らない cmoc 自身の機械的更新、および session join の conflict 解消は、編集 run ではない。
 
 ## git branch
 

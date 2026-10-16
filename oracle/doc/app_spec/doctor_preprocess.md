@@ -12,7 +12,7 @@ doctor preprocess は、各サブコマンドに共通する実行環境・設�
 
 検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・作業用配置先・コンポーネントまたは索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「通知処理と Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を作業用配置先の存在保証、必須の検索用コンポーネント、または索引同期へ適用してはならない。
 
-realization refactor fork の開始前処理をユーザー中断で打ち切る場合は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「ユーザー中断」に従い、前処理の未完了だけを理由に fork をエラー終了させない。未検証の前処理を成功扱いにして本命処理へ進むのではなく、未完了の段階を記録して fork の中断処理へ移る。
+中断可能な workload の開始前処理をユーザー中断で打ち切る場合は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` または `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「ユーザー中断」に従い、前処理の未完了だけを理由にエラー終了させない。未検証の前処理を成功扱いにして本命処理へ進むのではなく、未完了の段階を記録して中断処理へ移る。
 
 ## 共通実行環境の検証
 
@@ -172,9 +172,11 @@ doctor preprocess の後に作成する run worktree の初回同期にも、同
 
 ### editing run の join での同期時点
 
+本節は、workload の同一 invocation 内の自動 join と、明示的な `cmoc run join` の両方に適用する。開始前の doctor preprocess が成功したことだけで、join 時点の検証と同期を省略しない。
+
 active run の kind が `realization_refactor` または `feedback_report` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。これは、session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
 
-merge 後は kind にかかわらず、競合解消の付随編集も反映した最終的な session tree に対して entry 集合を同期する。merge 進行中に doctor preprocess を再実行して同期・commit を割り込ませない。競合中の管理物の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」に従う。
+merge または no-op join 後は kind にかかわらず、競合解消の付随編集も反映した最終的な session tree に対して entry 集合を同期する。merge 進行中に doctor preprocess を再実行して同期・commit を割り込ませない。競合中の管理物の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」に従う。
 
 ## feedback MCP reporter/client の事前検証
 

@@ -14,12 +14,14 @@
 実行 ID `{{execution-id}}` は、ユーザーが起動した最外側の末端サブコマンドの invocation を識別する。console と保存記録を同じ値で対応付け、editor input のファイル名から対応するターミナル上の実行を直接照合できるようにする。書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。
 
 - 最外側のサブコマンド開始処理で、doctor preprocess や editor input より前に一度確定し、終了まで維持する。この発行確定順を実行開始順とし、並行開始も同じ基準で順序を定める。
-- 内部から呼び出すサブコマンド、処理関数、agent call、Codex call、retry、および回復待ちには、同じ実行 ID を引き継ぐ。TUI 起動用の初回 exec から TUI への自動移行も含め、実際の最外側のサブコマンド名を維持する。
+- 内部から呼び出すサブコマンド、処理関数、agent call、Codex call、retry、および回復待ちには、同じ実行 ID を引き継ぐ。自動 join と post-join、TUI 起動用の初回 exec から TUI への自動移行も含め、実際の最外側のサブコマンド名を維持する。
 - 別の最外側のサブコマンド実行には別の値を割り当てる。同じ session や run を扱う場合も、複数ターミナルで並行実行する場合も重複させない。
 - `cmoc resume` も新しい最外側の実行として採番する。指定された再開元の実行 ID は対応情報として保持し、今回の実行 ID やログ保存先に再利用しない。
 - 同じ実行を表す console 表示、保存先の `{{execution-id}}`、および記録内の実行情報には同じ文字列を使う。
 
 記録系の日時項目は維持し、実行 ID で置き換えない。
+
+公開 CLI の command 表記と agent call 種別は区別する。apply/refactor の command 表記は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「公開コマンド名」に従い、builder 名や内部処理名で置き換えない。
 
 agent call、Codex call、session、run、および handoff target の識別子は、それぞれの識別対象を維持する。これらの識別情報を使う記録には、関連する実行 ID との対応を残し、実行 ID で各識別子を置き換えない。
 
@@ -63,11 +65,13 @@ realization refactor の巡回・確定成果・比較可能なテスト時間�
 
 primary report は、冒頭だけで、何を依頼した実行か、どこまで終わったか、注意すべき点、および次に必要な操作を人間が読み取れるものとする。その invocation で確定した作業内容と終端結果を要約し、根拠となる詳細結果と実行記録を続ける。ユーザーが起動した最外側の非対話末端サブコマンドは、terminal result を確定する前に primary report を 1 件保存する。
 
-ただし、feedback の publication で確定する report の掲載時点と、保存後に確定する処理結果の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。再開で引き継ぐ report の保存確認、掲載対象、および入力・実行情報の帰属は、同文書の「再開時の report と実行記録」または `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」に従う。
+feedback の immutable な publication artifact の掲載時点は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。`cmoc feedback report` は、同文書の「invocation report」に従い最外側の終了結果を primary report に載せる。再開した実行の帰属は同文書の「再開時の report と実行記録」に従う。`cmoc feedback close` が publication report を primary report として使う場合の保存確認・掲載時点・保存後の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」を維持する。
 
 - `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
 - primary report 作成専用の追加 agent call は、個別仕様が report 生成手順として明示する場合に限る。
 - cmoc 内部から呼び出したサブコマンド、処理関数、agent call、および Codex call は、独立した primary report を保存しない。
+
+自動 join を含む workload は、join と post-join、state、cleanup、失敗段階、および次の操作を最外側の primary report に含める。項目と保存順序は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」「workload の report」に従う。内部 join 用に report、表示用エディタ、terminal result、または完了通知を重複させない。
 
 primary report の保存に失敗し、完了契約を確定できない場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー終了の確定」に従って internal failure とする。この場合は、保存済みでない primary report の path を terminal result に表示しない。
 
@@ -110,7 +114,7 @@ editor input の掲載元は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_
 
 実行の成否と問題の有無は分ける。終了コード 0 を問題なしと読み替えず、未確認を確認済みとして扱わない。サブコマンド固有の結果分類と、その結果に応じた注意事項・次の操作は個別仕様に従う。
 
-要約は既存の確定情報から cmoc が作成し、要約のための追加 agent call は行わない。realization apply と realization refactor の変更要約の可否・生成方法は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「fork report と終了コード」と `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「変更要約」に従う。oracle edit の差分と成果の帰属は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に従う。
+要約は既存の確定情報から cmoc が作成し、要約のための追加 agent call は行わない。realization apply と realization refactor の変更要約の可否・生成方法は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「report と終了コード」と `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「変更要約」に従う。oracle edit の差分と成果の帰属は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に従う。
 
 #### 詳細結果と実行記録
 

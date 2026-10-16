@@ -1,4 +1,4 @@
-"""run join と feedback 自動 join の競合解消 call の構築定義。"""
+"""編集 run の自動 join と明示 join に共通する競合解消 call の構築定義。"""
 
 from pathlib import Path
 
@@ -31,7 +31,8 @@ def build_run_join_conflict_resolution_parameter(
         run_head_commit: 差分検査後、merge 前に確定した run branch の HEAD。
         session_head_commit: merge 前に確定した session branch の HEAD。
         session_worktree: run の merge が進行中の session worktree。
-        feedback_report_cut_path: 自動 join 時の封印済み report cut への参照。
+        feedback_report_cut_path: 自然完了した feedback の封印済み report cut への参照。
+            publication を行わない join と他 workload では渡さない。
 
     NOTE
         意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の

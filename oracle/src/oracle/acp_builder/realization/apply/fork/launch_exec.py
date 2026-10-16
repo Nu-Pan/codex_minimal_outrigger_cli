@@ -1,4 +1,4 @@
-"""`cmoc realization apply fork` の prompt 文面と起動パラメータの構築定義。"""
+"""`cmoc realization apply` の追従作業用 prompt と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path
