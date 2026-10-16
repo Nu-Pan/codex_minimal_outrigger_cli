@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
+from unittest.mock import Mock
 
 import pytest
 from _git_support import run_git
@@ -83,6 +84,63 @@ def test_refactor_state_sync_tracks_enumerated_files(
         relative: {**entry, "investigation_required": True}
         for relative, entry in state.items()
     }
+
+
+@pytest.mark.parametrize("initial_state", ["empty", "pending", "new_entries"])
+def test_refactor_cycle_initialization_avoids_redundant_io(
+    refactor_files: Path, monkeypatch: pytest.MonkeyPatch, initial_state: str
+) -> None:
+    """保存済みの調査要求を再保存せず、同期が生んだ差分は確定する。"""
+    root = refactor_files
+    targets = [] if initial_state == "empty" else ["README.md", "oracle/spec.md"]
+    monkeypatch.setattr(
+        refactor_module, "enumerate_refactor_targets", lambda _root: targets
+    )
+    write_refactor_state(root, {})
+    if initial_state == "pending":
+        sync_refactor_state(root)
+    state_path = refactor_workload.refactor_state_path(root)
+    before = state_path.read_bytes()
+    save = Mock(wraps=write_refactor_state)
+    monkeypatch.setattr(refactor_module, "write_refactor_state", save)
+    monkeypatch.setattr(refactor_workload, "write_refactor_state", save)
+
+    # Git 分類・commit/rollback・要求の再設定と中断は test_editing_run_cli.py に残す。
+    # ここでは保存内容と既存 snapshot の差を Git 境界へ渡し、巡開始の I/O を検査する。
+    inspect_changes = Mock(
+        side_effect=lambda _root, **_kwargs: (
+            [state_path.relative_to(root).as_posix()]
+            if state_path.read_bytes() != before
+            else []
+        )
+    )
+    commit = Mock()
+    monkeypatch.setattr(refactor_workload, "worktree_change_paths", inspect_changes)
+    monkeypatch.setattr(refactor_workload, "commit_work_unit", commit)
+    progress = refactor_workload._RefactorProgress(
+        cycle=1,
+        targets={"previous.md"},
+        processed={"previous.md"},
+        deferred={"previous.md"},
+    )
+
+    pending = refactor_workload._initialize_cycle(
+        SimpleNamespace(run_worktree=root), progress=progress
+    )
+
+    assert pending == targets
+    assert set(load_refactor_state(root)) == set(targets)
+    assert progress.cycle == 2
+    assert progress.targets == set(targets)
+    assert not progress.processed
+    assert not progress.deferred
+    inspect_changes.assert_called_once_with(root, include_rename_sources=True)
+    assert save.call_count == (1 if initial_state == "new_entries" else 0)
+    if initial_state == "new_entries":
+        commit.assert_called_once_with(root, "cmoc realization refactor cycle")
+    else:
+        commit.assert_not_called()
+        assert state_path.read_bytes() == before
 
 
 @pytest.mark.parametrize(

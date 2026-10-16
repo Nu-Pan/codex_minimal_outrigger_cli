@@ -1125,7 +1125,7 @@
     "investigation_required": true,
     "last_investigation_result": "findings",
     "last_investigated_sha256": "45f2cdf62d9edd181a1f1cc14734db2757e556059630746b1486c1bd5d1101b4",
-    "last_investigated_at": "2026-10-12_16-02-25_229"
+    "last_investigated_at": "2026-10-16_14-00-24_082"
   },
   "src/sub_commands/realization/apply/__init__.py": {
     "investigation_required": true,
