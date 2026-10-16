@@ -314,6 +314,25 @@ def test_signal_process_group_members_uses_each_member_pidfd(
     assert closed == [1111, 1222]
 
 
+@pytest.mark.parametrize(
+    ("parents", "current_start"),
+    [(set(), None), ({(111, 10)}, None), ({(111, 10)}, 20)],
+    ids=["no-parents", "exited-parent", "reused-pid"],
+)
+def test_descendant_processes_skips_scan_without_current_parent(
+    monkeypatch, parents, current_start
+):
+    """親が不在・終了・PID 再利用の場合は子を探すための /proc 走査を省く。"""
+    monkeypatch.setattr(
+        runtime_codex_profile, "process_start_time", lambda _pid: current_start
+    )
+    proc_path = Mock(side_effect=AssertionError("no current parent to scan for"))
+    monkeypatch.setattr(runtime_codex_profile, "Path", proc_path)
+
+    assert runtime_codex_profile._descendant_processes(parents) == ()
+    proc_path.assert_not_called()
+
+
 def test_stop_process_group_rejects_reused_group_before_signal(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

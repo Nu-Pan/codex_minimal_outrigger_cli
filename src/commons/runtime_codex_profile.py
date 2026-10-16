@@ -453,6 +453,8 @@ def _descendant_processes(
 ) -> tuple[tuple[int, int], ...]:
     # parent の starttime を再確認し、別 process の子を取り込まない。
     parent_ids = {pid for pid, start in parents if process_start_time(pid) == start}
+    if not parent_ids:
+        return ()
     descendants: list[tuple[int, int]] = []
     for path in Path("/proc").iterdir():
         if not path.name.isdigit():
