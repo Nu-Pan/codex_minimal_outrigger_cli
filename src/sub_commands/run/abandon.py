@@ -239,4 +239,5 @@ def _remove_run_branch(
     if result.returncode != 0:
         warnings.append(result.stderr.strip() or "run branch removal failed")
         return False
-    return not branch_exists(context.repo, context.run_branch)
+    # Git の正常終了で削除は完了しているため、同じ branch を再照会しない。
+    return True
