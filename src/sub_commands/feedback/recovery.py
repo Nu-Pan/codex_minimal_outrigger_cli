@@ -23,9 +23,9 @@ from commons.runtime_feedback_state import (
     _require_exact_fields,
     artifact_reference,
     cleanup_published_report,
+    current_pointer_path,
     discard_report_cut,
     feedback_writer_lock,
-    load_active_state,
     load_report_cut,
     recover_report_cut_checkpoint_references,
     validate_feedback_state,
@@ -55,6 +55,7 @@ def finish_feedback_run(
     completion = read_run_artifact(context.repo, manifest["run"]["completion"])
     merged = read_run_artifact(context.repo, manifest["run"]["merged"])
     path = feedback_root(context.repo) / "finalization.json"
+    # journal には pointer だけを固定し、参照先の検証は lifecycle lock 内で一度行う。
     journal = {
         "schema_version": 1,
         "feedback_run_id": manifest["run"]["feedback_run_id"],
@@ -62,7 +63,9 @@ def finish_feedback_run(
         "identity": manifest["run"]["identity"],
         "report_cut_id": manifest["report_cut_id"],
         "report": artifact_reference(context.repo, result.primary_report),
-        "current": load_active_state(context.repo).current,
+        "current": _read_canonical_object(
+            current_pointer_path(context.repo), "feedback current pointer"
+        ),
         "completion": completion,
         "merged": merged,
         "result": result.result,

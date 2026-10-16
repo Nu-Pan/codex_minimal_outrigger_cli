@@ -1088,8 +1088,8 @@
   "src/sub_commands/feedback/recovery.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "1659f1878e18aea63028efd9270efbaee295b0c7099bb67e3aa2c2c35ac5eba7",
-    "last_investigated_at": "2026-10-12_14-39-50_536"
+    "last_investigated_sha256": "ca01be51161999e870ef5db2d07f049cccd7f2526b26c85739c3646e75b71ffa",
+    "last_investigated_at": "2026-10-16_13-27-48_027"
   },
   "src/sub_commands/feedback/remediation.py": {
     "investigation_required": true,

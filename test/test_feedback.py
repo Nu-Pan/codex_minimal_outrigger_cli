@@ -2761,14 +2761,14 @@ def test_empty_report_publishes_current_generation(
         "run_codex_exec",
         lambda *_args, **_kwargs: pytest.fail("empty report must not call Codex"),
     )
-    # 終了処理でも hash 検証済み manifest を共有し、同じ内容の再読込を検出する。
-    finish = recovery_module._finish_from_journal
+    # journal 作成を含む終了処理全体で、cleanup manifest の重複検証を検出する。
+    finish = recovery_module.finish_feedback_run
     original_read = Path.read_bytes
     cleanup_reads = []
 
-    def finish_with_read_count(context, journal, path):
+    def finish_with_read_count(context, manifest, result):
         manifest_path = feedback_state_module.report_cut_manifest_path(
-            root, journal["report_cut_id"]
+            root, manifest["report_cut_id"]
         )
 
         def read(candidate):
@@ -2778,9 +2778,9 @@ def test_empty_report_publishes_current_generation(
 
         with monkeypatch.context() as finalization_patch:
             finalization_patch.setattr(Path, "read_bytes", read)
-            return finish(context, journal, path)
+            return finish(context, manifest, result)
 
-    monkeypatch.setattr(recovery_module, "_finish_from_journal", finish_with_read_count)
+    monkeypatch.setattr(recovery_module, "finish_feedback_run", finish_with_read_count)
 
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
