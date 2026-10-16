@@ -79,6 +79,46 @@ def managed_repository(cli_repository: Path) -> Path:
     return root
 
 
+@pytest.fixture
+def doctor_repair_events(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """配置先の検査と同じ前処理で、修復順序と毎回の reporter 検査も観測する。"""
+    # 順序だけのために repository と doctor の全処理を重ねない。
+    events: list[str] = []
+    original_ignore = doctor_module.ensure_cmoc_ignored
+    original_agents = doctor_module._ensure_agents_tracked
+    original_config = doctor_module.sync_config
+    original_state = doctor_module.sync_refactor_state
+
+    def observe_ignore(path: Path) -> None:
+        assert all((path / relative).is_dir() for relative in _WORK_DIRECTORIES)
+        events.append("ignore")
+        original_ignore(path)
+
+    def observe_agents(path: Path) -> bool:
+        events.append("agents")
+        return original_agents(path)
+
+    def observe_config(path: Path, **kwargs):
+        events.append("config")
+        return original_config(path, **kwargs)
+
+    def observe_state(path: Path, *, sync_entries: bool = True) -> RefactorState:
+        events.append("state")
+        return original_state(path, sync_entries=sync_entries)
+
+    def observe_reporter() -> None:
+        events.append("reporter")
+
+    monkeypatch.setattr(doctor_module, "ensure_cmoc_ignored", observe_ignore)
+    monkeypatch.setattr(doctor_module, "_ensure_agents_tracked", observe_agents)
+    monkeypatch.setattr(doctor_module, "sync_config", observe_config)
+    monkeypatch.setattr(doctor_module, "sync_refactor_state", observe_state)
+    monkeypatch.setattr(
+        doctor_module, "validate_feedback_reporter_availability", observe_reporter
+    )
+    return events
+
+
 def test_refactor_preprocess_interruption_preserves_user_changes(
     managed_repository, monkeypatch
 ):
@@ -323,9 +363,9 @@ def test_doctor_preprocess_repairs_git_state(
 
 @pytest.mark.parametrize("explicit_doctor", [False, True])
 def test_doctor_preprocess_restores_empty_work_directories(
-    cli_repository, explicit_doctor
+    cli_repository, explicit_doctor, doctor_repair_events
 ):
-    """親ごとの不足を補完し、既存の内容を保って再実行時の差分を増やさない。"""
+    """両入口の修復順序を守り、不足の補完と再実行で既存内容・差分を保つ。"""
     # 修復済みの管理 file だけ用意し、配置先を作るための doctor 全体を重ねない。
     # 初期内容を最初の commit に揃え、参照しない空 commit を準備しない。
     root = cli_repository
@@ -342,8 +382,12 @@ def test_doctor_preprocess_restores_empty_work_directories(
     head_before = run_git(root, "rev-parse", "HEAD").stdout
     preserved_before = (preserved.stat().st_ino, preserved.stat().st_mtime_ns)
 
+    # 準備用の state 同期を除き、各前処理だけの順序を観測する。
+    doctor_repair_events.clear()
     doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit_doctor)
 
+    expected_order = ["ignore", "agents", "config", "state", "reporter"]
+    assert doctor_repair_events == expected_order
     assert all((root / relative).is_dir() for relative in _WORK_DIRECTORIES)
     assert all(
         not list((root / relative).iterdir())
@@ -360,8 +404,10 @@ def test_doctor_preprocess_restores_empty_work_directories(
         for relative in _WORK_DIRECTORIES
     }
 
+    doctor_repair_events.clear()
     doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit_doctor)
 
+    assert doctor_repair_events == expected_order
     assert directory_states == {
         relative: (
             (root / relative).stat().st_ino,
@@ -580,60 +626,6 @@ def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
                 assert '"changed": 1' in report
             assert document.read_text() == contents
             assert "oracle/doc/source.md" in state
-
-
-def test_doctor_preprocess_follows_repair_order(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """doctor が oracle の ignore、agents、config、state 順に修復する。"""
-    root = make_repo(tmp_path)
-    events: list[str] = []
-    original_ignore = doctor_module.ensure_cmoc_ignored
-    original_agents = doctor_module._ensure_agents_tracked
-    original_config = doctor_module.sync_config
-    original_state = doctor_module.sync_refactor_state
-
-    def observe_ignore(path: Path) -> None:
-        """ignore 修復の呼び出し順を記録する。"""
-        assert all((path / relative).is_dir() for relative in _WORK_DIRECTORIES)
-        events.append("ignore")
-        original_ignore(path)
-
-    def observe_agents(path: Path) -> bool:
-        """agents 修復の呼び出し順を記録する。"""
-        events.append("agents")
-        return original_agents(path)
-
-    def observe_config(path: Path, **kwargs):
-        """config 修復の呼び出し順を記録する。"""
-        events.append("config")
-        return original_config(path, **kwargs)
-
-    def observe_state(path: Path, *, sync_entries: bool = True) -> RefactorState:
-        """refactor state 修復の呼び出し順を記録する。"""
-        events.append("state")
-        return original_state(path, sync_entries=sync_entries)
-
-    def observe_reporter() -> None:
-        """reporter 事前検証の呼び出し順を記録する。"""
-        events.append("reporter")
-
-    monkeypatch.setattr(doctor_module, "ensure_cmoc_ignored", observe_ignore)
-    monkeypatch.setattr(doctor_module, "_ensure_agents_tracked", observe_agents)
-    monkeypatch.setattr(doctor_module, "sync_config", observe_config)
-    monkeypatch.setattr(doctor_module, "sync_refactor_state", observe_state)
-    monkeypatch.setattr(
-        doctor_module,
-        "validate_feedback_reporter_availability",
-        observe_reporter,
-    )
-
-    # 明示 doctor と通常の事前処理を繰り返しても、reporter 検証を省略しない。
-    for explicit in (True, False, True, False):
-        events.clear()
-        doctor_module.run_doctor_preprocess(root, explicit_doctor=explicit)
-        assert events == ["ignore", "agents", "config", "state", "reporter"]
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
