@@ -1514,8 +1514,8 @@
   "test/test_runtime_cli.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "cad19e8d3a17ae61d57b33ad366315724b57bf5ff353bb814e43fd6708a11427",
-    "last_investigated_at": "2026-10-13_09-18-58_119"
+    "last_investigated_sha256": "29f94706771359d4b1fc63e6e67ad7b173e92a52c29fed7c17ff137bc1dd61c4",
+    "last_investigated_at": "2026-10-16_19-54-33_430"
   },
   "test/test_runtime_codex_permissions.py": {
     "investigation_required": true,

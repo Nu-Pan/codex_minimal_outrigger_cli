@@ -858,6 +858,7 @@ def test_cli_handled_failure_is_written_to_stderr(
     committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
+    nonpersistent_execution_ids: None,
 ) -> None:
     """想定済み CLI error は簡潔な terminal result を stderr に返す。"""
     root = committed_repository
@@ -907,6 +908,7 @@ def test_cli_requires_current_directory_to_be_work_root(
     cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
+    nonpersistent_execution_ids: None,
 ) -> None:
     """work root 以外からの CLI 実行では副作用を出す前に拒否する。"""
     root = cli_repository
@@ -1052,6 +1054,7 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
     committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
+    nonpersistent_execution_ids: None,
 ) -> None:
     """共通前処理と明示 doctor の対象 worktree・root 探索の再利用範囲を確認する。"""
     import sub_commands.doctor as doctor_command
