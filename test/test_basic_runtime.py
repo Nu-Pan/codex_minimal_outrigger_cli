@@ -435,10 +435,11 @@ def test_run_worktree_lookup_and_removal_reject_symlink_components(
         moved.rename(symlink_path)
 
 
-def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
+def test_worktree_lookup_rejects_invalid_registered_paths(
     committed_repository: Path, tmp_path: Path
 ) -> None:
-    """stale な Git 登録先を作業 root として使わず、置換した内容も削除しない。"""
+    """run/session の stale な Git 登録先を拒否し、置換した内容も削除しない。"""
+    # 両 branch の検査で repository と空 commit を共用し、登録先は別々に保つ。
     root = committed_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     run_git(
@@ -462,12 +463,7 @@ def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
 
     assert (target / "keep.txt").read_text() == "keep\n"
 
-
-def test_session_worktree_lookup_rejects_invalid_registered_path(
-    committed_repository: Path, tmp_path: Path
-) -> None:
-    """session branch も stale な Git 登録先を worktree として扱わない。"""
-    root = committed_repository
+    # session は管理領域外の linked worktree で、同じ stale 判定を検証する。
     target = tmp_path / "session-worktree"
     run_git(
         root,

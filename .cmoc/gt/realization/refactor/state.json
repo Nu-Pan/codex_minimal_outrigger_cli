@@ -1274,8 +1274,8 @@
   "test/test_basic_runtime.py": {
     "investigation_required": true,
     "last_investigation_result": "findings",
-    "last_investigated_sha256": "692d8eb51a9152595d560f2bec2448dcf97aa529e785d1b41e7a67c28af40842",
-    "last_investigated_at": "2026-10-13_04-21-10_908"
+    "last_investigated_sha256": "5f32a8c89ef0f73ee872a72c075ff1866f11e26e01ced0f175b6dc6cf24d1a0d",
+    "last_investigated_at": "2026-10-16_16-26-27_030"
   },
   "test/test_cli_command_tree.py": {
     "investigation_required": true,
