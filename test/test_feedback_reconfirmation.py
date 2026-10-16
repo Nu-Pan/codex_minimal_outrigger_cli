@@ -220,6 +220,39 @@ def _run(harness):
     return remediation._wave_loop(harness.context, harness.manifest, harness.state)
 
 
+@pytest.mark.parametrize("late_issue", [False, True], ids=["empty", "late-issue"])
+def test_empty_wave_collects_basis_only_after_an_issue_arrives(
+    feedback_run, monkeypatch, late_issue
+):
+    h = feedback_run
+    collect_inputs = decision.worktree_inputs
+
+    def collect_for_issue(worktree):
+        assert h.candidates, "an empty wave has no issue basis to collect"
+        return collect_inputs(worktree)
+
+    def prepare_join():
+        if late_issue and not h.candidates:
+            _add_candidate(h, "a")
+
+    prepare = Mock(side_effect=prepare_join)
+    monkeypatch.setattr(decision, "worktree_inputs", collect_for_issue)
+    monkeypatch.setattr(remediation, "doctor_preprocess_for_join", prepare)
+
+    candidates, aggregates = _run(h)
+
+    assert candidates == h.candidates
+    assert aggregates == {}
+    assert len(h.calls) == int(late_issue)
+    assert prepare.call_count == (2 if late_issue else 1)
+    manifest, _ = load_report_cut(h.context.repo)
+    assert len(manifest["run"]["waves"]) == (2 if late_issue else 1)
+    first_wave = run_state.read_run_artifact(
+        h.context.repo, manifest["run"]["waves"][0]
+    )
+    assert first_wave["candidates"] == {}
+
+
 def test_run_artifact_reader_uses_one_snapshot(tmp_path, monkeypatch):
     """hash を確認した byte 列を返し、次の呼出しでは変更を再検査する。"""
     path = tmp_path / ".cmoc/gu/feedback/work/cut/record.json"

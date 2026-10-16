@@ -367,7 +367,8 @@ def _wave_loop(
             previous_aggregates=aggregates,
             observed_at=captured_at,
         )
-        files = decision.worktree_inputs(context.run_worktree)
+        # 候補がない反復では照合する判定根拠がない。次の intake では改めて判断する。
+        files = decision.worktree_inputs(context.run_worktree) if candidates else {}
         pending = {}
         for identity, candidate in sorted(candidates.items()):
             history = decision.issue_history(context.repo, manifest, identity)
