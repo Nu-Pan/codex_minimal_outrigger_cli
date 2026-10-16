@@ -858,10 +858,10 @@
     "last_investigated_at": "2026-10-16_09-20-59_674"
   },
   "src/commons/runtime_editor_input_handoff_mcp.py": {
-    "investigation_required": true,
+    "investigation_required": false,
     "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "ee11a66a44a8fdb307015fb74eda856a90f5f317fec844e8c3b6265b2cd9542b",
-    "last_investigated_at": "2026-10-12_07-53-37_454"
+    "last_investigated_sha256": "d3de5bd0415fd22332f280c9809f691826bf3c44fd7b882712d88d8a7d562475",
+    "last_investigated_at": "2026-10-16_09-23-01_312"
   },
   "src/commons/runtime_editor_input_handoff_protocol.py": {
     "investigation_required": true,
