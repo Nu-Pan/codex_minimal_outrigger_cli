@@ -76,7 +76,13 @@ def record_asset_event(kind: str, root: Path, **payload: object) -> None:
     # logger が実行 ID とサブコマンドを補う。本文や認証情報は記録しない。
     logger = current_subcommand_logger()
     if logger is not None:
-        logger.event(kind, cmoc_root=str(root), component="document_search", **payload)
+        # 保存する時だけ複製し、後続更新から in-memory 記録も独立させる。
+        logger.event(
+            kind,
+            cmoc_root=str(root),
+            component="document_search",
+            **copy.deepcopy(payload),
+        )
 
 
 class _AssetUse:
@@ -97,10 +103,10 @@ class _AssetUse:
         self.event(status="requested")
 
     def event(self, **fields: object) -> None:
-        # snapshot は後続更新で過去の in-memory 記録が変わらないようにする。
+        # 取得・公開の制御状態は、logger の有無にかかわらず更新する。
         self.fields.update(fields)
         self.fields["communications"] = self.communications
-        record_asset_event("asset.state", self.root, **copy.deepcopy(self.fields))
+        record_asset_event("asset.state", self.root, **self.fields)
 
 
 class _CommunicationRecorder(urllib.request.BaseHandler):
