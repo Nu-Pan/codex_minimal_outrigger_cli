@@ -161,7 +161,8 @@ def test_parallel_worktrees_generate_one_embedding_in_total(
     # 分割・Node stream は部分編集で検査し、ここでは実 Git・cache・lock を使う。
     create, inputs = cache_search
     root = _repo_with_docs(tmp_path, committed=True)
-    runs = [_worktree(root, tmp_path / f"run-{index}") for index in range(2)]
+    # 主 worktree と linked worktree を競合させ、複製は一つだけ作る。
+    runs = [root, _worktree(root, tmp_path / "run")]
     contender_waiting = threading.Event()
     start_wait = SearchObservation.start_wait
 
@@ -211,28 +212,31 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_s
     assert inputs() == [original]
 
 
-@pytest.mark.parametrize(
-    "change", ["partition", "inference", "runtime", "contract", "model"]
-)
 def test_reuse_compatibility_is_independent_of_partition(
-    document_repository, cache_search, monkeypatch, change
+    document_repository, cache_search, monkeypatch
 ):
     """入力片を固定し、分割条件と推論条件による cache の互換性だけを検査する。"""
+    from commons import runtime_document_search as module
+
     # Git 分類・共有範囲は実 repository の再利用 test に残す。
     create, inputs = cache_search
     root = document_repository
     original = (root / "oracle/doc/allowed.md").read_text()
     with closing(create(root)) as search:
         first = search.synchronize()
-    config = _tuning()
-    if change == "partition":
-        config = replace(config, chunk_tokens=64, chunk_overlap_tokens=1)
-    elif change == "inference":
-        config = replace(config, embedding_context_tokens=256)
-    else:
-        from commons import runtime_document_search as module
+    assert inputs() == [original]
 
-        if change == "runtime":
+    # 互換な二条件を先に調べ、非互換条件ごとに新規生成を確認する。
+    # 初期生成だけを共有し、各条件は元の設定・materials から個別に変える。
+    for change in ("partition", "runtime", "inference", "contract", "model"):
+        previous_inputs = inputs()
+        config = _tuning()
+        materials = SEARCH_MATERIALS
+        if change == "partition":
+            config = replace(config, chunk_tokens=64, chunk_overlap_tokens=1)
+        elif change == "inference":
+            config = replace(config, embedding_context_tokens=256)
+        elif change == "runtime":
             materials = replace(
                 SEARCH_MATERIALS,
                 node_version="different-node",
@@ -249,15 +253,15 @@ def test_reuse_compatibility_is_independent_of_partition(
                 SEARCH_MATERIALS,
                 embedding=replace(SEARCH_MATERIALS.embedding, sha256="different-model"),
             )
-        monkeypatch.setattr(module, "SEARCH_MATERIALS", materials)
-    incompatible = change in ("inference", "contract", "model")
-    with closing(create(root, config)) as search:
-        second = search.synchronize()
-        assert first.identity != second.identity
-        assert search.sync_progress["generated_embeddings"] == (
-            1 if incompatible else 0
-        )
-    assert inputs() == [original] * (2 if incompatible else 1)
+        generated = 1 if change in ("inference", "contract", "model") else 0
+        with monkeypatch.context() as patch:
+            patch.setattr(module, "SEARCH_MATERIALS", materials)
+            with closing(create(root, config)) as search:
+                second = search.synchronize()
+                assert first.identity != second.identity, change
+                assert search.sync_progress["generated_embeddings"] == generated, change
+                assert second.reused_embeddings == 1 - generated, change
+        assert inputs() == previous_inputs + [original] * generated, change
 
 
 def test_failed_sync_saved_results_are_reusable_in_another_worktree(
