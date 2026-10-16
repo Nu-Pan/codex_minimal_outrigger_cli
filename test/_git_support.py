@@ -50,11 +50,3 @@ def make_repo(tmp_path: Path, *, initial_branch: str | None = None) -> Path:
     run_git(root, "add", ".")
     run_git(root, "commit", "-m", "initial")
     return root
-
-
-def add_tracked_ignored_oracle_file(root: Path) -> None:
-    """repository rule では ignore されるが追跡対象でもある oracle file を作る。"""
-    (root / ".gitignore").write_text("oracle/ignored.md\n")
-    (root / "oracle" / "ignored.md").write_text("# ignored\n")
-    run_git(root, "add", "-f", ".gitignore", "oracle/ignored.md")
-    run_git(root, "commit", "-m", "add ignored oracle")

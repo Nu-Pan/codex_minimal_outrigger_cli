@@ -9,7 +9,6 @@ from _git_support import (
     SESSION_BRANCH,
     SESSION_ID,
     current_branch,
-    make_repo,
     run_git,
 )
 from test_feedback import (
@@ -94,13 +93,16 @@ def reported_case(ready_content_session, monkeypatch):
 
 
 @pytest.fixture
-def close_repository(tmp_path, monkeypatch):
+def close_repository(committed_repository, monkeypatch):
     # close 固有の検査には session を作らず、report を実行するケースだけで準備する。
     # report から close への結合と入力消費は reported_case の検査に残す。
     # doctor 内部の修復・索引同期は専用 test と reported_case で検証する。
     # close が前処理の失敗を越えて更新しないことは、この file の失敗 test に残す。
     monkeypatch.setattr(close_module, "run_doctor_preprocess", lambda _root: None)
-    root = make_repo(tmp_path)
+    # 保存済み案件には実 HEAD と README の根拠だけを用意し、追跡 file の準備を省く。
+    # 追跡済み差分・doctor との結合は reported_case に残す。
+    root = committed_repository
+    (root / "README.md").write_text("# repo\n")
     monkeypatch.chdir(root)
     seed_search_config(root)
     monkeypatch.setattr(
