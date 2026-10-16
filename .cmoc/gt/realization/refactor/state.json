@@ -973,9 +973,9 @@
   },
   "src/commons/runtime_primary_report.py": {
     "investigation_required": true,
-    "last_investigation_result": "no_findings",
-    "last_investigated_sha256": "609055d0afc766b57702eeefaeafcb217d46e386dcf1fc51dcc5938d27fab049",
-    "last_investigated_at": "2026-10-12_10-50-43_791"
+    "last_investigation_result": "findings",
+    "last_investigated_sha256": "e082806e8bafc1305b585af754c810c9b83faf7f88c1b596651a64446d8c6802",
+    "last_investigated_at": "2026-10-16_11-33-57_809"
   },
   "src/commons/runtime_primary_report_render.py": {
     "investigation_required": true,
