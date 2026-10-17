@@ -120,7 +120,7 @@ def apply_after_preprocess(nonpersistent_run_ids, monkeypatch):
     """apply の終了・復旧検査では、doctor と prompt の準備を繰り返さない。"""
     # 必要な設定・配置先は ready_*_session が用意する。
     # doctor の修復・失敗は test_doctor_cli.py、apply との実結合は
-    # test_realization_apply_fork_and_run_join_use_common_state に残す。
+    # test_realization_apply_automatically_joins_changes_and_noop に残す。
     preprocess = Mock()
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
     # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を省く。
@@ -3882,11 +3882,14 @@ def test_refactor_second_interruption_during_auto_join_is_error(
     assert not run_git(root, "status", "--porcelain").stdout
 
 
+@pytest.mark.usefixtures("apply_after_preprocess")
 @pytest.mark.parametrize("staged", [False, True])
 def test_apply_auto_join_rechecks_session_changes(
     ready_content_session, monkeypatch, staged
 ):
     """作業中に生じた session 側の未確定差分を残し、自動 join を停止する。"""
+    # doctor・実 builder の結合は代表 test に残し、ここでは本命終了後の
+    # 再検査と差分の保持に必要な実 Git・state・report だけを通す。
     root, _, state_path = ready_content_session
     user_diff = []
 
