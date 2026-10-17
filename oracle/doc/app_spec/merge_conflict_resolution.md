@@ -32,7 +32,7 @@ cmoc は次の管理処理を担当する。
 
 agent は staging、commit、merge の開始・中止、branch・worktree 操作、または cmoc の管理 state の直接更新を行わない。agent の編集だけでは Git index の unmerged entry は解消されないため、内容の解消完了と cmoc による staging 後の確認を区別する。管理物の競合や staging 待ちの unmerged entry が残ることだけを agent の未解消理由にしない。ただし、それらにより必要な検証ができなければ、その不足を報告する。cmoc が更新する管理物以外のアクセス禁止対象に内容の競合が残る場合は、merge を成立させない。agent を呼び出した場合は、その明示的な解消完了も確認できなければならない。
 
-refactor state の同期内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」を正本とし、cmoc が管理する調査履歴と調査要求の扱いを競合解消 agent に委ねない。run join の同期時点は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」と、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。
+refactor state の値の統合と同期内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「join での統合」「entry 集合の同期」を正本とし、cmoc が管理する最終調査日時の扱いを競合解消 agent に委ねない。run join の同期時点は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」と、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。
 
 ## 受理と報告
 

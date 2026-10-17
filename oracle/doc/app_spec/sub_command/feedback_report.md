@@ -186,7 +186,7 @@ agent が返した `fixed` の自己申告だけを、意味的な正しさの�
 
 commit が成功する前に `fixed` として publication、active state からの除外、または observation cleanup を行ってはならない。commit または rollback 後は、次の issue call を開始する前に run worktree と staging area が整合した clean 状態でなければならない。
 
-refactor state の `investigation_required` または巡内の unresolved target 集合を feedback issue state として流用してはならない。refactor の継続反復や終了条件も feedback report には適用せず、本書の「intake wave loop」「ユーザー中断」に従う。
+refactor state または巡内の unresolved target 集合を feedback issue state として流用してはならない。refactor の継続反復や終了条件も feedback report には適用せず、本書の「intake wave loop」「ユーザー中断」に従う。
 
 ## intake wave loop
 

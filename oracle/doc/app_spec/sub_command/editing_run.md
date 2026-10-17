@@ -75,7 +75,7 @@ run を作る workload は、個別仕様に従って本命処理の成果を確
 
 `joinable` は確定済み成果を取り込める状態であり、invocation の正常終了ではない。自動 join と必要な後処理、結果保存、`ready` への初期化、および資源の cleanup の結果を確定してから、最外側の invocation を終了する。各処理の順序と失敗時の扱いは、本書の「merge と post-join」「join の失敗と復旧」「使用済み branch と worktree の cleanup」に従う。
 
-realization refactor では、全対象の調査完了や改善の収束を join の条件にしない。確定済み成果物と refactor state を取り込み、次の新しい refactor run へ調査要求を引き継ぐ。実行途中の同じ run を再開する操作は設けない。
+realization refactor では、全対象の調査完了や改善の収束を join の条件にしない。確定済み成果物と、次の新しい refactor run の選択順序に使う refactor state を取り込む。実行途中の同じ run を再開する操作は設けない。
 
 feedback の自然完了では、`incomplete` を含む publication と workload 固有 cleanup まで必要とする。その境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication」に従う。ユーザー中断では同文書の「publication を行わない feedback join」に従う。
 
@@ -138,7 +138,7 @@ workload または join の停止失敗後は、書き込み得る process の�
 2. 未取り込みの run では、元の確定済み成果を統合前 run HEAD として記録する。join 前の doctor preprocess が run に管理更新を加える場合も、その更新より先に記録し、管理更新を元の workload の成果へ混入させない。再試行では前回の統合前 run HEAD を保持する。
 3. doctor preprocess と事前条件を検査し、対象 run と今回の join 開始時の state を確定する。基準 session HEAD を記録してから「差分検査」を行い、`--force-resolve` があれば取消の確定まで終える。doctor の遅延対象と復旧時の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」に従う。
 4. run worktree で、基準 session HEAD を run branch へ merge する。競合は本書の「競合解消」に従って解消し、必要な検証を行う。元の workload の commit は書き換えず、統合の変更を後続の履歴として扱う。元の run 成果が session から到達可能な場合も、その session tree に対して同期要否を確認できるよう run を整えるが、記録だけの merge commit は作らない。
-5. session の統合と競合解消の完了後、cmoc が run tree の refactor state を同期し、tracked 差分があれば run branch に commit する。同期内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」に従う。準備完了の tree に必要な検証を完了し、先行する検証記録を使う場合もその tree に適用できることを確認する。run worktree と staging area を clean にし、準備完了 run HEAD と検証・同期の結果を、session への取り込みを始める前に記録する。
+5. session の統合と競合解消の完了後、cmoc が run tree の refactor state を同期し、tracked 差分があれば run branch に commit する。両 branch の値の統合と同期内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「join での統合」「entry 集合の同期」に従う。準備完了の tree に必要な検証を完了し、先行する検証記録を使う場合もその tree に適用できることを確認する。run worktree と staging area を clean にし、準備完了 run HEAD と検証・同期の結果を、session への取り込みを始める前に記録する。
 
 #### session への取り込み
 

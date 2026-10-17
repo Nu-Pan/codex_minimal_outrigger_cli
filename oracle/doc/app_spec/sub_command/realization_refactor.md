@@ -4,7 +4,7 @@
 
 realization refactor は、仕様への適合と必要な回帰検出能力を保ちながら、テストと実装のムダをファイル単位で網羅的に調査・削減し、テスト実行時間の短縮を図る workload である。全 oracle file と全 realization file を調査の起点にし、人間が `Ctrl+C` で止めるまで一巡を繰り返す。変更がない巡も継続する。
 
-長時間の反復と、任意の段階から本命作業を速やかに停止できることを、並ぶ契約とする。停止要求に対して長い調査や検証の完了を待たせず、未確定作業を取り消す。その後、検証済みの確定成果と調査状態を同じ invocation 内で session branch へ自動 join して正常終了する。停止までの処理と、取り込みに必要な競合解消・検証は区別する。
+長時間の反復と、任意の段階から本命作業を速やかに停止できることを、並ぶ契約とする。停止要求に対して長い調査や検証の完了を待たせず、未確定作業を取り消す。その後、検証済みの確定成果と refactor state を同じ invocation 内で session branch へ自動 join して正常終了する。停止までの処理と、取り込みに必要な競合解消・検証は区別する。
 
 適合性の共通基準と refactor 固有の改善基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」「realization refactor の改善判断」を正本とする。installed skill の有無で判断基準を変えない。直近の oracle 変更へ素早く追従する realization apply の目的は拡張しない。
 
@@ -16,22 +16,20 @@ fork、join、abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_sp
 
 ## refactor state
 
+refactor state は、run をまたいで未調査・長く調査していない対象を優先し、短い run を繰り返しても同じ先頭対象ばかりを調査しないための永続情報である。
+
 ### 保存先と JSON schema
 
 refactor state の保存先は `{{work-root}}/.cmoc/gt/realization/refactor/state.json` とする。
 
-JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、各 file の調査状態を value とする object である。調査状態は、次の field を持つ object とする。
+JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path を key、次の field だけを持つ object を value とする。
 
 | field | 型・値 |
 |---|---|
-| `investigation_required` | boolean。再調査の要求があれば `true`。 |
-| `last_investigation_result` | `not_investigated`、`no_findings`、`findings` のいずれか |
-| `last_investigated_sha256` | 調査時点の file 内容に対する SHA256 文字列、または `null` |
-| `last_investigated_at` | `{{time-stamp}}`、または `null` |
+| `last_investigated_at` | その path を起点とする調査を最後に確定した日時を表す `{{time-stamp}}`。未調査なら `null`。 |
 
-`last_investigated_at` は調査日時であり、`{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` の「タイムスタンプのフォーマット」に従って保存する。ID は使用しない。
+`last_investigated_at` は、`{{cmoc-root}}/oracle/doc/app_spec/timestamp.md` の「タイムスタンプのフォーマット」に従って保存する。ID は使用しない。
 
-- `not_investigated` の entry は hash と日時をともに `null` とする。
 - absolute path と `..` による `{{work-root}}` 外参照を禁止する。
 - JSON object の記載順に意味を持たせない。
 - state file は agent ではなく cmoc が更新する。
@@ -40,14 +38,20 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 
 - entry の対象は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
 - 対象 file と entry の過不足のない一致は、cmoc が同期を完了した時点の不変条件とする。同期時点には、通常の doctor preprocess、refactor の各処理単位、および run join の準備完了時点がある。join の同期場所と取り込み成立時の保証、初回 no-op・復旧の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。人間の編集直後を含め、常時一致することは要求しない。
-- 新規 file には `investigation_required=true`、`last_investigation_result=not_investigated`、hash と日時が `null` の entry を作成する。
+- 新規 file には `last_investigated_at=null` の entry を作成する。
 - 削除 file の entry は削除する。rename は削除と追加として同期する。
-- 現在の file の SHA256 が `last_investigated_sha256` と異なる場合は、既存の調査履歴を保持したまま `investigation_required=true` にする。
-- 同期だけで既存の調査要求を解除したり、一巡を開始・完了したことにしたりしない。
+- 同じ path の既存 entry は、file 内容の変更にかかわらず日時を保持する。同期のための内容 hash の保存・比較は行わない。
+- 同期だけで調査日時を進めたり、一巡を開始・完了したことにしたりしない。
 
-### 調査履歴と巡回の区別
+### join での統合
 
-state は確定済みの調査履歴と再調査要求を次の新しい refactor run へ引き継ぐ。`no_findings` や `investigation_required=false` は、改善余地の不存在、収束、または将来の巡での調査不要を意味しない。一巡内で調査機会を与えたかどうかは、この履歴とは区別して管理する。
+run join の準備と、各 join での refactor state の競合解消では、cmoc が両 branch の確定済み state を path ごとに統合する。同じ path の値が異なる場合は、`null` より日時を採用し、日時同士なら新しい方を残す。片側だけに entry があればその値を使い、統合後の tree に対して「entry 集合の同期」を行う。merge や競合解消自体を調査実績にせず、新たな調査日時を付けない。
+
+### 永続情報と巡回管理の区別
+
+state は選択順序のために使い、内容変更の検知、再調査要求の保持、所見別の結果や個々の調査結果の詳細履歴の保存は行わない。日時があることは、現在の内容を調査済みであること、改善余地の不存在、または将来の巡での調査不要を意味しない。
+
+各巡の対象集合、処理済み集合、および unresolved target の保留集合は実行中だけ管理する。新しい run はこれらの集合を引き継がず、現時点の全対象から新しい巡を始める。所見や検証結果の報告は、本書の「保存と掲載内容」「変更要約」が定める確定記録を使い、state や過去 run の report から今回の調査実績を作らない。
 
 ## 引数と想定内差分
 
@@ -62,10 +66,10 @@ state は確定済みの調査履歴と再調査要求を次の新しい refacto
 一巡は、列挙した対象を一通り調査する区切りであり、改善余地の不存在を判定する区切りではない。
 
 1. コマンドの開始時は、doctor preprocess と編集 run の共通開始処理を行う。
-2. 各巡の開始時は run worktree 上で entry 集合を同期し、全 entry をその巡の対象にする。前から残る調査要求を保持し、`false` の entry にも `investigation_required=true` を設定する。この state 更新を run branch に確定してから調査を始める。
+2. 各巡の開始時は run worktree 上で entry 集合を同期し、全 entry をその巡の対象集合にする。処理済み集合と保留集合は空から始める。同期差分がある場合だけ、その state 更新を run branch に確定してから調査を始める。
 3. その巡の全対象に調査機会を与えたら、変更や unresolved の有無にかかわらず次巡へ進む。調査機会を与えたとは、その target の処理単位を確定したことをいい、中断・失敗で rollback した単位は数えない。
 
-巡回中の削除 file は以後の対象から外し、削除そのものを調査実績として数えない。追加 file と変更により生じた再調査要求は、遅くとも次巡で扱う。同じ対象の再修正や新規 file の追加によって、すでに順番を待っている他の対象が後回しになり続けてはならない。
+巡回中の削除 file は以後の未処理対象から外し、削除そのものを調査実績として数えない。追加 file は遅くとも次巡の対象に含める。処理済み file が変更されてもその巡では未処理に戻さず、次巡で再び調査する。同じ対象の再修正や新規 file の追加によって、すでに順番を待っている他の対象が後回しになり続けてはならない。
 
 一巡を管理する内部表現と、追加・削除・変更を反映する細かな scheduling は、この網羅性と公平な処理機会を満たす範囲で実装に委ねる。一巡の途中を同じ run で復元する永続 checkpoint は設けない。
 
@@ -73,27 +77,23 @@ state は確定済みの調査履歴と再調査要求を次の新しい refacto
 
 ### 調査対象の選択
 
-- その巡でまだ調査機会を与えていない対象を選び、同じ対象の再選択より優先する。
-- 前の巡または run から引き継いだ調査要求を、新たに設定した要求より先に扱う。その中では `last_investigation_result=not_investigated` を先に選び、その後は `last_investigated_at` の古い順、同値なら path の昇順とする。日時の比較には保存したミリ秒精度の値を使う。
+- その巡の対象集合から、処理済みの対象を除いて選ぶ。
+- `last_investigated_at=null` の未調査対象を先に選び、その後は日時の古い順、同値なら path の昇順とする。未調査対象同士も path の昇順とし、日時の比較には保存したミリ秒精度の値を使う。内容の変更、所見の有無、または unresolved を理由とする優先付けは行わない。
 - 関連 file を編集・参照しただけでは、その file 自身を起点とする調査機会を与えたことにしない。
 
 ### 一巡内の unresolved target
 
 処理単位の確定結果に `resolution.status=unresolved` の所見が残る target を、その巡の unresolved target として保留する。保留は一巡内だけで有効とし、次巡では再検討する。current run 全体や次の run の選択対象から除外してはならない。
 
-存在し続ける保留対象の entry には `last_investigation_result=findings` と `investigation_required=true` を残す。巡内の保留集合を永続的な skip・checkpoint として保存しない。終了時には、確定済みの未解決理由を report に残し、次の run では現時点の原文を調べ直す。
+保留対象も、その調査を確定した処理済み対象として扱う。終了時には、確定済みの未解決理由を report に残し、次の run では現時点の原文を調べ直す。
 
 ### 1 処理単位
 
-1. 対象 file の現在の SHA256 を調査時点の hash として取得する。
-2. `build_realization_refactor_fork_file_review_and_fix_parameter` の作業入力には対象 path だけを渡す。一つの起点に関係し、検証・確定・rollback を一体として扱える小さなまとまりを選び、所見調査、realization file の修正、および検証を 1 回の agent call で行う。全 repository の改善を一つの call で完遂することは要求しない。
-3. agent call が正常終了した後、「Structured Output の受理と正規化」に従って処理結果を決め、「確定前の検証」を満たすことを確認する。
-4. 調査時点の hash、日時、および正規化後の所見有無を対象 entry に保存する。
-    - 所見なし: `last_investigation_result=no_findings`, `investigation_required=false`
-    - 所見あり: `last_investigation_result=findings`, `investigation_required=true`
-5. agent call が変更した全 realization file を `investigation_required=true` にし、追加・rename・削除後の entry 集合を同じ処理単位で同期する。
-6. 「不可分な確定区間」に従い、realization file の差分と refactor state の更新を同じ処理単位の commit として確定する。所見、変更 path、検証結果、および commit の対応を、その後の進捗と report に利用できるよう記録する。
-7. 対象にその巡の調査機会を与えたことを記録し、unresolved が残れば巡内で保留する。停止要求がなければ、次の対象または次巡へ進む。
+1. `build_realization_refactor_fork_file_review_and_fix_parameter` の作業入力には対象 path だけを渡す。一つの起点に関係し、検証・確定・rollback を一体として扱える小さなまとまりを選び、所見調査、realization file の修正、および検証を 1 回の agent call で行う。全 repository の改善を一つの call で完遂することは要求しない。
+2. agent call が正常終了した後、「Structured Output の受理と正規化」に従って処理結果を決め、「確定前の検証」を満たすことを確認する。
+3. 追加・rename・削除後の entry 集合を同じ処理単位で同期する。起点の path が引き続き対象として存在すれば、所見や変更の有無、unresolved の有無にかかわらず、その entry の `last_investigated_at` を今回の調査の確定日時に更新する。起点以外の file の編集・参照は日時の更新理由にしない。削除・rename された起点の entry は再作成せず、rename 先へ日時を引き継がない。
+4. 「不可分な確定区間」に従い、realization file の差分と refactor state の更新を同じ処理単位の commit として確定する。所見、変更 path、検証結果、および commit の対応を、その後の進捗と report に利用できるよう記録する。
+5. 対象をその巡の処理済み集合に加え、unresolved が残れば保留集合にも加える。停止要求がなければ、次の対象または次巡へ進む。
 
 #### Structured Output の受理と正規化
 
@@ -140,7 +140,7 @@ agent 作業、全件テスト、計測、全対象の列挙・同期などの�
 
 ## 終了理由
 
-通常の終了経路はユーザー中断とする。全件処理、調査要求の一時的な解消、数値目標の達成、改善の停滞、周回数、または実行予算による自動停止条件を設けない。改善余地の不存在や反復の収束を自動判定することも要求しない。対象が空でも、停止要求を受け付けながら再同期して継続する。
+通常の終了経路はユーザー中断とする。全件処理、数値目標の達成、改善の停滞、周回数、または実行予算による自動停止条件を設けない。改善余地の不存在や反復の収束を自動判定することも要求しない。対象が空でも、停止要求を受け付けながら再同期して継続する。
 
 継続不能なエラーは、通常の終了と区別して停止する。ファイル単位調査で全問題を発見できること、LLM の回答品質、または agent の申告・作業内容の意味的な正しさは保証しない。
 
@@ -152,11 +152,11 @@ agent 作業、全件テスト、計測、全対象の列挙・同期などの�
 - 停止要求を受けたら、新しい本命の処理単位・巡・agent call・品質検査・計測を開始しない。変更要約のための agent call や、未確定作業を確定するための追加テストも行わない。整合化後の自動 join に必要な競合解消 call と検証、および primary report の重要事項確認は、共通の中断契約が認める例外とする。
 - 不可分な確定区間の外では、開始準備・列挙・同期を含む実行中の処理を打ち切り、agent、test、計測、および作業用子 process を停止する。書き込み得る process の停止を確認してから、未確定の一処理単位全体を直前の確定状態へ rollback する。長い作業の自然完了を待つ経路を通常の停止処理にしない。
 - 子 process の終了待ちは、作業の自然完了に依存しない有限の猶予とし、終了しなければ停止手段を切り替えて回収する。停止を確認できないまま rollback したり `joinable` にしたりしてはならない。停止や rollback 自体が失敗した場合は「その他のエラー」に従う。
-- rollback は、その単位が導入した追加・変更・rename・削除と、巡開始の準備を含む未確定の refactor state 更新を取り消す。成果物と調査状態の片方だけを確定せず、取り消した作業を調査済み・検証済みとして数えない。確定済み commit と調査要求を保持する。
+- rollback は、その単位が導入した追加・変更・rename・削除と、巡開始の準備を含む未確定の refactor state 更新を取り消す。成果物と refactor state の片方だけを確定せず、取り消した作業を調査済み・検証済みとして数えない。確定済み commit と refactor state を保持する。
 - doctor preprocess または共通開始処理が途中の場合にも同じ確定・rollback の境界を適用し、その準備が導入した未確定の更新と作成資源を取り消す。開始前から存在する資源や人間の未コミット差分を取り消さず、未完了の前処理を成功と記録しない。run の成立前に終了した場合は、存在しない run、`joinable` state、または join を作らず、その段階を report して正常中断を完了する。
-- 成立済みの run は、上記の整合化後に `run.state=joinable` にし、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」に従って確定済み成果物と調査状態を取り込む。通常の中断で run worktree に未確定差分を残さない。
+- 成立済みの run は、上記の整合化後に `run.state=joinable` にし、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」に従って確定済み成果物と refactor state を取り込む。通常の中断で run worktree に未確定差分を残さない。
 - 自動 join と必要な後処理が完了した場合に、`user_interruption` として終了コード 0 で終える。自動 join またはその必須後処理の取消・失敗は、最初の停止要求による正常中断とは区別し、共通 join の復旧契約に従って `error` とする。本命の調査・改善を再開してはならない。
-- 続ける場合は正常終了後に新しい `cmoc realization refactor` を開始し、調査要求を引き継ぐ。同じ run branch または worktree の実行途中を復元する仕組みは設けない。
+- 続ける場合は正常終了後に新しい `cmoc realization refactor` を開始し、取り込まれた refactor state を選択順序に使う。同じ run branch または worktree の実行途中を復元する仕組みは設けない。
 
 ## その他のエラー
 
@@ -191,7 +191,7 @@ full test 1 回の所要時間と、検査の実行回数などによる orchest
 - 停止要求の受付と、子 process 停止・rollback または確定区間の終了を待っている状態。
 - 本命処理の停止完了後に行う自動 join、競合解消、および後処理の段階。
 
-調査数は各巡の確定実績で数え、過去の履歴や単なる関連 file の参照で進捗を増やさない。表示のために新しい agent call を行わない。
+調査数は各巡の確定実績で数え、state の日時の有無や単なる関連 file の参照で進捗を増やさない。表示のために新しい agent call を行わない。
 
 ## feedback との境界
 
@@ -210,11 +210,12 @@ full test 1 回の所要時間と、検査の実行回数などによる orchest
 - 完了した巡の数、終了時の巡・処理段階、その巡の対象数・確定調査数・未処理数・保留数。
 - current run で 1 回以上処理単位を確定した target path の重複のない件数と、確定した処理単位の件数。
 - 巡内の unresolved target の件数と path。
-- 各 target の確定済みの最新結果に残る未解決所見、その理由、および対応する Codex call log または Structured Output のフル path。前の巡から再調査を待つ未解決所見も含め、巡内の保留対象と区別する。
+- current run における各 target の確定済みの最新結果に残る未解決所見、その理由、および対応する Codex call log または Structured Output のフル path。同じ run の前の巡から再調査を待つ未解決所見も含め、巡内の保留対象と区別する。
 - 処理単位ごとの正規化後の所見数、変更と検証の結果。所見なしへ正規化した単位は 0 件とする。
-- entry 総数、調査要求あり件数、各 `last_investigation_result` の件数。これらの履歴集計を、その巡の未処理数や改善目的での調査済み実績と混同しない。
 - 確定済みの変更要約、比較基準と測定済みテスト時間・短縮率、未完了または比較不能な計測。
 - 中断・エラー時の子 process 停止と rollback・確定の結果、取り消した未確定作業、および必要な次の操作。異常時は手動 join・abandon または修復の可否を示す。
+
+所見の集計は current run の確定記録を対象とし、過去 run を含む所見別の履歴集計は行わない。過去の詳細結果は、その実行の report と Codex call log に残す。
 
 確定していない項目は `null`、未実行、または未完了として区別する。失敗した処理段階、エラー、および関連ログを記録する。
 

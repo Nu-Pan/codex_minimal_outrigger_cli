@@ -22,8 +22,8 @@
 4. 必要に応じて、仕様への適合と必要な回帰検出能力を保ち、テストと実装のムダを網羅的に削減する。
     1. 人間が `cmoc realization refactor` を呼び出す。
     2. 巡回の進捗、確定済み変更、測定済みのテスト時間を見て、人間が適当な時点で `Ctrl+C` を押す。変更なしの巡も反復し、全件処理や数値目標の達成では自動終了しない。
-    3. cmoc は子 process の停止と未確定作業の rollback を終え、確定済み成果物と調査状態を自動 join して正常中断を完了する。
-    4. 続ける場合は、新しい `cmoc realization refactor` を開始する。同じ run の実行途中は復元しない。
+    3. cmoc は子 process の停止と未確定作業の rollback を終え、確定済み成果物と refactor state を自動 join して正常中断を完了する。
+    4. 続ける場合は、新しい `cmoc realization refactor` を開始する。選択順序は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「調査対象の選択」に従い、同じ run の実行途中は復元しない。
 5. 必要に応じて、人間が `cmoc feedback report` を呼び出す。
     - session worktree と staging area は clean にする。
     - cmoc は run 上で安全な realization file の修正を issue ごとに commit し、処理中の新しい issue も intake wave で可能な限り処理する。
