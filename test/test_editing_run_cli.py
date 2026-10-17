@@ -128,9 +128,7 @@ def join_after_preprocess(ready_join_session, monkeypatch):
     # test_realization_apply_fork_and_run_join_use_common_state と
     # test_run_join_from_run_worktree_* に残す。merge 後の state 同期は実行する。
     preprocess = Mock(return_value={})
-    monkeypatch.setattr(
-        run_join_module, "doctor_preprocess_changes_for_join", preprocess
-    )
+    monkeypatch.setattr(run_join_module, "doctor_preprocess_for_join", preprocess)
     yield ready_join_session
     # CLI が join 前の doctor 呼び出しを省略する回帰も検出する。
     preprocess.assert_called_with()
@@ -533,18 +531,18 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
 @pytest.mark.parametrize(
     ("kind", "expected_sync"),
     [
-        ("realization_apply", True),
+        ("realization_apply", False),
         ("realization_refactor", False),
         ("feedback_report", False),
     ],
 )
-def test_run_join_doctor_sync_depends_on_active_run_kind(
+def test_run_join_doctor_defers_sync_for_all_run_kinds(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     kind: str,
     expected_sync: bool,
 ) -> None:
-    """run kind に応じて join 前 doctor の refactor state 同期を切り替える。"""
+    """全 run kind の join 前 doctor は refactor state 同期を遅延する。"""
     # kind は実際の保存済み state から読み、履歴・checkout の準備は省く。
     # 実 Git の root 解決と doctor の結合は run worktree 起点の join test に残す。
     write_state(
@@ -582,59 +580,6 @@ def test_run_join_doctor_sync_depends_on_active_run_kind(
     run_join_module.doctor_preprocess_for_join()
 
     assert calls == [(tmp_path, expected_sync)]
-
-
-@pytest.mark.parametrize("has_repair_record", [False, True], ids=["absent", "empty"])
-def test_doctor_paths_for_join_skips_diff_without_repairs(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    has_repair_record: bool,
-) -> None:
-    """対象 worktree の修復がなければ先行差分を Git に照会しない。"""
-    run_worktree = tmp_path / "run"
-    changes = {tmp_path: ("session-before-doctor", {"session-only.md"})}
-    if has_repair_record:
-        changes[run_worktree] = ("run-before-doctor", set())
-    monkeypatch.setattr(
-        run_join_module,
-        "tree_changes",
-        lambda *_args: pytest.fail("no repair paths need a history query"),
-    )
-
-    assert (
-        run_join_module.doctor_paths_for_join(changes, run_worktree, "run-fork")
-        == set()
-    )
-
-
-def test_doctor_paths_for_join_preserves_preexisting_changes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """修復と重なる先行変更は rename 両端と削除を含めて差分検査に残す。"""
-    run_worktree = tmp_path / "run"
-    repair_paths = {"new-repair.md", "shared.md", "old.md", "renamed.md", "deleted.md"}
-    changes = {
-        tmp_path: ("session-before-doctor", {"session-only.md"}),
-        run_worktree: ("run-before-doctor", repair_paths),
-    }
-
-    def preexisting_changes(worktree, base, end):
-        assert (worktree, base, end) == (
-            run_worktree,
-            "run-fork",
-            "run-before-doctor",
-        )
-        return [
-            GitChange("M", ("shared.md",)),
-            GitChange("R100", ("old.md", "renamed.md")),
-            GitChange("D", ("deleted.md",)),
-        ]
-
-    monkeypatch.setattr(run_join_module, "tree_changes", preexisting_changes)
-
-    assert run_join_module.doctor_paths_for_join(changes, run_worktree, "run-fork") == {
-        "new-repair.md"
-    }
 
 
 @pytest.mark.parametrize(
@@ -819,7 +764,10 @@ def test_apply_join_hook_selects_diff_base(
         metadata["post_join_hook"]
         == f"session.last_joined_apply_fork_commit {'updated' if run_state == 'joinable' else 'preserved'}"
     )
-    assert (metadata["run_join_commit"] is None) is (not has_run_change)
+    # 新しい oracle の entry 同期も run 上の成果として取り込む。
+    assert metadata["run_join_commit"] is not None
+    if not has_run_change:
+        assert metadata["refactor_state_sync_commit"] is not None
     assert not context.run_worktree.exists()
 
 
@@ -2642,6 +2590,17 @@ def cleanup_ready_report(tmp_path, monkeypatch):
         "load_state_for_branch",
         lambda *_args: (SESSION_ID, tmp_path / "state.json", SessionState()),
     )
+    monkeypatch.setattr(
+        run_join_module,
+        "load_join_record",
+        lambda *_args: SimpleNamespace(
+            workload_post_join=True, prepared_run_head="prepared"
+        ),
+    )
+    monkeypatch.setattr(run_join_module, "confirm_import", lambda _record: True)
+    monkeypatch.setattr(
+        run_join_module, "_cleanup_run_matches_prepared", lambda *_args: True
+    )
     return report
 
 
@@ -2790,48 +2749,7 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
     assert warnings == ["run branch cleanup failed"]
 
 
-def test_run_join_conflict_abort_failure_still_restores_session_tree(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """merge --abort の失敗時も join 開始前の clean tree へ戻す。"""
-    context = EditingRunContext(
-        repo=tmp_path,
-        session_worktree=tmp_path / "session",
-        session_id=SESSION_ID,
-        state_path=tmp_path / "state.json",
-        session_branch=SESSION_BRANCH,
-        session_fork_commit="session-fork",
-        kind="realization_apply",
-        run_branch=RUN_BRANCH,
-        run_fork_commit="run-fork",
-        run_worktree=tmp_path / "run",
-    )
-    commands: list[list[str]] = []
-
-    def fake_run_git(
-        args: list[str],
-        _cwd: Path,
-        check: bool = True,
-    ) -> SimpleNamespace:
-        """join rollback の分岐を確認するための Git 実行結果を返す。"""
-        commands.append(args)
-        if args[:2] == ["rev-parse", "-q"]:
-            return SimpleNamespace(returncode=0, stdout="")
-        if args == ["merge", "--abort"]:
-            return SimpleNamespace(returncode=1, stdout="")
-        return SimpleNamespace(returncode=0, stdout="")
-
-    monkeypatch.setattr(run_join_module, "run_git", fake_run_git)
-    run_join_module.restore_session_after_join_failure(
-        context, "session-head-before-join"
-    )
-
-    assert ["reset", "--hard", "session-head-before-join"] in commands
-    assert ["clean", "-fd"] in commands
-
-
-def test_run_join_keeps_merge_when_post_join_sync_fails(
+def test_run_join_rolls_back_preparation_when_sync_fails(
     join_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2850,13 +2768,10 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
     failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert failed.exit_code == 1
-    assert run_git(root, "rev-parse", "HEAD").stdout.strip() != session_head
-    assert (root / "README.md").read_text() == "realized\n"
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
+    assert (context.run_worktree / "README.md").read_text() == "realized\n"
     assert _state(state_path)["run"]["state"] == "error"
-    assert (
-        _state(state_path)["session"]["last_joined_apply_fork_commit"]
-        == context.run_fork_commit
-    )
+    assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
     monkeypatch.setattr(run_join_module, "sync_refactor_state", lambda _root: None)
@@ -2864,10 +2779,7 @@ def test_run_join_keeps_merge_when_post_join_sync_fails(
 
     assert joined.exit_code == 0
     assert (root / "README.md").read_text() == "realized\n"
-    assert (
-        _state(state_path)["session"]["last_joined_apply_fork_commit"]
-        == context.run_fork_commit
-    )
+    assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
     for output in (joined.output, terminal_primary_report(joined).read_text()):
         assert "session.last_joined_apply_fork_commit updated" not in output
 
@@ -2989,8 +2901,9 @@ def test_run_join_conflict_launch_uses_shared_settings(
         if automatic and index == 1:
             conflict(Path(call["cwd"]))
         else:
-            assert Path(call["cwd"]) == root
-            (root / "README.md").write_text("session change\nrun change\n")
+            run_worktree = Path(call["cwd"])
+            assert run_worktree != root
+            (run_worktree / "README.md").write_text("session change\nrun change\n")
 
     completed = '{"type":"turn.completed"}\n'
     replies = [(0, completed, "done")] if automatic else []
@@ -3045,8 +2958,8 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
 
     def unresolved_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
         calls.append(parameter)
-        (root / "src" / "incidental.py").parent.mkdir(exist_ok=True)
-        (root / "src" / "incidental.py").write_text("value = 1\n")
+        (context.run_worktree / "src" / "incidental.py").parent.mkdir(exist_ok=True)
+        (context.run_worktree / "src" / "incidental.py").write_text("value = 1\n")
         return SimpleNamespace(
             output_text="merge_resolution: unresolved\n検証不足: 人間意図を確認できません。\n"
         )
@@ -3074,12 +2987,12 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     def resolved_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
         calls.append(parameter)
         assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
-        assert parameter.agent_call_cwd == root
+        assert parameter.agent_call_cwd == context.run_worktree
         assert run_head in parameter.prompt
         assert session_head in parameter.prompt
-        (root / "README.md").write_text("session change\nrun change\n")
-        (root / "src" / "related.py").parent.mkdir(exist_ok=True)
-        (root / "src" / "related.py").write_text("value = 1\n")
+        (context.run_worktree / "README.md").write_text("session change\nrun change\n")
+        (context.run_worktree / "src" / "related.py").parent.mkdir(exist_ok=True)
+        (context.run_worktree / "src" / "related.py").write_text("value = 1\n")
         return SimpleNamespace(
             output_text="merge_resolution: resolved\n検証: 両側の内容を確認しました。\n"
         )
@@ -4012,9 +3925,11 @@ def test_refactor_interruption_allows_only_join_conflict_call(
     def resolve(parameter, **kwargs):
         assert stopped
         check_recovery_interruption()
-        assert parameter.agent_call_cwd == root
+        assert parameter.agent_call_cwd != root
         conflicts.append(kwargs["purpose"])
-        (root / "README.md").write_text("session result\nrefactor result\n")
+        (parameter.agent_call_cwd / "README.md").write_text(
+            "session result\nrefactor result\n"
+        )
         return SimpleNamespace(
             returncode=0,
             output_text="merge_resolution: resolved\nBoth intents retained; verification passed.",
@@ -4062,7 +3977,7 @@ def test_join_partial_cleanup_failure_keeps_identity_and_recovery_actions(
     metadata = report_metadata(terminal_primary_report(result).read_text())
     assert metadata["remaining_resources"] == {"branch": True, "worktree": False}
     actions = report_section(terminal_primary_report(result).read_text(), "次の操作")
-    assert "cmoc run join" not in actions
+    assert "cmoc run join" in actions
     assert "cmoc run abandon" in actions
     abandoned = runner.invoke(app, ["run", "abandon"], catch_exceptions=False)
     assert abandoned.exit_code == 0, abandoned.output
@@ -4701,3 +4616,273 @@ def test_refactor_interrupted_agent_commit_rolls_back_remaining_untracked_files(
     report = terminal_primary_report(result).read_text()
     assert "- committed processing units: 0" in report
     assert "uncommitted work rolled back" in report
+
+
+@pytest.mark.parametrize(
+    "kind", ["realization_apply", "realization_refactor", "feedback_report"]
+)
+def test_join_prepares_and_syncs_run_before_import(
+    join_after_preprocess, monkeypatch, kind
+):
+    """session の oracle も run 上で統合・同期し、その tree を一度取り込む。"""
+    root, _, state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess, kind=kind)
+    (context.run_worktree / "result.txt").write_text("run result\n")
+    original = commit_work_unit(context.run_worktree, "workload result")
+    (root / "oracle/new.md").write_text("session oracle\n")
+    baseline = commit_work_unit(root, "session oracle")
+    sync = run_join_module.sync_refactor_state
+    observed = []
+
+    def sync_run(worktree):
+        assert worktree == context.run_worktree
+        assert run_git(root, "rev-parse", "HEAD").stdout.strip() == baseline
+        assert (worktree / "oracle/new.md").read_text() == "session oracle\n"
+        observed.append(worktree)
+        return sync(worktree)
+
+    monkeypatch.setattr(run_join_module, "sync_refactor_state", sync_run)
+    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert joined.exit_code == 0, joined.output
+    from commons.runtime_run_join_state import load_join_record, tree_id
+
+    record = load_join_record(root, SESSION_ID)
+    assert record.original_run_head == original
+    assert record.session_head == baseline
+    assert record.context.run_fork_commit == context.run_fork_commit
+    assert record.session_tree == tree_id(root, record.prepared_run_head)
+    assert run_git(
+        root, "show", "-s", "--format=%P", record.join_commit
+    ).stdout.split() == [baseline, record.prepared_run_head]
+    assert observed == [context.run_worktree]
+    assert "oracle/new.md" in load_refactor_state(root)
+    assert _state(state_path)["run"]["state"] == "ready"
+
+
+def test_join_force_and_sync_commits_roll_back_to_original_result(
+    join_after_preprocess, monkeypatch
+):
+    """同期 commit 後の失敗でも、force 取消を含む準備全体だけを戻す。"""
+    root, _, state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
+    (context.run_worktree / "oracle/invalid.md").write_text("unexpected\n")
+    (context.run_worktree / "result.txt").write_text("result\n")
+    original = commit_work_unit(context.run_worktree, "workload result")
+    baseline = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    commit = run_join_module.commit_work_unit
+
+    def fail_after_sync(worktree, message):
+        result = commit(worktree, message)
+        if "sync before run join" in message:
+            assert result is not None
+            raise OSError("stop after synchronization commit")
+        return result
+
+    with monkeypatch.context() as failure:
+        failure.setattr(run_join_module, "commit_work_unit", fail_after_sync)
+        failed = runner.invoke(
+            app, ["run", "join", "--force-resolve"], catch_exceptions=False
+        )
+    assert failed.exit_code == 1
+    assert run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip() == original
+    assert run_git(context.run_worktree, "status", "--porcelain").stdout == ""
+    assert (context.run_worktree / "oracle/invalid.md").exists()
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == baseline
+    assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
+    joined = runner.invoke(
+        app, ["run", "join", "--force-resolve"], catch_exceptions=False
+    )
+    assert joined.exit_code == 0, joined.output
+    assert not (root / "oracle/invalid.md").exists()
+    assert (root / "result.txt").read_text() == "result\n"
+
+
+def test_join_preserves_session_updates_during_preparation(
+    join_after_preprocess, monkeypatch
+):
+    """準備中の session 更新と人間の未確定差分を保持し、次回に統合し直す。"""
+    root, _, _ = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
+    (context.run_worktree / "result.txt").write_text("result\n")
+    original = commit_work_unit(context.run_worktree, "workload result")
+    sync = run_join_module.sync_refactor_state
+
+    def concurrent_update(worktree):
+        result = sync(worktree)
+        (root / "oracle/later.md").write_text("later oracle\n")
+        commit_work_unit(root, "concurrent session update")
+        (root / "human.txt").write_text("uncommitted human input\n")
+        return result
+
+    with monkeypatch.context() as updating:
+        updating.setattr(run_join_module, "sync_refactor_state", concurrent_update)
+        failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert failed.exit_code == 1
+    assert (root / "human.txt").read_text() == "uncommitted human input\n"
+    assert (root / "oracle/later.md").read_text() == "later oracle\n"
+    assert run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip() == original
+    commit_work_unit(root, "keep human input")
+    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert joined.exit_code == 0, joined.output
+    assert (root / "result.txt").read_text() == "result\n"
+
+
+def test_join_recovers_import_after_missing_receipt_and_partial_cleanup(
+    join_after_preprocess, monkeypatch
+):
+    """取り込み直後の停止を履歴から復元し、ready と資源欠落後も後処理だけ進める。"""
+    root, _, state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
+    (context.run_worktree / "result.txt").write_text("result\n")
+    commit_work_unit(context.run_worktree, "workload result")
+    git = run_join_module.run_git
+
+    def stop_after_import(args, worktree, **kwargs):
+        result = git(args, worktree, **kwargs)
+        if args == ["commit", "--no-edit"] and worktree == root:
+            raise OSError("stop immediately after import")
+        return result
+
+    with monkeypatch.context() as failure:
+        failure.setattr(run_join_module, "run_git", stop_after_import)
+        failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert failed.exit_code == 1
+    imported = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    # ready 初期化直後に停止し、worktree と branch の回収だけが済んだ状態。
+    state = SessionState.from_dict(_state(state_path))
+    state.run = RunPart()
+    write_state(state_path, state)
+    run_git(root, "worktree", "remove", str(context.run_worktree))
+    run_git(root, "branch", "-D", context.run_branch)
+    for name in (
+        "sync_refactor_state",
+        "doctor_preprocess_for_join",
+        "validate_run_join",
+    ):
+        monkeypatch.setattr(
+            run_join_module,
+            name,
+            lambda *_args, **_kwargs: pytest.fail(
+                "post-join recovery repeated preparation"
+            ),
+        )
+    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert joined.exit_code == 0, joined.output
+    metadata = report_metadata(terminal_primary_report(joined).read_text())
+    assert metadata["run_join_commit"] == imported
+    assert metadata["join_recovery"] == "post_join"
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == imported
+    assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
+
+
+@pytest.mark.parametrize("needs_sync", [False, True])
+def test_initial_reachable_run_checks_sync_before_noop(
+    join_after_preprocess, monkeypatch, needs_sync
+):
+    """元の成果が到達可能でも同期を行い、差分がない場合だけ no-op とする。"""
+    root, _, _ = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
+    (root / "oracle/new.md").write_text("new oracle\n")
+    if not needs_sync:
+        run_join_module.sync_refactor_state(root)
+    baseline = commit_work_unit(root, "session advances")
+    monkeypatch.setattr(
+        merge_conflict_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: pytest.fail("no-op must not resolve conflicts"),
+    )
+    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert joined.exit_code == 0, joined.output
+    from commons.runtime_run_join_state import load_join_record
+
+    record = load_join_record(root, SESSION_ID)
+    assert record.original_run_head == context.run_fork_commit
+    if needs_sync:
+        assert record.join_commit is not None
+        assert record.sync_commit == record.prepared_run_head
+    else:
+        assert record.join_commit is record.sync_commit is None
+        assert record.prepared_run_head == record.session_commit == baseline
+        assert run_git(root, "rev-parse", "HEAD").stdout.strip() == baseline
+
+
+@pytest.mark.parametrize("operation_failed", [False, True])
+def test_join_preserves_unattributed_run_commit(
+    join_after_preprocess, monkeypatch, operation_failed
+):
+    """準備と判別できない run commit があれば rollback や cleanup をしない。"""
+    root, _, _ = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
+    (context.run_worktree / "result.txt").write_text("result\n")
+    commit_work_unit(context.run_worktree, "workload result")
+    commit = run_join_module.commit_work_unit
+    unexpected = []
+
+    def foreign_commit(worktree, message):
+        result = commit(worktree, message)
+        if "sync before run join" in message:
+            (worktree / "foreign.txt").write_text("unknown owner\n")
+            unexpected.append(commit(worktree, "unattributed change"))
+            if operation_failed:
+                raise OSError("stop after foreign commit")
+        return result
+
+    monkeypatch.setattr(run_join_module, "commit_work_unit", foreign_commit)
+    failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert failed.exit_code == 1
+    assert (
+        run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip()
+        == unexpected[0]
+    )
+    assert (context.run_worktree / "foreign.txt").read_text() == "unknown owner\n"
+    assert "帰属" in terminal_primary_report(failed).read_text()
+
+
+def test_join_identifies_import_before_later_session_commit(
+    join_after_preprocess, monkeypatch
+):
+    """取り込み後に session が進んでも、取り込み成立の commit を保持する。"""
+    root, _, _ = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
+    (context.run_worktree / "result.txt").write_text("result\n")
+    commit_work_unit(context.run_worktree, "workload result")
+    git = run_join_module.run_git
+    imported = []
+
+    def later_session_commit(args, worktree, **kwargs):
+        result = git(args, worktree, **kwargs)
+        if args == ["commit", "--no-edit"] and worktree == root:
+            imported.append(run_git(root, "rev-parse", "HEAD").stdout.strip())
+            (root / "human.txt").write_text("later human change\n")
+            commit_work_unit(root, "later human commit")
+        return result
+
+    monkeypatch.setattr(run_join_module, "run_git", later_session_commit)
+    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert joined.exit_code == 0, joined.output
+    metadata = report_metadata(terminal_primary_report(joined).read_text())
+    assert metadata["run_join_commit"] == imported[0]
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() != imported[0]
+    assert (root / "human.txt").read_text() == "later human change\n"
+
+
+def test_explicit_doctor_keeps_normal_sync_after_pending_join(
+    join_after_preprocess, monkeypatch
+):
+    """後処理の復旧時の同期抑止を、独立した通常 doctor へ広げない。"""
+    root, _, _ = join_after_preprocess
+    context = _prepare_run(join_after_preprocess)
+    (context.run_worktree / "result.txt").write_text("result\n")
+    commit_work_unit(context.run_worktree, "workload result")
+    with monkeypatch.context() as failure:
+        failure.setattr(
+            run_join_module, "cleanup_joined_run", lambda *_args: "preserved"
+        )
+        failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert failed.exit_code == 1
+    (root / "oracle/later.md").write_text("later oracle\n")
+    commit_work_unit(root, "later oracle")
+    from commons.runtime_doctor import run_doctor_preprocess
+
+    run_doctor_preprocess(root, explicit_doctor=True)
+    assert "oracle/later.md" in load_refactor_state(root)

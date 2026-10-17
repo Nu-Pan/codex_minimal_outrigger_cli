@@ -40,6 +40,7 @@ def resolve_merge_conflicts(
     purpose: str,
     initial_conflicts: list[str] | None = None,
     before_commit: Callable[[], None] | None = None,
+    sync_managed_entries: bool = True,
 ) -> dict[str, Any]:
     """内容を agent に委ね、refactor state と全変更を merge commit に収める。"""
     # report 用の初期一覧を受け取った場合は、同じ index を再照会しない。
@@ -103,7 +104,8 @@ def resolve_merge_conflicts(
         result["incidental_paths"] = sorted(changed)
     if refactor_relative in managed:
         _merge_refactor_state(root, refactor_relative)
-        sync_refactor_state(root)
+        if sync_managed_entries:
+            sync_refactor_state(root)
     run_git(["add", "-A"], root)
     remaining = unmerged_paths(root)
     if remaining:

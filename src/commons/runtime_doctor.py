@@ -179,6 +179,35 @@ def run_doctor_preprocess(
 ) -> None:
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
+    # 停止した join の後処理を、通常同期で上書きしない。
+    from .runtime_run_join_state import confirm_import, restore_pending_join
+
+    branch = run_git(
+        ["symbolic-ref", "-q", "--short", "HEAD"], root, check=False
+    ).stdout.strip()
+    record = restore_pending_join(repo_root(root), branch)
+    if record is not None:
+        imported = confirm_import(record)
+        if imported and not explicit_doctor:
+            update_primary_report_fields(
+                **record.report_fields(), join_recovery="post_join"
+            )
+            return
+        if any(
+            candidate.is_dir()
+            and run_git(
+                ["rev-parse", "-q", "--verify", "MERGE_HEAD"], candidate, check=False
+            ).returncode
+            == 0
+            for candidate in {root, record.context.run_worktree}
+        ):
+            raise CmocError(
+                "join 準備の復旧を先に実行してください。",
+                ["`cmoc run join` で復旧してください。"],
+                "",
+            )
+        if not explicit_doctor:
+            sync_refactor_entries = False
     update_primary_report_fields(
         work_root=str(root),
         config_path=str(config_path(root)),

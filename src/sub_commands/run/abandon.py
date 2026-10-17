@@ -110,6 +110,12 @@ def _cmoc_run_abandon_body() -> TerminalResult:
             )
         state.run = RunPart()
         write_state(context.state_path, state)
+        from commons.runtime_run_join_state import load_join_record
+
+        record = load_join_record(context.repo, context.session_id)
+        if record is not None and record.context.run_branch == context.run_branch:
+            record.finished = True
+            record.save()
         delete_run_process_id(context.repo, context.session_id)
         update_primary_report_fields(
             state_after="ready",

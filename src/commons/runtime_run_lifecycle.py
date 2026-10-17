@@ -96,6 +96,9 @@ def require_ready_session() -> tuple[Path, Path, str, Path, SessionState, str]:
             ["active な cmoc session branch へ checkout して再実行してください。"],
             f"current branch: {branch}",
         )
+    from .runtime_run_join_state import restore_pending_join
+
+    restore_pending_join(repository, branch)
     session_id, path, state = load_state_for_branch(repository, branch)
     if state.session.state != "active" or state.run.state != "ready":
         raise CmocError(
@@ -240,6 +243,9 @@ def resolve_active_run(
     repository = repo_root()
     current_worktree = work_root()
     branch = current_branch(current_worktree)
+    from .runtime_run_join_state import restore_pending_join
+
+    restore_pending_join(repository, branch)
     session_id, path, state = load_state_for_branch(repository, branch)
     if state.session.state != "active" or state.run.state not in allowed_states:
         raise CmocError(

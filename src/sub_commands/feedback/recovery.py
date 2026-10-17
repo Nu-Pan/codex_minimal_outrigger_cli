@@ -50,6 +50,7 @@ from commons.runtime_run_join import (
     remaining_run_resources,
     restore_run_error,
 )
+from commons.runtime_run_join_state import confirm_import, join_record, load_join_record
 from commons.runtime_run_lifecycle import EditingRunContext
 
 
@@ -328,6 +329,9 @@ def _finish_from_journal(
                 publication_report=report_path,
             )
             _, _, session = load_state_for_branch(repo, context.session_branch)
+            record = join_record(context)
+            record.workload_post_join = True
+            record.save()
             phase = "state reset"
             session.run = RunPart()
             write_state(context.state_path, session)
@@ -360,9 +364,16 @@ def _finish_from_journal(
                 TerminalResult(result=journal["result"], warnings=tuple(warnings)),
                 publication_report=report_path,
             )
+
             # 最外側での最後の report 保存が終わるまで recovery の根拠を保持する。
-            if not set_primary_report_completion_handler(lambda: _durable_unlink(path)):
+            def finish_join() -> None:
+                # 最外側の report 保存後にだけ、次の run を許可する。
+                record.finished = True
+                record.save()
                 _durable_unlink(path)
+
+            if not set_primary_report_completion_handler(finish_join):
+                finish_join()
         except BaseException:
             _, _, session = load_state_for_branch(repo, context.session_branch)
             session.run = RunPart(
@@ -415,7 +426,7 @@ def _finish_from_journal(
 
 def require_manual_feedback_run(context: EditingRunContext) -> None:
     """自動 join 済み feedback run を明示 join/abandon で破棄させない。"""
-    from .remediation import _failure, _is_ancestor, _validate_context
+    from .remediation import _failure, _validate_context
 
     if context.kind != "feedback_report":
         return
@@ -435,8 +446,8 @@ def require_manual_feedback_run(context: EditingRunContext) -> None:
     run = manifest["run"]
     joined = run["merged"] is not None
     if not joined and run["join_intent"] is not None:
-        intent = read_run_artifact(context.repo, run["join_intent"])
-        joined = _is_ancestor(context, intent["run_head"])
+        record = load_join_record(context.repo, context.session_id)
+        joined = record is not None and confirm_import(record)
     if joined:
         raise _failure(
             "feedback run は自動 join 済みです。",
