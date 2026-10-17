@@ -76,11 +76,12 @@ def editor_input(
 @pytest.mark.parametrize(
     "command", [["tui"], ["oracle", "investigation"], ["oracle", "edit"]]
 )
+# 空 file と空白の分類は test_prompt_editor_input.py に残す。
+# 各 CLI は空白から EmptyPromptInput を受ける経路で、中断後の終了処理を検証する。
 @pytest.mark.parametrize(
     ("raw_input", "save_fails"),
     [
         pytest.param(b"recoverable input\r\n", True, id="save-failure"),
-        pytest.param(b"", False, id="empty"),
         pytest.param(" \t\r\n\u3000\u00a0\n".encode("utf-8"), False, id="whitespace"),
     ],
 )

@@ -140,7 +140,9 @@ def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
         )
         assert original_prompt == expected_prompt
     else:
-        with pytest.raises(CmocError, match="プロンプトが空"):
+        with pytest.raises(
+            prompt_editor_input_module.EmptyPromptInput, match="プロンプトが空"
+        ):
             prompt_editor_input_module.collect_prompt_editor_input(tmp_path, input_path)
 
     assert final_reads == 1
