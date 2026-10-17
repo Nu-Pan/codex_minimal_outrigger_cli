@@ -263,7 +263,7 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 ### join 後の publication failure
 
-自然完了経路の自動 join 後に、post-join、検証、publication、結果保存、state 更新、または cleanup に失敗した場合は、`run.state=error` とする。merge と publication point を巻き戻さず、未 cleanup の raw observation、current pointer、および recovery に必要な run artifact と診断を保持する。共通 join の確定済み処理を重複適用せず、未完了の後処理を特定して再開する。
+自然完了経路の自動 join 後に、post-join、検証、publication、結果保存、state 更新、または cleanup に失敗した場合は、`run.state=error` とする。merge と publication point を巻き戻さず、未 cleanup の raw observation、current pointer、および recovery に必要な run artifact と診断を保持する。共通 join の確定済み処理を重複適用せず、未完了の後処理を特定して再開する。重要事項確認の未完了には、本書の「invocation report」が参照する共通規約の例外を適用する。
 
 publication point 前後の state と入力の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「最新状態の atomic publication」に従う。確定後の cleanup 失敗では、新しい current が成立したことを invocation report に明示し、処理済み入力を pending として再取り込みしない。
 
@@ -316,7 +316,7 @@ feedback の publication、`incomplete` 診断 report の生成、active・histo
 
 ## 続行不能な失敗
 
-本節は本命の issue 処理と join・publication の失敗を扱う。primary report の重要事項確認用 call の停止・失敗は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」に従う。
+本節は本命の issue 処理と join・publication の失敗を扱う。primary report の重要事項確認用 call の停止・失敗は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「確認結果と終了結果の分離」に従う。
 
 本命処理の続行不能な失敗では、実行中の issue 処理単位を正式な結果と commit まで確定できる場合だけ commit し、それ以外は処理単位全体を rollback する。成立済み run を `run.state=error` とし、自動 join しない。run 成立前なら新しい run state を作らない。
 
@@ -412,7 +412,7 @@ publication report の保存段階では、未保存なら固定済み target �
 
 invocation report は feedback publication または active state の一部ではなく、current pointer の参照先にしない。candidate を publication 済み issue または active issue として扱ってはならない。
 
-上記の確定結果を掲載した機械生成版について、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従って確認する。recovery でも今回の invocation report を確認し、引き継いだ publication artifact の再判定・追記・上書きは行わない。重要事項の確認状態と、publication の `result: incomplete` は別の意味として表示する。
+上記の確定結果を掲載した機械生成版について、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従う確認工程を行う。確認未完了と必要な保存・終了処理の失敗は、同文書の「確認結果と終了結果の分離」に従って区別する。recovery でも今回の invocation report を確認し、引き継いだ publication artifact の再判定・追記・上書きは行わない。重要事項の確認状態と、publication の `result: incomplete` は別の意味として表示する。
 
 `user_interruption` では publication 未実施と保持した観測・checkpoint を明記する。自動 join に成功した場合は、成果の取り込みと最新状態の未 publication を区別し、次回 report で再確認することを示す。run 成立前なら、自動 join は未実行とする。
 
@@ -420,7 +420,7 @@ invocation report は feedback publication または active state の一部で�
 
 ## 終了コード
 
-以下は本命処理と必要な確定・保存処理の結果を表す。重要事項確認自体の未完了による影響は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call > 未確定事項」と区別する。
+以下は本命処理と必要な確定・保存処理の結果を表す。重要事項確認自体の未完了には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認結果と終了結果の分離」の例外を適用する。
 
 - `ok`、`attention`、`incomplete` は、自然完了の自動 join・publication と必要な終了処理まで成功した場合に終了コード 0 とする。正常なユーザー中断も、成立済み run の自動 join と必要な終了処理を完了した場合、または run 成立前に整合して終了した場合に 0 とする。
 - validation 失敗、agent call failure、Structured Output 受理失敗、差分検査失敗、commit 失敗、state corruption、merge 失敗、required recovery 失敗、および durable report・publication・cleanup の失敗は終了コード 1 とする。

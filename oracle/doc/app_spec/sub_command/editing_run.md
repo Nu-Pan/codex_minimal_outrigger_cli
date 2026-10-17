@@ -143,6 +143,8 @@ call 固有の正確な prompt 文面、builder の引数、prompt part の選�
 
 ### join の失敗と復旧
 
+本節の失敗・取消による state と終了結果の扱いに対し、primary report の重要事項確認の未完了には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認結果と終了結果の分離」の例外を適用する。
+
 join の事前検査で停止した場合は、取り込みを開始せず、既存の差分と run を保持する。その invocation の対象となる停止済み run を特定できる場合は `run.state=error` とする。対象がない場合は存在しない run や state を作らず、別の実行中 invocation を妨げる state 変更も行わない。失敗・取消を本命処理の正常終了や正常なユーザー中断へ変換しない。
 
 競合解消または merge commit 確定前の検証・管理処理が失敗・取消となった場合は、書き込み得る子 process の停止を確認してから、cmoc が merge を中止し、merge と競合解消が導入した作業ファイルの差分を除去する。付随する追加・変更・rename・削除と tracked な生成物も含め、session worktree と staging area を merge 開始前の clean な状態へ戻す。そのうえで `run.state=error` とし、run branch と run worktree を保持する。report とログ、および repository-local feedback state はこの作業差分の rollback 対象にせず、それぞれの保持契約に従う。report には未解消理由と、停止確認・復旧の結果を残す。停止を確認できない場合は rollback せず `error` とし、停止または復旧に失敗した場合も cleanup せず、残存資源・差分、および必要な次の操作を示す。

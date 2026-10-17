@@ -107,5 +107,5 @@ active run の `{{cmoc-run-fork-commit}}` であり、apply の差分終点と r
 - 本命処理の成果確定、または正常なユーザー中断の停止・整合化を終えると `joinable` へ遷移し、同じ invocation 内で自動 join する。
 - 正常な自動 join では、取り込み、post-join、および workload 固有の確定処理が終わるまで `joinable` と active run 情報を保持する。feedback の自然完了では publication と入力・work artifact の cleanup も含む。`error` からの復旧では、過去の本命処理を正常終了扱いに戻さず、join 開始時の state を `joinable` へ読み替えない。
 - 結果と report を保存した後に `ready` へ遷移し、`kind`、`branch`、`fork_commit` を `null` に初期化する。その後の隔離資源 cleanup と最終記録の順序は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。明示 join と workload 固有 recovery もこの境界を使用する。
-- 本命処理、join、または必須の後処理が失敗した場合は `error` へ遷移する。`ready` 初期化後の後処理失敗も、同文書の「join の失敗と復旧」に従い active run 情報と残存資源を扱う。
+- 本命処理、join、または必須の後処理が失敗した場合は `error` へ遷移する。`ready` 初期化後の後処理失敗も、同文書の「join の失敗と復旧」に従い active run 情報と残存資源を扱う。重要事項確認の未完了には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認結果と終了結果の分離」の例外を適用する。
 - `cmoc run abandon` は、その cleanup を完了した後に `ready` へ遷移し、active run 情報を初期化する。

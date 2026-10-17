@@ -155,12 +155,12 @@ agent 作業、全件テスト、計測、全対象の列挙・同期などの�
 - rollback は、その単位が導入した追加・変更・rename・削除と、巡開始の準備を含む未確定の refactor state 更新を取り消す。成果物と調査状態の片方だけを確定せず、取り消した作業を調査済み・検証済みとして数えない。確定済み commit と調査要求を保持する。
 - doctor preprocess または共通開始処理が途中の場合にも同じ確定・rollback の境界を適用し、その準備が導入した未確定の更新と作成資源を取り消す。開始前から存在する資源や人間の未コミット差分を取り消さず、未完了の前処理を成功と記録しない。run の成立前に終了した場合は、存在しない run、`joinable` state、または join を作らず、その段階を report して正常中断を完了する。
 - 成立済みの run は、上記の整合化後に `run.state=joinable` にし、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」に従って確定済み成果物と調査状態を取り込む。通常の中断で run worktree に未確定差分を残さない。
-- 自動 join と必要な後処理が完了した場合に、`user_interruption` として終了コード 0 で終える。自動 join 開始後の取消・失敗は、最初の停止要求による正常中断とは区別し、共通 join の復旧契約に従って `error` とする。本命の調査・改善を再開してはならない。
+- 自動 join と必要な後処理が完了した場合に、`user_interruption` として終了コード 0 で終える。自動 join またはその必須後処理の取消・失敗は、最初の停止要求による正常中断とは区別し、共通 join の復旧契約に従って `error` とする。本命の調査・改善を再開してはならない。
 - 続ける場合は正常終了後に新しい `cmoc realization refactor` を開始し、調査要求を引き継ぐ。同じ run branch または worktree の実行途中を復元する仕組みは設けない。
 
 ## その他のエラー
 
-本節は本命処理とその停止・確定・join の失敗を扱う。primary report の重要事項確認自体の停止・失敗と終了結果への影響は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」に従う。
+本節は本命処理とその停止・確定・join の失敗を扱う。primary report の重要事項確認自体の停止・失敗と終了結果への影響は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「確認結果と終了結果の分離」に従う。
 
 - Codex CLI call の続行不能な失敗、想定外 path の変更、必要な検証の未完了・失敗、確定・停止・rollback の失敗などでは、未確定作業を整合させて停止し、成立済みの run を `error` にする。
 - 未検証の変更をエラー処理のために commit してはならない。不可分な確定区間内では、その区間の整合性を回復する。

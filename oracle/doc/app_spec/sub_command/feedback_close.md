@@ -83,7 +83,7 @@ close report は次へ保存する。publication する report の掲載時点�
 
 正常に完了した新規 close では、その publication 済み report を primary report とする。確定済み close の再実行で recovery が不要な場合は、今回の実行 ID で `already_closed` の report を作り、元の close と現在の state を参照する。自由記述入力には今回の理由を掲載し、保存済みの元の理由と区別する。この report を current pointer の参照先にしない。
 
-primary report を兼ねる publication report は、初回の durable 保存前に、その掲載時点の機械生成版の全文を確認し、確認結果と確認自身の実行記録を組み込む。確認には `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」を適用する。current pointer 切替や cleanup の前であることを維持し、それらを完了済みとは記載しない。確認用 agent に、人間の外部解決宣言や直前の issue 判定を再検証させない。
+primary report を兼ねる publication report は、初回の durable 保存前に、その掲載時点の機械生成版の全文を対象とする確認工程を行い、確認状態・結果と確認自身の実行記録を組み込む。確認には `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」を適用し、終了結果への影響と必要な保存・終了処理の失敗との区別は、同文書の「確認結果と終了結果の分離」に従う。current pointer 切替や cleanup の前であることを維持し、それらを完了済みとは記載しない。確認用 agent に、人間の外部解決宣言や直前の issue 判定を再検証させない。
 
 recovery では元の publication report を書き換えず、未保存なら固定済み target へ上記の初回保存手順で保存し、保存済みなら path と hash を検証して再利用する。保存済み report は、冒頭の要約、重要事項の確認結果と確認自身の記録、元の指示も含めて固定済みの理由と掲載時点を維持し、今回の入力や結果に置き換えない。保存済みの確認が未完了でも再確認 call を開始せず、確認結果の追記・差し替え・report の上書きを行わない。正常に recovery を完了した場合は、その report の保存確認を primary report の要件を満たすものとする。再開した実行には新しい実行 ID を付与し、今回の入力・作業・終端結果と共通掲載内容をその実行のサブコマンドログに残して、元の実行・report・close との対応を示す。
 

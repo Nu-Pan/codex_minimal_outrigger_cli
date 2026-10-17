@@ -74,7 +74,7 @@ cmoc 呼び出し時点で `$CODEX_HOME` が設定済みなら、その値をそ
 
 cmoc は Codex CLI 呼び出し前に、Codex CLI が実際に参照する `$CODEX_HOME` がディレクトリとして存在することを検証する。この preflight validation に失敗した場合は、cmoc の実行を即時失敗させる。model provider 固有の認証要件を cmoc が一律に検証してはならない。
 
-ただし、primary report の重要事項確認用 call を開始できない場合の確認状態と最外側の終了結果への影響は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」に従う。この call の開始不能を、本命処理の失敗と混同しない。
+ただし、primary report の重要事項確認用 call の開始不能には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「確認結果と終了結果の分離」を適用する。上記の即時失敗を最外側の終了結果へ適用する際は、この例外に従う。
 
 ## Codex CLI 引数による設定上書き
 
@@ -460,7 +460,7 @@ cmoc は、ユーザーが TUI 内でセッションを切り替えない前提�
 
 ## Structured Output
 
-primary report の重要事項確認にも、本節の schema の責務、機械的検証、および不受理出力の保持を適用する。同 call での補正実施の採否と不受理時の保存・終了方針は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call > 未確定事項」を参照する。
+primary report の重要事項確認にも、本節の schema の責務、機械的検証、出力補正、および不受理出力の保持を適用する。正式な全文確認不能の応答を受理した場合の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「回復待ちと出力補正」に従う。
 
 - Codex CLI に Structured Output を要求する場合は、必ず `--output-schema` を使うこと
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
@@ -517,6 +517,8 @@ primary report の重要事項確認にも、本節の schema の責務、機械
 
 ### 補正不能時の扱い
 
+以下の「既存のエラー処理」について、primary report の重要事項確認用 call には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「確認結果と終了結果の分離」の例外を適用する。不受理出力の保持と失敗の記録は省略しない。
+
 - 最大 2 回の補正後も検証に合格しない場合は、検証を緩和せず既存のエラー処理へ移る
 - prompt、schema、および validator が矛盾している場合は、補正によって矛盾を隠そうとせず既存のエラー処理へ移る
 - 作業成果物の差分変動、session の再開不能、またはその他の出力修正だけでは解消できない失敗も、検証を緩和せず既存のエラー処理へ移る
@@ -541,7 +543,7 @@ primary report の重要事項確認にも、本節の schema の責務、機械
 
 ### primary report の重要事項確認の回復境界
 
-確認専用 call への回復待ち・再試行・補正の適用と、待機・保存・終了の方針は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」を正本とする。以下の失敗分類と最終成功の確認は利用するが、本命 call の回復待ちの継続や失敗時の終了コードを、確認専用 call にも採用済みとは扱わない。
+確認専用 call にも、本節の失敗分類、最終成功の確認、回復待ち・probe・再開を適用する。確認を終える場合の保存と最外側の終了結果には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「確認結果と終了結果の分離」を適用する。
 
 ### 最終的な成功と失敗の判断
 
@@ -631,7 +633,7 @@ Structured Output の補正には、本書の「同じ session での出力補�
 
 primary report の確認中の取消は、同文書の「重要事項確認の取消」に従う。これはサブコマンドの本命処理に正常中断を追加するものではない。
 
-待機対象外の失敗または再開不能で続行を断念する場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー分類」と「エラー終了の確定」に従う。終了時の commit、rollback、部分成果、および state の扱いは各 workload の正本を維持し、共通の回復処理で一律に変更しない。特に、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に対する自動 rollback を追加してはならない。
+待機対象外の失敗または再開不能で続行を断念する場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー分類」と「エラー終了の確定」に従う。ただし、確認専用 call には本書の「primary report の重要事項確認の回復境界」を優先する。終了時の commit、rollback、部分成果、および state の扱いは各 workload の正本を維持し、共通の回復処理で一律に変更しない。特に、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に対する自動 rollback を追加してはならない。
 
 #### 表示と記録
 

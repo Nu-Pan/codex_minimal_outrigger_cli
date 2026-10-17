@@ -52,15 +52,15 @@ realization refactor では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/rea
 
 共通の保存・出力規則は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。primary report、個別仕様が保存を認める再開 state、および terminal result を含むサブコマンド終了イベントから、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
 
-ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。ただし、primary report の保存を含む完了処理自体に失敗した場合は、個別仕様と、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従ってエラー処理を行う。
+ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。ただし、primary report の保存を含む完了処理自体に失敗した場合は、個別仕様と、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従ってエラー処理を行う。重要事項確認の未完了については、本書の「重要事項確認の取消」が参照する共通規約の例外を適用する。
 
 Windows toast による terminal result の通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする。
 
 ## 重要事項確認の取消
 
-primary report の重要事項確認中に受けた `Ctrl+C` は、確認用 call に対する新しい取消要求とする。本命処理の停止に使った要求は、終了工程として新たに始める確認を自動で取り消す要求にはしない。
+primary report の重要事項確認中に受けた `Ctrl+C` は、確認用 call に対する新しい取消要求とする。補正、回復待ち、および probe の間も受け付ける。本命処理の停止に使った要求は、終了工程として新たに始める確認を自動で取り消す要求にはしない。
 
-確認の停止、確認未完了の記録、保存との関係、および未確定の終了方針は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」に従う。確認を終えた後の state 確定・report 保存・publication などの処理へ、この call の取消契約を拡張しない。
+確認の停止、確認未完了の記録、保存との関係、および終了結果への非波及は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「確認結果と終了結果の分離」に従う。確認を終えた後の state 確定・report 保存・publication などの処理へ、この call の取消契約を拡張しない。
 
 ## TUI 起動途中の取消
 
