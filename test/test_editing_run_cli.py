@@ -151,7 +151,7 @@ def join_after_preprocess(ready_join_session, monkeypatch):
 
 @pytest.fixture
 def refactor_after_preprocess(ready_join_session, nonpersistent_run_ids, monkeypatch):
-    """終了・復旧の検査には、修復・同期済みの session から本処理を実行する。"""
+    """所見追従・終了・復旧は、修復・同期済みの session から検査する。"""
     # doctor の修復・索引同期・中断は test_doctor_cli.py、fork との結合は
     # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
     # 管理 file は ready_join_session の初期 commit に揃え、前処理を重ねない。
@@ -1268,11 +1268,11 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
 
 
 def test_refactor_fork_moves_unresolved_target_after_rename(
-    ready_content_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """3 種類の rename 後も unresolved と state を揃え、run の準備は共有する。"""
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = refactor_after_preprocess
     # 内容を保つ rename、Git が delete/add とする置換、別所見の追加 file による
     # 候補の曖昧さを別々の target で検証し、session・巡回・終了処理を重複させない。
     cases = {
@@ -1381,12 +1381,12 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
 
 
 def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
-    ready_content_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """後続 target の rename でも既存 unresolved target を追従させる。"""
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = refactor_after_preprocess
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
     reviewed: list[str] = []
@@ -4459,10 +4459,10 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
 
 
 def test_refactor_latest_resolution_survives_commit_inspection_failure(
-    ready_content_session, monkeypatch
+    refactor_after_preprocess, monkeypatch
 ):
     """確定後の差分確認が失敗しても、最新結果で解消した過去の未解決を復活させない。"""
-    root, _, state_path = ready_content_session
+    root, _, state_path = refactor_after_preprocess
     reviewed = 0
     inspect = refactor_module.tree_changes
 
