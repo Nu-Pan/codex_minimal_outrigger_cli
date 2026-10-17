@@ -1178,7 +1178,7 @@ def test_recovery_uses_saved_merge_verification_after_commit(feedback_run, monke
     remediation._seal(h.context, h.manifest, candidates, aggregates)
     seal = read_json_object(h.context.repo / h.manifest["run"]["sealed"]["path"])
     parameter = SimpleNamespace(
-        agent_call_kind="build_run_join_conflict_resolution_parameter",
+        agent_call_kind="realization_edit",
         file_access_mode=SimpleNamespace(value="realization_write"),
         prompt=f"sealed: {h.manifest['run']['sealed']['path']}",
     )

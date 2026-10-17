@@ -113,7 +113,7 @@ def script_codex_calls(monkeypatch, responses, *, on_call=None, stderr=""):
                 "prompt": prompt,
                 "cwd": kwargs["cwd"],
                 "env": kwargs["env"],
-                "timeout": kwargs["timeout"],
+                "timeout": kwargs.get("timeout"),
             }
         )
         if on_call is not None:
@@ -122,6 +122,15 @@ def script_codex_calls(monkeypatch, responses, *, on_call=None, stderr=""):
         if isinstance(response, BaseException):
             raise response
         returncode, stdout, output = response
+        if callback := kwargs.get("process_started_callback"):
+            callback()
+        if sink := kwargs.get("stdout"):
+            sink.write(stdout)
+        if sink := kwargs.get("stderr"):
+            sink.write(stderr)
+        if callback := kwargs.get("stdout_line_callback"):
+            for line in stdout.splitlines(keepends=True):
+                callback(line)
         if output is not None:
             output_path = Path(codex_arg_value(argv, "--output-last-message"))
             if isinstance(output, bytes):

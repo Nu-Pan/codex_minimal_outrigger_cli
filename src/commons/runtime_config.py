@@ -2,7 +2,7 @@
 
 import json
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, NoReturn
@@ -59,11 +59,19 @@ def _model_provider_id(value: Any) -> str:
     return value
 
 
-def _agent_call_kind(value: Any) -> str:
-    """設定検索に使う安定した agent call 種別文字列を検証する。"""
-    if not isinstance(value, str) or not value.strip():
-        raise TypeError
-    validate_json_toml_value(value)
+def _config_object(value: Any, names: Iterable[str], field: str) -> dict[str, Any]:
+    """正本で定義した項目集合と一致する object だけを受理する。"""
+    if not isinstance(value, dict):
+        raise TypeError(f"{field}: object が必要です")
+    names = set(names)
+    missing = names - value.keys()
+    if missing:
+        raise TypeError(f"{field}.{sorted(missing)[0]}: 必須項目がありません")
+    unknown = value.keys() - names
+    if unknown:
+        raise TypeError(
+            f"{field}.{sorted(unknown, key=str)[0]}: 未知の項目です。手動で除去してください"
+        )
     return value
 
 
@@ -179,6 +187,10 @@ def _document_search_config(value: Any) -> DocumentSearchConfig:
 
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     """正本 config 型を、永続化 JSON の object 境界へ変換する。"""
+    # 設定キーを正本から取得し、共有対象の個別上書きも通常の構造検証で拒否する。
+    _config_object(
+        config.codex.agent_calls, CmocConfigCodex().agent_calls, "codex.agent_calls"
+    )
     model_providers: dict[str, dict[str, dict[str, JsonTomlValue]]] = {}
     for provider_id, provider_config in config.codex.model_providers.items():
         if not isinstance(provider_config, CodexModelProviderConfig):
@@ -195,8 +207,11 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     for agent_call_kind, call_config in config.codex.agent_calls.items():
         if not isinstance(call_config, CodexCallConfig):
             raise TypeError("invalid Codex agent call definition")
-        normalized_kind = _agent_call_kind(agent_call_kind)
-        agent_calls[normalized_kind] = {
+        if call_config.model_provider not in model_providers:
+            raise TypeError(
+                f"codex.agent_calls.{agent_call_kind}.model_provider: provider 定義がありません"
+            )
+        agent_calls[agent_call_kind] = {
             "model_provider": _model_provider_id(call_config.model_provider),
             "model": _model_name(call_config.model),
             "reasoning_effort": _reasoning_effort_name(call_config.reasoning_effort),
@@ -278,18 +293,20 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
 
 
 def _model_provider_map_from_dict(
-    default: dict[str, CodexModelProviderConfig],
     data: Any,
 ) -> dict[str, CodexModelProviderConfig]:
     """provider-local 設定を型検証済みの正本設定型へ戻す。"""
     if not isinstance(data, dict):
         raise TypeError
-    restored = dict(default)
+    restored = {}
     for provider_id, value in data.items():
-        if not isinstance(value, dict):
-            raise TypeError
         normalized_provider_id = _model_provider_id(provider_id)
-        settings = value.get("settings", {})
+        value = _config_object(
+            value,
+            (field.name for field in fields(CodexModelProviderConfig)),
+            f"codex.model_providers.{normalized_provider_id}",
+        )
+        settings = value["settings"]
         if not isinstance(settings, dict):
             raise TypeError
         restored_settings: dict[str, JsonTomlValue] = {}
@@ -303,85 +320,63 @@ def _model_provider_map_from_dict(
 
 
 def _agent_call_map_from_dict(
-    default: dict[str, CodexCallConfig],
     data: Any,
 ) -> dict[str, CodexCallConfig]:
-    """agent call ごとの直接設定を既定値補完済みの map へ戻す。"""
-    restored = dict(default)
-    if not isinstance(data, dict):
-        raise TypeError
+    """正本の種別集合と各 call の必須文字列を補完せず復元する。"""
+    data = _config_object(data, CmocConfigCodex().agent_calls, "codex.agent_calls")
+    restored = {}
     for agent_call_kind, value in data.items():
-        if not isinstance(value, dict):
-            raise TypeError
-        normalized_kind = _agent_call_kind(agent_call_kind)
-        restored[normalized_kind] = CodexCallConfig(
-            model_provider=_model_provider_id(value.get("model_provider")),
-            model=_model_name(value.get("model")),
-            reasoning_effort=_reasoning_effort_name(value.get("reasoning_effort")),
+        value = _config_object(
+            value,
+            (field.name for field in fields(CodexCallConfig)),
+            f"codex.agent_calls.{agent_call_kind}",
+        )
+        restored[agent_call_kind] = CodexCallConfig(
+            model_provider=_model_provider_id(value["model_provider"]),
+            model=_model_name(value["model"]),
+            reasoning_effort=_reasoning_effort_name(value["reasoning_effort"]),
         )
     return restored
 
 
-def _section(data: dict[str, Any], key: str) -> dict[str, Any]:
-    """省略可能な config section を、型検証済み dict として取り出す。"""
-    if key not in data:
-        return {}
-    value = data[key]
-    if not isinstance(value, dict):
-        raise TypeError
-    return value
-
-
-def _int_value(data: dict[str, Any], key: str, default: int) -> int:
-    """JSON の bool 混入を拒否しつつ int config 値を復元する。"""
-    value = data.get(key, default)
-    # `{{work-root}}/oracle/src/oracle/other/cmoc_config.py` では int field なので、
-    # JSON の bool/string 値は数値ではなく人手編集エラーとして扱う。
-    return _config_int(value)
-
-
 def config_from_dict(data: dict[str, Any]) -> CmocConfig:
-    """永続化 JSON object から、不足項目を既定値で補った config を復元する。"""
-    # 保存済み入力だけに必要な厳格な検証は load_config 側で行う。
-    return _config_from_dict(data, CmocConfig())
+    """現行の設定構造と参照整合性を検証し、補完せず復元する。"""
+    return _config_from_dict(data)
 
 
 def _config_from_dict(
     data: dict[str, Any],
-    default: CmocConfig,
     *,
     document_search: DocumentSearchConfig | None = None,
 ) -> CmocConfig:
     """保存内容の検証で復元済みの検索設定があれば、その結果を再利用する。"""
-    # Codex 側の省略補完と、値の不正時の診断を共用する。
+    # 新規生成には正本の既定状態を使い、入力済みの設定には既定値を混入させない。
     try:
-        if not isinstance(data, dict):
-            raise TypeError("config top-level must be an object")
-        codex_data = _section(data, "codex")
-        model_providers = _model_provider_map_from_dict(
-            default.codex.model_providers,
-            codex_data.get("model_providers", {}),
+        data = _config_object(
+            data, (field.name for field in fields(CmocConfig)), "config"
         )
-        agent_calls = _agent_call_map_from_dict(
-            default.codex.agent_calls,
-            codex_data.get("agent_calls", {}),
+        codex_data = _config_object(
+            data["codex"],
+            (field.name for field in fields(CmocConfigCodex)),
+            "codex",
         )
+        model_providers = _model_provider_map_from_dict(codex_data["model_providers"])
+        agent_calls = _agent_call_map_from_dict(codex_data["agent_calls"])
+        for kind, call in agent_calls.items():
+            if call.model_provider not in model_providers:
+                raise TypeError(
+                    f"codex.agent_calls.{kind}.model_provider: provider 定義がありません"
+                )
 
         if document_search is None:
-            document_search = _document_search_config(
-                data.get("document_search", default.document_search)
-            )
+            document_search = _document_search_config(data["document_search"])
         return CmocConfig(
-            num_parallel=_int_value(data, "num_parallel", default.num_parallel),
+            num_parallel=_config_int(data["num_parallel"]),
             document_search=document_search,
             codex=CmocConfigCodex(
                 model_providers=model_providers,
                 agent_calls=agent_calls,
-                num_try_falv_recovery=_int_value(
-                    codex_data,
-                    "num_try_falv_recovery",
-                    default.codex.num_try_falv_recovery,
-                ),
+                num_try_falv_recovery=_config_int(codex_data["num_try_falv_recovery"]),
             ),
         )
     except (RecursionError, TypeError, ValueError) as exc:
@@ -402,7 +397,7 @@ def _config_from_dict(
         raise CmocError(
             "cmoc config が不正です。",
             ["{{work-root}}/.cmoc/gt/config.json を確認してから再実行してください。"],
-            detail,
+            f"reason: {exc}\n{detail}",
         ) from exc
 
 
@@ -521,36 +516,14 @@ def _config_from_saved_data(path: Path, data: dict[str, Any]) -> CmocConfig:
     """検索設定・agent call 設定・provider 参照を確認して保存内容を復元する。"""
     # 検索設定の不備は Codex 設定の復元より先に診断する。
     document_search = _saved_search_config(path, data)
-    codex = data.get("codex")
-    if not isinstance(codex, dict):
-        field = "codex"
-    elif not isinstance(codex.get("model_providers"), dict):
-        field = "codex.model_providers"
-    elif not isinstance(codex.get("agent_calls"), dict):
-        field = "codex.agent_calls"
-    else:
-        calls = codex["agent_calls"]
-        providers = codex["model_providers"]
-        # 必須項目の確認と値の復元には、今回の読み込みで作る既定状態を共用する。
-        default = CmocConfig()
-        missing = set(default.codex.agent_calls) - set(calls)
-        if missing:
-            field = f"codex.agent_calls.{sorted(missing)[0]}"
-        else:
-            config = _config_from_dict(data, default, document_search=document_search)
-            unknown = [
-                kind
-                for kind, call in config.codex.agent_calls.items()
-                if call.model_provider not in providers
-            ]
-            if not unknown:
-                return config
-            field = f"codex.agent_calls.{unknown[0]}.model_provider"
-    raise CmocError(
-        "agent call の保存設定が不足または不正です。",
-        [f"{path} の {field} を手動で修正してください。"],
-        f"path: {path}\nitem: {field}\nreason: 必須設定または provider 定義がありません",
-    )
+    try:
+        return _config_from_dict(data, document_search=document_search)
+    except CmocError as exc:
+        raise CmocError(
+            exc.summary,
+            [f"{path} の設定を手動で修正してください。"],
+            f"path: {path}\n{exc.detail}",
+        ) from exc
 
 
 def load_config(root: Path) -> CmocConfig:

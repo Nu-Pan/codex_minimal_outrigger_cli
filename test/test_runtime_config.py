@@ -2,7 +2,7 @@
 
 設定 I/O は通常の directory で検証し、Git 追跡は test_doctor_cli.py で扱う。
 
-この file は 16,000 文字を超えるが、既定値、JSON 変換、merge、および入力拒否は
+この file は 16,000 文字を超えるが、既定値、JSON 変換、保存、および入力拒否は
 同じ config schema と round-trip 契約を共有する。分割すると、設定 field ごとの
 受理条件と永続化結果が複数 file に分散するため、一つの config 回帰として保つ。
 
@@ -44,19 +44,34 @@ from commons.runtime_config import SearchConfigIssue
 from config.cmoc_config import CmocConfig
 
 
+@pytest.fixture
+def config_data():
+    """検証対象の項目以外は正本の既定状態で満たす。"""
+    return config_to_dict(CmocConfig())
+
+
 def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
-    """全 agent call の正本既定値を設定補完と JSON 変換で保持する。"""
+    """共有設定と7種の個別設定の正本既定値を JSON 変換で保持する。"""
     config = CmocConfig()
 
     assert config.num_parallel == 8
     assert config.codex.model_providers == {"openai": CodexModelProviderConfig()}
-    assert config.codex.agent_calls
+    assert set(config.codex.agent_calls) == {
+        "realization_edit",
+        "build_session_join_conflict_resolution_parameter",
+        "build_tui_launch_tui_parameter",
+        "build_oracle_investigation_launch_tui_parameter",
+        "build_oracle_edit_main_launch_exec_parameter",
+        "build_feedback_normalize_issue_parameter",
+        "build_primary_report_review_parameter",
+        "build_quota_availability_probe_parameter",
+    }
     for agent_call_kind, call_config in config.codex.agent_calls.items():
         assert agent_call_kind
         assert call_config.model_provider in config.codex.model_providers
         assert call_config.model
         assert call_config.reasoning_effort
-    restored = config_from_dict({})
+    restored = config_from_dict(config_to_dict(config))
     assert restored.codex.agent_calls == config.codex.agent_calls
     assert config_to_dict(restored)["codex"]["agent_calls"] == {
         agent_call_kind: asdict(call_config)
@@ -102,26 +117,19 @@ def test_load_config_missing_points_to_doctor(
     assert not (root / ".cmoc/gt/config.json").exists()
 
 
-def test_config_round_trips_through_json_file(tmp_path: Path) -> None:
+def test_config_round_trips_through_json_file(tmp_path: Path, config_data) -> None:
     """設定を config.json へ保存しても全 section の値を復元できる。"""
     root = tmp_path / "repo"
-    config = config_from_dict(
-        {
-            "num_parallel": 3,
-            "codex": {
-                "model_providers": {
-                    "provider": {"settings": {"endpoint": "http://127.0.0.1"}}
-                },
-                "agent_calls": {
-                    "custom_call": {
-                        "model_provider": "provider",
-                        "model": "local-model",
-                        "reasoning_effort": "deliberate",
-                    }
-                },
-            },
-        }
-    )
+    config_data["num_parallel"] = 3
+    config_data["codex"]["model_providers"]["provider"] = {
+        "settings": {"endpoint": "http://127.0.0.1"}
+    }
+    config_data["codex"]["agent_calls"]["realization_edit"] = {
+        "model_provider": "provider",
+        "model": "local-model",
+        "reasoning_effort": "deliberate",
+    }
+    config = config_from_dict(config_data)
 
     config_path = root / ".cmoc" / "gt" / "config.json"
     write_config(config_path, config)
@@ -138,9 +146,8 @@ def test_saved_search_config_is_not_filled_by_deserialization_defaults(
     path.parent.mkdir(parents=True)
     path.write_text('{"num_parallel": 3}\n')
 
-    assert (
-        config_from_dict({"num_parallel": 3}).document_search == DocumentSearchConfig()
-    )
+    with pytest.raises(CmocError):
+        config_from_dict({"num_parallel": 3})
     with pytest.raises(CmocError) as exc_info:
         sync_config(root)
 
@@ -226,6 +233,113 @@ def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitio
         "codex.agent_calls.build_tui_launch_tui_parameter.model_provider"
         in exc_info.value.detail
     )
+
+
+@pytest.mark.parametrize("kind", list(CmocConfig().codex.agent_calls))
+def test_saved_config_rejects_missing_call_without_doctor_completion(
+    tmp_path, config_data, kind
+):
+    """共有設定も個別設定も必須とし、検索の補完候補があっても保存しない。"""
+    path = tmp_path / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    del config_data["codex"]["agent_calls"][kind]
+    del config_data["document_search"]["chunk_tokens"]
+    original = json.dumps(config_data) + "\n"
+    path.write_text(original)
+
+    with pytest.raises(CmocError) as error:
+        config_from_dict(config_data)
+    assert f"codex.agent_calls.{kind}" in error.value.detail
+    with pytest.raises(CmocError) as error:
+        sync_config(tmp_path, repair_missing=True)
+    assert f"codex.agent_calls.{kind}" in error.value.detail
+    assert str(path) in error.value.detail
+    assert "手動" in error.value.next_actions[0]
+    assert path.read_text() == original
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "build_realization_apply_fork_launch_exec_parameter",
+        "build_realization_refactor_fork_file_review_and_fix_parameter",
+        "build_feedback_remediate_issue_parameter",
+        "build_run_join_conflict_resolution_parameter",
+        "custom_call",
+    ],
+)
+@pytest.mark.parametrize("replace_shared", [False, True], ids=["extra", "replacement"])
+def test_saved_config_rejects_unrecognized_call_keys(
+    tmp_path, config_data, kind, replace_shared
+):
+    """builder 別 entry と未知の種別を、追加・共有設定の代用のどちらでも拒否する。"""
+    calls = config_data["codex"]["agent_calls"]
+    calls[kind] = dict(calls["realization_edit"])
+    if replace_shared:
+        del calls["realization_edit"]
+    path = tmp_path / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = json.dumps(config_data) + "\n"
+    path.write_text(original)
+
+    for repair_missing in (False, True):
+        with pytest.raises(CmocError) as error:
+            sync_config(tmp_path, repair_missing=repair_missing)
+        field = "realization_edit" if replace_shared else kind
+        assert f"codex.agent_calls.{field}" in error.value.detail
+        assert path.read_text() == original
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        (),
+        ("codex",),
+        ("codex", "agent_calls", "realization_edit"),
+        ("codex", "model_providers", "openai"),
+    ],
+)
+@pytest.mark.parametrize("operation", ["missing", "unknown"])
+def test_config_validates_record_fields_without_defaults(
+    tmp_path, config_data, location, operation
+):
+    """各構造の欠落・個別上書きを通常の項目検証で拒否し、保存内容を保つ。"""
+    record = config_data
+    for field in location:
+        record = record[field]
+    if operation == "missing":
+        field = next(iter(record))
+        del record[field]
+    else:
+        field = "overrides"
+        record[field] = {"model": "per-call-model"}
+    path = tmp_path / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = json.dumps(config_data) + "\n"
+    path.write_text(original)
+
+    for repair_missing in (False, True):
+        with pytest.raises(CmocError) as error:
+            sync_config(tmp_path, repair_missing=repair_missing)
+        assert field in error.value.detail
+        assert path.read_text() == original
+
+
+def test_config_rejects_missing_provider_without_inserting_builtin(
+    tmp_path, config_data
+):
+    """組み込み provider も定義が必須で、doctor は暗黙に追加しない。"""
+    config_data["codex"]["model_providers"].clear()
+    path = tmp_path / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = json.dumps(config_data) + "\n"
+    path.write_text(original)
+
+    for repair_missing in (False, True):
+        with pytest.raises(CmocError) as error:
+            sync_config(tmp_path, repair_missing=repair_missing)
+        assert "model_provider" in error.value.detail
+        assert path.read_text() == original
 
 
 @pytest.mark.parametrize(
@@ -426,10 +540,13 @@ def test_config_rejects_symlinked_path_without_touching_link_target(
 
 
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])
-def test_config_rejects_non_object_codex_agent_call_settings(value: object) -> None:
+def test_config_rejects_non_object_codex_agent_call_settings(
+    config_data, value: object
+) -> None:
     """agent call 設定に object 以外を指定した config を拒否する。"""
+    config_data["codex"]["agent_calls"]["realization_edit"] = value
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {"agent_calls": {"custom_call": value}}})
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
@@ -458,6 +575,7 @@ def test_config_rejects_non_object_codex_agent_call_settings(value: object) -> N
     ],
 )
 def test_config_rejects_invalid_codex_agent_call_settings(
+    config_data,
     field: str,
     value: object,
 ) -> None:
@@ -468,8 +586,9 @@ def test_config_rejects_invalid_codex_agent_call_settings(
         "reasoning_effort": "high",
     }
     call_config[field] = value
+    config_data["codex"]["agent_calls"]["realization_edit"] = call_config
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {"agent_calls": {"custom_call": call_config}}})
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
     if value == "\ud800":
@@ -480,10 +599,13 @@ def test_config_rejects_invalid_codex_agent_call_settings(
 
 @pytest.mark.parametrize("field", ["model_providers", "agent_calls"])
 @pytest.mark.parametrize("value", [None, [], "invalid"])
-def test_config_rejects_non_object_codex_name_maps(field: str, value: object) -> None:
+def test_config_rejects_non_object_codex_name_maps(
+    config_data, field: str, value: object
+) -> None:
     """codex の map field にオブジェクト以外を指定した config を拒否する。"""
+    config_data["codex"][field] = value
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {field: value}})
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
@@ -497,20 +619,23 @@ def test_config_rejects_non_object_codex_name_maps(field: str, value: object) ->
     ],
 )
 def test_config_rejects_invalid_model_provider_definitions(
+    config_data,
     providers: object,
 ) -> None:
     """provider 定義と settings に object 以外を指定した config を拒否する。"""
+    config_data["codex"]["model_providers"] = providers
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {"model_providers": providers}})
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
 @pytest.mark.parametrize("value", [None, [], "invalid"])
-def test_config_rejects_non_object_codex_section(value: object) -> None:
+def test_config_rejects_non_object_codex_section(config_data, value: object) -> None:
     """codex section にオブジェクト以外を指定した config を拒否する。"""
+    config_data["codex"] = value
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": value})
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
@@ -522,15 +647,17 @@ def test_config_rejects_non_object_codex_section(value: object) -> None:
         {"num_parallel": "3"},
     ],
 )
-def test_config_rejects_non_integer_int_values(data: dict[str, object]) -> None:
+def test_config_rejects_non_integer_int_values(
+    config_data, data: dict[str, object]
+) -> None:
     """整数を要求する設定項目が bool や文字列を受け入れない。"""
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict(data)
+        config_from_dict({**config_data, **data})
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-def test_config_preserves_generic_model_provider_settings() -> None:
+def test_config_preserves_generic_model_provider_settings(config_data) -> None:
     """任意 ID と再帰的な JSON/TOML 共通値を読み込みと JSON 化で保持する。"""
     # 同じ container の再出現を循環と誤判定せず、値として保存できる。
     shared = {"answer": 42}
@@ -542,30 +669,25 @@ def test_config_preserves_generic_model_provider_settings() -> None:
         "nested": ["value", shared, shared],
         "unicode": "\ud7ff\ue000\U0010ffff",
     }
-    config = config_from_dict(
+    config_data["codex"]["model_providers"].update(
         {
-            "codex": {
-                "model_providers": {
-                    "provider.with.dot": {"settings": settings},
-                    "builtin": {},
-                },
-                "agent_calls": {
-                    "custom_call": {
-                        "model_provider": "provider.with.dot",
-                        "model": "local-model",
-                        "reasoning_effort": "deliberate",
-                    }
-                },
-            }
+            "provider.with.dot": {"settings": settings},
+            "builtin": {"settings": {}},
         }
     )
+    config_data["codex"]["agent_calls"]["realization_edit"] = {
+        "model_provider": "provider.with.dot",
+        "model": "local-model",
+        "reasoning_effort": "deliberate",
+    }
+    config = config_from_dict(config_data)
 
     assert config.codex.model_providers == {
         "openai": CodexModelProviderConfig(),
         "provider.with.dot": CodexModelProviderConfig(settings),
         "builtin": CodexModelProviderConfig(),
     }
-    assert config.codex.agent_calls["custom_call"] == CodexCallConfig(
+    assert config.codex.agent_calls["realization_edit"] == CodexCallConfig(
         "provider.with.dot", "local-model", "deliberate"
     )
     assert config_to_dict(config)["codex"]["model_providers"] == {
@@ -580,35 +702,30 @@ def test_config_preserves_generic_model_provider_settings() -> None:
     [None, float("nan"), float("inf"), 2**63, object(), "\udfff", {"\ud800": "value"}],
 )
 def test_config_rejects_values_without_unique_json_toml_encoding(
+    config_data,
     setting: object,
 ) -> None:
     """null、非有限数、範囲外整数などを provider-local 値として拒否する。"""
+    config_data["codex"]["model_providers"]["provider"] = {
+        "settings": {"setting": setting}
+    }
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict(
-            {
-                "codex": {
-                    "model_providers": {"provider": {"settings": {"setting": setting}}}
-                }
-            }
-        )
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-def test_config_rejects_excessively_nested_provider_setting() -> None:
+def test_config_rejects_excessively_nested_provider_setting(config_data) -> None:
     """深すぎる provider-local 値を利用者向け設定エラーへ変換する。"""
     nested: object = 0
     for _ in range(sys.getrecursionlimit()):
         nested = [nested]
 
+    config_data["codex"]["model_providers"]["provider"] = {
+        "settings": {"nested": nested}
+    }
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict(
-            {
-                "codex": {
-                    "model_providers": {"provider": {"settings": {"nested": nested}}}
-                }
-            }
-        )
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
     assert "provider" in exc_info.value.detail
@@ -617,7 +734,9 @@ def test_config_rejects_excessively_nested_provider_setting() -> None:
 
 
 @pytest.mark.parametrize("container_kind", ["list", "dict"])
-def test_config_rejects_cyclic_provider_setting(container_kind: str) -> None:
+def test_config_rejects_cyclic_provider_setting(
+    config_data, container_kind: str
+) -> None:
     """循環値も設定エラーへ変換し、診断を UTF-8 出力できる。"""
     if container_kind == "list":
         setting = []
@@ -626,14 +745,11 @@ def test_config_rejects_cyclic_provider_setting(container_kind: str) -> None:
         setting = {}
         setting["self"] = setting
 
+    config_data["codex"]["model_providers"]["provider"] = {
+        "settings": {"cycle": setting}
+    }
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict(
-            {
-                "codex": {
-                    "model_providers": {"provider": {"settings": {"cycle": setting}}}
-                }
-            }
-        )
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"
     assert "cycle" in exc_info.value.detail
@@ -673,40 +789,30 @@ def test_config_to_dict_rejects_invalid_in_memory_search_config(field, value) ->
 def test_config_to_dict_rejects_unusable_in_memory_model_name(model: str) -> None:
     """型注釈を迂回した model 名も永続化境界で拒否する。"""
     config = CmocConfig()
-    config.codex.agent_calls["custom_call"] = CodexCallConfig("openai", model, "high")
+    config.codex.agent_calls["realization_edit"] = CodexCallConfig(
+        "openai", model, "high"
+    )
 
     with pytest.raises(TypeError):
         config_to_dict(config)
 
 
-def test_config_drops_legacy_codex_model_class_maps() -> None:
-    """旧 model class と reasoning effort map を永続設定から除外する。"""
-    config = config_from_dict(
-        {
-            "codex": {
-                "model": {"minimum": {"model": "legacy"}},
-                "reasoning_effort": {"low": "legacy"},
-            }
-        }
-    )
-
-    codex_data = config_to_dict(config)["codex"]
-    assert "model" not in codex_data
-    assert "reasoning_effort" not in codex_data
-
-
-def test_config_preserves_codex_falv_recovery_try_count() -> None:
+def test_config_preserves_codex_falv_recovery_try_count(config_data) -> None:
     """codex の recovery 試行回数を読み込みと JSON 化の両方で保持する。"""
-    config = config_from_dict({"codex": {"num_try_falv_recovery": 4}})
+    config_data["codex"]["num_try_falv_recovery"] = 4
+    config = config_from_dict(config_data)
 
     assert config.codex.num_try_falv_recovery == 4
     assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 4
 
 
 @pytest.mark.parametrize("value", [True, "1", None])
-def test_config_rejects_invalid_codex_falv_recovery_try_count(value: object) -> None:
+def test_config_rejects_invalid_codex_falv_recovery_try_count(
+    config_data, value: object
+) -> None:
     """recovery 試行回数へ int 以外を指定した config を拒否する。"""
+    config_data["codex"]["num_try_falv_recovery"] = value
     with pytest.raises(CmocError) as exc_info:
-        config_from_dict({"codex": {"num_try_falv_recovery": value}})
+        config_from_dict(config_data)
 
     assert exc_info.value.summary == "cmoc config が不正です。"

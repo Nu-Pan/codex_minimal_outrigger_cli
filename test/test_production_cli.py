@@ -557,10 +557,9 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     feedback_server = override["mcp_servers"]["cmoc_feedback"]
     feedback_reporting_enabled = agent_call_kind not in {
         "build_feedback_normalize_issue_parameter",
-        "build_feedback_remediate_issue_parameter",
         "build_primary_report_review_parameter",
         "build_quota_availability_probe_parameter",
-    }
+    } and not str(payload.get("purpose", "")).startswith("feedback issue remediation")
     assert feedback_server["enabled"] is feedback_reporting_enabled
     assert feedback_server["enabled_tools"] == (
         ["submit_observation"] if feedback_reporting_enabled else []
@@ -1050,7 +1049,8 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     remediation_calls = [
         payload
         for payload in remediation_calls
-        if payload.get("agent_call_kind") == "build_feedback_remediate_issue_parameter"
+        if payload.get("agent_call_kind") == "realization_edit"
+        and str(payload.get("purpose", "")).startswith("feedback issue remediation")
     ]
     assert remediation_calls
     assert len({payload["agent_call_id"] for payload in remediation_calls}) == 1
