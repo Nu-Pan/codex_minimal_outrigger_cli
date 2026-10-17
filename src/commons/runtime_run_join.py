@@ -28,7 +28,7 @@ from .runtime_primary_report import (
     update_primary_report_fields,
 )
 from .runtime_primary_report_specs import TerminalClassification
-from .runtime_refactor import sync_refactor_state
+from .runtime_refactor import merge_refactor_states
 from .runtime_results import TerminalResult
 from .runtime_run import (
     delete_run_process_id,
@@ -385,7 +385,7 @@ def merge_run(
             record.pending_action = "sync"
             record.save()
             update_primary_report_fields(join_phase="refactor state sync")
-            sync_refactor_state(context.run_worktree)
+            merge_refactor_states(context.run_worktree, (run_head, record.session_head))
             record.sync_commit = commit_work_unit(
                 context.run_worktree, "cmoc refactor state sync before run join"
             )

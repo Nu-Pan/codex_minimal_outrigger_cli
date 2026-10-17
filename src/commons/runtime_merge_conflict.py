@@ -1,7 +1,6 @@
 """join 中の内容統合と cmoc 管理物の解消を分担する。"""
 
 import hashlib
-import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -11,13 +10,12 @@ from oracle.acp_builder.basic import AgentCallParameter
 from .runtime_codex import run_codex_exec
 from .runtime_errors import CmocError
 from .runtime_git import (
-    literal_pathspec,
     run_git,
     status_path_statuses,
 )
 from .runtime_paths import refactor_state_path, repo_root
 from .runtime_primary_report import update_primary_report_fields
-from .runtime_refactor import sync_refactor_state, write_refactor_state
+from .runtime_refactor import merge_refactor_states
 from .runtime_results import CodexExecCallable
 
 
@@ -103,9 +101,9 @@ def resolve_merge_conflicts(
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の「agent call の差分検証」
         result["incidental_paths"] = sorted(changed)
     if refactor_relative in managed:
-        _merge_refactor_state(root, refactor_relative)
-        if sync_managed_entries:
-            sync_refactor_state(root)
+        merge_refactor_states(
+            root, ("HEAD", "MERGE_HEAD"), sync_entries=sync_managed_entries
+        )
     run_git(["add", "-A"], root)
     remaining = unmerged_paths(root)
     if remaining:
@@ -138,40 +136,6 @@ def _status_snapshot(
             hashlib.sha256(content).hexdigest() if content is not None else None,
         )
     return snapshot
-
-
-def _merge_refactor_state(root: Path, path: str) -> None:
-    """両 branch の調査履歴と調査要求を失わず、後続の集合同期へ渡す。"""
-    sides: list[dict[str, Any]] = []
-    for stage in (2, 3):
-        content = run_git(["show", f":{stage}:{path}"], root, check=False)
-        if content.returncode == 0:
-            value = json.loads(content.stdout)
-            if not isinstance(value, dict):
-                raise CmocError("refactor state の競合内容が不正です。", [], path)
-            sides.append(value)
-    merged: dict[str, Any] = {}
-    for side in sides:
-        for name, entry in side.items():
-            previous = merged.get(name)
-            if previous is None:
-                merged[name] = entry
-            elif isinstance(previous, dict) and isinstance(entry, dict):
-                newer = max(
-                    (previous, entry),
-                    key=lambda item: item.get("last_investigated_at") or "",
-                )
-                merged[name] = {
-                    **newer,
-                    "investigation_required": previous.get(
-                        "investigation_required", True
-                    )
-                    or entry.get("investigation_required", True),
-                }
-            else:
-                raise CmocError("refactor state の競合内容が不正です。", [], name)
-    write_refactor_state(root, merged)
-    run_git(["add", "--", literal_pathspec(path)], root)
 
 
 def _check_conflict_markers(root: Path) -> None:

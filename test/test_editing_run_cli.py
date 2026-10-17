@@ -59,7 +59,6 @@ import sub_commands.run.abandon as run_abandon_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex_recovery import check_recovery_interruption
 from commons.runtime_config import load_config, write_config
-from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
 from commons.runtime_ids import is_common_id
 from commons.runtime_logging import SubcommandLogger
@@ -69,7 +68,7 @@ from commons.runtime_primary_report import (
     reset_primary_report_context,
     start_primary_report_context,
 )
-from commons.runtime_refactor import load_refactor_state
+from commons.runtime_refactor import load_refactor_state, write_refactor_state
 from commons.runtime_report_markdown import ReportSummary
 from commons.runtime_results import TerminalResult
 from commons.runtime_run import run_process_id_path
@@ -275,14 +274,11 @@ def _state(path: Path) -> dict:
     return json.loads(path.read_text())
 
 
-def _mark_refactor_target_no_findings(root: Path, target: str) -> None:
-    """state sync が既存 target の変更を検出できる履歴を作る。"""
+def _mark_refactor_target_investigated(root: Path, target: str) -> None:
+    """選択順序のために既存 target の最終調査日時を確定する。"""
     path = root / ".cmoc" / "gt" / "realization" / "refactor" / "state.json"
     state = json.loads(path.read_text())
     state[target] = {
-        "investigation_required": False,
-        "last_investigation_result": "no_findings",
-        "last_investigated_sha256": file_sha256(root / target),
         "last_investigated_at": timestamp(),
     }
     path.write_text(json.dumps(state, indent=2) + "\n")
@@ -1356,10 +1352,7 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     assert sorted(reviewed) == sorted(cases)
     for source, (destination, _replace_content, _add_unrelated_file) in cases.items():
         assert source not in refactor_state
-        assert refactor_state[destination]["investigation_required"] is True
-        assert refactor_state[destination]["last_investigation_result"] == (
-            "not_investigated"
-        )
+        assert refactor_state[destination] == {"last_investigated_at": None}
     reports = list(
         (root / ".cmoc" / "gu" / "report" / "realization" / "refactor").glob("*.md")
     )
@@ -1478,7 +1471,7 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
     worktree = root
     refactor_state = load_refactor_state(worktree)
     assert "README.md" not in refactor_state
-    assert refactor_state["renamed.md"]["investigation_required"] is True
+    assert refactor_state["renamed.md"] == {"last_investigated_at": None}
     assert reviewed.count("README.md") == 1
     assert reviewed.count("oracle/spec.md") == 1
     assert "renamed.md" not in reviewed
@@ -1894,14 +1887,12 @@ def test_apply_error_preserves_unreadable_process_tracking(
 
 
 @pytest.mark.parametrize("interrupted", [False, True])
-@pytest.mark.parametrize("inspection", ["changes", "state"])
 def test_refactor_terminal_report_survives_change_inspection_failure(
     refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     interrupted: bool,
-    inspection: str,
 ) -> None:
-    """確認不能な差分・履歴を空として扱わず terminal report と state を保存する。"""
+    """確認不能な差分を空として扱わず terminal report と state を保存する。"""
     root, _session_branch, state_path = refactor_after_preprocess
     # report の故障検査には巡回・agent call の準備が不要。実 CLI の終端処理は通す。
     # agent 作業の rollback は test_refactor_interrupt_rolls_back_current_unit_and_is_joinable
@@ -1921,21 +1912,13 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
         "_initialize_cycle",
         fail_cycle,
     )
-    if inspection == "changes":
-        monkeypatch.setattr(
-            refactor_module,
-            "tree_changes",
-            lambda *_args, **_kwargs: (_ for _ in ()).throw(
-                RuntimeError("git diff unavailable")
-            ),
-        )
-    else:
-        # 巡回前に停止するため、report より前の state 読み取りは準備しない。
-        monkeypatch.setattr(
-            refactor_module,
-            "load_refactor_state",
-            Mock(side_effect=RuntimeError("state unavailable")),
-        )
+    monkeypatch.setattr(
+        refactor_module,
+        "tree_changes",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            RuntimeError("git diff unavailable")
+        ),
+    )
 
     result = runner.invoke(
         app,
@@ -1953,12 +1936,8 @@ def test_refactor_terminal_report_survives_change_inspection_failure(
     )
     assert len(reports) == 1
     report_text = reports[0].read_text()
-    if inspection == "changes":
-        assert "change inspection failed" in report_text
-        assert "## Changed paths\n\n- unavailable" in report_text
-    else:
-        assert "state inspection failed" in report_text
-        assert "- entries: null" in report_text
+    assert "change inspection failed" in report_text
+    assert "## Changed paths\n\n- unavailable" in report_text
     assert f'completion_reason: "{expected_reason}"' in report_text
 
 
@@ -2257,7 +2236,7 @@ def test_run_join_accepts_realization_changes_with_session_oracle_change(
     (root / "rename.md").write_text("rename source\n")
     (root / "delete.md").write_text("delete source\n")
     commit_work_unit(root, "seed rename and delete sources")
-    _mark_refactor_target_no_findings(root, "oracle/spec.md")
+    _mark_refactor_target_investigated(root, "oracle/spec.md")
     context = _prepare_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     (context.run_worktree / "rename.md").rename(context.run_worktree / "renamed.md")
@@ -2291,7 +2270,7 @@ def test_run_join_from_run_worktree_allows_doctor_state_sync(
 ) -> None:
     """run worktree からの join でも doctor state 同期を許可する。"""
     root, _session_branch, _state_path = ready_join_session
-    _mark_refactor_target_no_findings(root, "README.md")
+    _mark_refactor_target_investigated(root, "README.md")
     context = _prepare_run(ready_join_session)
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
@@ -2761,8 +2740,8 @@ def test_run_join_rolls_back_preparation_when_sync_fails(
     commit_work_unit(context.run_worktree, "run change")
     monkeypatch.setattr(
         run_join_module,
-        "sync_refactor_state",
-        lambda _root: (_ for _ in ()).throw(RuntimeError("sync failed")),
+        "merge_refactor_states",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("sync failed")),
     )
 
     failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2774,7 +2753,7 @@ def test_run_join_rolls_back_preparation_when_sync_fails(
     assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
-    monkeypatch.setattr(run_join_module, "sync_refactor_state", lambda _root: None)
+    monkeypatch.setattr(run_join_module, "merge_refactor_states", lambda *_args: None)
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert joined.exit_code == 0
@@ -3214,16 +3193,11 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     assert reviewed == sorted(refactor_state)
     assert reviewed.count("README.md") == 1
     assert reviewed.index("oracle/spec.md") > reviewed.index("README.md")
-    assert {
-        path
-        for path, entry in refactor_state.items()
-        if entry["investigation_required"]
-    } == {"README.md"}
-    assert refactor_state["README.md"]["last_investigation_result"] == "findings"
     assert all(
-        entry["last_investigation_result"] == "no_findings"
-        for path, entry in refactor_state.items()
-        if path != "README.md"
+        entry["last_investigated_at"] is not None for entry in refactor_state.values()
+    )
+    assert all(
+        set(entry) == {"last_investigated_at"} for entry in refactor_state.values()
     )
     assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `1`" in result.output
@@ -3246,6 +3220,8 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     assert "resolution.summary: 人間の判断が必要" in report_text
     assert f"Codex call log: `{call_log}`" in report_text
     assert "## Change summary\n\n- none\n" in report_text
+    assert "## Refactor state" not in report_text
+    assert "investigation_required" not in report_text
 
 
 def test_refactor_interrupt_after_run_publish_is_joinable(
@@ -4231,7 +4207,11 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
     """巡開始の state 準備は rollback、確定区間の停止要求は記録まで完了する。"""
     # doctor の停止・rollback は test_doctor_cli.py に残し、巡開始の境界を検査する。
     root, _, state_path = refactor_after_preprocess
-    _mark_refactor_target_no_findings(root, "README.md")
+    _mark_refactor_target_investigated(root, "README.md")
+    previous = load_refactor_state(root)["README.md"].copy()
+    # 同期の差分を作り、巡開始時の state 確定を実際に必要とする。
+    (root / "new.txt").write_text("new file\n")
+    commit_work_unit(root, "add unsynchronized target")
     if during_commit:
         commit = refactor_module.commit_work_unit
 
@@ -4242,14 +4222,15 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
 
         monkeypatch.setattr(refactor_module, "commit_work_unit", commit_then_interrupt)
     else:
-        write = refactor_module.write_refactor_state
+        write = refactor_module.sync_refactor_state
 
         def prepare_then_interrupt(*args):
-            write(*args)
+            result = write(*args)
             signal.raise_signal(signal.SIGINT)
+            return result
 
         monkeypatch.setattr(
-            refactor_module, "write_refactor_state", prepare_then_interrupt
+            refactor_module, "sync_refactor_state", prepare_then_interrupt
         )
     monkeypatch.setattr(
         refactor_module,
@@ -4261,8 +4242,8 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
     assert _state(state_path)["run"]["state"] == "ready"
     worktree = root
     state = load_refactor_state(worktree)
-    assert state["README.md"]["investigation_required"] is during_commit
-    assert state["README.md"]["last_investigation_result"] == "no_findings"
+    assert state["README.md"] == previous
+    assert state["new.txt"] == {"last_investigated_at": None}
     assert not worktree_change_paths(worktree)
     report = terminal_primary_report(result).read_text()
     assert f"- current cycle: {int(during_commit)}" in report
@@ -4270,7 +4251,7 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
 
 
 @pytest.mark.parametrize("interrupt_next_cycle_start", [False, True])
-def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
+def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
     refactor_after_preprocess,
     monkeypatch,
     interrupt_next_cycle_start,
@@ -4278,22 +4259,20 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
 ):
     """旧履歴を調査機会にせず、未解決を次巡で再検討して全対象を公平に処理する。"""
     root, _, state_path = refactor_after_preprocess
-    _mark_refactor_target_no_findings(root, "README.md")
+    _mark_refactor_target_investigated(root, "README.md")
     reviewed = []
     if interrupt_next_cycle_start:
-        commit = refactor_module.commit_work_unit
-        cycles = 0
+        initialize = refactor_module._initialize_cycle
 
-        def interrupt_second_cycle(root, message):
-            nonlocal cycles
-            result = commit(root, message)
-            if message == "cmoc realization refactor cycle":
-                cycles += 1
-                if cycles == 2:
-                    signal.raise_signal(signal.SIGINT)
-            return result
+        def interrupt_second_cycle(context, **kwargs):
+            pending = initialize(context, **kwargs)
+            if kwargs["progress"].cycle == 2:
+                signal.raise_signal(signal.SIGINT)
+            return pending
 
-        monkeypatch.setattr(refactor_module, "commit_work_unit", interrupt_second_cycle)
+        monkeypatch.setattr(
+            refactor_module, "_initialize_cycle", interrupt_second_cycle
+        )
     else:
         _stop_after_cycles(monkeypatch, cycles=2)
 
@@ -4343,7 +4322,8 @@ def test_refactor_repeats_cycles_and_prioritizes_carried_requests(
         return
     assert len(reviewed) == count * 2
     assert set(reviewed[:count]) == set(state) == set(reviewed[count:])
-    assert reviewed[count - 1] == reviewed[count] == "README.md"
+    assert reviewed[count - 1] == "README.md"
+    assert reviewed[count:] == reviewed[:count]
     assert all(reviewed.count(target) == 2 for target in state)
     assert "- completed cycles: 2" in report
     assert "## Unresolved findings\n\n- none" in report
@@ -4464,8 +4444,7 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
     run = _state(state_path)["run"]
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     assert (
-        load_refactor_state(worktree)["README.md"]["last_investigation_result"]
-        == "findings"
+        load_refactor_state(worktree)["README.md"]["last_investigated_at"] is not None
     )
     assert (worktree / "README.md").read_text() == "resolved\n"
     assert not worktree_change_paths(worktree)
@@ -4631,17 +4610,17 @@ def test_join_prepares_and_syncs_run_before_import(
     original = commit_work_unit(context.run_worktree, "workload result")
     (root / "oracle/new.md").write_text("session oracle\n")
     baseline = commit_work_unit(root, "session oracle")
-    sync = run_join_module.sync_refactor_state
+    sync = run_join_module.merge_refactor_states
     observed = []
 
-    def sync_run(worktree):
+    def sync_run(worktree, refs):
         assert worktree == context.run_worktree
         assert run_git(root, "rev-parse", "HEAD").stdout.strip() == baseline
         assert (worktree / "oracle/new.md").read_text() == "session oracle\n"
         observed.append(worktree)
-        return sync(worktree)
+        return sync(worktree, refs)
 
-    monkeypatch.setattr(run_join_module, "sync_refactor_state", sync_run)
+    monkeypatch.setattr(run_join_module, "merge_refactor_states", sync_run)
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert joined.exit_code == 0, joined.output
     from commons.runtime_run_join_state import load_join_record, tree_id
@@ -4656,6 +4635,61 @@ def test_join_prepares_and_syncs_run_before_import(
     ).stdout.split() == [baseline, record.prepared_run_head]
     assert observed == [context.run_worktree]
     assert "oracle/new.md" in load_refactor_state(root)
+
+
+@pytest.mark.parametrize("scenario", ["older_run", "older_session", "conflict"])
+def test_join_merges_committed_timestamps_before_sync(
+    join_after_preprocess, monkeypatch, scenario
+):
+    """Git の自動統合・競合解消のどちらでも新しい日時を残して集合を同期する。"""
+    root, _, state_path = join_after_preprocess
+    older = "2026-10-18_00-00-00_001"
+    newer = "2026-10-18_00-00-00_002"
+    initial = "2026-10-18_00-00-00_000" if scenario == "conflict" else newer
+    (root / "retired.txt").write_text("old target\n")
+    state = refactor_module.sync_refactor_state(root)
+    state["README.md"]["last_investigated_at"] = initial
+    state["retired.txt"]["last_investigated_at"] = newer
+    write_refactor_state(root, state)
+    commit_work_unit(root, "seed investigated targets")
+    context = _prepare_run(join_after_preprocess, kind="realization_refactor")
+
+    run_root = context.run_worktree
+    (run_root / "retired.txt").unlink()
+    (run_root / "result.txt").write_text("run result\n")
+    state = refactor_module.sync_refactor_state(run_root)
+    state["README.md"]["last_investigated_at"] = (
+        initial if scenario == "older_session" else older
+    )
+    state["result.txt"]["last_investigated_at"] = newer
+    write_refactor_state(run_root, state)
+    commit_work_unit(run_root, "run investigations and deletion")
+
+    (root / "oracle/new.md").write_text("session oracle\n")
+    state = refactor_module.sync_refactor_state(root)
+    state["README.md"]["last_investigated_at"] = (
+        older if scenario == "older_session" else newer
+    )
+    state["oracle/new.md"]["last_investigated_at"] = older
+    write_refactor_state(root, state)
+    commit_work_unit(root, "session investigations")
+    monkeypatch.setattr(
+        merge_conflict_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: pytest.fail("managed state needs no agent call"),
+    )
+
+    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+
+    assert joined.exit_code == 0, joined.output
+    assert _state(state_path)["run"]["state"] == "ready"
+    state = load_refactor_state(root)
+    assert state["README.md"] == {"last_investigated_at": newer}
+    assert state["result.txt"] == {"last_investigated_at": newer}
+    assert state["oracle/new.md"] == {"last_investigated_at": older}
+    assert state["oracle/spec.md"] == {"last_investigated_at": None}
+    assert "retired.txt" not in state
+    assert not worktree_change_paths(root)
     assert _state(state_path)["run"]["state"] == "ready"
 
 
@@ -4705,17 +4739,17 @@ def test_join_preserves_session_updates_during_preparation(
     context = _prepare_run(join_after_preprocess)
     (context.run_worktree / "result.txt").write_text("result\n")
     original = commit_work_unit(context.run_worktree, "workload result")
-    sync = run_join_module.sync_refactor_state
+    sync = run_join_module.merge_refactor_states
 
-    def concurrent_update(worktree):
-        result = sync(worktree)
+    def concurrent_update(worktree, refs):
+        result = sync(worktree, refs)
         (root / "oracle/later.md").write_text("later oracle\n")
         commit_work_unit(root, "concurrent session update")
         (root / "human.txt").write_text("uncommitted human input\n")
         return result
 
     with monkeypatch.context() as updating:
-        updating.setattr(run_join_module, "sync_refactor_state", concurrent_update)
+        updating.setattr(run_join_module, "merge_refactor_states", concurrent_update)
         failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert failed.exit_code == 1
     assert (root / "human.txt").read_text() == "uncommitted human input\n"
@@ -4755,7 +4789,7 @@ def test_join_recovers_import_after_missing_receipt_and_partial_cleanup(
     run_git(root, "worktree", "remove", str(context.run_worktree))
     run_git(root, "branch", "-D", context.run_branch)
     for name in (
-        "sync_refactor_state",
+        "merge_refactor_states",
         "doctor_preprocess_for_join",
         "validate_run_join",
     ):
@@ -4784,7 +4818,7 @@ def test_initial_reachable_run_checks_sync_before_noop(
     context = _prepare_run(join_after_preprocess)
     (root / "oracle/new.md").write_text("new oracle\n")
     if not needs_sync:
-        run_join_module.sync_refactor_state(root)
+        refactor_module.sync_refactor_state(root)
     baseline = commit_work_unit(root, "session advances")
     monkeypatch.setattr(
         merge_conflict_module,

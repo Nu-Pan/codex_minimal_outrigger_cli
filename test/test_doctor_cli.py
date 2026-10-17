@@ -344,9 +344,6 @@ def test_doctor_preprocess_repairs_git_state(
     assert all(
         entry
         == {
-            "investigation_required": True,
-            "last_investigation_result": "not_investigated",
-            "last_investigated_sha256": None,
             "last_investigated_at": None,
         }
         for entry in state.values()

@@ -17,7 +17,7 @@ from _git_support import RUN_BRANCH, init_repo, run_git
 
 import commons.runtime_git as runtime_git
 import commons.runtime_refactor as runtime_refactor
-from cmoc_runtime import CmocError, file_sha256
+from cmoc_runtime import CmocError
 from commons.runtime_git import (
     enumerate_oracle_and_realization_files,
     is_oracle_file_path,
@@ -205,13 +205,9 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     for relative, entry in state.items():
         entry.update(
             {
-                "investigation_required": False,
-                "last_investigation_result": "no_findings",
-                "last_investigated_sha256": file_sha256(root / relative),
                 "last_investigated_at": "2026-08-08_00-00-00_000",
             }
         )
-    previous_readme_digest = state["README.md"]["last_investigated_sha256"]
     write_refactor_state(root, state)
 
     # ignored directory 内の untracked symlink は regular file の state を変えない。
@@ -258,12 +254,9 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
 
     assert set(synchronized) == expected_after
     assert "visible.txt" not in synchronized
-    assert synchronized["added.txt"]["last_investigated_sha256"] is None
-    assert synchronized["README.md"]["investigation_required"] is True
-    assert (
-        synchronized["README.md"]["last_investigated_sha256"] == previous_readme_digest
-    )
-    assert synchronized["oracle/spec.md"]["investigation_required"] is False
+    assert synchronized["added.txt"] == {"last_investigated_at": None}
+    assert synchronized["README.md"] == state["README.md"]
+    assert synchronized["oracle/spec.md"] == state["oracle/spec.md"]
 
 
 def test_realization_classifier_uses_nested_head_for_deleted_file(
