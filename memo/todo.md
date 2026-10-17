@@ -15,20 +15,14 @@
     - なぜそれがおすすめなのかの説明は欲しい
 - そもそも、未確事項の提示ってどの指示が由来なんだ？
 
-## MCP tool の description がおぞましいことになっているかもしれない
+## エージェントに書かせた文章の精査
 
-- ベクトル検索の MCP tool がひどいものだったので、他もひどいに違いない
-- ベクトル検索の MCP tool と同様に、数値定義と自然言語的な説明は oracle file に引き上げたい
-
-## 動的構築プロンプトの精査
-
-- 対象
-    - `oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
-    - `oracle/src/oracle/prompt_builder/policy/realization_findings.py`
-- 所見
-    - まず、日本語が怪しい
-    - policy と動的構築プロンプトとで役割被ってない？
-    - 人間が読めなくて冗長なだけで、要件自体は満たせてそう
+- MCP tool の description
+    - ベクトル検索の MCP tool がひどいものだったので、他もひどいに違いない
+    - ベクトル検索の MCP tool と同様に、数値定義と自然言語的な説明は oracle file に引き上げたい
+- `oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
+- `oracle/src/oracle/prompt_builder/policy/realization_findings.py`
+- `cmoc feedback report` の動的生成プロンプト
 
 ## `cmoc resume` で oracle src に変更が入った？
 
@@ -44,13 +38,6 @@
 ## primary report の内容に対する不満
 
 - レイアウトを仕様化したので、しばらく様子見
-- primary report 内に LLM が生成したサマリーが欲しいかも？
-
-## fork, run join を消したい
-
-- 正常終了のケースで abandon したこと一度も無いので、自動 join で良いよねの気持ち
-- abandon 自体は異常状態からの復帰に便利なので残すべき
-- 自動 join なら fork ももう要らない（実際 apply には fork 以外のサブコマンドが居ない）
 
 ## サンドボックスの表現方法を再検討
 
@@ -95,10 +82,6 @@ realization file は読み書き禁止。
 - `cmoc realization refactor` みたいにファイル単位での改善を行うサブコマンドが必要
 - 品質基準がスキルでフォローされる事を前提としてしまうが、これは cmoc --> スキルの依存関係なので避けたい
 - 仕様の意味を壊さない範囲で、具体性があって検証しやすい話だけをリファクタの対象とする
-
-## `cmoc feedback report` の動的生成プロンプトが未チェック
-
-- とりあえず生成されて、その品質の目視確認はしていない
  
 ## 複数モデル混合での oracle doc 編集
 
