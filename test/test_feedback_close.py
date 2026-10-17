@@ -63,7 +63,7 @@ from main import app
 
 # exec の永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py に残す。
 # close の実行別 log・report と state 保存を検査し、採番 DB の同期書き込みだけ省く。
-# 案件・generation・observation の実採番と recovery での ID 引継ぎは維持する。
+# 案件・generation・observation の実採番は reported_case、recovery の ID 引継ぎは各検査に残す。
 pytestmark = pytest.mark.usefixtures(
     "feedback_without_transport", "nonpersistent_execution_ids"
 )
@@ -105,7 +105,7 @@ def reported_case(ready_content_session, monkeypatch):
 
 
 @pytest.fixture
-def close_repository(committed_repository, monkeypatch):
+def close_repository(committed_repository, nonpersistent_feedback_ids, monkeypatch):
     # close 固有の検査には session を作らず、report を実行するケースだけで準備する。
     # report から close への結合と入力消費は reported_case の検査に残す。
     # doctor 内部の修復・索引同期は専用 test と reported_case で検証する。

@@ -130,7 +130,7 @@ def ready_join_session(
 def feedback_publication_session(
     ready_join_session: tuple[Path, str, Path],
     feedback_without_transport: None,
-    nonpersistent_execution_ids: None,
+    nonpersistent_feedback_ids: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
     """案件の publication 検査には、修復不要の session と同期を待たない保存を使う。"""
@@ -139,16 +139,6 @@ def feedback_publication_session(
     # fsync の順序・失敗・再保存は test_feedback_store.py、実同期との結合は
     # 上記の wave test に残す。write・rename・hash 検査と recovery は実行する。
     monkeypatch.setattr("os.fsync", lambda _fd: None)
-    # SQLite の FULL 同期は os.fsync の置換では省けない。永続採番は
-    # test_runtime_ids.py と test_codex_runtime_paths.py、feedback との結合は
-    # 上記の wave test に残し、ここでは ID の対応・再発時の非再利用を検査する。
-    for module in (
-        feedback_run_state,
-        feedback_state,
-        feedback_store,
-        remediation_module,
-    ):
-        monkeypatch.setattr(module, "new_id", runtime_logging.new_id)
     # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
     monkeypatch.setattr(
         remediation_module, "doctor_preprocess_for_join", lambda **_kwargs: None
@@ -168,6 +158,24 @@ def nonpersistent_execution_ids(monkeypatch: pytest.MonkeyPatch) -> None:
         "new_id",
         lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
     )
+
+
+@pytest.fixture
+def nonpersistent_feedback_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """publication・close の検査に、保存を伴わない feedback ID を用意する。"""
+    # SQLite の FULL 同期は os.fsync の置換では省けない。永続採番は
+    # test_runtime_ids.py と test_codex_runtime_paths.py、feedback との結合は
+    # test_feedback.py の後続 wave test と test_feedback_close.py の reported_case に残す。
+    # 各検査では ID の対応・再発時の非再利用・recovery での固定 target を保つ。
+    for module in (
+        feedback_run_state,
+        feedback_state,
+        feedback_store,
+        remediation_module,
+    ):
+        monkeypatch.setattr(module, "new_id", runtime_logging.new_id)
 
 
 @pytest.fixture
