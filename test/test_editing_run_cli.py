@@ -51,6 +51,7 @@ import commons.runtime_primary_report as primary_report_module
 import commons.runtime_primary_report_review as review_module
 import commons.runtime_run as runtime_run_module
 import commons.runtime_run_join as run_join_module
+import commons.runtime_run_join_state as join_state_module
 import commons.runtime_run_lifecycle as lifecycle_module
 import commons.runtime_run_report as run_report_module
 import commons.runtime_state as runtime_state_module
@@ -4907,6 +4908,18 @@ def test_join_identifies_import_before_later_session_commit(
     commit_work_unit(context.run_worktree, "workload result")
     git = run_join_module.run_git
     imported = []
+    confirm_import = run_join_module.confirm_import
+    confirmation_queries = []
+
+    def confirm_with_bounded_queries(record):
+        discovering = not record.imported and record.prepared_run_head is not None
+        with monkeypatch.context() as probe:
+            queries = Mock(wraps=join_state_module.run_git)
+            probe.setattr(join_state_module, "run_git", queries)
+            confirmed = confirm_import(record)
+        if discovering:
+            confirmation_queries.append(queries.call_count)
+        return confirmed
 
     def later_session_commit(args, worktree, **kwargs):
         result = git(args, worktree, **kwargs)
@@ -4917,12 +4930,15 @@ def test_join_identifies_import_before_later_session_commit(
         return result
 
     monkeypatch.setattr(run_join_module, "run_git", later_session_commit)
+    monkeypatch.setattr(run_join_module, "confirm_import", confirm_with_bounded_queries)
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert joined.exit_code == 0, joined.output
     metadata = report_metadata(terminal_primary_report(joined).read_text())
     assert metadata["run_join_commit"] == imported[0]
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() != imported[0]
     assert (root / "human.txt").read_text() == "later human change\n"
+    # 時間閾値を置かず、履歴の親一覧と両 tree の照会だけで確認できることを守る。
+    assert confirmation_queries and max(confirmation_queries) <= 3
 
 
 def test_explicit_doctor_keeps_normal_sync_after_pending_join(

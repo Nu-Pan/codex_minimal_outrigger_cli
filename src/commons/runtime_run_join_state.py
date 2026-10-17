@@ -287,17 +287,25 @@ def confirm_import(record: JoinRecord) -> bool:
         [
             "rev-list",
             "--first-parent",
+            "--parents",
             f"{record.session_head}..{context.session_branch}",
         ],
         context.repo,
     ).stdout.splitlines()
+    # 親を履歴と一括取得し、後続 session commit ごとの process 起動を避ける。
+    candidates = [
+        fields[0]
+        for line in commits
+        if (fields := line.split())[1:]
+        == [record.session_head, record.prepared_run_head]
+    ]
+    if not candidates:
+        return False
+    prepared_tree = tree_id(context.repo, record.prepared_run_head)
     matches = [
         commit
-        for commit in commits
-        if run_git(["show", "-s", "--format=%P", commit], context.repo).stdout.split()
-        == [record.session_head, record.prepared_run_head]
-        and tree_id(context.repo, commit)
-        == tree_id(context.repo, record.prepared_run_head)
+        for commit in candidates
+        if tree_id(context.repo, commit) == prepared_tree
     ]
     if len(matches) > 1:
         raise CmocError("join の取り込み成立を一意に確認できません。", [], "")
@@ -305,7 +313,7 @@ def confirm_import(record: JoinRecord) -> bool:
         return False
     record.imported = True
     record.join_commit = record.session_commit = matches[0]
-    record.session_tree = tree_id(context.repo, matches[0])
+    record.session_tree = prepared_tree
     record.save()
     return True
 
