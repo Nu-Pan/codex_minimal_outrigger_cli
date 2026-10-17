@@ -62,7 +62,7 @@ def quota_probe_prompt(agent_call_cwd: Path) -> str:
     """runtime が正本 builder から生成する quota probe の prompt を返す。"""
     return runtime_codex_exec._quota_availability_probe_parameter(
         AgentCallParameter(
-            agent_call_kind="build_realization_apply_fork_launch_exec_parameter",
+            agent_call_kind="realization_edit",
             file_access_mode=FileAccessMode.READONLY,
             prompt="base",
             structured_output_schema_path=None,
@@ -126,7 +126,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         ],
     )
     parameter = AgentCallParameter(
-        "build_realization_apply_fork_launch_exec_parameter",
+        "realization_edit",
         FileAccessMode.PURE_ORACLE_READ,
         "prompt",
         None,
@@ -344,7 +344,7 @@ def test_quota_probe_uses_canonical_complete_prompt(
     """quota probe が正本 builder の完全 prompt と固有 call kind を使用する。"""
     root = quota_prompt_root
     base = AgentCallParameter(
-        agent_call_kind="build_realization_apply_fork_launch_exec_parameter",
+        agent_call_kind="realization_edit",
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt="base",
         structured_output_schema_path=None,

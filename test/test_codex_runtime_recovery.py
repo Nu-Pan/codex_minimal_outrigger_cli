@@ -202,8 +202,15 @@ def execute(case, **kwargs):
     )
 
 
-def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkeypatch):
+@pytest.mark.parametrize(
+    "call_kind", ["realization_edit", "build_feedback_normalize_issue_parameter"]
+)
+def test_reason_changes_preserve_settings_session_and_work(
+    recovery_case, monkeypatch, call_kind
+):
     root, parameter, config, logger = recovery_case
+    parameter = replace(parameter, agent_call_kind=call_kind)
+    recovery_case = (root, parameter, config, logger)
     headers = {"X-Test": "original"}
     config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
         "custom", "work-model", "high"
@@ -291,8 +298,15 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
     )
 
 
-def test_quota_to_capacity_inherits_only_until_resume(recovery_case, monkeypatch):
-    _, parameter, config, _ = recovery_case
+@pytest.mark.parametrize(
+    "call_kind", ["realization_edit", "build_feedback_normalize_issue_parameter"]
+)
+def test_quota_to_capacity_inherits_only_until_resume(
+    recovery_case, monkeypatch, call_kind
+):
+    root, parameter, config, logger = recovery_case
+    parameter = replace(parameter, agent_call_kind=call_kind)
+    recovery_case = (root, parameter, config, logger)
     config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
         "openai", "work", "high"
     )

@@ -21,6 +21,12 @@ from unittest.mock import Mock
 
 import pytest
 from _cli_support import runner, terminal_primary_report
+from _codex_support import (
+    codex_arg_value,
+    codex_override_config,
+    script_codex_calls,
+    setup_codex_home,
+)
 from _git_support import (
     RUN_BRANCH,
     RUN_ID,
@@ -52,6 +58,7 @@ import sub_commands.realization.refactor as refactor_module
 import sub_commands.run.abandon as run_abandon_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex_recovery import check_recovery_interruption
+from commons.runtime_config import load_config, write_config
 from commons.runtime_content import file_sha256
 from commons.runtime_errors import CmocError
 from commons.runtime_ids import is_common_id
@@ -83,6 +90,7 @@ from commons.runtime_state import (
     state_path,
     write_state,
 )
+from config.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 from main import app
 
 # agent 応答は差し替え、観測を送信しないため、collector の起動・probe を準備しない。
@@ -2387,10 +2395,10 @@ def test_run_join_from_run_worktree_preserves_prior_session_doctor_path_change(
     assert _state(state_path)["run"]["state"] == "ready"
 
 
-def test_run_join_preserves_existing_non_search_config_shape(
+def test_run_join_rejects_incomplete_non_search_config_without_rewriting(
     ready_join_session: tuple[Path, str, Path],
 ) -> None:
-    """通常起動の doctor は検索以外の不足を理由に config を書き換えない。"""
+    """通常起動は検索以外の不足を補完せず、join 前に失敗して入力を保つ。"""
     root, _session_branch, _state_path = ready_join_session
     config = root / ".cmoc" / "gt" / "config.json"
     config_data = json.loads(config.read_text())
@@ -2398,11 +2406,13 @@ def test_run_join_preserves_existing_non_search_config_shape(
     config.write_text(json.dumps(config_data, indent=2) + "\n")
     run_git(root, "add", ".cmoc/gt/config.json")
     run_git(root, "commit", "-m", "create stale doctor config")
-    _prepare_run(ready_join_session)
+    context = _prepare_run(ready_join_session)
 
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output
+    assert context.run_worktree.exists()
+    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
     assert config.is_file()
     assert "num_parallel" not in json.loads(config.read_text())
 
@@ -2946,6 +2956,71 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
     assert reads[conflict] == 0
     assert any(args[0] == "add" for args in commands)
     assert any(args[0] == "commit" for args in commands)
+
+
+@pytest.mark.parametrize("automatic", [False, True], ids=["explicit", "automatic"])
+def test_run_join_conflict_launch_uses_shared_settings(
+    ready_content_session, tmp_path, monkeypatch, automatic
+):
+    """自動・明示 join の実経路で、設定保存から競合解消の argv まで確認する。"""
+    root, _, state_path = ready_content_session
+    setup_codex_home(tmp_path, monkeypatch)
+    config = load_config(root)
+    config.codex.model_providers["shared"] = CodexModelProviderConfig(
+        {"base_url": "https://shared.invalid/v1", "env_key": "SHARED_AUTH"}
+    )
+    config.codex.agent_calls["realization_edit"] = CodexCallConfig(
+        "shared", "shared-model", "shared-effort"
+    )
+    write_config(root / ".cmoc/gt/config.json", config)
+    commit_work_unit(root, "configure shared editing")
+
+    def conflict(worktree):
+        (worktree / "README.md").write_text("run change\n")
+        (root / "README.md").write_text("session change\n")
+        commit_work_unit(root, "concurrent session change")
+
+    if not automatic:
+        context = _prepare_run(ready_content_session)
+        conflict(context.run_worktree)
+        commit_work_unit(context.run_worktree, "run change")
+
+    def during_call(index, call):
+        if automatic and index == 1:
+            conflict(Path(call["cwd"]))
+        else:
+            assert Path(call["cwd"]) == root
+            (root / "README.md").write_text("session change\nrun change\n")
+
+    completed = '{"type":"turn.completed"}\n'
+    replies = [(0, completed, "done")] if automatic else []
+    replies.append((0, completed, "merge_resolution: resolved\nverified"))
+    calls = script_codex_calls(monkeypatch, replies, on_call=during_call)
+    command = ["realization", "apply"] if automatic else ["run", "join"]
+
+    result = runner.invoke(app, command, catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == (2 if automatic else 1)
+    assert (root / "README.md").read_text() == "session change\nrun change\n"
+    assert _state(state_path)["run"]["state"] == "ready"
+    for call in calls:
+        assert codex_arg_value(call["argv"], "--model") == "shared-model"
+        overrides = codex_override_config(call["argv"])
+        assert overrides["model_provider"] == "shared"
+        assert overrides["model_reasoning_effort"] == "shared-effort"
+        assert overrides["model_providers"] == {
+            "shared": {
+                "base_url": "https://shared.invalid/v1",
+                "env_key": "SHARED_AUTH",
+            }
+        }
+    logs = [
+        json.loads(path.read_text())
+        for path in (root / ".cmoc/gu/log/codex").glob("*/*_call.json")
+    ]
+    assert {log["agent_call_kind"] for log in logs} == {"realization_edit"}
+    assert len({log["agent_call_id"] for log in logs}) == len(calls)
 
 
 def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
