@@ -4173,10 +4173,10 @@ def test_outer_report_save_failure_restores_joined_run_error(
 
 
 def test_refactor_with_no_targets_keeps_synchronizing(
-    ready_content_session, monkeypatch
+    refactor_after_preprocess, monkeypatch
 ):
     """空対象でも巡を継続し、ユーザー停止だけで終了する。"""
-    _root, _, state_path = ready_content_session
+    _root, _, state_path = refactor_after_preprocess
     synchronized = []
 
     def empty_state(root):
@@ -4206,10 +4206,10 @@ def test_refactor_with_no_targets_keeps_synchronizing(
 
 
 def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
-    ready_content_session, monkeypatch, refactor_unit_diff_queries
+    refactor_after_preprocess, monkeypatch, refactor_unit_diff_queries
 ):
     """削除は成果に含め、後の巡で戻した変更は net 成果へ数えない。"""
-    root, _, state_path = ready_content_session
+    root, _, state_path = refactor_after_preprocess
     # 別 file の削除と差し戻しを同じ run で検査し、session/run 作成を共有する。
     deleted_path = "src/deleted.py"
     (root / deleted_path).write_text("VALUE = 1\n")
@@ -4395,10 +4395,10 @@ def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
 
 
 def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
-    ready_content_session, monkeypatch, refactor_unit_diff_queries
+    refactor_after_preprocess, monkeypatch, refactor_unit_diff_queries
 ):
     """関連 file の変更を調査実績へ数えず、追加 file は次巡に公平に処理する。"""
-    _root, _, _state_path = ready_content_session
+    _root, _, _state_path = refactor_after_preprocess
     reviewed = []
     classified = Counter()
     classify = lifecycle_module.is_realization_file_path
