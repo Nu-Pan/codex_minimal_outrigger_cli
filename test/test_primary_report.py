@@ -593,7 +593,12 @@ def test_primary_report_keeps_outputs_observations_and_artifact_paths(
         if supplied_report:
             saved = logger.path.with_suffix(".md")
             saved.write_text(
-                "# Workload report\n\n## 実行記録\n本文にも同じ見出しがある。\n"
+                render_report_document(
+                    "Workload report",
+                    {"command": "cmoc doctor", "execution_id": logger.execution_id},
+                    ReportSummary("完了"),
+                    "## 実行記録\n\n本文にも同じ見出しがある。\n",
+                )
             )
             return TerminalResult(
                 primary_report=saved, primary_report_role="test report"

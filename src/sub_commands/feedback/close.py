@@ -1,4 +1,4 @@
-"""外部解決を宣言した inconclusive 案件を、agent call なしで終了する。"""
+"""外部解決を宣言した inconclusive 案件を終了し、初回 report を確認する。"""
 
 from pathlib import Path
 from typing import Any
@@ -46,6 +46,7 @@ from commons.runtime_ids import is_common_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
 from commons.runtime_paths import sessions_dir
 from commons.runtime_primary_report import (
+    review_primary_report,
     update_primary_report_fields,
     update_primary_report_input,
 )
@@ -327,6 +328,7 @@ def _prepare_close(
         execution_id,
         logger.path,
     )
+    report = review_primary_report(repo, report, logger)
     return {
         "schema_version": 1,
         "operation_id": operation_id,
@@ -478,6 +480,7 @@ def _already_closed_report(
         original_input=reason,
         execution_record=execution_record_markdown(logger),
     )
+    content = review_primary_report(repo, content, logger)
     write_immutable_bytes(path, content.encode())
     return path
 

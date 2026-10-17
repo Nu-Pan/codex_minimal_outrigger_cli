@@ -81,6 +81,29 @@ def check_recovery_interruption() -> None:
 
 
 @contextmanager
+def isolated_recovery_interruption() -> Iterator[threading.Event]:
+    """終了工程の確認に、新しい取消要求だけを受け付ける。"""
+    # 本命処理の停止要求や finalization の signal mask を確認へ持ち越さない。
+    cancellation = threading.Event()
+    token = _CANCELLATION.set(cancellation)
+    previous = signal.getsignal(signal.SIGINT)
+
+    def interrupt(_signum: int, _frame: FrameType | None) -> None:
+        # 受理と競合しても、この確認での後続 call を開始させない。
+        cancellation.set()
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGINT, interrupt)
+    previous_mask = signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT})
+    try:
+        yield cancellation
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+        signal.signal(signal.SIGINT, previous)
+        _CANCELLATION.reset(token)
+
+
+@contextmanager
 def defer_recovery_interruption(
     *, check_pending: bool = True, propagate: bool = True
 ) -> Iterator[None]:

@@ -73,6 +73,19 @@ _TUI_AGENT_CALL_KINDS = frozenset(
 )
 
 
+def _save_interrupted_process_logs(
+    error: BaseException, stdout_path: Path, stderr_path: Path
+) -> None:
+    # 停止時に回収できた診断を、通常の call と同じ保存先へ残す。
+    for name, path in (
+        ("cmoc_process_stdout", stdout_path),
+        ("cmoc_process_stderr", stderr_path),
+    ):
+        content = getattr(error, name, None)
+        if isinstance(content, str):
+            path.write_text(content, encoding="utf-8")
+
+
 def _read_optional_output(path: Path) -> tuple[str, Any]:
     """schema なしの出力から本文と JSON を取得し、不正 JSON は None とする。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
@@ -897,6 +910,7 @@ def run_codex_exec(
         except BaseException as exc:
             error = format_codex_call_error(exc)
             outcome = "failed"
+            _save_interrupted_process_logs(exc, probe_stdout, probe_stderr)
             raise
         finally:
             probe_feedback.close()
@@ -990,6 +1004,8 @@ def run_codex_exec(
                 run_codex_env=call_environment,
             )
         except BaseException as exc:
+            if not tui_initial:
+                _save_interrupted_process_logs(exc, stdout_path, stderr_path)
             if tui_initial:
                 stopped_returncode = getattr(exc, "cmoc_process_returncode", None)
                 state = (

@@ -63,3 +63,7 @@ def render_error(exc: BaseException) -> str:
 
 class TuiStartupCancelled(KeyboardInterrupt):
     """初回作業が未完了のまま TUI 起動を取り消したことを表す。"""
+
+
+class CodexProcessStopError(CmocError):
+    """call の失敗とは別に、子 process の停止確認が失敗したことを表す。"""

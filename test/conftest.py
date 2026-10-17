@@ -21,6 +21,7 @@ import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_editor_input_handoff_protocol as handoff_protocol
 import commons.runtime_feedback as runtime_feedback
 import commons.runtime_logging as runtime_logging
+import commons.runtime_primary_report_review as report_review
 import commons.runtime_windows_toast as runtime_windows_toast
 import sub_commands.feedback.remediation as remediation_module
 from commons.runtime_config import write_config
@@ -329,6 +330,21 @@ def _isolate_primary_report_editor(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         runtime_cli, "open_primary_report_in_editor", lambda _path: None
     )
+
+
+@pytest.fixture(autouse=True)
+def primary_report_review_runner(monkeypatch):
+    """一般の CLI 検査では確認用の実推論を置換し、専用検査に実 runner を渡す。"""
+    # 回復・補正・取消と掲載内容は test_primary_report_review.py で fake CLI を通す。
+    runner = report_review.run_codex_exec
+    monkeypatch.setattr(
+        report_review,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            output_json={"result": {"status": "no_findings", "findings": []}}
+        ),
+    )
+    return runner
 
 
 @pytest.fixture(autouse=True)

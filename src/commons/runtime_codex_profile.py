@@ -35,6 +35,7 @@ from basic.acp import AgentCallParameter, FileAccessMode
 from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig, JsonTomlValue
 
+from .runtime_codex_logging import format_codex_call_error
 from .runtime_codex_recovery import CodexOutcome
 from .runtime_config import validate_json_toml_value
 from .runtime_content import write_hashed_file
@@ -43,7 +44,7 @@ from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
     EDITOR_INPUT_SOURCE_ENV,
 )
-from .runtime_errors import CmocError
+from .runtime_errors import CmocError, CodexProcessStopError
 from .runtime_feedback_protocol import (
     FEEDBACK_CAPABILITY_ENV,
     FEEDBACK_COLLECTOR_PORT_ENV,
@@ -721,8 +722,12 @@ def _feedback_mcp_override_args(enable_feedback_reporting: bool) -> list[str]:
     return args
 
 
-def _editor_input_handoff_mcp_override_args() -> list[str]:
+def _editor_input_handoff_mcp_override_args(enabled: bool) -> list[str]:
     """cmoc_editor_input server をガイド取得と上書きへ呼び出し単位で固定する。"""
+    # disabled でも transport の検証は行われるため、常に完全な設定を渡す。
+    # 0.163.0 の設定検証と、無効な接続を起動しない境界:
+    # https://github.com/openai/codex/blob/83086188ae0614bd882818ff1aa23f3194962012/codex-rs/config/src/mcp_types.rs#L448-L503
+    # https://github.com/openai/codex/blob/83086188ae0614bd882818ff1aa23f3194962012/codex-rs/codex-mcp/src/connection_manager.rs#L314-L317
     # Codex 0.154.0 は env_vars の値を起動元の環境から MCP child へ渡す。
     # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/rmcp-client/src/utils.rs#L14-L24
     # https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/rmcp-client/src/stdio_server_launcher.rs#L236-L260
@@ -734,11 +739,11 @@ def _editor_input_handoff_mcp_override_args() -> list[str]:
         # 共有 venv の editable install が別 checkout を指していても起動元と揃える。
         "env": {"PYTHONPATH": str(Path(__file__).resolve().parents[1])},
         "env_vars": [EDITOR_INPUT_REPOSITORY_ENV, EDITOR_INPUT_SOURCE_ENV],
-        "enabled": True,
+        "enabled": enabled,
         # handoff の利用可否は TUI agent call 自体の成功条件を変更しない。
         "required": False,
-        "enabled_tools": ["get_handoff_guide", "overwrite"],
-        "disabled_tools": [],
+        "enabled_tools": ["get_handoff_guide", "overwrite"] if enabled else [],
+        "disabled_tools": [] if enabled else ["get_handoff_guide", "overwrite"],
         "startup_timeout_sec": 5,
         "tool_timeout_sec": 15,
         "default_tools_approval_mode": "approve",
@@ -875,10 +880,8 @@ def build_codex_override_args(
         *document_search_mcp_override_args(
             parameter, config, path_context=path_context
         ),
-        *(
-            _editor_input_handoff_mcp_override_args()
-            if parameter.enable_editor_input_handoff_mcp
-            else []
+        *_editor_input_handoff_mcp_override_args(
+            parameter.enable_editor_input_handoff_mcp
         ),
     ]
     args.extend(_model_provider_override_args(call_config.model_provider, config))
@@ -1110,7 +1113,18 @@ def _run_subprocess_with_started_callback(
 
     if cancellation is not None or timeout is not None:
         kwargs["start_new_session"] = True
-    with subprocess.Popen(argv, **kwargs) as process:
+    try:
+        process = subprocess.Popen(argv, **kwargs)
+    except FileNotFoundError:
+        # CLI 不在と cwd 不在の区別は外側の共通判定を維持する。
+        raise
+    except OSError as exc:
+        raise CmocError(
+            "Codex subprocess を起動できませんでした。",
+            ["Codex CLI の実行権限と実行環境を確認してください。"],
+            repr(exc),
+        ) from exc
+    try:
         try:
             # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
             # Popen が成功した後だけ TUI process 起動済みとして扱い、起動前の
@@ -1127,12 +1141,30 @@ def _run_subprocess_with_started_callback(
             )
         except BaseException as exc:
             if kwargs.get("start_new_session"):
-                _kill_codex_process_group(process)
+                try:
+                    _kill_codex_process_group(process)
+                except Exception as stop_error:
+                    detail = format_codex_call_error(stop_error)
+                    # group の停止不能を成功へ変換せず、直接所有する child だけ回収する。
+                    # Popen.__exit__ の無期限 wait へ渡して自然完了を待たない。
+                    try:
+                        if process.poll() is None:
+                            process.kill()
+                        process.wait(timeout=5)
+                    except Exception as reap_error:
+                        detail += f"\nchild reap failed: {reap_error!r}"
+                    raise CodexProcessStopError(
+                        "Codex subprocess の停止を確認できませんでした。",
+                        ["残存 process と診断ログを確認してください。"],
+                        f"pid: {process.pid}\n{detail}",
+                    ) from stop_error
             else:
                 process.kill()
-            process.communicate()
+            stdout, stderr = process.communicate()
             # 呼び出し元は、停止が確認できた取消と終了不明を区別して記録する。
             setattr(exc, "cmoc_process_returncode", process.returncode)
+            setattr(exc, "cmoc_process_stdout", stdout)
+            setattr(exc, "cmoc_process_stderr", stderr)
             raise
 
         returncode = process.wait()
@@ -1143,6 +1175,11 @@ def _run_subprocess_with_started_callback(
                 output=stdout,
                 stderr=stderr,
             )
+    finally:
+        # communicate を完遂できなかった経路も、親が所有する pipe は閉じる。
+        for stream in (process.stdin, process.stdout, process.stderr):
+            if stream is not None:
+                stream.close()
     return subprocess.CompletedProcess(argv, returncode, stdout, stderr)
 
 

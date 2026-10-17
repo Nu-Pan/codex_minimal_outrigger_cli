@@ -119,6 +119,8 @@ def test_prepare_codex_overrides_use_call_defaults_without_home_config(
         FEEDBACK_CAPABILITY_ENV: "exclude",
         FEEDBACK_COLLECTOR_PORT_ENV: "exclude",
         FEEDBACK_PROTOCOL_ENV: "exclude",
+        EDITOR_INPUT_REPOSITORY_ENV: "exclude",
+        EDITOR_INPUT_SOURCE_ENV: "exclude",
     }
     assert "--profile" not in args
     assert "-p" not in args
@@ -144,6 +146,8 @@ def test_codex_overrides_disable_feedback_reporter_for_selected_call() -> None:
         FEEDBACK_CAPABILITY_ENV: "exclude",
         FEEDBACK_COLLECTOR_PORT_ENV: "exclude",
         FEEDBACK_PROTOCOL_ENV: "exclude",
+        EDITOR_INPUT_REPOSITORY_ENV: "exclude",
+        EDITOR_INPUT_SOURCE_ENV: "exclude",
     }
 
 

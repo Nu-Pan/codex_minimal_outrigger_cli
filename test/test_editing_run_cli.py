@@ -41,6 +41,7 @@ import commons.runtime_cli as runtime_cli
 import commons.runtime_git as git_module
 import commons.runtime_merge_conflict as merge_conflict_module
 import commons.runtime_primary_report as primary_report_module
+import commons.runtime_primary_report_review as review_module
 import commons.runtime_run as runtime_run_module
 import commons.runtime_run_join as run_join_module
 import commons.runtime_run_lifecycle as lifecycle_module
@@ -4078,6 +4079,40 @@ def test_join_cleanup_defers_when_a_required_guard_is_unconfirmed(
     assert warnings
     assert context.run_worktree.exists()
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+
+
+@pytest.mark.parametrize("kind", ["realization_apply", "realization_refactor"])
+@pytest.mark.parametrize("failure", ["cancel", "call"])
+def test_review_failure_preserves_completed_join_state_and_artifacts(
+    join_after_preprocess, monkeypatch, kind, failure
+):
+    root, _, state_path = join_after_preprocess
+    context = _prepare_run(join_after_preprocess, kind=kind)
+    (context.run_worktree / "README.md").write_text("joined\n")
+    commit_work_unit(context.run_worktree, "result")
+
+    def fail_review(*args, **kwargs):
+        # cleanup 済みの run を使わず、実際の state と成果を含む全文を確認する。
+        assert not context.run_worktree.exists()
+        assert _state(state_path)["run"]["state"] == "ready"
+        frozen = next((root / ".cmoc/gu/log/codex").glob("*/*review*.md"))
+        metadata = report_metadata(frozen.read_text())
+        assert metadata["state_after"] == "ready" and metadata["cleanup"] == "completed"
+        if failure == "cancel":
+            raise KeyboardInterrupt
+        raise CmocError("review failed", [], "cannot resume")
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fail_review)
+    result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert _state(state_path)["run"] == SessionState().to_dict()["run"]
+    assert (root / "README.md").read_text() == "joined\n"
+    assert not context.run_worktree.exists()
+    assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+    assert (
+        "エージェントによる重要事項の確認は完了していません。"
+        in terminal_primary_report(result).read_text()
+    )
 
 
 def test_outer_report_save_failure_restores_joined_run_error(
