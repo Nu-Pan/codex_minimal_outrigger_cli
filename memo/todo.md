@@ -51,10 +51,9 @@
     - 外側の sandbox 設定は内側の sandbox 設定にも影響を与えるのが厄介
     - その点、プロンプトによる制限指示は内側と外側とで独立なのが嬉しい
 
-## cmoc refactor state sync after run join のコミットは run branch に積んだほうが良いように思える
+## refactor state って要る…？
 
-- refactor state の更新結果のこと
-- session branch に積んでる理由から確認が必要
+- 少なくとも「差分が出なくなるまで繰り返し追従作業を行う」はもう存在しないはず
 
 ## いい加減、`codex`, `codex exec` の仕様記述の棲み分けをどうにかしたい
 
