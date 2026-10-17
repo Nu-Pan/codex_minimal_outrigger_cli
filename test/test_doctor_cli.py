@@ -1506,33 +1506,10 @@ def test_doctor_rejects_symlinked_agents_paths(
         assert outside.read_text() == outside_content
 
 
-def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
+def test_doctor_repair_separates_committed_staged_and_unstaged_gitignore(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """doctor の `.gitignore` 修復 commit が事前の stage 内容を上書きしないことを検証する。"""
-
-    root = committed_repository
-    gitignore = root / ".gitignore"
-    gitignore.write_text("human-rule\n")
-    run_git(root, "add", ".gitignore")
-    monkeypatch.chdir(root)
-
-    run_doctor(root)
-
-    committed_gitignore = run_git(root, "show", "HEAD:.gitignore").stdout
-    assert "human-rule" not in committed_gitignore
-    assert "/.cmoc/gu/" in committed_gitignore
-    assert gitignore.read_text() == "human-rule\n\n/.cmoc/gu/\n"
-    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
-        ".gitignore"
-    ]
-    assert "human-rule" in run_git(root, "diff", "--cached").stdout
-
-
-def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """修復対象 path にある staged と unstaged の差分をそれぞれ保つことを検証する。"""
+    """一度の修復で、commit・index・作業 file の差分の分離と保持を検証する。"""
 
     root = committed_repository
     gitignore = root / ".gitignore"
@@ -1543,12 +1520,13 @@ def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
 
     run_doctor(root)
 
-    cached_diff = run_git(root, "diff", "--cached").stdout
-    unstaged_diff = run_git(root, "diff").stdout
-    assert "staged-rule" in cached_diff
-    assert "unstaged-rule" not in cached_diff
-    assert "unstaged-rule" in unstaged_diff
+    # 各保存先の内容を比較し、利用者の hunk の commit 混入・消失・誤 stage を検出する。
+    assert run_git(root, "show", "HEAD:.gitignore").stdout == "/.cmoc/gu/\n"
+    assert run_git(root, "show", ":.gitignore").stdout == "staged-rule\n\n/.cmoc/gu/\n"
     assert gitignore.read_text() == "staged-rule\nunstaged-rule\n\n/.cmoc/gu/\n"
+    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
+        ".gitignore"
+    ]
 
 
 def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
