@@ -980,15 +980,17 @@ def test_config_change_reclaims_only_inactive_index(
             )
         ) as current,
     ):
-        previous.search("内容")
+        # 同期も検索と同じ lease・回収を通るため、query 推論・保存・順位付けを重ねない。
+        # query と検索結果は同期・候補の専用 test、実行中の保護は次の test に残す。
+        previous.synchronize()
         _, old_index, _, _ = previous._paths()
         assert old_index.is_file()
-        result = current.search("内容")
-        assert [hit["path"] for hit in result["hits"]] == ["oracle/doc/allowed.md"]
+        result = current.synchronize()
+        assert result.document_count == result.chunk_count == 1
         assert current._paths()[1] != old_index
         assert old_index.is_file()
         previous.close()
-        current.search("内容")
+        current.synchronize()
         assert not old_index.exists()
 
 
@@ -1025,22 +1027,23 @@ def test_config_change_preserves_index_while_request_uses_it(
             )
         ) as current,
     ):
-        previous.search("内容")
-        current.search("内容")
+        # 索引の準備と回収は同期だけで行い、保護対象の要求だけを query 推論で止める。
+        previous.synchronize()
+        current.synchronize()
         _, old_index, _, _ = previous._paths()
         previous.worker = WaitingWorker()
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(previous.search, "未計算の query")
             try:
                 assert started.wait(5)
-                assert current.search("内容")["status"] == "ok"
+                assert current.synchronize().chunk_count == 1
                 previous.close()
-                current.search("内容")
+                current.synchronize()
                 assert old_index.is_file()
             finally:
                 release.set()
             assert future.result(timeout=5)["status"] == "ok"
-        current.search("内容")
+        current.synchronize()
         assert not old_index.exists()
 
 
