@@ -3696,14 +3696,17 @@ def test_refactor_interrupt_before_run_creation_is_normal_completion(
 
 
 @pytest.mark.parametrize("interrupt_point", ["commit", "post_commit_record"])
+@pytest.mark.usefixtures("join_after_preprocess")
 def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
-    ready_content_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     interrupt_point: str,
 ) -> None:
     """処理単位の commit または確定記録後に中断しても進捗を report する。"""
-    root, _session_branch, state_path = ready_content_session
+    # 開始・join 前の修復検査は両 fixture の参照先に残す。
+    # ここでは実 commit・自動 join と、確定済み成果・report の保持を検査する。
+    root, _session_branch, state_path = refactor_after_preprocess
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
 
