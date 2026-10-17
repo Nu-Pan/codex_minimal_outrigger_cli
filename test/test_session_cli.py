@@ -579,16 +579,31 @@ def test_session_abandon_repairs_linked_worktree_before_failure_and_completion(
     state_path = session_state_path(root, session_branch)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
 
-    # home branch がなくても先に管理物を修復し、session branch で停止する。
+    # 同名 tag は home branch と見なさず、管理物を修復して session branch で停止する。
+    # branch 不在の拒否と表示もここで検査し、別 repository と失敗実行の準備を省く。
     gitignore = break_preprocess_invariants(linked)
     run_git(root, "branch", "-D", home_branch)
+    run_git(root, "tag", home_branch, home_commit)
 
     failed = runner.invoke(app, ["session", "abandon"])
 
     assert failed.exit_code != 0
+    assert failed.stdout == ""
+    assert "# 失敗: cmoc session abandon" in failed.stderr
+    assert "- 診断用サブコマンドログ: `" in failed.stderr
+    assert "ステップ経過時間" not in failed.output
+    assert "- 経過時間: `" in failed.output
+    assert "quota 待機時間" not in failed.output
+    assert "- 終了コード: `1`" in failed.output
     assert current_branch(root) == root_branch
     assert current_branch(linked) == session_branch
     assert "session home branch が存在しません。" in failed.stderr
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        == 0
+    )
     assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
     assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == []
@@ -621,42 +636,6 @@ def test_session_abandon_repairs_linked_worktree_before_failure_and_completion(
     assert state["session"]["state"] == "abandoned"
     assert f"- abandoned_branch: `{session_branch}`" in result.output
     assert failed_report.read_text(encoding="utf-8") == failed_report_content
-
-
-def test_session_abandon_requires_existing_home_branch(
-    session_completion_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
-) -> None:
-    """home branchが存在しないsession abandonを拒否することを検証する。"""
-    root = session_completion_repository
-    monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_session_in_worktree(root, root)
-    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
-    # 前処理の修復と事前条件の順序は linked worktree の専用ケースで検証する。
-    # このケースでは local branch と同名 tag を区別する境界を保つ。
-    run_git(root, "branch", "-D", home_branch)
-    run_git(root, "tag", home_branch, home_commit)
-
-    result = runner.invoke(app, ["session", "abandon"])
-
-    assert session_preprocess == [root]
-    assert result.exit_code != 0
-    assert result.stdout == ""
-    assert "# 失敗: cmoc session abandon" in result.stderr
-    assert "- 診断用サブコマンドログ: `" in result.stderr
-    assert "ステップ経過時間" not in result.output
-    assert "- 経過時間: `" in result.output
-    assert "quota 待機時間" not in result.output
-    assert "- 終了コード: `1`" in result.output
-    assert current_branch(root) == session_branch
-    assert "session home branch が存在しません。" in result.stderr
-    assert (
-        subprocess.run(
-            ["git", "rev-parse", "--verify", session_branch], cwd=root
-        ).returncode
-        == 0
-    )
 
 
 def test_session_abandon_reports_run_cleanup_action_when_run_is_present(
