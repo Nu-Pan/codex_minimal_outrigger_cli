@@ -1320,45 +1320,28 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """既に追跡された `.cmoc/gu` のファイルを実体を残して index から外すことを検証する。"""
+    """無変更と staged/unstaged 変更のある管理物を、実体を保って追跡から外す。"""
 
+    # 同じ除外処理の入力を別 file に置き、repository 準備と doctor 起動を共有する。
     root = cli_repository
-    local_path = root / ".cmoc" / "gu" / "cache.json"
-    local_path.parent.mkdir(parents=True)
-    local_path.write_text("{}\n")
-    run_git(root, "add", "-f", ".cmoc/gu/cache.json")
+    unchanged = root / ".cmoc/gu/cache.json"
+    changed = root / ".cmoc/gu/nested/changed.json"
+    changed.parent.mkdir(parents=True)
+    unchanged.write_text("{}\n")
+    changed.write_text('{"old": true}\n')
+    run_git(root, "add", "-f", ".cmoc/gu")
     run_git(root, "commit", "-m", "track old cmoc local cache")
+    changed.write_text('{"new": true}\n')
+    run_git(root, "add", "-f", ".cmoc/gu/nested/changed.json")
+    changed.write_text('{"working": true}\n')
     monkeypatch.chdir(root)
 
     run_doctor(root)
 
+    assert unchanged.read_text() == "{}\n"
+    assert changed.read_text() == '{"working": true}\n'
     assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout.strip() == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
-    assert local_path.is_file()
-    assert local_path.read_text() == "{}\n"
-
-
-def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """事前に stage された `.cmoc/gu` の変更を doctor が復元・上書きしないことを検証する。"""
-
-    root = cli_repository
-    local_path = root / ".cmoc" / "gu" / "cache.json"
-    local_path.parent.mkdir(parents=True)
-    local_path.write_text('{"old": true}\n')
-    run_git(root, "add", "-f", ".cmoc/gu/cache.json")
-    run_git(root, "commit", "-m", "track old cmoc local cache")
-    local_path.write_text('{"new": true}\n')
-    run_git(root, "add", "-f", ".cmoc/gu/cache.json")
-    monkeypatch.chdir(root)
-    local_path.write_text('{"working": true}\n')
-
-    run_doctor(root)
-
-    assert local_path.read_text() == '{"working": true}\n'
-    assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout.strip() == ""
-    assert run_git(root, "diff", "--cached", "--name-only").stdout.strip() == ""
 
 
 def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_deletion(
