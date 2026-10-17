@@ -32,7 +32,7 @@ def unmerged_paths(root: Path) -> list[str]:
 
 def resolve_merge_conflicts(
     root: Path,
-    parameter: AgentCallParameter | None,
+    build_parameter: Callable[[], AgentCallParameter],
     *,
     codex_exec: CodexExecCallable | None = None,
     purpose: str,
@@ -59,12 +59,8 @@ def resolve_merge_conflicts(
     }
     update_primary_report_fields(conflict_resolution=result)
     if content_conflicts:
-        if parameter is None:
-            raise CmocError(
-                "内容競合の agent call を構築できません。",
-                [],
-                "\n".join(content_conflicts),
-            )
+        # 管理物だけの競合では、使わない prompt と path context を構築しない。
+        parameter = build_parameter()
         before = _status_snapshot(root, conflict_paths)
         output = (codex_exec or run_codex_exec)(
             parameter, root=repo_root(root), purpose=purpose

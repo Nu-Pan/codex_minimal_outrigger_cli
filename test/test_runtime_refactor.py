@@ -19,9 +19,9 @@ from _git_support import run_git
 import commons.runtime_git as git_module
 import commons.runtime_refactor as refactor_module
 import sub_commands.realization.refactor as refactor_workload
+import sub_commands.session.join as session_join_module
 from cmoc_runtime import CmocError
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
-from commons.runtime_merge_conflict import resolve_merge_conflicts
 from commons.runtime_refactor import (
     RefactorState,
     is_normalized_relative_path,
@@ -507,7 +507,7 @@ def test_merge_refactor_states_uses_committed_dates_and_current_paths(
         assert load_refactor_state(root) == state, refs
 
 
-def test_managed_state_conflict_merges_without_agent(cli_repository):
+def test_managed_state_conflict_merges_without_agent(cli_repository, monkeypatch):
     root = cli_repository
     (root / "README.md").write_text("readme\n")
     write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
@@ -523,13 +523,32 @@ def test_managed_state_conflict_merges_without_agent(cli_repository):
         root, {"README.md": {"last_investigated_at": "2026-10-18_00-00-00_001"}}
     )
     run_git(root, "commit", "-am", "other investigation")
+    other = run_git(root, "rev-parse", "HEAD").stdout.strip()
     merge = git_module.run_git(["merge", "--no-edit", first], root, check=False)
     assert merge.returncode != 0
 
-    resolution = resolve_merge_conflicts(root, None, purpose="test state conflict")
+    # session の入口でも、管理物だけなら完全 prompt の構築を省く。
+    build_parameter = Mock(side_effect=AssertionError("unused agent parameter"))
+    codex_exec = Mock(side_effect=AssertionError("unused agent call"))
+    report_fields = {}
+    monkeypatch.setattr(
+        session_join_module,
+        "build_session_join_conflict_resolution_parameter",
+        build_parameter,
+    )
+    monkeypatch.setattr(
+        session_join_module,
+        "update_primary_report_fields",
+        lambda **fields: report_fields.update(fields),
+    )
 
-    assert resolution["agent_status"] == "not_needed"
-    assert resolution["content_conflicts"] == []
+    session_join_module.resolve_session_join_conflict(root, first, other, codex_exec)
+
+    build_parameter.assert_not_called()
+    codex_exec.assert_not_called()
+    assert report_fields["conflict_resolution_status"] == "not_needed"
+    assert report_fields["conflict_resolution_result"] == "confirmed"
+    assert report_fields["conflict_agent_report"] is None
     assert load_refactor_state(root) == {"README.md": {"last_investigated_at": newer}}
     assert not run_git(root, "status", "--porcelain").stdout
 

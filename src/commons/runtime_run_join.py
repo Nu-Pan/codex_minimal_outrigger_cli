@@ -3,6 +3,7 @@
 import os
 from collections.abc import Callable, Collection
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 
 from .runtime_cli import start_subcommand_step
@@ -360,7 +361,8 @@ def merge_run(
                 with run_process_tracking(context.repo, context.session_id):
                     resolution = resolve_merge_conflicts(
                         context.run_worktree,
-                        build_run_join_conflict_resolution_parameter(
+                        partial(
+                            build_run_join_conflict_resolution_parameter,
                             run_head,
                             record.session_head,
                             context.run_worktree,

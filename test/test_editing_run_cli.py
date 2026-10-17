@@ -2886,7 +2886,7 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
     monkeypatch.setattr(merge_conflict_module, "run_git", git)
     result = merge_conflict_module.resolve_merge_conflicts(
         root,
-        parameter,
+        lambda: parameter,
         codex_exec=resolved_codex,
         purpose="test merge resolution",
         initial_conflicts=[conflict_relative],
@@ -4744,6 +4744,10 @@ def test_join_merges_committed_timestamps_before_sync(
         merge_conflict_module,
         "run_codex_exec",
         lambda *_args, **_kwargs: pytest.fail("managed state needs no agent call"),
+    )
+    monkeypatch.setattr(
+        "oracle.acp_builder.run.join.conflict_resolution.build_run_join_conflict_resolution_parameter",
+        lambda *_args, **_kwargs: pytest.fail("managed state needs no agent parameter"),
     )
 
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
