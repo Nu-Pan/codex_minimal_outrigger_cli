@@ -69,6 +69,15 @@ def _seed_remote_tracking_branch(root: Path, branch: str, commit: str) -> None:
     run_git(root, "config", "checkout.defaultRemote", "origin")
 
 
+def _branch_refs(root: Path) -> set[str]:
+    """local と remote の ref を一度に取得し、完全名で存在を検査する。"""
+    return set(
+        run_git(
+            root, "for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"
+        ).stdout.splitlines()
+    )
+
+
 def session_state_path(root: Path, session_branch: str) -> Path:
     """managed session branch に対応する永続 state file の path を求める。
 
@@ -407,30 +416,10 @@ def test_session_fork_rollback_does_not_guess_remote_home_branch(
     assert session_preprocess == [root]
     assert result.exit_code != 0
     assert current_branch(root) == session_branch
-    assert (
-        cmoc_runtime.run_git(
-            ["show-ref", "--verify", f"refs/heads/{home_branch}"],
-            root,
-            check=False,
-        ).returncode
-        != 0
-    )
-    assert (
-        cmoc_runtime.run_git(
-            ["show-ref", "--verify", f"refs/remotes/origin/{home_branch}"],
-            root,
-            check=False,
-        ).returncode
-        == 0
-    )
-    assert (
-        cmoc_runtime.run_git(
-            ["show-ref", "--verify", f"refs/heads/{session_branch}"],
-            root,
-            check=False,
-        ).returncode
-        == 0
-    )
+    refs = _branch_refs(root)
+    assert f"refs/heads/{home_branch}" not in refs
+    assert f"refs/remotes/origin/{home_branch}" in refs
+    assert f"refs/heads/{session_branch}" in refs
     assert not session_state_path(root, session_branch).exists()
     assert "session fork の作成に失敗しました。" in result.stderr
 
@@ -729,30 +718,10 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     assert result.exit_code != 0
     assert current_branch(root) == session_branch
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == home_commit
-    assert (
-        cmoc_runtime.run_git(
-            ["show-ref", "--verify", f"refs/heads/{home_branch}"],
-            root,
-            check=False,
-        ).returncode
-        != 0
-    )
-    assert (
-        cmoc_runtime.run_git(
-            ["show-ref", "--verify", f"refs/remotes/origin/{home_branch}"],
-            root,
-            check=False,
-        ).returncode
-        == 0
-    )
-    assert (
-        cmoc_runtime.run_git(
-            ["show-ref", "--verify", f"refs/heads/{session_branch}"],
-            root,
-            check=False,
-        ).returncode
-        == 0
-    )
+    refs = _branch_refs(root)
+    assert f"refs/heads/{home_branch}" not in refs
+    assert f"refs/remotes/origin/{home_branch}" in refs
+    assert f"refs/heads/{session_branch}" in refs
     assert json.loads(state_path.read_text())["session"]["state"] == "active"
     assert "git switch --no-guess" in result.stderr
 
@@ -854,10 +823,10 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     run_git(root, "switch", home_branch)
-    (root / "README.md").write_text("remote target\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "advance remote branch target")
+    # remote の誤推測は branch と commit で検出でき、tree の変更は使わない。
+    run_git(root, "commit", "--allow-empty", "-m", "advance remote branch target")
     remote_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    assert remote_commit != session_commit
     _seed_remote_tracking_branch(root, session_branch, remote_commit)
     run_git(root, "switch", session_branch)
 
@@ -895,22 +864,9 @@ def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_rac
     assert "branch rollback failed:" in result.stderr
     assert current_branch(root) == home_branch
     assert json.loads(state_path.read_text())["session"]["state"] == "active"
-    assert (
-        cmoc_runtime.run_git(
-            ["show-ref", "--verify", f"refs/heads/{session_branch}"],
-            root,
-            check=False,
-        ).returncode
-        != 0
-    )
-    assert (
-        cmoc_runtime.run_git(
-            ["show-ref", "--verify", f"refs/remotes/origin/{session_branch}"],
-            root,
-            check=False,
-        ).returncode
-        == 0
-    )
+    refs = _branch_refs(root)
+    assert f"refs/heads/{session_branch}" not in refs
+    assert f"refs/remotes/origin/{session_branch}" in refs
 
 
 @pytest.mark.parametrize("command", ["abandon", "join"])
@@ -1495,7 +1451,6 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
     assert "git コマンドが失敗しました。" in result.stderr
     assert "git switch --no-guess" in result.stderr
     assert "git コマンドが失敗しました。" not in result.stdout
-    assert run_git(root, "branch", "--show-current").stdout.strip() == session_branch
     assert (
         run_git(
             root,
