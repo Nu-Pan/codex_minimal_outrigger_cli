@@ -730,7 +730,7 @@ def run_codex_exec(
             changed = frozen_snapshot.changed_paths(current_snapshot)
             if not changed:
                 return
-            restore_worktree_snapshot(frozen_snapshot)
+            restore_worktree_snapshot(frozen_snapshot, current=current_snapshot)
         except Exception as exc:
             detail = f"artifact inspection or restoration failed: {exc!r}"
             if emit_exhausted:

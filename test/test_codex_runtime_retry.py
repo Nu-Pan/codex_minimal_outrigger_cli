@@ -19,6 +19,7 @@ from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
+import commons.runtime_git as runtime_git
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError, SubcommandLogger
 from commons.runtime_codex import run_codex_exec
@@ -399,13 +400,18 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
     )
     # 事後条件なしの開始前読み取りを拒否し、補正前の状態取得と復元は実行する。
     capture_snapshot = runtime_codex_exec.capture_worktree_snapshot
+    snapshot_reads = []
 
-    def capture_after_initial_call(work_root):
+    def capture_after_initial_call(work_root, **kwargs):
         assert calls, "no postcondition needs a pre-call artifact snapshot"
-        return capture_snapshot(work_root)
+        snapshot_reads.append(len(calls))
+        return capture_snapshot(work_root, **kwargs)
 
     monkeypatch.setattr(
         runtime_codex_exec, "capture_worktree_snapshot", capture_after_initial_call
+    )
+    monkeypatch.setattr(
+        runtime_git, "capture_worktree_snapshot", capture_after_initial_call
     )
     schema = tmp_path / "artifact_change_schema.json"
     schema.write_text(
@@ -439,12 +445,18 @@ def test_run_codex_exec_restores_artifacts_changed_by_correction(
     assert nested_file.read_text() == "nested initial\n"
     assert not (root / "extra.py").exists()
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
+    # 初回状態の固定、補正後の検出、復元確認を保ち、復元直前の重複取得を防ぐ。
+    assert len(snapshot_reads) <= 3
     events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [
         "output_correction_requested",
         "output_correction_failed",
     ]
+    assert (
+        "changed paths: ['README.md', 'extra.py', 'nested/tracked.txt', 'oracle/spec.md']"
+        in codex_events[-1]["error"]
+    )
 
 
 def test_run_codex_exec_logs_keyboard_interrupt(

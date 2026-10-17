@@ -181,14 +181,17 @@ def _collect_snapshot_repositories(
             _collect_snapshot_repositories(work_root, path, repositories)
 
 
-def restore_worktree_snapshot(snapshot: WorktreeSnapshot) -> None:
-    """現在の作業成果物を指定 snapshot と同じ filesystem 状態へ戻す。"""
+def restore_worktree_snapshot(
+    snapshot: WorktreeSnapshot, *, current: WorktreeSnapshot | None = None
+) -> None:
+    """取得済みの現在状態があれば再利用し、snapshot と同じ状態へ戻す。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Structured Output 補正 turn が変動させた path だけを初回 call 完了時へ戻す。
     frozen = dict(snapshot.entries)
     seen: set[frozenset[str]] = set()
     while True:
-        current = capture_worktree_snapshot(snapshot.root, paths=snapshot.paths)
+        if current is None:
+            current = capture_worktree_snapshot(snapshot.root, paths=snapshot.paths)
         changed = snapshot.changed_paths(current)
         if not changed:
             return
@@ -206,6 +209,8 @@ def restore_worktree_snapshot(snapshot: WorktreeSnapshot) -> None:
             artifact = frozen.get(relative)
             if artifact is not None:
                 _write_worktree_artifact(snapshot.root, Path(relative), artifact)
+        # 取得済み状態の再利用は初回だけとし、復元後は filesystem を再検査する。
+        current = None
 
 
 def _read_worktree_artifact(
