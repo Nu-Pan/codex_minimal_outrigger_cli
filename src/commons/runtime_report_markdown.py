@@ -24,8 +24,8 @@ _PURPOSES = {
     "session join": "session の変更を home branch へ取り込む",
     "session abandon": "session を終了し、対象 branch を破棄する",
     "oracle edit": "確定したユーザー指示に従い、2 回の agent call で oracle を編集する",
-    "realization apply fork": "指定 commit 範囲の oracle 変更を realization へ反映する",
-    "realization refactor fork": "realization の調査・改善を巡回し、確定済み成果を保存する",
+    "realization apply": "指定 commit 範囲の oracle 変更を realization へ反映する",
+    "realization refactor": "realization の調査・改善を巡回し、確定済み成果を保存する",
     "run join": "確定済みの run 成果を session へ取り込む",
     "run abandon": "run の process を停止し、worktree と branch を破棄する",
     "feedback report": "feedback を再確認・修正し、判定と根拠を generation にまとめる",
@@ -205,7 +205,7 @@ def _report_target(command: str, fields: dict[str, object]) -> str:
         return f"work-root: {value('work_root')}"
     if command == "oracle edit":
         return f"repo-root: {value('repo_root')} / session branch: {value('session_branch')}"
-    if command == "realization apply fork":
+    if command == "realization apply":
         return f"commit 範囲: {value('diff_base_commit')} → {value('run_fork_commit')}"
     if command == "feedback close":
         return f"案件 ID: {value('case_id')}"

@@ -1,8 +1,8 @@
 """非対話サブコマンドの primary report を保存してエディタで開く。
 
 個別 writer の確定情報を引き継ぎ、最外側で終端結果と実行記録を合わせて保存する。
-固定済みの feedback publication report は再利用し、個別 report がない早期終了は
-確定済みの runtime 情報から要約する。
+feedback report は最外側の invocation 結果を掲載し、immutable な publication と
+区別する。個別 report がない早期終了は確定済みの runtime 情報から要約する。
 
 根拠:
 - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
@@ -15,8 +15,10 @@ import stat
 import subprocess
 import tempfile
 import threading
+from collections.abc import Callable, Iterator
+from contextlib import ExitStack, contextmanager
 from contextvars import ContextVar, Token
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from .runtime_editor import select_editor
@@ -37,6 +39,7 @@ from .runtime_primary_report_specs import (
 from .runtime_report_markdown import (
     ReportSummary,
     fenced_text,
+    markdown_sections,
     render_report_document,
     terminal_outcome,
 )
@@ -71,6 +74,9 @@ class PrimaryReportContext:
     fields: dict[str, object]
     original_input: str | None = None
     prepared_report: _PreparedReport | None = None
+    save_failure_handler: Callable[[], None] | None = None
+    completion_handler: Callable[[], None] | None = None
+    finalization: ExitStack = field(default_factory=ExitStack)
 
 
 _PRIMARY_REPORT_CONTEXT: ContextVar[PrimaryReportContext | None] = ContextVar(
@@ -99,7 +105,7 @@ def start_primary_report_context(
             "first_agent_call_status": "not_started",
             "second_agent_call_status": "not_started",
         }
-    elif command_name == "realization apply fork":
+    elif command_name == "realization apply":
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
         # fallback は reporter の agent call より前にも発生するため、0 件の
         # invocation では正本が要求する空の observation 集合を確定値にする。
@@ -115,7 +121,27 @@ def start_primary_report_context(
 
 def reset_primary_report_context(token: Token[PrimaryReportContext | None]) -> None:
     """invocation-local な report context を元へ戻す。"""
-    _PRIMARY_REPORT_CONTEXT.reset(token)
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    try:
+        if context is not None:
+            context.finalization.close()
+    finally:
+        _PRIMARY_REPORT_CONTEXT.reset(token)
+
+
+@contextmanager
+def primary_report_finalization_lock(repo: Path, session_id: str) -> Iterator[None]:
+    """ready 初期化後も、最外側の終了記録が終わるまで lifecycle 排他を保つ。"""
+    # 同じ thread の後処理は再入可能な run lock を共有する。
+    from .runtime_run import run_lifecycle_lock
+
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    if context is None:
+        with run_lifecycle_lock(repo, session_id):
+            yield
+    else:
+        context.finalization.enter_context(run_lifecycle_lock(repo, session_id))
+        yield
 
 
 def update_primary_report_fields(**fields: object) -> None:
@@ -137,6 +163,87 @@ def current_primary_report_fields() -> dict[str, object]:
     """同じ invocation の先行 preprocess が確定した項目を参照する。"""
     context = _PRIMARY_REPORT_CONTEXT.get()
     return dict(context.fields) if context is not None else {}
+
+
+def set_primary_report_save_failure_handler(handler: Callable[[], None]) -> None:
+    """終了時の保存失敗で、取り込み済み run の復旧情報を保持する。"""
+    # 最外側での最後の保存にも、join と同じ失敗境界を適用する。
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    if context is not None:
+        context.save_failure_handler = handler
+
+
+def set_primary_report_completion_handler(handler: Callable[[], None]) -> bool:
+    """最後の report 保存を確認してから、残る終了記録を回収する。"""
+    # publication recovery の journal を、終了時の再保存より先に失わない。
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    if context is None:
+        return False
+    context.completion_handler = handler
+    return True
+
+
+def recover_primary_report_save_failure() -> TerminalResult:
+    """保存失敗の診断を保ち、登録済み run の error 遷移を試みる。"""
+    # state 保存自体の失敗も、元の report 保存失敗を隠さずログへ残す。
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    if context is not None and context.save_failure_handler is not None:
+        try:
+            context.save_failure_handler()
+        except BaseException as exc:
+            logger = current_subcommand_logger()
+            if logger is not None:
+                logger.event("report_failure_recovery_failed", error=repr(exc))
+    fields = context.fields if context is not None else {}
+    actions = fields.get("recovery_next_actions")
+    return TerminalResult(
+        completion_reason="error"
+        if context is not None and context.spec.template == "refactor_fork"
+        else None,
+        details=tuple(
+            (name, fields[name])
+            for name in (
+                "state_after",
+                "run_branch",
+                "run_worktree",
+                "run_join_commit",
+                "cleanup",
+                "remaining_resources",
+            )
+            if name in fields
+        )
+        + (
+            (("unresolved targets", fields["unresolved_target_count"]),)
+            if "unresolved_target_count" in fields
+            else ()
+        ),
+        next_actions=tuple(str(action) for action in actions)
+        if isinstance(actions, (tuple, list))
+        else (),
+    )
+
+
+def save_prepared_primary_report(
+    path: Path, classification: TerminalClassification, result: TerminalResult
+) -> Path:
+    """資源回収後も、保存済みの詳細と最新の終了情報を合わせて更新する。"""
+    # 削除した run worktree を再読せず、取り込み前に確定した詳細を使う。
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    logger = current_subcommand_logger()
+    if context is None or context.prepared_report is None or logger is None:
+        raise PrimaryReportSaveError(path)
+    rewrite_primary_report(
+        path,
+        _finish_prepared_report(
+            context.prepared_report,
+            context.fields,
+            classification,
+            1 if classification == "error" else 0,
+            result,
+            logger,
+        ),
+    )
+    return path
 
 
 def prepare_primary_report(
@@ -169,6 +276,18 @@ def ensure_primary_report(
 ) -> TerminalResult:
     """保存済み report を検証し、未作成の終了経路へ fallback を保存する。"""
     context = _PRIMARY_REPORT_CONTEXT.get()
+    if (
+        result.primary_report is None
+        and context is not None
+        and context.prepared_report is not None
+    ):
+        prepared_path = context.prepared_report.path
+        if prepared_path.is_file() and prepared_path.stat().st_size:
+            result = replace(
+                result,
+                primary_report=prepared_path,
+                primary_report_role=context.spec.role,
+            )
     if result.primary_report is not None:
         report_path = result.primary_report
         try:
@@ -176,7 +295,7 @@ def ensure_primary_report(
             # feedback publication は hash 確定前に実行記録を描画する。
             # その他の個別 report は最外側 invocation の終了時に記録を追加する。
             content = report_path.read_text(encoding="utf-8")
-            if command_name in {"feedback report", "feedback close"}:
+            if command_name == "feedback close":
                 if "\n## 実行記録\n" not in content:
                     raise PrimaryReportSaveError(report_path)
             else:
@@ -208,6 +327,13 @@ def ensure_primary_report(
                     report_path,
                     updated,
                 )
+            if (
+                classification != "error"
+                and context is not None
+                and context.completion_handler is not None
+            ):
+                context.completion_handler()
+                context.completion_handler = None
         except PrimaryReportSaveError:
             raise
         except BaseException as exc:
@@ -290,6 +416,18 @@ def _finish_prepared_report(
         next_actions=actions,
     )
     details = prepared.details
+    if "join_status" in fields:
+        from .runtime_primary_report_render import join_result_lines
+
+        details += "\n\n" + markdown_sections(join_result_lines(fields))
+        summary = replace(
+            summary,
+            scope=(
+                *summary.scope,
+                f"run state: {fields.get('state_after')}",
+                f"join: {fields.get('join_status')} / cleanup: {fields.get('cleanup')}",
+            ),
+        )
     if notices:
         details += "\n\n## 終了時の確認事項\n\n" + fenced_text("\n".join(notices))
     return render_report_document(
@@ -411,14 +549,14 @@ def _report_fields(
         known.setdefault("result", result.result)
     if result.completion_reason is not None:
         known.setdefault("completion_reason", result.completion_reason)
-    if command_name == "realization refactor fork" and classification in {
+    if command_name == "realization refactor" and classification in {
         "user_interruption",
         "error",
     }:
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
         # report fallback 自体が作られる終了経路でも、共通分類と reason を一致させる。
         known["completion_reason"] = classification
-    if command_name == "realization apply fork" and classification == "error":
+    if command_name == "realization apply" and classification == "error":
         # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
         # apply の共通 fork report は error 終了理由を必須項目として持つ。
         # run 開始前の fallback では個別 report が reason を渡せないため補う。

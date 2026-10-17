@@ -141,9 +141,7 @@ def test_refactor_preprocess_interruption_preserves_user_changes(
     monkeypatch.setattr(
         doctor_module, "_synchronize_document_search_index", interrupt_sync
     )
-    result = runner.invoke(
-        app, ["realization", "refactor", "fork"], catch_exceptions=False
-    )
+    result = runner.invoke(app, ["realization", "refactor"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     assert run_git(root, "rev-parse", "HEAD").stdout == head
     assert run_git(root, "diff", "--binary").stdout == before
@@ -179,9 +177,7 @@ def test_refactor_preprocess_interruption_keeps_committed_repairs(
         signal.raise_signal(signal.SIGINT)
 
     monkeypatch.setattr(doctor_module, "_commit_doctor_repairs", commit_then_interrupt)
-    result = runner.invoke(
-        app, ["realization", "refactor", "fork"], catch_exceptions=False
-    )
+    result = runner.invoke(app, ["realization", "refactor"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     assert run_git(root, "rev-parse", "HEAD").stdout != head
     assert run_git(root, "status", "--short").stdout == ""
@@ -232,9 +228,7 @@ def test_refactor_preprocess_stop_restores_pending_linked_worktree_index(
     monkeypatch.setattr(
         doctor_module, "_commit_doctor_repairs", interrupt_after_main_commit
     )
-    result = runner.invoke(
-        app, ["realization", "refactor", "fork"], catch_exceptions=False
-    )
+    result = runner.invoke(app, ["realization", "refactor"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     assert run_git(root, "rev-parse", "HEAD").stdout != head
     for worktree, (unstaged, staged) in before.items():

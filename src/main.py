@@ -182,15 +182,11 @@ app = typer.Typer(
 session_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 oracle_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
-realization_apply_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
-realization_refactor_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 run_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 feedback_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 app.add_typer(session_app, name="session")
 app.add_typer(oracle_app, name="oracle")
 app.add_typer(realization_app, name="realization")
-realization_app.add_typer(realization_apply_app, name="apply")
-realization_app.add_typer(realization_refactor_app, name="refactor")
 app.add_typer(run_app, name="run")
 app.add_typer(feedback_app, name="feedback")
 
@@ -260,22 +256,22 @@ def oracle_investigation() -> None:
     cmoc_oracle_investigation_impl()
 
 
-@realization_apply_app.command("fork")
-def realization_apply_fork() -> None:
+@realization_app.command("apply")
+def realization_apply() -> None:
     """oracle 差分へ追従する realization run を開始する CLI 入口。"""
-    from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
+    from sub_commands.realization.apply import cmoc_realization_apply_impl
 
-    cmoc_realization_apply_fork_impl()
+    cmoc_realization_apply_impl()
 
 
-@realization_refactor_app.command("fork")
-def realization_refactor_fork() -> None:
+@realization_app.command("refactor")
+def realization_refactor() -> None:
     """full realization refactor cycle を開始する CLI 入口。"""
-    from sub_commands.realization.refactor.fork import (
-        cmoc_realization_refactor_fork_impl,
+    from sub_commands.realization.refactor import (
+        cmoc_realization_refactor_impl,
     )
 
-    cmoc_realization_refactor_fork_impl()
+    cmoc_realization_refactor_impl()
 
 
 @run_app.command("join")

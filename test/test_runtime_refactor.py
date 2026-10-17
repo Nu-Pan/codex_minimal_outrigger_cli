@@ -18,7 +18,7 @@ from _git_support import run_git
 
 import commons.runtime_git as git_module
 import commons.runtime_refactor as refactor_module
-import sub_commands.realization.refactor.fork as refactor_workload
+import sub_commands.realization.refactor as refactor_workload
 from cmoc_runtime import CmocError, file_sha256
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
 from commons.runtime_refactor import (

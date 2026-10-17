@@ -177,7 +177,9 @@ def feedback_run(tmp_path, monkeypatch):
     monkeypatch.setattr(remediation, "sync_refactor_state", lambda *_args: None)
     monkeypatch.setattr(remediation, "stop_tracked_codex_children", lambda *_args: None)
     monkeypatch.setattr(remediation, "_update_progress", lambda *_args: None)
-    monkeypatch.setattr(remediation, "doctor_preprocess_for_join", lambda: None)
+    monkeypatch.setattr(
+        remediation, "doctor_preprocess_for_join", lambda **_kwargs: None
+    )
     monkeypatch.setattr(
         remediation, "validate_run_join", lambda *_args, **_kwargs: None
     )
@@ -236,7 +238,7 @@ def test_empty_wave_collects_basis_only_after_an_issue_arrives(
         assert h.candidates, "an empty wave has no issue basis to collect"
         return collect_inputs(worktree)
 
-    def prepare_join():
+    def prepare_join(**_kwargs):
         if late_issue and not h.candidates:
             _add_candidate(h, "a")
 

@@ -108,6 +108,45 @@ def read_run_artifact(repo: Path, reference: dict[str, Any]) -> dict[str, Any]:
     return _read_canonical_object(path, "feedback run artifact", expected_sha256=digest)
 
 
+def unpublished_join_record(repo: Path, directory: Path) -> dict[str, Any] | None:
+    """終了済みの非 publication run を、再開対象の report cut と区別する。"""
+    # checkpoint は元の参照とともに残し、receipt が固定した manifest を検証する。
+    path = directory / "join_result.json"
+    if not path.exists() and not path.is_symlink():
+        return None
+    record = _read_canonical_object(path, "unpublished feedback join")
+    _require_exact_fields(
+        record,
+        {"schema_version", "publication", "identity", "session_commit", "manifest"},
+        path,
+        "unpublished feedback join",
+    )
+    if (
+        type(record["schema_version"]) is not int
+        or record["schema_version"] != 1
+        or record["publication"] is not False
+    ):
+        raise _corruption("非 publication join の version/result が不正です。", path)
+    manifest_path, digest = _resolve_artifact_reference(
+        repo,
+        record["manifest"],
+        expected_root=directory,
+        description="unpublished join manifest",
+    )
+    if manifest_path != directory / "manifest.json":
+        raise _corruption("非 publication join の manifest path が不正です。", path)
+    manifest = _read_canonical_object(
+        manifest_path, "unpublished join manifest", expected_sha256=digest
+    )
+    if (
+        record["identity"] != manifest.get("run", {}).get("identity")
+        or not isinstance(record["session_commit"], str)
+        or re.fullmatch(r"[0-9a-f]{40}", record["session_commit"]) is None
+    ):
+        raise _corruption("非 publication join の identity/commit が不正です。", path)
+    return record
+
+
 def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     """各 issue の最後の論理 call を publication 用に選ぶ。履歴は削除しない。"""
     selected: dict[str, dict[str, Any]] = {}

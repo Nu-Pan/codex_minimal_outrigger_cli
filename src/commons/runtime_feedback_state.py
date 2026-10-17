@@ -2711,6 +2711,10 @@ def _find_report_cut_manifest(repo: Path) -> Path | None:
             raise _corruption(
                 "feedback report work root に未定義 artifact があります。", path
             )
+        from .runtime_feedback_run_state import unpublished_join_record
+
+        if unpublished_join_record(repo, path) is not None:
+            continue
         directories.append(path)
     if len(directories) > 1:
         raise _corruption("再開対象の feedback report cut が複数あります。", root)

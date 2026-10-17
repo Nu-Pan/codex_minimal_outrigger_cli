@@ -15,6 +15,7 @@ import html
 import json
 import os
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from inspect import getsourcefile
 from pathlib import Path
@@ -75,14 +76,27 @@ from commons.runtime_feedback_store import (
     write_immutable_bytes,
 )
 from commons.runtime_json_schema import checked_schema_validator
-from commons.runtime_logging import current_subcommand_logger
+from commons.runtime_logging import current_execution_id, current_subcommand_logger
 from commons.runtime_paths import reports_dir
-from commons.runtime_primary_report import update_primary_report_fields
-from commons.runtime_primary_report_render import saved_execution_notices
+from commons.runtime_primary_report import (
+    current_primary_report_fields,
+    prepare_primary_report,
+    rewrite_primary_report,
+    update_primary_report_fields,
+    write_reserved_primary_report,
+)
+from commons.runtime_primary_report_render import (
+    feedback_invocation_lines,
+    feedback_statuses,
+    saved_execution_notices,
+)
+from commons.runtime_primary_report_specs import TerminalClassification
 from commons.runtime_report_markdown import (
+    ReportSummary,
     fenced_text,
     markdown_sections,
     render_report_document,
+    terminal_outcome,
 )
 from commons.runtime_results import StructuredOutputValidationIssue
 
@@ -110,6 +124,101 @@ def _cmoc_feedback_report_body() -> TerminalResult:
     from .remediation import run_feedback_report
 
     return run_feedback_report()
+
+
+def save_feedback_invocation_report(
+    repo: Path,
+    classification: TerminalClassification,
+    result: TerminalResult,
+    *,
+    publication_report: Path | None = None,
+) -> Path:
+    """publication を変更せず、今回の run 終了結果を primary report に保存する。"""
+    # 保存先は今回の execution ID に固定し、recovery 元の入力を付け替えない。
+    logger = current_subcommand_logger()
+    if logger is None:
+        raise RuntimeError("feedback invocation logger is unavailable")
+    path = reports_dir(repo, "feedback/invocation") / f"{current_execution_id(repo)}.md"
+    fields = {
+        "command": "cmoc feedback report",
+        "execution_id": logger.execution_id,
+        "generated_at": rfc3339_now(),
+        "repo_root": repo,
+        "subcommand_log_path": logger.path,
+        **current_primary_report_fields(),
+        **feedback_statuses(logger),
+        "terminal_classification": classification,
+        "exit_code": 1 if classification == "error" else 0,
+    }
+    if result.result is not None:
+        fields["result"] = result.result
+    body = feedback_invocation_lines(classification, result, logger, fields)
+    if publication_report is not None:
+        # publication の generation と一覧を使い、現時点の未確定 candidate は載せない。
+        state = load_active_state(repo)
+        fields.update(
+            publication_established=True,
+            publication_report=str(publication_report),
+            published_generation=state.current,
+        )
+        if fields["current_pointer_update_status"] != "completed":
+            # recovery は今回 pointer を切り替えず、元の publication の成立を確認する。
+            fields.update(
+                normal_publication_status="previously_completed"
+                if result.result != "incomplete"
+                else "not_completed",
+                incomplete_diagnostic_status="previously_completed"
+                if result.result == "incomplete"
+                else "not_completed",
+                current_pointer_update_status="previously_completed",
+            )
+        body.extend(
+            [
+                "## Publication",
+                f"- publication report: `{publication_report}`",
+                "- この一覧は publication が確定した generation の時点を示します。",
+                "",
+                render_current_cases(state.issues),
+            ]
+        )
+        summary = feedback_report_summary(
+            state.issues,
+            terminal_outcome(classification),
+            scope=(
+                f"run state: {fields.get('state_after')}",
+                f"cleanup: {fields.get('cleanup')}",
+            ),
+        )
+    else:
+        summary = ReportSummary(
+            terminal_outcome(classification),
+            (
+                f"run state: {fields.get('state_after')}",
+                "publication は行っていません。保持した観測と active record は次回 report で再確認します。",
+            ),
+            tuple(result.warnings),
+            result.next_actions,
+        )
+    if fields.get("state_after") != "ready" and classification != "error":
+        fields.update(terminal_classification=None, exit_code=None)
+        summary = replace(
+            summary,
+            outcome="取り込み後の終了処理は未完了です。state 初期化と cleanup の結果を確認してください。",
+        )
+    content = prepare_primary_report(
+        path,
+        "cmoc feedback report invocation report",
+        fields,
+        summary,
+        markdown_sections(body),
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        rewrite_primary_report(path, content)
+    else:
+        path.open("x").close()
+        write_reserved_primary_report(path, content)
+    return path.resolve()
 
 
 def _pending_observations(
@@ -2208,7 +2317,7 @@ def _record_feedback_interruption(
             ),
         )
         next_actions = (
-            "`cmoc run join` で確定済み修正を取り込むか、`cmoc run abandon` で破棄してください。",
+            "保持した観測と active record は、次の新しい `cmoc feedback report` で再確認してください。",
         )
     return TerminalResult(details=details, next_actions=next_actions)
 

@@ -894,7 +894,7 @@ def test_cli_parse_error_report_is_written_to_stderr() -> None:
 
 def test_unknown_subcommand_option_is_rejected_by_cli_parser() -> None:
     """未知の option はサブコマンド実行前の CLI 解析で拒否する。"""
-    argv = ["realization", "apply", "fork", "--scope", "bad"]
+    argv = ["realization", "apply", "--scope", "bad"]
     result = runner.invoke(app, argv)
 
     assert result.exit_code != 0

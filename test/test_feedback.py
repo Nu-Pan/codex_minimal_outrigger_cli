@@ -22,6 +22,7 @@ import hashlib
 import itertools
 import json
 import os
+import signal
 import socket
 import threading
 from copy import deepcopy
@@ -36,6 +37,7 @@ import pytest
 from _acp_builder_support import oracle_schema_path
 from _cli_support import runner, seed_search_config, terminal_primary_report
 from _git_support import SESSION_ID, current_branch, make_repo, run_git
+from _report_support import assert_report_layout, report_metadata, report_section
 from oracle.acp_builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter as _build_canonical_normalize_parameter,
 )
@@ -78,6 +80,7 @@ from commons.runtime_feedback_protocol import (
     REPORTER_PROTOCOL_VERSION,
 )
 from commons.runtime_feedback_state import (
+    current_pointer_path,
     feedback_writer_lock,
     issue_id,
     load_active_state,
@@ -2874,7 +2877,7 @@ def test_feedback_preconditions_preserve_existing_changes_and_raw(
 
         result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
-        doctor.assert_called_once_with()
+        doctor.assert_called_once_with(rollback_on_interruption=True)
         doctor.reset_mock()
         assert result.exit_code == 1, (condition, result.output)
         expected_error = (
@@ -3009,8 +3012,6 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
         ("checkpoint", "join"),
         ("checkpoint_reference", "join"),
         ("checkpoint_reference", "abandon"),
-        ("interrupt", "join"),
-        ("interrupt", "abandon"),
     ],
 )
 def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
@@ -3093,13 +3094,130 @@ def test_feedback_interrupt_after_run_start_reports_retained_run(
 
     assert result.exit_code == 0, result.output
     session_state = json.loads(session_path.read_text())
-    assert session_state["run"]["state"] == "joinable"
+    assert session_state["run"]["state"] == "ready"
     report_text = terminal_primary_report(result).read_text()
     assert 'terminal_classification: "user_interruption"' in report_text
     assert 'run_kind: "feedback_report"' in report_text
     assert 'state_before: "ready"' in report_text
-    assert 'state_after: "joinable"' in report_text
-    assert "保持した feedback run" in result.output
+    assert 'state_after: "ready"' in report_text
+    assert "cmoc run join" not in result.output
+
+
+def test_feedback_interruption_joins_commits_and_next_report_reconfirms(
+    feedback_publication_session,
+    monkeypatch,
+):
+    """中断は publication せず checkpoint を残し、次の report は全入力を再確認する。"""
+    root = feedback_publication_session
+    initial = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert initial.exit_code == 0, initial.output
+    pointer = current_pointer_path(root).read_bytes()
+    inputs = []
+    for path in ("README.md", "oracle/spec.md"):
+        accepted, raw = store_agent_observation(
+            root, _context(root, session_id=SESSION_ID), _payload(path=path)
+        )
+        inputs.append((issue_id(f"agent\0{accepted['observation_id']}"), raw, path))
+    by_id = {identity: path for identity, _raw, path in inputs}
+    handled = []
+
+    def repair_then_interrupt(parameter, **_kwargs):
+        if handled:
+            signal.raise_signal(signal.SIGINT)
+            pytest.fail("issue resumed after interruption")
+        identity = sorted(by_id)[0]
+        handled.append(identity)
+        (parameter.agent_call_cwd / "README.md").write_text("confirmed repair\n")
+        output = _remediation_output(identity, "fixed", reference_path=by_id[identity])
+        output["result"]["changed_paths"] = ["README.md"]
+        return _fake_result(root, output)
+
+    monkeypatch.setattr(feedback_report_module, "run_codex_exec", repair_then_interrupt)
+    interrupted = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert interrupted.exit_code == 0, interrupted.output
+    assert current_pointer_path(root).read_bytes() == pointer
+    assert (root / "README.md").read_text() == "confirmed repair\n"
+    assert all(raw.exists() for _identity, raw, _path in inputs)
+    assert load_report_cut(root) is None
+
+    [receipt] = (root / ".cmoc/gu/feedback/work").glob("*/join_result.json")
+    manifest_path = receipt.parent / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    [checkpoint] = manifest["processing"]["remediation_checkpoints"]
+    checkpoint_path = root / checkpoint["path"]
+    checkpoint_content = checkpoint_path.read_bytes()
+    text = terminal_primary_report(interrupted).read_text()
+    assert 'state_after: "ready"' in text
+    assert 'terminal_classification: "user_interruption"' in text
+    assert "publication は行っていません" in text
+    assert not Path(
+        json.loads(receipt.read_text())["identity"]["run_worktree"]
+    ).exists()
+    assert "cmoc run join" not in report_section(text, "次の操作")
+
+    rechecked = []
+
+    def reconfirm(parameter, **_kwargs):
+        assert (
+            parameter.agent_call_cwd / "README.md"
+        ).read_text() == "confirmed repair\n"
+        identity = sorted(by_id)[len(rechecked)]
+        rechecked.append(identity)
+        return _fake_result(
+            root,
+            _remediation_output(
+                identity, "already_resolved", reference_path=by_id[identity]
+            ),
+        )
+
+    monkeypatch.setattr(feedback_report_module, "run_codex_exec", reconfirm)
+    completed = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert completed.exit_code == 0, completed.output
+    assert rechecked == sorted(by_id)
+    assert current_pointer_path(root).read_bytes() != pointer
+    assert all(not raw.exists() for _identity, raw, _path in inputs)
+    assert checkpoint_path.read_bytes() == checkpoint_content
+    assert load_report_cut(root) is None
+
+
+def test_feedback_outer_report_failure_retains_publication_recovery(
+    feedback_publication_session, monkeypatch
+):
+    """最後の invocation 保存失敗でも journal と immutable な publication を残す。"""
+    import commons.runtime_primary_report as primary_report
+
+    root = feedback_publication_session
+    original = primary_report.rewrite_primary_report
+    with monkeypatch.context() as failing:
+        failing.setattr(
+            primary_report,
+            "rewrite_primary_report",
+            lambda *_args: (_ for _ in ()).throw(OSError("outer report save failed")),
+        )
+        failed = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert failed.exit_code == 1, failed.output
+    assert primary_report.rewrite_primary_report is original
+    state = load_active_state(root)
+    publication = root / state.current["report_path"]
+    saved_publication = publication.read_bytes()
+    assert (feedback_root(root) / "finalization.json").is_file()
+    assert (
+        json.loads(state_path(root, SESSION_ID).read_text())["run"]["state"] == "error"
+    )
+    assert "cmoc feedback report" in failed.output
+    assert "cmoc run abandon" not in failed.output
+    monkeypatch.setattr(
+        feedback_report_module,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: pytest.fail("recovery must not start a call"),
+    )
+    recovered = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
+    assert recovered.exit_code == 0, recovered.output
+    assert publication.read_bytes() == saved_publication
+    assert not (feedback_root(root) / "finalization.json").exists()
+    assert (
+        json.loads(state_path(root, SESSION_ID).read_text())["run"]["state"] == "ready"
+    )
 
 
 def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
@@ -3122,8 +3240,11 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
 
     assert result.exit_code == 0, result.output
     session_state = json.loads(session_path.read_text())
-    assert session_state["run"]["state"] == "joinable"
-    manifest, manifest_path = load_report_cut(root)
+    assert session_state["run"]["state"] == "ready"
+    assert load_report_cut(root) is None
+    [manifest_path] = (root / ".cmoc/gu/feedback/work").glob("*/manifest.json")
+    manifest = json.loads(manifest_path.read_text())
+    assert (manifest_path.parent / "join_result.json").is_file()
     assert manifest["processing"]["status"] == "interrupted"
     assert 'terminal_classification: "user_interruption"' in (
         terminal_primary_report(result).read_text()
@@ -3145,7 +3266,7 @@ def test_feedback_interrupt_after_report_cut_write_recovers_manifest(
         catch_exceptions=False,
     )
     assert rejected.exit_code == 1, rejected.output
-    assert "未完了の feedback run/publication/cleanup" in rejected.stderr
+    assert "未完了の feedback run/publication/cleanup" not in rejected.stderr
     assert "feedback/invocation" in str(terminal_primary_report(rejected))
     assert load_close_work(root) is None
     assert load_active_state(root) == before
@@ -3193,6 +3314,7 @@ def test_feedback_interrupt_cleanup_failure_sets_error_and_reports(
         "publication",
         "raw_cleanup",
         "cleanup",
+        "branch_cleanup",
         "merge_reference",
         "completion_reference",
     ],
@@ -3204,6 +3326,7 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
 ) -> None:
     """自動 join 後の失敗は修復 commit と公開入力を保持して同じ run を完了する。"""
     import commons.runtime_feedback_run_state as run_state_module
+    import commons.runtime_run_join as join_runtime
     import sub_commands.feedback.recovery as recovery_module
 
     root = feedback_publication_session
@@ -3217,6 +3340,9 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
 
     target = feedback_report_module if fault == "publication" else recovery_module
     name = "publish_current_pointer" if fault == "publication" else "cleanup_joined_run"
+    if fault == "branch_cleanup":
+        target = join_runtime
+        name = "delete_branch"
     if fault == "raw_cleanup":
         target = feedback_state_module
         name = "_unlink_artifact_reference"
@@ -3239,7 +3365,9 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     assert (root / "README.md").read_text() == "joined repair\n"
     report_text = terminal_primary_report(result).read_text()
     publication_status = (
-        "completed" if fault in {"raw_cleanup", "cleanup"} else "not_completed"
+        "completed"
+        if fault in {"raw_cleanup", "cleanup", "branch_cleanup"}
+        else "not_completed"
     )
     for field, label, expected in (
         ("normal_publication_status", "正常 publication", publication_status),
@@ -3250,7 +3378,7 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert f"- {label}: `{expected}`" in report_text
     joined_head = run_git(root, "rev-parse", "HEAD").stdout
     saved_report = None
-    if fault in {"raw_cleanup", "cleanup"}:
+    if fault in {"raw_cleanup", "cleanup", "branch_cleanup"}:
         published = load_active_state(root)
         assert published.current is not None
         saved_report = root / published.current["report_path"]
@@ -3262,7 +3390,7 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert "publication_established: true" in report_text
     # 手動操作の拒否は merge 記録（参照回復を含む）と finalization journal の両経路で検査する。
     # completion/publication の障害種別や raw cleanup の進捗は、この拒否条件を変えない。
-    if fault in {"merge_reference", "cleanup"}:
+    if fault in {"merge_reference", "cleanup", "branch_cleanup"}:
         for operation in ("join", "abandon"):
             rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
             assert rejected.exit_code == 1, rejected.output
@@ -3281,6 +3409,21 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     )
     recovered = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
     assert recovered.exit_code == 0, recovered.output
+    invocation = terminal_primary_report(recovered)
+    assert invocation.parent == root / ".cmoc/gu/report/feedback/invocation"
+    assert invocation != terminal_primary_report(result)
+    metadata = report_metadata(invocation.read_text())
+    assert metadata["execution_id"] == invocation.stem
+    assert metadata["publication_execution_id"] == terminal_primary_report(result).stem
+    assert metadata["state_before"] == "error"
+    assert metadata["state_after"] == "ready"
+    assert metadata["cleanup"] == "completed"
+    assert metadata["publication_established"] is True
+    assert (
+        Path(metadata["publication_report"]).stem
+        == metadata["publication_execution_id"]
+    )
+    assert_report_layout(invocation.read_text())
     assert run_git(root, "rev-parse", "HEAD").stdout == joined_head
     assert not raw.exists()
     assert load_report_cut(root) is None

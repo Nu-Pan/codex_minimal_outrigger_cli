@@ -4,6 +4,7 @@ import traceback
 from collections.abc import Callable, Sequence
 from contextlib import nullcontext
 from contextvars import ContextVar
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 
@@ -38,8 +39,10 @@ from .runtime_paths import (
 )
 from .runtime_primary_report import (
     PrimaryReportSaveError,
+    current_primary_report_fields,
     ensure_primary_report,
     open_primary_report_in_editor,
+    recover_primary_report_save_failure,
     reset_primary_report_context,
     start_primary_report_context,
 )
@@ -193,7 +196,7 @@ def run_cli_subcommand(
         # refactor の停止後は、report・終端表示中の再中断も同じ正常な終了へ集約する。
         with (
             defer_recovery_interruption(check_pending=False, propagate=False)
-            if name == "realization refactor fork" and _CURRENT_USER_INTERRUPTION.get()
+            if name == "realization refactor" and _CURRENT_USER_INTERRUPTION.get()
             else nullcontext()
         ):
             stop_feedback()
@@ -435,6 +438,12 @@ def _finalize_subcommand(
             pass
 
     terminal_result = _error_terminal_result(specific_result, error)
+    recovery_actions = current_primary_report_fields().get("recovery_next_actions")
+    if error is not None and isinstance(recovery_actions, (tuple, list)):
+        terminal_result = replace(
+            terminal_result,
+            next_actions=tuple(str(action) for action in recovery_actions),
+        )
     try:
         terminal_result = ensure_primary_report(
             logger.root,
@@ -449,10 +458,11 @@ def _finalize_subcommand(
         # {{work-root}}/oracle/doc/app_spec/error_handling.md
         # report 保存失敗は元の終端結果に代わる internal failure とする。未保存の
         # role/path を持たない新しい result を使い、console へ候補 path を出さない。
+        recovered_result = recover_primary_report_save_failure()
         classification = "error"
         returncode = 1
         error = report_error
-        terminal_result = _error_terminal_result(TerminalResult(), report_error)
+        terminal_result = _error_terminal_result(recovered_result, report_error)
     if terminal_result.primary_report is not None:
         try:
             open_primary_report_in_editor(terminal_result.primary_report)
