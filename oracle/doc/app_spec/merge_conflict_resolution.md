@@ -55,7 +55,8 @@ cmoc は merge を行っている worktree を call の cwd とし、merge 前�
 - `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py` の `build_conflict_resolution_policy`：共通の統合・検証方針の文面と、完了判定を含む報告の正確な表現。
 - `{{cmoc-root}}/oracle/src/oracle/prompt_builder/merge_conflict_resolution.py` の `build_merge_conflict_resolution_prompt`：共通の objective、commit 参照入力、および prompt part の構築。
 - `{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`：完全 prompt への共通規定と追加文面の統合。
-- `{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls`：競合解消 call の provider、model、および reasoning effort の設定値。
+
+競合解消 call の設定選択は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」に従う。provider、model、および reasoning effort の正確な設定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` へ委譲する。
 
 call 固有の編集範囲と起動定義の委譲先は各 join の仕様で定める。競合解消専用の新しい Structured Output schema、永続 state、または解消内容を再審査する追加レビュー call は設けない。最外側の primary report の重要事項確認は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従い、競合解消の検証・受理とは分ける。
 

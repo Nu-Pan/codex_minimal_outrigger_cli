@@ -208,7 +208,7 @@ cmoc の管理データは `.cmoc/gt` または `.cmoc/gu` 配下に配置する
 ## Model provider、Model、Reasoning Effort
 
 - agent call ごとの直接設定、値の意味、検証境界、および provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「Codex model provider」を正本とする
-- cmoc は各 agent call に使用する設定を、同仕様の「agent call ごとの直接設定」と「回復確認 probe の設定例外」に従って取得する
+- cmoc は各 agent call に使用する設定を、同仕様の「agent call ごとの直接設定」が定める設定取得キーの選択規則と、「回復確認 probe の設定例外」に従って取得する
 - `cmoc oracle edit` の設定の確定時点と両回での共用は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「ユーザー指示と prompt の構築」に従う
 - TUI 新規起動の二段階で共用する設定と、後日の公開 resume の取得時点は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「TUI 起動での設定の確定」に従う
 - 取得した model provider、Model、Reasoning Effort、および provider-local 設定は、初回、Structured Output の補正、retry、および回復待ち後の再開を含む同一 agent call 内の全 Codex call で変更せず使用する

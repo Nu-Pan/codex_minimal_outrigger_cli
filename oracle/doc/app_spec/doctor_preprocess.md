@@ -20,7 +20,9 @@ cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利�
 
 cmoc 本体と doctor を起動するための Python 環境・起動用依存は事前導入の範囲とする。検索用 runtime・モデル等の未準備を、doctor 自身を起動できない理由にしてはならない。doctor は OS、Git、Codex CLI、または model provider の導入・修復を担わず、自動修復しない必須依存の不足も診断してエラーとする。
 
-保存設定は、検索設定に加え、既存の agent call 種別に必要な設定の存在・構造と provider 定義への参照整合性を検証する。設定の正確な構造は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig`、検証の意味と限界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「provider 定義」に従う。検索以外の既存設定を自動で置換せず、不備には手動修正を案内する。provider 固有の認証・疎通や Model の互換性検査を追加しない。
+保存設定は、検索設定に加え、`agent_calls` のキー集合、そこに置く共有設定と個別設定、および provider 定義の存在・構造と参照整合性を検証する。設定の正確な構造は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig` と `CmocConfigCodex`、検証の意味と限界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「provider 定義」に従う。
+
+検索以外の保存済み設定を自動で補完・置換せず、不備には手動修正を案内する。設定ファイル自体がない場合の生成は、本書の「検索設定の検証と補完」に従う。provider 固有の認証・疎通や Model の互換性検査を追加しない。
 
 ## 実行手順
 

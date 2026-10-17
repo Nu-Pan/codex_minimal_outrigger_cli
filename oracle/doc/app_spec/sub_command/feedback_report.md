@@ -139,7 +139,7 @@ call の境界を次に示す。
 - agent に feedback state file、Git index、branch、commit、または worktree lifecycle を操作させない。
 - candidate 外の issue を remediation 対象として探索させない。
 
-issue remediation call の provider、model、および reasoning effort の既定値を含む正確な設定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` へ委譲する。設定値を prompt 文面へ注入してはならない。
+issue remediation call の設定選択は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」に従う。provider、model、および reasoning effort の既定値を含む正確な設定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls["realization_edit"]` へ委譲する。設定値を prompt 文面へ注入してはならない。
 
 ### Structured Output と結果分類
 

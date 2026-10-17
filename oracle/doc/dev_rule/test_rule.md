@@ -62,8 +62,8 @@ Codex CLI 呼び出しには、実在の Codex CLI executable（Real Codex CLI�
 
 ### Model provider、Model、Reasoning Effort、および quota
 
-- 実経路統合テストから発生する各 agent call は、テスト用 `CmocConfig` の対応する `agent_call_kind` entry から model provider、Model、および Reasoning Effort の直接文字列を取得する
-- テスト用 `CmocConfig` には、実経路統合テストから発生する各 agent call 種別の設定を用意する
+- テスト用 `CmocConfig` でも、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「回復確認 probe の設定例外」に従って model provider、Model、および Reasoning Effort の直接文字列を取得する
+- テスト用 `CmocConfig` は、同仕様の委譲先が定める共有設定、個別設定、および provider 定義を備えた構造とする
 - テスト用 `CmocConfig` の直接設定は、必要な実推論を維持しながら実経路統合テストの quota 消費を抑えるために、通常の既定設定と異なる値を使用してよい
 - 実経路統合テスト専用の cmoc 固有なモデル分類または推論強度分類を導入してはならない
 - 自動テストによる quota 消費を一律には禁止せず、テスト用 `CmocConfig` で選択される model provider の quota 消費を許容する
@@ -74,6 +74,22 @@ Codex CLI 呼び出しには、実在の Codex CLI executable（Real Codex CLI�
 ## Fake Codex CLI
 
 Fake Codex CLI は、Real Codex CLI の代わりに決定論的な応答を返し、cmoc の制御ロジックと Codex CLI 呼び出しの前後処理を検証するために使用する。
+
+### agent call の設定選択と固定
+
+設定の生成・検証は単体テスト、起動設定への反映は Fake Codex CLI を中心に、次を確認する。意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「回復確認 probe の設定例外」と、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Model provider、Model、Reasoning Effort」を正本とする。
+
+| 検証対象 | 確認する結果 |
+|---|---|
+| 共有キーによる選択と反映 | `agent_calls["realization_edit"]` の各項目を変更すると、共有対象4種すべての起動 argv に反映される。run join は自動 join と明示 join の両方を確認し、ログ・feedback 等で使う各 call 固有の `agent_call_kind` は維持する |
+| 設定の配置と個別上書きの拒否 | 生成する設定では共有設定と個別設定を `agent_calls` に置き、共有対象の個別 entry を含めない。保存設定に共有対象の call 名の entry または個別上書きを加えると、通常の構造検証で拒否する |
+| 共有設定欠落時の拒否 | 共有グループ名の entry が欠けた場合、所属 call の個別 entry を代わりに置いた場合も含め、起動前に拒否し、自身の call 名へ fallback しない |
+| 対象外の個別選択 | 共有対象外7種に異なる設定値を用意し、それぞれ自身の call 名をキーとする `agent_calls` の entry を選ぶ。primary report 確認を本命 call の設定で代用しない |
+| その他の設定不備の拒否 | 必須の個別設定・provider 定義の欠落、構造・型・値の制約違反、および provider 参照不整合では、暗黙の補完・変換をせず起動前に拒否する |
+| 同一 call 内の固定 | 設定元を変更しても、初回・Structured Output 補正・retry・回復待ち後の再開では、確定済みの直接文字列と provider-local 設定を保持する |
+| probe の例外 | 一時障害の回復確認では、共有設定を使う本命 call を含め、停止した call の確定値と同じ認証適用先を使う。quota から一時障害の確認へ切り替わった後の条件保持と、一時障害の確認を含まない quota 待機での probe 個別設定の選択を区別する |
+
+TUI の設定確定時点は、次節の「TUI の二段階起動と公開 resume」で検証する。この設定統合のために Real Codex CLI を使うテストを追加・実行するのは、人間の明示指示がある場合に限る。実行の選択と手順は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」に従う。
 
 ### TUI の二段階起動と公開 resume
 

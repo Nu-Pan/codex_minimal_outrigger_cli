@@ -195,7 +195,7 @@ agent は、全文に記された目標未達、未完了、未検証、未解�
 
 - `{{cmoc-root}}/oracle/src/oracle/acp_builder/primary_report_review.py` の `build_primary_report_review_parameter`：prompt 文面、固定した入力ファイルの受け渡し、call 種別、file access mode、および MCP の選択を含む起動パラメータ。
 - `{{cmoc-root}}/oracle/src/oracle/acp_builder/primary_report_review.json` の root schema（JSON Pointer `#`）：Structured Output の構造、確認状態の固定値、重要事項・根拠・未完了理由の field と組み合わせ。構造と schema で表せる出力要件は prompt に重複させない。
-- `{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls`：通常の call 種別設定と同じ仕組みで選ぶ model provider、model、reasoning effort の既定値。
+- `{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls["build_primary_report_review_parameter"]`：重要事項確認用 call の個別設定の既定値。
 
 設定取得と出力検証には、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」と `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Structured Output」を適用する。schema にない意味的品質を機械的な受理条件へ追加しない。
 
