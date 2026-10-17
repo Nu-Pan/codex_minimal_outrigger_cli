@@ -52,11 +52,13 @@ import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
 import commons.runtime_feedback_store as feedback_store_module
 import commons.runtime_logging as logging_module
+import commons.runtime_run_join as run_join_module
 import sub_commands.feedback.close as feedback_close_module
 import sub_commands.feedback.decision as decision_module
 import sub_commands.feedback.recovery as recovery_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
+import sub_commands.run.abandon as run_abandon_module
 from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
 )
@@ -3020,9 +3022,12 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
 
 
 # rollback 済み error の手動終了は、障害原因によらず同じ入力状態を扱う。
-# 各障害を検査し、error（rollback 済み／checkpoint 保存済み）と joinable で両操作を残す。
-# doctor の修復・索引同期と公開 session fork の結合は後続 wave に残す。
+# 各障害の rollback を検査し、checkpoint 保存済み error では両操作を残す。
+# doctor の修復・索引同期と公開 session fork の結合は wave test に残す。
 # 準備済み session を使い、Git 差分・rollback・手動終了を実行する。
+# 手動 join/abandon と実 doctor の結合は test_editing_run_cli.py の
+# test_run_join_from_run_worktree_tracks_main_doctor_repairs と
+# test_run_join_preserves_active_state_when_cleanup_fails に残す。
 @pytest.mark.parametrize(
     ("fault", "operation"),
     [
@@ -3049,8 +3054,6 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
         target = "oracle/bad.md" if fault == "forbidden_change" else "README.md"
         (worktree / target).parent.mkdir(parents=True, exist_ok=True)
         (worktree / target).write_text("unconfirmed change\n")
-        if fault == "interrupt":
-            raise KeyboardInterrupt
         output = _remediation_output(identity, "fixed")
         output["result"]["changed_paths"] = (
             [] if fault == "unreported_change" else [target]
@@ -3068,23 +3071,30 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
             feedback_report_module, "_record_checkpoint", checkpoint_failure
         )
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == (0 if fault == "interrupt" else 1), result.output
+    assert result.exit_code == 1, result.output
     manifest, _ = load_report_cut(root)
     _, _, session = load_state_for_branch(
         root, manifest["run"]["identity"]["session_branch"]
     )
-    assert session.run.state == ("joinable" if fault == "interrupt" else "error")
-    assert manifest["processing"]["status"] == (
-        "interrupted" if fault == "interrupt" else "failed"
-    )
+    assert session.run.state == "error"
+    assert manifest["processing"]["status"] == "failed"
     run_worktree = Path(manifest["run"]["identity"]["run_worktree"])
     assert (run_worktree / "README.md").read_text() == (
         "unconfirmed change\n" if fault == "checkpoint_reference" else initial
     )
     assert run_git(run_worktree, "status", "--porcelain").stdout == ""
     assert manifest["processing"]["remediation_checkpoints"] == []
+
+    # doctor 本体だけを省き、join の復旧検査・journal と前処理の呼出契約は保つ。
+    preprocess = Mock()
+    preprocess_module = run_join_module if operation == "join" else run_abandon_module
+    monkeypatch.setattr(preprocess_module, "run_doctor_preprocess", preprocess)
     completed = runner.invoke(app, ["run", operation], catch_exceptions=False)
     assert completed.exit_code == 0, completed.output
+    if operation == "join":
+        preprocess.assert_called_once_with(root, sync_refactor_entries=False)
+    else:
+        preprocess.assert_called_once_with(root)
     assert (root / "README.md").read_text() == (
         "unconfirmed change\n"
         if fault == "checkpoint_reference" and operation == "join"
