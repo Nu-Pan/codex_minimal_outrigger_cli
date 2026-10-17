@@ -39,7 +39,7 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 ### entry 集合の同期
 
 - entry の対象は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
-- 対象 file と entry の過不足のない一致は、cmoc が同期を完了した時点の不変条件とする。同期時点には、doctor preprocess、refactor の各処理単位、run join 後などがある。人間の編集直後を含め、常時一致することは要求しない。
+- 対象 file と entry の過不足のない一致は、cmoc が同期を完了した時点の不変条件とする。同期時点には、通常の doctor preprocess、refactor の各処理単位、および run join の準備完了時点がある。join の同期場所と取り込み成立時の保証、初回 no-op・復旧の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。人間の編集直後を含め、常時一致することは要求しない。
 - 新規 file には `investigation_required=true`、`last_investigation_result=not_investigated`、hash と日時が `null` の entry を作成する。
 - 削除 file の entry は削除する。rename は削除と追加として同期する。
 - 現在の file の SHA256 が `last_investigated_sha256` と異なる場合は、既存の調査履歴を保持したまま `investigation_required=true` にする。
@@ -232,4 +232,4 @@ full test 1 回の所要時間と、検査の実行回数などによる orchest
 
 ## join 後 hook
 
-workload 固有の hook は持たない。merge 後の refactor state 同期は共通 lifecycle が行う。
+workload 固有の hook は持たない。join に必要な refactor state 同期は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「run 側での準備」が所有する共通処理とする。

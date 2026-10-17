@@ -23,7 +23,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 - 上記に該当しない realization file、その他の非 oracle file の変更は追従対象外とする。
 - 差分に現れた file だけを作業範囲としてはいけない。関連する oracle file と realization file を `{{work-root}}` リポジトリ全体から調査する。
 - 差分は今回追従すべき oracle 変更を特定する根拠であり、realization file の変更内容を正本仕様へ逆流させる根拠ではない。
-- apply 実行中に session branch へ追加された oracle 変更は、次回 apply の比較範囲に残す。
+- apply 実行中に session branch へ追加された oracle 変更は、join 準備で run に統合されても次回 apply の比較範囲に残す。準備完了 run HEAD を追従対象差分の終点や比較始点の保存値にしない。
 
 ## agent call と file access
 
@@ -41,7 +41,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 
 ## 想定内差分
 
-想定内差分は、agent が変更する realization file とする。
+本命の追従作業の想定内差分は、agent が変更する realization file とする。join では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「差分検査」に従って統合前の成果を検査する。session 由来の変更と競合解消の付随編集には同節の責務別の検査を適用し、join に伴う refactor state 同期は cmoc の共通管理処理として扱う。本命 agent の編集範囲は広げない。
 
 ## 実行手順
 
@@ -49,7 +49,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 2. 追従対象差分の始点と終点を commit ID に確定する。
 3. `build_realization_apply_fork_launch_exec_parameter` で AgentCallParameter を構築する。
 4. その AgentCallParameter を変更せず、`{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` で実行する。
-5. agent の realization file 差分を検査し、差分がある場合は run branch に commit する。差分がなければ空 commit を作らず、共通 join の no-op 判定へ進む。
+5. agent の realization file 差分を検査し、差分がある場合は run branch に commit する。差分がなければ空 commit を作らない。この時点で join 全体を no-op と判定せず、共通 join の準備へ進む。
 6. `run.state=joinable` にして、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」に従って自動 join する。本書の「join 後 hook」も適用する。
 7. 共通 join の post-join、結果保存、state 初期化、および cleanup の結果を primary report に含め、最外側の invocation の終了を確定する。
 
@@ -80,11 +80,11 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 
 ## join 後 hook
 
-`session.last_joined_apply_fork_commit` は、次の条件をすべて満たす自動 join または `cmoc run join` で、対象 run の `run.fork_commit`（`{{cmoc-run-fork-commit}}`）に更新する。それ以外では値を保持する。
+`session.last_joined_apply_fork_commit` は、次の条件をすべて満たす自動 join または `cmoc run join` で、session への取り込み成立後に、対象 run の元の `run.fork_commit`（`{{cmoc-run-fork-commit}}`）に更新する。それ以外では値を保持する。
 
 - `run.kind` が `realization_apply` である。
 - その join が事前条件を検証して対象 run を確定する時点で、`run.state` が `joinable` である。最外側の workload の起動時点の state で代用しない。
-- merge または no-op join が成立し、その取り込み結果が rollback されていない。
+- 共通 join が定める session への merge または no-op join が成立している。run 側の準備や同期の完了だけでは更新しない。
 
 join 失敗で `run.state=error` になり比較始点を更新できなかった場合は、次の apply が以前の比較範囲を再確認することを許容する。失敗した apply の部分成果を `error` から手動 join しても比較始点は更新しない。過去の追従作業の成功を記録・復元して更新資格を判定する処理や、そのための永続 field、成功 flag、状態値を追加してはならない。
 

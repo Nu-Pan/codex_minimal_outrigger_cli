@@ -72,9 +72,9 @@ cmoc は、人間が作業する session と、そこから隔離して成果物
 
 ### `{{cmoc-run-join-commit}}`
 
-- `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ merge した commit である。
+- 準備完了の `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ `--no-ff` で取り込んだ commit である。準備中に session を run へ統合した commit や、run 上の同期 commit とは区別する。
 
-join 時点ですでに run branch HEAD が session branch から到達可能であり、取り込む commit がない場合は、join を no-op として正常完了してよい。この場合、`{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。join の記録だけを目的とする空 commit を作ってはならない。
+no-op join では取り込み commit を作らないため、`{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。準備と no-op の成立条件、取り込み済みの復旧、およびその記録は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」「join の失敗と復旧」「join の共通記録」に従う。
 
 ## git worktree
 

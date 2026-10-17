@@ -19,7 +19,7 @@
 
 共通の開始処理は、次の順序で行う。
 
-1. doctor preprocess を実行する。
+1. doctor preprocess を実行する。同期に先立つ join 復旧情報の確認には、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」を適用する。
 2. `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「active session context」の条件を確認する。
 3. session worktree と staging area が clean であることを確認する。
 4. repository-level feedback writer 排他を取得する。
@@ -226,19 +226,23 @@ quiet period、directory の列挙タイミング、または一定時間 observ
 
 競合解消には、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「join の競合解消」を適用する。競合の発生そのものを publication failure にしてはならない。
 
-競合解消 agent は、封印済みの採用結果を維持するために、session worktree の merge 結果を調整してよい。内容が run branch と異なっても、両側の変更意図と採用結果を維持できる調整を認める。影響を受ける判定を全結果分類から特定し、merge commit 前に必要な検証を行う。issue 処理をやり直すための新しい wave や、別の remediation・レビュー call は開始しない。
+競合解消 agent は、封印済みの採用結果を維持するために、session を統合中の run worktree の merge 結果を調整してよい。内容が封印時と異なっても、両側の変更意図と採用結果を維持できる調整を認める。影響を受ける判定を全結果分類から特定し、run 側の merge commit 前に必要な検証を行う。issue 処理をやり直すための新しい wave や、別の remediation・レビュー call は開始しない。
 
-cmoc は、merge 対象 commit の参照に加えて、封印済み report cut の path を agent へ渡す。agent は、そこから採用結果、対応する checkpoint、および判定根拠を読み取り専用で参照し、調整と検証の結果を報告する。封印済み artifact や run branch の issue commit は書き換えない。正確な入力と指示文は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_parameter` へ委譲する。
+cmoc は、merge 対象 commit の参照に加えて、封印済み report cut の path を agent へ渡す。agent は、そこから採用結果、対応する checkpoint、および判定根拠を読み取り専用で参照し、調整と検証の結果を報告する。封印済み artifact や issue commit は書き換えず、受理した調整を cmoc が run の後続履歴に残す。封印時 run HEAD と準備完了 run HEAD の対応は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「report cut」「publication completion record」に従う。正確な入力と指示文は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_parameter` へ委譲する。
 
-結果分類そのものの変更が必要な場合、または必要な検証で封印済み結果の維持を確認できない場合は、merge commit を作成せず publication を停止する。この停止を新しい issue result、`human_required`、または `incomplete` へ変換しない。merge 開始前への復旧は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「join の失敗と復旧」に従う。
+結果分類そのものの変更が必要な場合、または必要な検証で封印済み結果の維持を確認できない場合は、調整を確定せず、session への取り込みと publication を停止する。この停止を新しい issue result、`human_required`、または `incomplete` へ変換しない。run 側の統合・同期 commit がすでに作成されていても、session への取り込み前なら、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「join の失敗と復旧」に従って準備変更を取り消す。
+
+cmoc は、共通 join の同期まで完了した run tree に対して、保存した検証記録が適用でき、採用する全結果の判定根拠を維持できることを確認してから session へ取り込む。必要な検証は run 側の準備で完了し、最終 session tree との対応の確認を取り込み後に行う。
 
 本節の調整は、本書の「net 差分と機械的受理条件」「issue 単位の commit と rollback」が定める元の issue 処理の受理条件を変更しない。issue の `changed_paths` と issue commit は元の処理単位の記録として保持し、マージ調整に伴う付随編集の記録と区別する。
 
 ### join 後の検証と記録
 
-merge または no-op join と post-join の後、issue commit の到達可能性、マージ調整を含む変更 path、必要な機械生成物、および採用する全結果の判定根拠を join 後の session 状態に対して検証する。merge commit 前の検証記録が最終状態に適用できることも確認する。検証済みの修正の効果と採用結果の有効性、および publication の整合性を確認できなければ、join 後検査失敗とする。この検証段階では新しい Codex call や修正を開始しない。終了時の primary report の重要事項確認は、本書の「invocation report」で別に扱う。
+session への取り込み成立後、publication に先立ち、issue commit と準備完了 run HEAD の到達可能性、マージ調整を含む変更 path、必要な機械生成物、および採用する全結果の判定根拠を検証する。最終取り込み結果である session commit と tree を特定し、その tree が準備完了時の run tree と一致すること、run 側で保存した検証記録をその tree に適用できることを確認する。publication 前の現在の session 状態についても、保存済み記録から全採用結果の有効性を確認する。検証済みの修正の効果と採用結果の有効性、および publication の整合性を確認できなければ、join 後検査失敗とする。
 
-封印済み artifact の hash 整合性は、その artifact が変わっていないことの検査である。マージ後のファイル内容が run branch と同一であることや、採用結果の意味的な妥当性の証明として扱ってはならない。調整と検証の記録は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「publication completion record」に従って最終取り込み結果と結び付ける。
+この検証段階では新しい Codex call、修正、または refactor state 同期を開始しない。停止後の現在の session 状態に対する publication の再開条件は、本書の「join 後の publication failure」に従い、最終取り込み結果と区別する。終了時の primary report の重要事項確認は、本書の「invocation report」で別に扱う。
+
+封印済み artifact の hash 整合性は、その artifact が変わっていないことの検査である。最終取り込み結果が封印時 run HEAD と同一の内容であることや、採用結果の意味的な妥当性の証明として扱ってはならない。調整と検証の記録は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「publication completion record」に従って最終取り込み結果と結び付ける。
 
 初回の正常な finalization では、publication と workload 固有 cleanup が完了するまで `run.state=joinable` と隔離資源を維持する。その後の結果保存、`ready` 初期化、および隔離資源 cleanup は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。未解消競合、差分不整合、結果分類変更の必要、または join 後検査失敗では `run.state=error` とし、publication と observation cleanup を行わない。run branch、run worktree、issue commit、raw observation、直前の current pointer、封印済み artifact、および診断情報を保持する。取り込み確定後の停止は本書の「join 後の publication failure」に従う。
 
@@ -262,18 +266,18 @@ validation 失敗、agent call failure、Structured Output 受理失敗、差分
 
 ### join 後の publication failure
 
-自然完了経路の自動 join 後に、post-join、検証、publication、結果保存、state 更新、または cleanup に失敗した場合は、`run.state=error` とする。merge と publication point を巻き戻さず、未 cleanup の raw observation、current pointer、および recovery に必要な run artifact と診断を保持する。共通 join の確定済み処理を重複適用せず、未完了の後処理を特定して再開する。重要事項確認の未完了には、本書の「invocation report」が参照する共通規約の例外を適用する。
+自然完了経路で session への取り込みが成立した後に、post-join、検証、publication、結果保存、state 更新、または cleanup に失敗した場合は、`run.state=error` とする。取り込み直後で join 結果の保存前に停止した場合も、共通 join の復旧情報から成立を確認できればこの経路とする。取り込み済みの session commit と publication point を巻き戻さず、未 cleanup の raw observation、current pointer、および recovery に必要な run artifact と診断を保持する。共通 join の確定済み処理を重複適用せず、未完了の後処理を特定して再開する。重要事項確認の未完了には、本書の「invocation report」が参照する共通規約の例外を適用する。
 
 publication point 前後の state と入力の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「最新状態の atomic publication」に従う。確定後の cleanup 失敗では、新しい current が成立したことを invocation report に明示し、処理済み入力を pending として再取り込みしない。
 
-次回の `cmoc feedback report` は、state と immutable artifact から同じ run の join 成功、publication の成立有無、および未完了処理を一意に特定できる場合に限り、次の条件で idempotent に再開する。
+次回の `cmoc feedback report` は、共通 join の復旧情報・Git と immutable artifact から同じ run の取り込み成立、publication の成立有無、および未完了処理を一意に特定できる場合に限り、次の条件で idempotent に再開する。run 側の準備完了だけを取り込み成立とみなさず、取り込み済みなら再同期・再 merge は行わない。
 
 | 確定状況 | 再開条件と処理 |
 |---|---|
-| publication point 前 | join 後 tree を再検証し、保存済みの判定根拠とマージ調整の検証記録から封印済み結果をそのまま採用できる場合だけ、同じ publication を再開する。 |
+| publication point 前 | 取り込み成立時の tree と現在の session 状態を確認し、保存済みの判定根拠と準備時の検証記録から封印済み結果をそのまま採用できる場合だけ、同じ publication を再開する。同期や追加修正でこの条件を満たそうとしてはならない。 |
 | publication point 後 | 確定済み generation・history・入力消費記録と固定済み cleanup 対象の整合性を検証し、残った後処理だけを再開する。確定済み判定の現在性を再評価して publication をやり直さない。 |
 
-確定後に外部状態や session tree が変わっていても、最後に確定した状態を保持して後処理を完了する。変化後の判定は次の新規 report で行う。run の隔離資源を削除する条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「使用済み branch と worktree の cleanup」に従う。
+publication point 後に外部状態や session tree が変わっていても、最後に確定した状態を保持して後処理を完了する。変化後の判定は次の新規 report で行う。run の隔離資源を削除する条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「使用済み branch と worktree の cleanup」に従う。
 
 新しい wave または Codex call は開始しない。ただし、今回の invocation report の重要事項確認だけは、本書の「invocation report」に従う例外とする。安全に再開できない場合は、`run.state=error` と資源を維持する。
 
@@ -281,7 +285,7 @@ publication point 前後の state と入力の扱いは、`{{cmoc-root}}/oracle/
 
 再開した実行のサブコマンドログには、その実行 ID、report 保存先を固定した実行 ID、feedback run と report cut の識別情報、および引き継ぐ report の path と保存状況を対応付けて記録する。対応付けには、report cut に封印した実行 ID と参照を使用する。
 
-未 publication の結果を採用するために、封印済みの結果分類の変更、新たな意味判断のための agent call、または追加修正を必要とする停止 run は、この recovery の対象外とする。merge commit 前に許されたマージ調整を、join 後にも継続できるとは扱わない。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
+未 publication の結果を採用するために、封印済みの結果分類の変更、新たな意味判断のための agent call、または追加修正を必要とする停止 run は、この recovery の対象外とする。run 側の準備で許されたマージ調整を、取り込み後にも継続できるとは扱わない。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
 
 手動 close は、この run の入力・採用結果を書き換える recovery 手段にはしない。close の開始条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「事前条件」に従う。
 
@@ -305,7 +309,7 @@ invocation report の重要事項確認は、この不可分な finalization の
 
 ### publication を行わない feedback join
 
-正常なユーザー中断後の自動 join と、ユーザー中断・エラーで残った run の `cmoc run join` は、確定済み issue commit だけを session branch へ取り込む。共通 join の事前検査、差分検査、競合解消、post-join、および refactor state 同期は省略しない。自然完了時の封印済み採用結果の検証は、この経路の publication 条件として適用しない。
+正常なユーザー中断後の自動 join と、ユーザー中断・エラーで残った run の `cmoc run join` は、確定済み issue commit を成果として、共通 join の「run 側での準備 → session への取り込み → 後処理」を行う。統合・競合解消・同期による後続の変更も共通契約に従い、新しい issue 処理は始めない。自然完了時の封印済み採用結果の検証は、この経路の publication 条件として適用しない。
 
 feedback の publication、`incomplete` 診断 report の生成、active・history の更新、および observation の消費・cleanup は行わない。raw observation、直前の current pointer、必要な checkpoint を保持し、feedback work state に join 結果と publication 未実施を記録する。取り込みと必要な結果保存を終えたら、共通 join に従って `ready` 初期化と隔離資源 cleanup を行う。
 
@@ -405,7 +409,7 @@ publication report の保存段階では、未保存なら固定済み target �
 詳細結果には、次の内容を含める。
 
 - 完了した wave、high-watermark、処理済み issue、確定済み commit、および rollback
-- 自動 join と post-join、refactor state 同期、state 初期化、cleanup、およびその未実行・失敗段階。共通項目は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「workload の report」に従う
+- 自動 join の準備・取り込み・後処理とその結果。共通項目は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「join の共通記録」「workload の report」に従い、封印時の成果との対応も示す
 - publication の成立有無と、成立した generation・publication report への参照。自然完了では本書の「現在の案件一覧」をその generation に対応させて掲載する。recovery では元の確定時点の一覧であることを示す
 - 未実行の処理、維持した state、中断またはエラーの理由、次の操作、および関連ログ
 

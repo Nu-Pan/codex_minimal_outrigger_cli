@@ -71,7 +71,7 @@ state を構成する artifact の役割を次に示す。
 | feedback run manifest | 1 feedback remediation run の入力、run identity、wave、join、publication、および cleanup の状態を結び付ける記録 |
 | intake wave | その wave が処理する observation、active issue、正規化済み issue identity、および根拠の immutable な固定入力 |
 | checkpoint | 受理済み normalization または remediation の入力、結果、検証、および commit を hash で結び付ける記録 |
-| report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、採用する有効な結果、および merge 対象を固定する |
+| report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、採用する有効な結果、および封印時の run 成果を固定する |
 | publication completion record | report cut の採用結果と、マージ調整・検証を経た最終取り込み結果を結び付ける immutable な記録 |
 | close の作業記録 | 対象案件・理由・base current pointer・publication target と未完了処理を結び付け、同じ close を再開するための記録 |
 | `incomplete` 診断 report | `inconclusive` を含む最新状態と、判定不能の具体的な原因を記載した durable な Markdown report |
@@ -231,24 +231,26 @@ report cut は、少なくとも次の入力を固定する。
 - wave 終了時に検証・正規化した追加入力とその hash、および採用結果・集計への対応。新しい wave を要しなかった重複 observation なども、消費するなら含める
 - run 開始時の current pointer、active generation、および最終 high-watermark
 - 処理した issue identity ごとに採用する有効な結果、案件 ID との対応、および対応する checkpoint の path と hash
-- issue commit、run branch HEAD、および merge 前の検証結果
+- issue commit、封印時 run HEAD、およびその成果に対する検証結果
 - active generation と history の publication target、正常または `incomplete` の report target、その保存先を固定した実行 ID、および消費・cleanup 対象の入力
 
 正常 report または `incomplete` 診断 report の保存先には、固定した時点の実行 ID を `{{execution-id}}` として使用し、最終 path とともに封印する。同じ publication を別のサブコマンド実行から再開する場合も、この target を引き継ぐ。保存先や帰属を再開した実行の ID に合わせて変更してはならない。
 
 封印後に許す調整・検証と停止条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。調整によって、封印済み report cut、wave input、issue result、最終 high-watermark、または cleanup target を変更してはならない。
 
+封印時 run HEAD は採用結果を確定した成果であり、共通 join の準備で進む run branch の現在 HEAD や準備完了 run HEAD へ付け替えない。準備と取り込みの進行は既存の run manifest などの管理記録で対応付ける。共通の記録境界と必要な復旧情報は、`{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「join の復旧情報」に従い、report cut の再封印で代替しない。
+
 ### publication completion record
 
-cmoc は、封印後のマージ調整に関する agent の判断と検証結果を、merge commit の作成前に既存の Codex call log へ保存する。記録から report cut と検証対象の内容を特定できるようにし、取り込み後に停止した場合も recovery 用の根拠として保持する。
+cmoc は、封印後のマージ調整に関する agent の判断と検証結果を、run 側の merge commit の作成前に既存の Codex call log へ保存する。さらに、同期を含む準備完了 run HEAD と、その tree に適用できる検証記録を session への取り込み前に結び付ける。記録から report cut と検証対象の内容を特定できるようにし、準備途中または取り込み直後に停止した場合も recovery 用の根拠として保持する。
 
-publication completion record は、merge または no-op join と post-join 後に、最終 session tree に対する検証を完了してから保存する。run manifest は、この record と report cut の path および hash を参照する。少なくとも次の対応を確認できる記録とする。
+publication completion record は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「join 後の検証と記録」を完了してから、publication 前に保存する。run manifest は、この record と report cut の path および hash を参照する。少なくとも次の対応を確認できる記録とする。
 
 - 封印済み report cut と採用結果・checkpoint の参照。
-- merge 前の両 commit、成立した merge commit または no-op join、および post-join 後の session commit。
-- run branch と issue commit の到達可能性。
-- マージ調整の対象、採用した判断と理由、影響を受けた判定、および merge commit 前に保存した検証記録との対応。調整しなかった場合はその旨。
-- その検証記録が最終 session tree に適用でき、全採用結果が有効であることを確認した最終検証結果。
+- 封印時 run HEAD、基準 session HEAD、準備完了 run HEAD、成立した `{{cmoc-run-join-commit}}` または no-op、および最終取り込みの session commit と tree。同じ commit は参照を共有して役割を区別する。
+- 準備完了 run HEAD と issue commit の到達可能性。
+- マージ調整の対象、採用した判断と理由、影響を受けた判定、および run 側で保存した検証・同期記録との対応。調整しなかった場合はその旨。
+- その検証記録を最終取り込みの tree に適用できることの確認と、publication 前に全採用結果が有効であることを確認した session 状態および検証結果。
 
 この record は、元の issue result の書き換えや新しい結果分類の保存先にはしない。artifact の不変性・hash 整合性と、調整後の内容に対する検証結果は区別して記録する。結果の有効性を確認できず停止した場合は completion を記録せず、診断情報と recovery 用資源を保持する。
 

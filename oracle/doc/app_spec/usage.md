@@ -28,7 +28,7 @@
     - session worktree と staging area は clean にする。
     - cmoc は run 上で安全な realization file の修正を issue ごとに commit し、処理中の新しい issue も intake wave で可能な限り処理する。
     - 自然完了では、自動 join と必要な検証の成功後、最新状態と publication report を確定する。今回の primary report には最終 state と cleanup の結果も載せる。現在の案件一覧には `human_required` と `inconclusive` を区別して示し、過去の経緯は history から確認する。
-    - `Ctrl+C` による正常中断では、実行中の処理を停止・整合化し、確定済み issue commit だけを自動 join する。publication は行わず、保持した observation と最新の active record を次回 report で再確認する。
+    - `Ctrl+C` による正常中断では、実行中の処理を停止・整合化し、確定済み issue commit を成果として自動 join する。publication は行わず、保持した observation と最新の active record を次回 report で再確認する。
     - `inconclusive` があれば結果は `incomplete` となるが、案件 ID と判定根拠は active に保存される。以後の確認・操作には最新状態の案件 ID を使う。
     - 人間が外部で解決を確認した `inconclusive` 案件は、`cmoc feedback close <案件ID> --reason "外部で修正し、人間が解決を確認した"` で閉じる。成功直後の最新一覧から対象が除かれ、理由と経緯は history に残る。
     - 後から同じ問題が観測された場合も、通常の検出・判定を経て新しい案件として現れる。以前の案件 ID に対する close の再実行は再発分へ作用しない。

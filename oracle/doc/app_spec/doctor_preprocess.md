@@ -33,7 +33,7 @@ cmoc 本体と doctor を起動するための Python 環境・起動用依存�
 3. 本書の「管理領域の非追跡保証」に従って、それぞれの root の `.cmoc/gu` が git 追跡対象外であることを保証する
 4. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 5. 処理に使用する各 work-root の `{{work-root}}/.cmoc/gt/config.json` に対し、入口に応じた検索設定の検証・補完、共通設定の検証、および追跡保証を行う
-6. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema を満たし、entry 集合と調査要求が同期済みであることを保証する
+6. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` の追跡状態・schema を検証し、entry 集合と調査要求を同期する。join とその復旧では、本書の「editing run の join での同期時点」を適用する
 7. 入口に応じた検索用コンポーネントの準備・検査を行う
 8. 本書の「検索索引の同期」に従って、処理対象の各 work-root の索引を同期する
 9. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
@@ -174,11 +174,13 @@ doctor preprocess の後に作成する run worktree の初回同期にも、同
 
 ### editing run の join での同期時点
 
-本節は、workload の同一 invocation 内の自動 join と、明示的な `cmoc run join` の両方に適用する。開始前の doctor preprocess が成功したことだけで、join 時点の検証と同期を省略しない。
+本節は、全編集 workload の同一 invocation 内の自動 join、明示的な `cmoc run join`、および取り込み済み run の後処理の復旧に適用する。run 開始前や通常の doctor による同期は維持する。開始前の doctor preprocess が成功したことだけで、join 時点の検証を省略しない。
 
-active run の kind が `realization_refactor` または `feedback_report` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。これは、session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
+join 前の doctor preprocess は、refactor state の追跡状態と schema を検証し、entry 集合と調査要求の同期を run 側での準備へ遅延する。`realization_apply` もこの対象に含む。session と run の独立した同期更新を避け、統合後の tree に一度集約するためである。
 
-merge または no-op join 後は kind にかかわらず、競合解消の付随編集も反映した最終的な session tree に対して entry 集合を同期する。merge 進行中に doctor preprocess を再実行して同期・commit を割り込ませない。競合中の管理物の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」に従う。
+同期・commit の順序、初回 no-op、および取り込み済みの復旧で再同期しない境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」「join の失敗と復旧」を正本とする。後処理だけを復旧する起動を通常同期の経路と誤認しないよう、同期に先立って対象 run の復旧情報を確認する。
+
+準備途中の停止による merge や未確定差分は、同文書の復旧処理で整合させてから追跡状態と schema を検証する。merge 進行中に doctor preprocess 全体を再実行して修復・同期・commit を割り込ませない。競合中の管理物の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」に従う。
 
 ## feedback MCP reporter/client の事前検証
 
