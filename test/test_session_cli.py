@@ -944,30 +944,6 @@ def session_conflict_parameter(
     builder.assert_called_once()
 
 
-def test_session_join_preserves_repository_local_feedback_state(
-    session_completion_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
-) -> None:
-    """session join が repository-local feedback state を merge や rollback しない。"""
-    # doctor の修復・順序は linked worktree の結合検査に残し、ここでは state 境界を検査する。
-    root = session_completion_repository
-    monkeypatch.chdir(root)
-    _seed_session_in_worktree(root, root)
-    relative = ".cmoc/gu/feedback/normalization_checkpoint/sentinel.json"
-    path = root / relative
-    path.parent.mkdir(parents=True)
-    content = '{"repository_local":true}\n'
-    path.write_text(content)
-
-    joined = runner.invoke(app, ["session", "join"], catch_exceptions=False)
-
-    assert session_preprocess == [root]
-    assert joined.exit_code == 0, joined.output
-    assert path.read_text() == content
-    assert run_git(root, "ls-files", "--", relative).stdout == ""
-
-
 def test_session_join_preserves_work_on_incidental_conflict_marker(
     session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1355,10 +1331,17 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
 ) -> None:
-    """session branch削除失敗をwarningとしてjoin成功に含めることを検証する。"""
+    """branch 削除失敗を warning として成功させ、feedback state を保持する。"""
     root = session_completion_repository
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_session_in_worktree(root, root)
+    # 同じ join で repo-root の state 保持も検査し、専用の repository・CLI 起動を省く。
+    # linked worktree での成功・失敗と doctor の結合は上の修復ケースに残す。
+    feedback_relative = ".cmoc/gu/feedback/normalization_checkpoint/sentinel.json"
+    feedback = root / feedback_relative
+    feedback.parent.mkdir(parents=True)
+    feedback_content = '{"repository_local":true}\n'
+    feedback.write_text(feedback_content)
     original_run_git = session_join_module.run_git
 
     # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
@@ -1383,6 +1366,8 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     )
     assert "- deleted_session_branch: `False`" in result.output
     assert f"session branch was not deleted: {session_branch}" in result.output
+    assert feedback.read_text() == feedback_content
+    assert run_git(root, "ls-files", "--", feedback_relative).stdout == ""
 
 
 def test_session_join_does_not_delete_when_local_branch_reachability_check_fails(
