@@ -50,6 +50,7 @@ from commons.runtime_config import config_from_dict, config_to_dict
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import FeedbackInvocation
 from commons.runtime_feedback_store import iter_observation_paths
+from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_logging import SubcommandLogger
 from config.cmoc_config import CmocConfig, CodexCallConfig, CodexModelProviderConfig
 
@@ -70,6 +71,17 @@ def settings_root(tmp_path, monkeypatch, nonpersistent_codex_ids):
         path_model, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
     return root
+
+
+@pytest.fixture
+def unchanged_artifacts(monkeypatch):
+    """成果物を変更しない設定・診断検査では、空の snapshot を使う。"""
+    # 実差分の照合と補正中の変動検出・復元は test_codex_runtime_retry.py の
+    # corrects_declared_postcondition と restores_artifacts_changed_by_correction に残す。
+    monkeypatch.setattr(
+        "commons.runtime_codex_exec.capture_worktree_snapshot",
+        lambda root: WorktreeSnapshot(root, ()),
+    )
 
 
 def shared_parameters(root):
@@ -177,10 +189,9 @@ def test_individual_builders_select_their_own_entries(settings_root, monkeypatch
 
 
 def test_shared_settings_remain_fixed_across_output_corrections(
-    committed_repository, tmp_path, monkeypatch, nonpersistent_codex_ids
+    settings_root, monkeypatch, unchanged_artifacts
 ):
-    root = committed_repository
-    setup_codex_home(tmp_path, monkeypatch)
+    root = settings_root
     parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
         root / "src.py", root
     )
@@ -245,9 +256,14 @@ def test_invalid_saved_settings_fail_before_codex_launch(
 
 
 def test_shared_structured_output_failures_keep_feedback_kind_and_call_ids(
-    committed_repository, tmp_path, monkeypatch, nonpersistent_codex_ids
+    committed_repository,
+    tmp_path,
+    monkeypatch,
+    nonpersistent_codex_ids,
+    unchanged_artifacts,
 ):
     """異なる builder の受理失敗を共通種別で分類し、各実行の ID は分ける。"""
+    # feedback の保存 context に必要な HEAD は、実 Git で用意する。
     root = committed_repository
     setup_codex_home(tmp_path, monkeypatch)
     logger = SubcommandLogger(root, "settings test")
