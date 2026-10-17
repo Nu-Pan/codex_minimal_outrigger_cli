@@ -94,7 +94,11 @@ from main import app
 
 # agent 応答は差し替え、観測を送信しないため、collector の起動・probe を準備しない。
 # TCP/stdio の受理・拒否・drain と CLI との結合は test_feedback.py に残す。
-pytestmark = pytest.mark.usefixtures("feedback_without_transport")
+# 実行 ID の永続採番は test_runtime_ids.py、実採番と logger の結合は
+# test_runtime_cli.py に残す。run ID の発行、実ログ・report と実行 ID の対応は実検査する。
+pytestmark = pytest.mark.usefixtures(
+    "feedback_without_transport", "nonpersistent_execution_ids"
+)
 
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
