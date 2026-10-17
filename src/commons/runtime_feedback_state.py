@@ -2099,13 +2099,21 @@ def _validate_report_cut_current_input(
         raise _corruption(
             "report cut current generation と pointer snapshot が一致しません。", path
         )
-    generation_path = _validate_artifact_reference(
-        repo,
-        shaped_generation_reference,
-        expected_root=expected_generation_directory,
-        description="report cut current generation",
-        allow_missing=allow_missing,
-    )
+    if allow_missing:
+        generation_path = _validate_artifact_reference(
+            repo,
+            shaped_generation_reference,
+            expected_root=expected_generation_directory,
+            description="report cut current generation",
+            allow_missing=True,
+        )
+    else:
+        generation_path = _resolve_reference_path(
+            repo,
+            shaped_generation_reference["path"],
+            expected_generation_directory,
+            "report cut current generation",
+        )
     if (
         generation_path.parent != expected_generation_directory
         or generation_path.name != "manifest.json"
@@ -2134,11 +2142,33 @@ def _validate_report_cut_current_input(
         raise _corruption(
             "report cut current Markdown report path が不正です。", report_path
         )
+    if not allow_missing:
+        # generation loader が各 record の path・hash・schema を同じ byte 列から検査する。
+        # 固定入力の参照もその一覧と照合し、hash 検査だけの先行読込を重ねない。
+        generation_manifest, _issues, _aggregates, _history = _load_generation(
+            repo,
+            generation_path,
+            str(generation_id_value),
+            expected_sha256=shaped_generation_reference["sha256"],
+        )
+        if (
+            generation_manifest.get("report_cut_id")
+            != pointer_value.get("report_cut_id")
+            or generation_manifest.get("issues") != current["issues"]
+            or generation_manifest.get("machine_aggregates")
+            != current["machine_aggregates"]
+        ):
+            raise _corruption(
+                "report cut current input が generation manifest と一致しません。",
+                generation_path,
+            )
+        return
+
+    # cleanup では旧 generation が欠落し得るため、残っている各参照を個別に検査する。
     contracts = (
         ("issues", "issue_id", "issue"),
         ("machine_aggregates", "canonical_key", "machine_aggregate"),
     )
-    reference_groups: dict[str, list[_JsonObject]] = {}
     for name, identity_name, directory_name in contracts:
         references = current.get(name)
         if not isinstance(references, list):
@@ -2174,7 +2204,7 @@ def _validate_report_cut_current_input(
                 {"path": item.get("path"), "sha256": item.get("sha256")},
                 expected_root=expected_generation_directory,
                 description=f"report cut current {name}",
-                allow_missing=allow_missing,
+                allow_missing=True,
             )
             expected_name = (
                 f"{identity}.json"
@@ -2192,22 +2222,6 @@ def _validate_report_cut_current_input(
         if identities != sorted(set(identities)):
             raise _corruption(
                 f"report cut current {name} が一意な辞書順ではありません。", path
-            )
-        reference_groups[name] = references
-    if not allow_missing:
-        generation_manifest, _issues, _aggregates, _history = _load_generation(
-            repo, generation_path, str(generation_id_value)
-        )
-        if (
-            generation_manifest.get("report_cut_id")
-            != pointer_value.get("report_cut_id")
-            or generation_manifest.get("issues") != reference_groups["issues"]
-            or generation_manifest.get("machine_aggregates")
-            != reference_groups["machine_aggregates"]
-        ):
-            raise _corruption(
-                "report cut current input が generation manifest と一致しません。",
-                generation_path,
             )
 
 

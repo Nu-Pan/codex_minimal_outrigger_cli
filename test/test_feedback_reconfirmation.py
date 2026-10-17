@@ -1311,6 +1311,28 @@ def test_publication_and_active_generation_use_hash_verified_bytes(
     ):
         _assert_hash_verified_state_snapshot(root, state, path, monkeypatch)
 
+    # 次の cut は検証した generation と同じ参照だけを受理する。publication を再準備しない。
+    current = report._active_state_input(root, state)
+    reference = current["issues"][0]
+    for name, references in (
+        ("issues", None),
+        ("issues", []),
+        ("issues", [reference, reference]),
+        ("issues", [{**reference, "issue_id": "invalid"}]),
+        ("issues", [{**reference, "sha256": "0" * 64}]),
+        ("issues", [{**reference, "path": "../outside.json"}]),
+        ("issues", [{**reference, "extra": True}]),
+        ("machine_aggregates", None),
+        ("machine_aggregates", [{}]),
+    ):
+        with pytest.raises(CmocError, match="generation manifest"):
+            feedback_state._validate_report_cut_current_input(
+                root,
+                {**current, name: references},
+                root / "cut.json",
+                allow_missing=False,
+            )
+
 
 def test_published_active_state_reuses_one_cleanup_snapshot(
     publication_feedback, monkeypatch

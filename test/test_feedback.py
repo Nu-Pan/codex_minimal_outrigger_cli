@@ -340,6 +340,16 @@ def _assert_hash_verified_state_snapshot(root, state, path, monkeypatch):
     """一度読んだ artifact の hash と内容を使い、次回は改変を検出する。"""
     original_read = Path.read_bytes
     original_content = original_read(path)
+    current = feedback_report_module._active_state_input(root, state)
+    readers = (
+        (lambda: load_active_state(root), state),
+        (
+            lambda: feedback_state_module._validate_report_cut_current_input(
+                root, current, root / "cut.json", allow_missing=False
+            ),
+            None,
+        ),
+    )
     reads = []
 
     def replace_after_read(target):
@@ -349,16 +359,19 @@ def _assert_hash_verified_state_snapshot(root, state, path, monkeypatch):
             target.write_bytes(b"{}\n")
         return content
 
-    try:
-        with monkeypatch.context() as snapshot_patch:
-            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
-            assert load_active_state(root) == state
-            assert reads == [path]
-            with pytest.raises(CmocError, match="SHA256"):
-                load_active_state(root)
-            assert reads == [path, path]
-    finally:
-        path.write_bytes(original_content)
+    # active の読込と次の cut の固定入力検査で、同じ publication の準備を共有する。
+    for read_state, expected in readers:
+        reads.clear()
+        try:
+            with monkeypatch.context() as snapshot_patch:
+                snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+                assert read_state() == expected
+                assert reads == [path]
+                with pytest.raises(CmocError, match="SHA256"):
+                    read_state()
+                assert reads == [path, path]
+        finally:
+            path.write_bytes(original_content)
 
 
 def test_reporter_exposes_only_canonical_submission_tool(
