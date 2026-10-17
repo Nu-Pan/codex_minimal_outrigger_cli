@@ -300,11 +300,12 @@ def test_refactor_state_sync_round_trips_non_utf8_filename(
     assert load_refactor_state(root) == state
 
 
-def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(
+def test_inventory_does_not_traverse_excluded_roots_or_ignored_symlinks(
     cli_repository: Path,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """exact root は走査せず、nested の同名 path と fake `.git` は保持する。"""
+    """除外 root と link へ降りず、nested の同名 path と fake `.git` は保持する。"""
     root = cli_repository
     for name in (".agents", ".codex", ".cmoc", "memo"):
         excluded = root / name
@@ -322,6 +323,19 @@ def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(
     fake_metadata_file = nested / "fake-file" / ".git"
     fake_metadata_file.parent.mkdir(parents=True)
     fake_metadata_file.write_text("not repository metadata\n")
+
+    # 同じ走査で work-root 内外の link も検査し、repository と列挙の準備を共有する。
+    (root / ".gitignore").write_text("*.link\n")
+    links: list[Path] = []
+    for location, target in (
+        ("inside", root / "target"),
+        ("outside", tmp_path / "target"),
+    ):
+        target.mkdir()
+        (target / "payload.txt").write_text("payload\n")
+        link = root / f"ignored-{location}.link"
+        link.symlink_to(target, target_is_directory=True)
+        links.append(link)
 
     scanned: list[Path] = []
     original_scandir = runtime_git.os.scandir
@@ -344,6 +358,14 @@ def test_inventory_prunes_only_exact_roots_and_verified_nested_git_metadata(
     assert "nested/fake/.git/kept.txt" in realization_files
     assert "nested/fake-file/.git" in realization_files
     assert all(root / name not in scanned for name in _EXCLUDED_ROOTS)
+
+    for link in links:
+        assert link.absolute() not in scanned
+        assert all(
+            not relative.startswith(f"{link.name}/") for relative in realization_files
+        )
+    assert "target/payload.txt" in realization_files
+    assert (tmp_path / "target").absolute() not in scanned
 
 
 @pytest.mark.parametrize(
@@ -440,48 +462,6 @@ def test_inventory_rejects_symlink_when_ignore_status_is_unknown(
 
     with pytest.raises(CmocError, match="Git ignore"):
         enumerate_oracle_and_realization_files(root)
-
-
-def test_inventory_does_not_follow_ignored_symlink_target(
-    tmp_path: Path,
-    cli_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """work-root 内外の symlink 参照先を link 経由で走査しない。"""
-    root = cli_repository
-    (root / ".gitignore").write_text("*.link\n")
-    links: list[Path] = []
-    # 内外の参照先を同時に用意し、repository 準備と列挙を一度で済ませる。
-    for location, target in (
-        ("inside", root / "target"),
-        ("outside", tmp_path / "target"),
-    ):
-        target.mkdir()
-        (target / "payload.txt").write_text("payload\n")
-        link = root / f"ignored-{location}.link"
-        link.symlink_to(target, target_is_directory=True)
-        links.append(link)
-    scanned: list[Path] = []
-    original_scandir = runtime_git.os.scandir
-
-    def recording_scandir(path: Path) -> Iterator[os.DirEntry[str]]:
-        """走査された directory を記録して実処理へ委譲する。"""
-        scanned.append(Path(path).absolute())
-        return original_scandir(path)
-
-    monkeypatch.setattr(runtime_git.os, "scandir", recording_scandir)
-
-    _, realization_files = _relative_sets(
-        root, enumerate_oracle_and_realization_files(root)
-    )
-
-    for link in links:
-        assert link.absolute() not in scanned
-        assert all(
-            not relative.startswith(f"{link.name}/") for relative in realization_files
-        )
-    assert "target/payload.txt" in realization_files
-    assert (tmp_path / "target").absolute() not in scanned
 
 
 @pytest.mark.parametrize(
