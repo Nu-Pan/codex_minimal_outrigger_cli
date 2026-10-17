@@ -815,6 +815,9 @@ def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch
 def test_public_resume_accepts_fixed_id_after_initial_success(
     directory, monkeypatch, builder, command, outcome
 ):
+    # argv 設定は complete_prompt・current_settings・notification_failure で検査する。
+    # 終了状態ごとの再開適格性では、既存 helper で起動設定の再構築を省く。
+    stub_codex_overrides(monkeypatch)
     write_config(directory / ".cmoc/gt/config.json", CmocConfig())
     fake_initial(monkeypatch)
     notifications = []
