@@ -84,17 +84,6 @@ def unchanged_artifacts(monkeypatch):
     )
 
 
-def shared_parameters(root):
-    return [
-        build_realization_apply_fork_launch_exec_parameter("base", "head", root),
-        build_realization_refactor_fork_file_review_and_fix_parameter(
-            root / "src.py", root
-        ),
-        build_feedback_remediate_issue_parameter('{"issue_id":"issue"}', root),
-        build_run_join_conflict_resolution_parameter("run", "session", root),
-    ]
-
-
 def configured_calls():
     """誤った entry の選択を区別できるよう、全項目に異なる値を与える。"""
     config = CmocConfig()
@@ -132,7 +121,14 @@ def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
     settings_root, monkeypatch
 ):
     root = settings_root
-    parameters = shared_parameters(root)
+    parameters = [
+        build_realization_apply_fork_launch_exec_parameter("base", "head", root),
+        build_realization_refactor_fork_file_review_and_fix_parameter(
+            root / "src.py", root
+        ),
+        build_feedback_remediate_issue_parameter('{"issue_id":"issue"}', root),
+        build_run_join_conflict_resolution_parameter("run", "session", root),
+    ]
     assert {parameter.agent_call_kind for parameter in parameters} == {
         "realization_edit"
     }
@@ -234,7 +230,7 @@ def test_invalid_saved_settings_fail_before_codex_launch(
     settings_root, monkeypatch, invalid
 ):
     root = settings_root
-    parameter = shared_parameters(root)[0]
+    parameter = build_realization_apply_fork_launch_exec_parameter("base", "head", root)
     data = config_to_dict(CmocConfig())
     if invalid == "missing_shared":
         del data["codex"]["agent_calls"]["realization_edit"]
@@ -269,7 +265,14 @@ def test_shared_structured_output_failures_keep_feedback_kind_and_call_ids(
     logger = SubcommandLogger(root, "settings test")
     invocation = FeedbackInvocation(root, root, "settings test", logger)
     calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "{}")] * 6)
-    for parameter in shared_parameters(root)[1:3]:
+    # schema のある 2 種だけを構築し、使わない prompt の描画と Git 探索を省く。
+    parameters = [
+        build_realization_refactor_fork_file_review_and_fix_parameter(
+            root / "src.py", root
+        ),
+        build_feedback_remediate_issue_parameter('{"issue_id":"issue"}', root),
+    ]
+    for parameter in parameters:
         with pytest.raises(CmocError, match="Structured Output"):
             run_codex_exec(
                 parameter, root=root, config=CmocConfig(), subcommand_logger=logger
