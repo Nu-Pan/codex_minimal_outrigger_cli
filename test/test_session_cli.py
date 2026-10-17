@@ -726,88 +726,63 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     assert "git switch --no-guess" in result.stderr
 
 
-@pytest.mark.parametrize(
-    "cleanup_error",
-    [
-        CmocError("delete failed", ["next"], "branch delete failed"),
-        KeyboardInterrupt(),
-    ],
-)
-def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
+def test_session_abandon_rolls_back_cleanup_failures_and_allows_retry(
     session_completion_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    cleanup_error: BaseException,
     session_preprocess: list[Path],
 ) -> None:
-    """cleanup失敗時にsession branchとactive stateを復元することを検証する。"""
+    """削除前後の例外・中断から同じ session に戻り、次の実行へ進める。"""
     root = session_completion_repository
     monkeypatch.chdir(root)
     # 共通管理物の修復は linked worktree の専用ケースで検証する。
     session_branch, _ = _seed_session_in_worktree(root, root)
+    # home と異なる HEAD にして、削除後に誤った commit へ復元する回帰も検出する。
+    run_git(root, "commit", "--allow-empty", "-m", "session progress")
+    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     state_path = session_state_path(root, session_branch)
+    state_before = json.loads(state_path.read_text())
     gitignore = root / ".gitignore"
     original_delete_branch = session_module.delete_branch
 
-    def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
-        """対象session branchの削除だけを指定exceptionで失敗させる。"""
-        if branch == session_branch:
-            raise cleanup_error
-        return original_delete_branch(root, branch, force)
-
-    monkeypatch.setattr(session_module, "delete_branch", fake_delete_branch)
-
-    result = runner.invoke(app, ["session", "abandon"])
-
-    assert session_preprocess == [root]
-    assert result.exit_code != 0
-    assert result.stdout == ""
-    assert "session abandon の cleanup に失敗しました。" in result.stderr
-    assert "`cmoc session abandon` を再実行してください。" in result.stderr
-    assert current_branch(root) == session_branch
-    assert (
-        subprocess.run(
-            ["git", "rev-parse", "--verify", session_branch], cwd=root
-        ).returncode
-        == 0
+    # rollback 後に同じ前提へ戻るため、3 ケースの repository・session 準備を共用する。
+    cases = (
+        ("error", CmocError("delete failed", ["next"], "branch delete failed"), False),
+        ("interrupt", KeyboardInterrupt(), False),
+        ("interrupt_after_delete", KeyboardInterrupt(), True),
     )
-    state = json.loads(state_path.read_text())
-    assert state["session"]["state"] == "active"
-    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
-    assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""
-    assert run_git(root, "status", "--short").stdout.strip() == ""
+    for attempt, (case, cleanup_error, delete_first) in enumerate(cases, start=1):
+        delete_calls = []
 
+        def fail_delete(
+            repository: Path, branch: str, force: bool = False
+        ) -> cmoc_runtime.CommandResult:
+            """対象 branch の削除前または削除直後に失敗させる。"""
+            if branch != session_branch:
+                return original_delete_branch(repository, branch, force)
+            delete_calls.append(branch)
+            if delete_first:
+                deleted = original_delete_branch(repository, branch, force)
+                assert deleted.returncode == 0
+            raise cleanup_error
 
-def test_session_abandon_restores_branch_if_delete_is_interrupted_after_side_effect(
-    session_completion_repository: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
-) -> None:
-    """branch削除後の中断でも元のsession branchとstateを復元する。"""
-    root = session_completion_repository
-    monkeypatch.chdir(root)
-    session_branch, _ = _seed_session_in_worktree(root, root)
-    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    state_path = session_state_path(root, session_branch)
-    original_delete_branch = session_module.delete_branch
+        monkeypatch.setattr(session_module, "delete_branch", fail_delete)
 
-    def delete_then_interrupt(
-        repository: Path, branch: str, force: bool = False
-    ) -> None:
-        """branchを削除した直後にcleanup中断を再現する。"""
-        result = original_delete_branch(repository, branch, force)
-        assert result.returncode == 0
-        raise KeyboardInterrupt()
+        result = runner.invoke(app, ["session", "abandon"])
 
-    monkeypatch.setattr(session_module, "delete_branch", delete_then_interrupt)
-
-    result = runner.invoke(app, ["session", "abandon"])
-
-    assert session_preprocess == [root]
-    assert result.exit_code != 0
-    assert current_branch(root) == session_branch
-    assert run_git(root, "rev-parse", session_branch).stdout.strip() == session_commit
-    state = json.loads(state_path.read_text())
-    assert state["session"]["state"] == "active"
+        assert session_preprocess == [root] * attempt, case
+        assert delete_calls == [session_branch], case
+        assert result.exit_code != 0, case
+        assert result.stdout == "", case
+        assert "session abandon の cleanup に失敗しました。" in result.stderr, case
+        assert "`cmoc session abandon` を再実行してください。" in result.stderr, case
+        assert current_branch(root) == session_branch, case
+        assert (
+            run_git(root, "rev-parse", session_branch).stdout.strip() == session_commit
+        ), case
+        assert json.loads(state_path.read_text()) == state_before, case
+        assert "/.cmoc/gu/" in gitignore.read_text().splitlines(), case
+        assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == "", case
+        assert run_git(root, "status", "--short").stdout.strip() == "", case
 
 
 def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_race(
