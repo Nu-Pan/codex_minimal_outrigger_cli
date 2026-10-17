@@ -751,15 +751,12 @@ def test_apply_join_hook_selects_diff_base(
     """明示 join は取り込み時の state だけで比較始点の更新資格を決める。"""
     root, _branch, state_path = join_after_preprocess
     state = SessionState.from_dict(_state(state_path))
-    previous = (
-        run_git(root, "rev-parse", "HEAD").stdout.strip()
-        if has_previous_apply
-        else None
-    )
+    previous = state.session.session_fork_commit if has_previous_apply else None
     state.session.last_joined_apply_fork_commit = previous
     write_state(state_path, state)
-    (root / "oracle/new.md").write_text("new oracle\n")
-    commit_work_unit(root, "new oracle")
+    # 比較始点と fork を区別するだけなので、同期対象を増やさず HEAD を進める。
+    # oracle の entry 同期は test_join_prepares_and_syncs_run_before_import に残す。
+    run_git(root, "commit", "--allow-empty", "-m", "advance apply fork")
     context = _prepare_run(join_after_preprocess, run_state=run_state)
     if has_run_change:
         (context.run_worktree / "result.txt").write_text("result\n")
@@ -776,10 +773,9 @@ def test_apply_join_hook_selects_diff_base(
         metadata["post_join_hook"]
         == f"session.last_joined_apply_fork_commit {'updated' if run_state == 'joinable' else 'preserved'}"
     )
-    # 新しい oracle の entry 同期も run 上の成果として取り込む。
-    assert metadata["run_join_commit"] is not None
-    if not has_run_change:
-        assert metadata["refactor_state_sync_commit"] is not None
+    assert metadata["merge_status"] == ("merged" if has_run_change else "no_op")
+    assert (metadata["run_join_commit"] is not None) == has_run_change
+    assert (metadata["refactor_state_sync_commit"] is not None) == has_run_change
     assert not context.run_worktree.exists()
 
 
