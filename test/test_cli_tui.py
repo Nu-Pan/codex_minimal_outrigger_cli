@@ -120,7 +120,8 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
         monkeypatch.setattr(
             module, "ensure_prompt_editor_roots_ignored", record_editor_roots_ignored
         )
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    # doctor は上で置換済みで、入力中断は load_config より前に起きる。
+    # 消費しない設定の検証・JSON 保存と directory 作成は準備しない。
 
     # TCP・guide の cleanup は専用 test と editor 失敗 test が実経路で検証する。
     # ここでは target を閉じてから確定保存へ進む CLI の制御だけを観測する。
