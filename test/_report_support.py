@@ -5,12 +5,15 @@ from functools import lru_cache
 import yaml
 from markdown_it import MarkdownIt
 
+# 設定だけ共有する。parse は呼び出しごとに本文の状態と参照定義を作る。
+_REPORT_MARKDOWN = MarkdownIt()
+
 
 @lru_cache(maxsize=4)
 def _report_tokens(content):
     """同じ本文の解析を共有し、異なる report と抽出章の保持数を制限する。"""
     # helper 内では token を読み取るだけとし、YAML の戻り値は毎回独立に作る。
-    return tuple(MarkdownIt().parse(content))
+    return tuple(_REPORT_MARKDOWN.parse(content))
 
 
 def report_text(content):
@@ -44,6 +47,7 @@ def report_section(content, heading):
         if token.type != "heading_open" or tokens[index + 1].content != heading:
             continue
         start = token.map[1]
+        lines = content.splitlines(keepends=True)
         end = next(
             (
                 following.map[0]
@@ -52,9 +56,9 @@ def report_section(content, heading):
                 and following.level <= token.level
                 and following.tag <= token.tag
             ),
-            len(content.splitlines()),
+            len(lines),
         )
-        return "".join(content.splitlines(keepends=True)[start:end])
+        return "".join(lines[start:end])
     raise AssertionError(f"report section is missing: {heading}")
 
 
