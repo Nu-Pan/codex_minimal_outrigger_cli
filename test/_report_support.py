@@ -1,7 +1,16 @@
 """人間向け report を Markdown として読み、表示契約を確認する。"""
 
+from functools import lru_cache
+
 import yaml
 from markdown_it import MarkdownIt
+
+
+@lru_cache(maxsize=4)
+def _report_tokens(content):
+    """同じ本文の解析を共有し、異なる report と抽出章の保持数を制限する。"""
+    # helper 内では token を読み取るだけとし、YAML の戻り値は毎回独立に作る。
+    return tuple(MarkdownIt().parse(content))
 
 
 def report_text(content):
@@ -12,13 +21,13 @@ def report_text(content):
             for child in token.children or ()
             if child.type in {"text", "code_inline"}
         )
-        for token in MarkdownIt().parse(content)
+        for token in _report_tokens(content)
         if token.type == "inline"
     )
 
 
 def report_metadata(content):
-    tokens = MarkdownIt().parse(content)
+    tokens = _report_tokens(content)
     information = next(
         token.content
         for token in reversed(tokens)
@@ -30,7 +39,7 @@ def report_metadata(content):
 
 
 def report_section(content, heading):
-    tokens = MarkdownIt().parse(content)
+    tokens = _report_tokens(content)
     for index, token in enumerate(tokens):
         if token.type != "heading_open" or tokens[index + 1].content != heading:
             continue
@@ -52,12 +61,12 @@ def report_section(content, heading):
 def original_report_input(content):
     section = report_section(content, "元の指示")
     return next(
-        token.content for token in MarkdownIt().parse(section) if token.type == "fence"
+        token.content for token in _report_tokens(section) if token.type == "fence"
     ).removesuffix("\n")
 
 
 def assert_report_layout(content):
-    tokens = MarkdownIt().parse(content)
+    tokens = _report_tokens(content)
     assert tokens[0].type == "heading_open" and tokens[0].tag == "h1"
     assert not content.startswith("---")
     lines = content.splitlines()
