@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .runtime_errors import CmocError
 from .runtime_git import head_commit, run_git
-from .runtime_paths import sessions_dir
+from .runtime_paths import reuse_root_queries, sessions_dir
 from .runtime_run_lifecycle import EditingRunContext
 from .runtime_state import (
     RunPart,
@@ -220,8 +220,10 @@ def load_join_record(repo: Path, session_id: str) -> JoinRecord | None:
         raise CmocError("join 復旧記録を検証できません。", [], str(path)) from exc
 
 
+@reuse_root_queries()
 def join_record(context: EditingRunContext) -> JoinRecord:
     """同じ run の記録を再利用し、新規 run では元の成果を先に固定する。"""
+    # 配置の探索だけを取得内で共有し、保存内容・worktree 登録は毎回検証する。
     record = load_join_record(context.repo, context.session_id)
     if record is not None and record.context.run_branch == context.run_branch:
         if (

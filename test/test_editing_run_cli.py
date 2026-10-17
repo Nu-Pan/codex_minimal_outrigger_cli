@@ -2470,6 +2470,45 @@ def test_resolve_active_run_reuses_placement_queries_but_refreshes_state_and_wor
     inspect(root, "error")
 
 
+def test_join_record_reuses_placement_queries_but_refreshes_saved_record_and_worktree(
+    ready_run_session, monkeypatch
+):
+    """復旧記録の取得内だけ配置を共有し、次回の保存内容と Git 登録を再検査する。"""
+    context = _prepare_run(ready_run_session)
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git":
+            queries[(kwargs.get("cwd"), tuple(argv[1:]))] += 1
+        return original_run(argv, *args, **kwargs)
+
+    def inspect():
+        queries.clear()
+        with monkeypatch.context() as probe:
+            probe.setattr(git_module.subprocess, "run", record_query)
+            record = join_state_module.join_record(context)
+        assert record.context == context
+        assert record.original_run_head == context.run_fork_commit
+        # 初回保存と既存記録の読込の双方で、同じ配置照会の再起動を防ぐ。
+        assert queries and max(queries.values()) == 1, queries
+        return record
+
+    record = inspect()
+    assert not record.finished
+    assert not inspect().finished
+    record.finished = True
+    record.save()
+    assert inspect().finished
+
+    # 記録が正常でも session の登録が変われば拒否し、復旧後は取り直す。
+    run_git(context.session_worktree, "switch", "--detach")
+    with pytest.raises(CmocError, match="branch の worktree を特定できません"):
+        inspect()
+    run_git(context.session_worktree, "switch", context.session_branch)
+    assert inspect().finished
+
+
 def test_resolve_active_run_rejects_run_branch_from_another_session(
     ready_run_session: tuple[Path, str, Path],
 ) -> None:
