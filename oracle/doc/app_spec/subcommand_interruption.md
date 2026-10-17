@@ -17,6 +17,8 @@
 
 これとは別に、`cmoc tui` と `cmoc oracle investigation` の初回 exec 実行中には、本書の「TUI 起動途中の取消」を適用する。TUI へ制御を渡した後の操作を、cmoc の正常完了型の中断へ変更するものではない。
 
+primary report の重要事項確認中には、本書の「重要事項確認の取消」を適用する。確認を取り消せることだけを理由に、元のサブコマンドを中断可能サブコマンドへ追加しない。
+
 ## 中断要求の通知
 
 - 中断可能サブコマンドと TUI 起動用の初回 exec では、実行中の端末からの `Ctrl+C` をユーザー中断要求として受け付ける。
@@ -36,14 +38,16 @@ realization refactor では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/rea
 
 この優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「回復待ちと再開」に優先する。ただし、本書の「中断要求の通知」が定める不可分な finalization 区間の扱いは維持する。待機中の中断を理由に、個別 workload が要求する処理単位の commit・rollback または確定済み部分結果の保持を省略してはならない。
 
-成立済み run では、子 process の停止確認と未確定処理単位の整合化を終えた後、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」へ進む。新しい本命作業、巡、wave、issue 処理、または要約用 call は開始しないが、この自動 join に必要な競合解消 call と検証は例外として許可する。join の事前検査、state 同期、結果保存、および cleanup も省略しない。run 成立前に終了した場合は、join を開始しない。
+成立済み run では、子 process の停止確認と未確定処理単位の整合化を終えた後、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」へ進む。新しい本命作業、巡、wave、issue 処理、または変更要約用 call は開始しないが、この自動 join に必要な競合解消 call と検証は例外として許可する。join の事前検査、state 同期、結果保存、および cleanup も省略しない。run 成立前に終了した場合は、join を開始しない。
+
+これらの停止・整合化と、その経路で必要な後処理を終えた後は、中断 report の重要事項確認用 call も例外として許可する。run 成立前に中断した report も対象とし、開始時点と確認入力は `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従う。この例外によって、本命作業、要約、追加検証、または issue 探索を再開してはならない。
 
 本命処理の停止要求と、自動 join 自体の取消・失敗を区別する。正常中断の terminal result は join と必要な後処理の成功後に確定し、自動 join の取消・失敗は `error` とする。不可分な finalization 内の停止境界は個別仕様に従い、途中の強制終了を正常中断へ変換しない。
 
 確定済みの部分結果を保持したまま、次の順序で完了処理を行う。
 
 1. 個別仕様が定める自動 join、state 更新、および後処理を行う。
-2. 確定済みの部分作業と中断による終端結果を要約した primary report を、個別仕様が定める保存先へ保存する。表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「primary report」に従う。
+2. 確定済みの部分作業と中断による終端結果を含む primary report の機械生成版を完成し、重要事項の確認結果と確認自身の記録を加えて、個別仕様が定める保存先へ保存する。生成・表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「primary report」に従う。
 3. `user_interruption` の terminal result をサブコマンドログと console へ出力する。
 
 共通の保存・出力規則は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「コンソール・ファイル、ログ出力規則」を正本とする。primary report、個別仕様が保存を認める再開 state、および terminal result を含むサブコマンド終了イベントから、自然完了ではなくユーザー中断要求によって完了したことを判別可能にする。
@@ -51,6 +55,12 @@ realization refactor では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/rea
 ユーザー中断要求による完了は正常系とし、エラー結果またはエラー終了として扱ってはいけない。ただし、primary report の保存を含む完了処理自体に失敗した場合は、個別仕様と、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従ってエラー処理を行う。
 
 Windows toast による terminal result の通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast 通知」を正本とする。
+
+## 重要事項確認の取消
+
+primary report の重要事項確認中に受けた `Ctrl+C` は、確認用 call に対する新しい取消要求とする。本命処理の停止に使った要求は、終了工程として新たに始める確認を自動で取り消す要求にはしない。
+
+確認の停止、確認未完了の記録、保存との関係、および未確定の終了方針は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」に従う。確認を終えた後の state 確定・report 保存・publication などの処理へ、この call の取消契約を拡張しない。
 
 ## TUI 起動途中の取消
 

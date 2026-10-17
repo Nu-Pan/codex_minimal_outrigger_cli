@@ -27,7 +27,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 
 ## agent call と file access
 
-本節の call 数と補完禁止は run 内の本命の追従作業に適用する。同じ invocation の自動 join または復旧用の手動 join に必要な競合解消 call は別に扱い、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「競合解消」に従う。join を、失敗した追従作業を補完して追従完了へ変更する処理にはしない。
+本節の call 数と補完禁止は run 内の本命の追従作業に適用する。同じ invocation の自動 join または復旧用の手動 join に必要な競合解消 call は別に扱い、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「競合解消」に従う。join を、失敗した追従作業を補完して追従完了へ変更する処理にはしない。primary report の重要事項確認用 call は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従う共通生成工程とする。
 
 - 追従要否と適合性の判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」を正本とする。
 - 正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py` の `build_realization_apply_fork_launch_exec_parameter` へ委譲する。
@@ -71,7 +71,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
     - `feedback_observation_count` は件数を表す。0 件の場合も 0 を含める。
     - `feedback_observations` は、`observation_id` と raw observation file の full `path` を持つ object の配列とする。0 件の場合は空配列とする。
 - 差分の終点は共通項目の `{{cmoc-run-fork-commit}}` で表し、同じ commit を別項目として重複掲載しない。
-- AI による意味的な変更要約は生成しない。
+- AI による意味的な変更要約は生成しない。primary report の重要事項確認にも、この変更要約や追従成果の再認定を行わせない。
 - `{{repo-root}}/.cmoc/gu/report/realization/apply/{{execution-id}}.md` に保存し、この report を primary report とする。自動 join と後処理の掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「workload の report」に従う。
 - report 生成時点で確定していない共通 run 項目、差分の始点 commit、Codex CLI の終了結果、または変更 path は、`null` または未実行として記録する。
 - 自動 join と必要な終了処理を終えて `ready` に戻った `natural_completion` は終了コード 0、`error` は非 0 とする。`joinable` への遷移だけでは正常終了しない。

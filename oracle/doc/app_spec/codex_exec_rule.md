@@ -74,6 +74,8 @@ cmoc 呼び出し時点で `$CODEX_HOME` が設定済みなら、その値をそ
 
 cmoc は Codex CLI 呼び出し前に、Codex CLI が実際に参照する `$CODEX_HOME` がディレクトリとして存在することを検証する。この preflight validation に失敗した場合は、cmoc の実行を即時失敗させる。model provider 固有の認証要件を cmoc が一律に検証してはならない。
 
+ただし、primary report の重要事項確認用 call を開始できない場合の確認状態と最外側の終了結果への影響は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」に従う。この call の開始不能を、本命処理の失敗と混同しない。
+
 ## Codex CLI 引数による設定上書き
 
 cmoc は、`AgentCallParameter`、`CmocConfig` などから決まる呼び出し単位の設定を、Codex CLI の argv で明示的に上書きする。cmoc が上書きする設定については、`$CODEX_HOME/config.toml` や project config の値に依存してはならない。
@@ -357,7 +359,7 @@ TUI process は対話型の Codex を起動し、端末の入出力を使用す�
 - reporting の意味は `{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「agent による報告」を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
 - `AgentCallParameter` は、reporter の提供を有効にするかを agent call 単位で保持する。正確な field 名、型、および既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
 - builder が完全 prompt を構築する場合は、reporter の提供判断と同じ値を渡す。有効な call には報告規定を注入し、無効な call には注入しない。対話 resume は本書の「TUI の新規起動と対話 resume」に従う。正確な選択引数と配置は、`{{cmoc-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
-- 提供を無効にする call は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「issue 処理 call の observation 報告」に従う。対象外の builder は、reporter と報告規定をともに有効にする既定の契約を維持する
+- 提供を無効にする call は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「issue 処理 call の observation 報告」と、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call > agent の責務と境界」に従う。対象外の builder は、reporter と報告規定をともに有効にする既定の契約を維持する
 - 初回、Structured Output の補正、retry、および回復待ち後の再開を含む同一 agent call の全 Codex call で、この提供判断を維持する。無効な call の補正・再開 prompt に報告規定を追加してはならない
 - 提供が有効な場合、cmoc は Codex call の開始前に、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「collector と transport」が定める call context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする。無効な場合は、その call 用の reporter/client を起動せず、reporter context と capability を登録しない
 - cmoc は call-scoped な Codex CLI の argv override により提供判断を反映する。有効な場合の MCP server namespace `cmoc_feedback`、公開 tool `submit_observation`、同 tool の approval behavior、および MCP process に必要な起動情報の設定には、本書の「Codex CLI 引数による設定上書き」を適用する
@@ -388,7 +390,7 @@ editor input handoff の利用条件と agent の責務は、`{{cmoc-root}}/orac
 検索の対象、信頼境界、同期、結果、失敗、および資源管理は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「cmoc 専用文書検索」を正本とする。本節は call と MCP 接続の責務を所有する。
 
 - 検索 MCP の有効化を呼び出し単位で指定する。正確な field・型・既定値は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。builder が完全 prompt を構築する場合は、その検索有効状態を起動パラメータと一致させる。
-- oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の所見調査・修正、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。短い応答だけで可用性を確認する回復 probe では検索を無効にする。
+- oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の所見調査・修正、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。短い応答だけで可用性を確認する回復 probe と、固定した report 本文だけを読む重要事項確認用 call では検索を無効にする。
 - 各 call では検索要求時の自動同期を使う。起動時の検索設定・検索用コンポーネントの検査と索引同期は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「実行手順」「検索索引の同期」に従う。Structured Output の補正・retry・再開でも検索の有効状態と work-root を維持する。
 - 有効な各 Codex process に local stdio MCP 接続を設ける。検索 server の cwd、実行ファイル、引数、許可 tool、approval behavior、起動・tool 期限、および信頼された context の供給を、呼び出し単位の argv override で管理する。設定の符号化には本書の「Codex CLI 引数による設定上書き」を使う。
 - 起動管理側は、内側の検索要求の全体上限に停止・回収・返送の余裕を加えて、外側の MCP tool 期限を設定する。有効な設定変更時も、実行途中の動的延長に依存せずこの関係を保つ。内側の期限と停止は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「排他、期限、終了」に従う。余裕の具体値は実装に委ね、同文書の「製品受入条件」で連携を検証する。
@@ -458,6 +460,8 @@ cmoc は、ユーザーが TUI 内でセッションを切り替えない前提�
 
 ## Structured Output
 
+primary report の重要事項確認にも、本節の schema の責務、機械的検証、および不受理出力の保持を適用する。同 call での補正実施の採否と不受理時の保存・終了方針は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call > 未確定事項」を参照する。
+
 - Codex CLI に Structured Output を要求する場合は、必ず `--output-schema` を使うこと
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
 - スキーマは、一度 `{{repo-root}}/.cmoc/gu/schema/{{hash}}.json` に保存して、これを Codex CLI に参照させること
@@ -476,6 +480,7 @@ cmoc は、ユーザーが TUI 内でセッションを切り替えない前提�
 - 次の agent call では、Structured Output の自然言語部分を原則として日本語とする
     - realization refactor
     - feedback issue remediation
+    - primary report の重要事項確認
 - 対象の Structured Output でも、識別子、path、command、log 原文、および引用は元の表記を維持してよい
 
 ### 機械的検証と正式な結果
@@ -526,13 +531,17 @@ cmoc は、ユーザーが TUI 内でセッションを切り替えない前提�
 
 ### 基本的な考え方
 
-一時的な利用不能によって、それまでの作業を失ったり、本来の作業を繰り返して浪費したりすることを避ける。cmoc が管理する `codex exec` と `codex exec resume` が quota 枯渇または対象の一時障害で失敗した場合は、呼び出しを保留し、最小限の回復確認 probe で利用可能になるまで待つ。ただし、次の「TUI 起動用の初回 exec の回復例外」を優先する。TUI 内部と、その他の外部処理にも、この回復待ちを適用しない。
+一時的な利用不能によって、それまでの作業を失ったり、本来の作業を繰り返して浪費したりすることを避ける。cmoc が管理する `codex exec` と `codex exec resume` が quota 枯渇または対象の一時障害で失敗した場合は、呼び出しを保留し、最小限の回復確認 probe で利用可能になるまで待つ。ただし、次の「TUI 起動用の初回 exec の回復例外」を優先し、確認専用 call には「primary report の重要事項確認の回復境界」を適用する。TUI 内部と、その他の外部処理にも、この回復待ちを適用しない。
 
 ### TUI 起動用の初回 exec の回復例外
 
 汎用 TUI と oracle 調査 TUI の初回 exec が最終的に失敗した場合は、記録を保存して停止する。途中まで実行した依頼の再送を避けるため、cmoc による prompt の自動再投入を伴う retry・`codex exec resume`、およびそのための回復待ち・probe を適用しない。UUID を取得できても、自動で TUI へ移行しない。
 
 この例外は、次の「最終的な成功と失敗の判断」を変更せず、他の非対話 workload の回復規約にも広げない。
+
+### primary report の重要事項確認の回復境界
+
+確認専用 call への回復待ち・再試行・補正の適用と、待機・保存・終了の方針は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」を正本とする。以下の失敗分類と最終成功の確認は利用するが、本命 call の回復待ちの継続や失敗時の終了コードを、確認専用 call にも採用済みとは扱わない。
 
 ### 最終的な成功と失敗の判断
 
@@ -619,6 +628,8 @@ Structured Output の補正には、本書の「同じ session での出力補�
 #### 中断と終了処理
 
 ユーザー中断の対象と優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「対象」と「共通動作」に従う。回復待ちを導入したことだけを根拠に、中断対象外のサブコマンドへ正常中断を追加してはならない。
+
+primary report の確認中の取消は、同文書の「重要事項確認の取消」に従う。これはサブコマンドの本命処理に正常中断を追加するものではない。
 
 待機対象外の失敗または再開不能で続行を断念する場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー分類」と「エラー終了の確定」に従う。終了時の commit、rollback、部分成果、および state の扱いは各 workload の正本を維持し、共通の回復処理で一律に変更しない。特に、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に対する自動 rollback を追加してはならない。
 

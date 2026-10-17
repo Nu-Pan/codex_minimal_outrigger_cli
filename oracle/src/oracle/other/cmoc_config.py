@@ -182,6 +182,12 @@ class CmocConfigCodex:
                 model="gpt-6.1-sol",
                 reasoning_effort="max",
             ),
+            # NOTE report 全文の重要事項確認を独立した call 種別として調整する。
+            "build_primary_report_review_parameter": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6.1-sol",
+                reasoning_effort="max",
+            ),
             # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
             "build_quota_availability_probe_parameter": CodexCallConfig(
                 model_provider="openai",

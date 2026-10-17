@@ -13,6 +13,7 @@
 - 各 agent call 種別の設定は、model provider ID、Model 名、および Reasoning Effort 名を必須の直接文字列として持つ
 - 対応する agent call 種別の設定が存在しない場合は、値を推測せず Codex CLI の起動前にエラーとする
 - `CmocConfigCodex` の既定値は、すべての既存 agent call 種別に一つずつ対応する設定を持つ
+- primary report の重要事項確認も独立した call 種別の entry から設定を取得し、確認対象に含まれる本命 call の設定を流用しない。call の責務と builder は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従う
 - cmoc は、三つの直接文字列について、別名への解決、近い値への丸め、または fallback を行ってはならない
 - cmoc は、Model、Reasoning Effort、および model provider の組み合わせに対する互換性検査や allowlist を持たない
 - Codex CLI が設定を拒否した場合は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」に従う。TUI への適用範囲は同文書の「TUI の新規起動と対話 resume」に従い、非対話の回復待ちを持ち込まない

@@ -54,7 +54,7 @@ repository-local feedback state、subcommand log、および Codex call log は 
 
 normalization と issue remediation では、調査対象の再報告が追加 evidence として同じ issue の再確認を誘発する経路を止めるため、feedback reporter の提供を無効にする。対象は、本書の「agent observation と normalization」「issue remediation agent call」で委譲する `build_feedback_*_issue_parameter` 系とし、現在は `build_feedback_normalize_issue_parameter` と `build_feedback_remediate_issue_parameter` の 2 種類である。判定根拠の変化に伴う再確認 call も対象に含む。
 
-対象 call では、同じ issue の再報告と、作業中に見つかった別の問題の追加報告をともに行えなくてよい。MCP の非提供と報告規定の非注入、および同じ論理 call の補正・retry・再開での維持は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。これは feedback report invocation 全体の無効化ではなく、別の call kind である回復確認 probe、join の競合解消、および他の workload の報告契約を変更しない。
+対象 call では、同じ issue の再報告と、作業中に見つかった別の問題の追加報告をともに行えなくてよい。MCP の非提供と報告規定の非注入、および同じ論理 call の補正・retry・再開での維持は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。これは feedback report invocation 全体の無効化ではなく、別の call kind である回復確認 probe、join の競合解消、および他の workload の報告契約を変更しない。primary report の重要事項確認用 call の提供判断も、同節が参照する共通仕様に従う。
 
 入力 observation の同一性判断と、入力 issue の確認・修正・検証および `human_required` を含む結果は、既存の Structured Output で返す。追加報告ができないことを結果分類の理由にしてはならない。別 issue の追加報告用 field、代替 tool、または log からの自動 issue 化など、非提供を補う収集経路は設けない。
 
@@ -237,7 +237,7 @@ cmoc は、merge 対象 commit の参照に加えて、封印済み report cut �
 
 ### join 後の検証と記録
 
-merge または no-op join と post-join の後、issue commit の到達可能性、マージ調整を含む変更 path、必要な機械生成物、および採用する全結果の判定根拠を join 後の session 状態に対して検証する。merge commit 前の検証記録が最終状態に適用できることも確認する。検証済みの修正の効果と採用結果の有効性、および publication の整合性を確認できなければ、join 後検査失敗とする。この段階では新しい Codex call や修正を開始しない。
+merge または no-op join と post-join の後、issue commit の到達可能性、マージ調整を含む変更 path、必要な機械生成物、および採用する全結果の判定根拠を join 後の session 状態に対して検証する。merge commit 前の検証記録が最終状態に適用できることも確認する。検証済みの修正の効果と採用結果の有効性、および publication の整合性を確認できなければ、join 後検査失敗とする。この検証段階では新しい Codex call や修正を開始しない。終了時の primary report の重要事項確認は、本書の「invocation report」で別に扱う。
 
 封印済み artifact の hash 整合性は、その artifact が変わっていないことの検査である。マージ後のファイル内容が run branch と同一であることや、採用結果の意味的な妥当性の証明として扱ってはならない。調整と検証の記録は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「publication completion record」に従って最終取り込み結果と結び付ける。
 
@@ -276,7 +276,7 @@ publication point 前後の state と入力の扱いは、`{{cmoc-root}}/oracle/
 
 確定後に外部状態や session tree が変わっていても、最後に確定した状態を保持して後処理を完了する。変化後の判定は次の新規 report で行う。run の隔離資源を削除する条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「使用済み branch と worktree の cleanup」に従う。
 
-新しい wave または Codex call は開始しない。安全に再開できない場合は、`run.state=error` と資源を維持する。
+新しい wave または Codex call は開始しない。ただし、今回の invocation report の重要事項確認だけは、本書の「invocation report」に従う例外とする。安全に再開できない場合は、`run.state=error` と資源を維持する。
 
 再開したサブコマンドには、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従う新しい実行 ID を付与する。feedback run の識別情報と、引き継ぐ正常 report と `incomplete` 診断 report の target は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback run」「report cut」に従う。
 
@@ -296,11 +296,13 @@ publication point 前後の state と入力の扱いは、`{{cmoc-root}}/oracle/
 
 doctor preprocess または共通開始処理の途中では、その準備が導入した未確定更新と作成資源を取り消す。開始前からの資源や人間の未コミット差分は保持する。run 成立前に終了した場合は、未完了の段階を report し、存在しない run、`joinable` state、または join を作らずに正常中断を完了する。
 
-成立済み run は、整合化後に `run.state=joinable` とし、同じ invocation 内で本書の「publication を行わない feedback join」を実行する。中断後の新しい call と検証は、この join に必要な競合解消と検証だけを許す。新しい report cut を封印したり、issue 処理を再開したりしない。
+成立済み run は、整合化後に `run.state=joinable` とし、同じ invocation 内で本書の「publication を行わない feedback join」を実行する。中断後の新しい call と検証は、この join に必要な競合解消と検証、および共通中断契約が定める primary report の重要事項確認に限る。新しい report cut を封印したり、issue 処理を再開したりしない。
 
 自然完了経路では report cut の封印を開始する前に中断要求を確認し、受理済みなら中断経路へ移る。封印の開始から自動 join・join 後検査・publication・cleanup までは、不可分な finalization とする。中断経路でも、整合化後の自動 join 開始から必要な後処理・cleanup までは不可分な finalization とし、途中の停止要求は整合した境界まで保留する。
 
 finalization 中の process interruption、取消、または操作失敗は、正常な `user_interruption` へ変換しない。自然完了経路で取り込み済みなら本書の「join 後の publication failure」、それ以外は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「join の失敗と復旧」に従う。
+
+invocation report の重要事項確認は、この不可分な finalization の終了後に行う。確認の停止要求を、issue 処理の再開や publication の取消として扱わない。
 
 ### publication を行わない feedback join
 
@@ -313,6 +315,8 @@ feedback の publication、`incomplete` 診断 report の生成、active・histo
 自然完了経路ですでに自動 join した run は、本節の明示 join の対象にせず、「join 後の publication failure」に従う。
 
 ## 続行不能な失敗
+
+本節は本命の issue 処理と join・publication の失敗を扱う。primary report の重要事項確認用 call の停止・失敗は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」「重要事項確認用 call > 未確定事項」に従う。
 
 本命処理の続行不能な失敗では、実行中の issue 処理単位を正式な結果と commit まで確定できる場合だけ commit し、それ以外は処理単位全体を rollback する。成立済み run を `run.state=error` とし、自動 join しない。run 成立前なら新しい run state を作らない。
 
@@ -335,6 +339,8 @@ current pointer に結び付ける report は、`{{cmoc-root}}/oracle/doc/app_sp
 冒頭の要約では、それらが保存時点では未完了であることと、必要な確認・操作を示す。保存後の結果の確認先として元の実行のサブコマンドログを案内する。保存後に確定した処理結果と最終 state は、そのログと terminal result に記録し、publication report を書き換えない。`cmoc feedback report` では、これらの最終結果を今回の invocation report にも載せ、その 1 件を primary report とする。publication report 保存までの共通掲載内容は省略しない。
 
 publication artifact の不変性と掲載時点は、正常 report、`incomplete` 診断 report、および `cmoc feedback close` が publication する report に共通して適用する。close の primary report と保存後の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」を維持する。本コマンドの再開した実行の記録と帰属は、本書の「再開時の report と実行記録」に従う。
+
+本コマンドの publication report は primary report を兼ねないため、重要事項確認用 call とその結果欄を追加しない。重要事項の確認は、保存後の処理結果まで含めた今回の invocation report に対して行う。primary report を兼ねる close の publication report には、この省略を適用しない。
 
 ### 現在の案件一覧
 
@@ -406,11 +412,15 @@ publication report の保存段階では、未保存なら固定済み target �
 
 invocation report は feedback publication または active state の一部ではなく、current pointer の参照先にしない。candidate を publication 済み issue または active issue として扱ってはならない。
 
+上記の確定結果を掲載した機械生成版について、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従って確認する。recovery でも今回の invocation report を確認し、引き継いだ publication artifact の再判定・追記・上書きは行わない。重要事項の確認状態と、publication の `result: incomplete` は別の意味として表示する。
+
 `user_interruption` では publication 未実施と保持した観測・checkpoint を明記する。自動 join に成功した場合は、成果の取り込みと最新状態の未 publication を区別し、次回 report で再確認することを示す。run 成立前なら、自動 join は未実行とする。
 
 `error` では、今回完了できなかった処理と、最後に確定した generation・report を区別して示す。publication 前に失敗した場合は、今回の最新状態の確認・確定が成立していないことを示す。publication 後に失敗した場合は、成立済みの更新と残った処理を示す。未確定の結果を `incomplete` や解決済みへ変換しない。
 
 ## 終了コード
+
+以下は本命処理と必要な確定・保存処理の結果を表す。重要事項確認自体の未完了による影響は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call > 未確定事項」と区別する。
 
 - `ok`、`attention`、`incomplete` は、自然完了の自動 join・publication と必要な終了処理まで成功した場合に終了コード 0 とする。正常なユーザー中断も、成立済み run の自動 join と必要な終了処理を完了した場合、または run 成立前に整合して終了した場合に 0 とする。
 - validation 失敗、agent call failure、Structured Output 受理失敗、差分検査失敗、commit 失敗、state corruption、merge 失敗、required recovery 失敗、および durable report・publication・cleanup の失敗は終了コード 1 とする。

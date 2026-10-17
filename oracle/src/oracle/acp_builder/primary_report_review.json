@@ -1,0 +1,103 @@
+{
+  "type": "object",
+  "description": "primary report の重要事項確認の結果。自然言語は原則として日本語とし、識別子・path・command・引用は原文の表記を保つ。",
+  "additionalProperties": false,
+  "required": ["result"],
+  "properties": {
+    "result": {
+      "anyOf": [
+        {"$ref": "#/$defs/findings_result"},
+        {"$ref": "#/$defs/no_findings_result"},
+        {"$ref": "#/$defs/incomplete_result"}
+      ]
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "evidence"],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "report に記された重要事項の簡潔な説明。"
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "description": "この重要事項の根拠となる report 本文中の記載。",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["location", "quote"],
+            "properties": {
+              "location": {
+                "type": "string",
+                "pattern": "\\S",
+                "description": "確認対象 report 内で根拠へ到達できる位置。見出しと call ID など、本文内で区別できる情報を示す。"
+              },
+              "quote": {
+                "type": "string",
+                "pattern": "\\S",
+                "description": "根拠となる report 本文の短い原文引用。言い換えや外部資料からの引用を混ぜない。"
+              }
+            }
+          }
+        }
+      }
+    },
+    "findings_result": {
+      "type": "object",
+      "description": "固定された機械生成版の全文を確認し、重要事項があった場合。",
+      "additionalProperties": false,
+      "required": ["status", "findings"],
+      "properties": {
+        "status": {"type": "string", "enum": ["findings"]},
+        "findings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/finding"}
+        }
+      }
+    },
+    "no_findings_result": {
+      "type": "object",
+      "description": "固定された機械生成版の全文を確認した範囲では重要事項がなかった場合。実作業の正しさや report 外の問題の不存在を意味しない。",
+      "additionalProperties": false,
+      "required": ["status", "findings"],
+      "properties": {
+        "status": {"type": "string", "enum": ["no_findings"]},
+        "findings": {
+          "type": "array",
+          "maxItems": 0,
+          "items": {"$ref": "#/$defs/finding"}
+        }
+      }
+    },
+    "incomplete_result": {
+      "type": "object",
+      "description": "全文を読み取れない、入力が省略されている、context の制限などにより全文の確認を完了できなかった場合。該当なしとは区別する。",
+      "additionalProperties": false,
+      "required": ["status", "reason", "reviewed_scope", "findings"],
+      "properties": {
+        "status": {"type": "string", "enum": ["incomplete"]},
+        "reason": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "全文の確認を完了できなかった具体的な理由。"
+        },
+        "reviewed_scope": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "実際に確認できた本文の範囲と未確認範囲。何も確認できなければその旨を示す。"
+        },
+        "findings": {
+          "type": "array",
+          "description": "確認できた範囲から抽出した重要事項。空配列でも全文に該当なしという意味にはしない。",
+          "items": {"$ref": "#/$defs/finding"}
+        }
+      }
+    }
+  }
+}

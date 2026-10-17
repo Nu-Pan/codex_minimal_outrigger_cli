@@ -31,6 +31,8 @@ cmoc は、handled failure と internal failure のどちらの場合も、個�
 
 最外側の非対話末端サブコマンドでは、エラーまでに確定した作業内容とエラー終端結果を、個別仕様が定める primary report に保存する。その後、`error` の terminal result とサブコマンド終了イベントを確定する。
 
+エラー report の生成にも、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」を適用する。確認未完了と report 自体の保存失敗は区別する。確認の待機・取消・失敗が最外側の終了結果へ与える影響は、同節の「確認の停止・失敗と保存」「未確定事項」に従い、確認のために元の本命処理を再実行したり、その確定済み成果を破棄したりしない。
+
 primary report 自体を保存できない場合は、元の失敗結果に代えて report 保存基盤の internal failure を確定する。この場合、保存を確認できない report の役割または path は表示しない。
 
 ## handled failure の表示

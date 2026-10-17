@@ -284,7 +284,7 @@ report の開始条件は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedb
 
 1. base current pointer、操作の固定入力、次の generation・history・report の target、および消費・cleanup 対象を durable な作業記録へ結び付ける。
 2. 新しい generation の record と manifest、追加する history、および入力消費の記録を durable 保存する。これらはまだ公開しない。
-3. その generation の最新一覧を載せた Markdown report を、固定済み target の最終 path へ durable 保存する。
+3. その generation の最新一覧を載せた Markdown report を、固定済み target の最終 path へ durable 保存する。primary report を兼ねる close report の初回保存前の重要事項確認は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」に従う。
 4. 各 artifact の path と hash、および current pointer が base から変わっていないことを検証する。
 5. generation、report、および引き継ぐ履歴と追加履歴・消費記録を一体として選ぶ current pointer を atomic に切り替え、durable にする。
 6. 切替後にだけ、本書の「入力の消費と cleanup」に従って raw observation、切替前の generation、および完了済み work artifact を cleanup する。

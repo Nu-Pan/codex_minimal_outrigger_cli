@@ -8,7 +8,7 @@
 
 本節の報告義務は、reporter の提供を有効にした agent call に適用する。意図的な非提供は、提供が有効な call で reporter を利用できない障害とは区別する。
 
-提供判断と prompt 注入の整合、および実効設定の管理は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。無効化する call とその目的は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「issue 処理 call の observation 報告」を正本とする。
+提供判断、無効化対象への参照、prompt 注入の整合、および実効設定の管理は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。意図的に無効にした call に、報告義務や代替の報告経路を要求しない。
 
 ### 報告基準
 

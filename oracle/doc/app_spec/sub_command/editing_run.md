@@ -125,7 +125,7 @@ workload または join の停止失敗後は、書き込み得る process の�
 4. join 後の session tree に対して refactor state を同期する。同期で生じた tracked 差分は cmoc が commit する。
 5. workload 固有の取り込み後処理を完了する。feedback の自然完了では join 後検査・publication・入力と work artifact の cleanup、中断後または明示 join では publication 未実施の記録を行う。
 6. join、hook、refactor state 同期、および workload 固有処理の結果と、run identity を含む report を保存する。その後 `run.state=ready` とし、active run 情報を初期化する。
-7. 本書の「使用済み branch と worktree の cleanup」に従い隔離資源を回収する。state 更新と cleanup の実際の結果を同じ invocation の primary report に反映してから、terminal result を確定する。report に後続処理の成功を先取りして記載しない。
+7. 本書の「使用済み branch と worktree の cleanup」に従い隔離資源を回収する。state 更新と cleanup の実際の結果を同じ invocation の primary report の機械生成版に反映する。その後、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従って確認結果と確認自身の記録を加え、primary report を保存してから terminal result を確定する。report に後続処理の成功を先取りして記載しない。
 
 自然完了した feedback の publication artifact は immutable のまま保ち、最外側の実行結果は `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「invocation report」に保存する。
 
@@ -219,6 +219,8 @@ workload の report の実行情報には、少なくとも次の項目を含め
 確定できない項目は `null` とし、存在しない branch、commit、worktree、または state を作ってはならない。変更 path と完了理由も含める。保存先と workload 固有項目は、workload 固有仕様で定める。
 
 最外側の invocation の primary report は、上記に加えて、自動 join の事前検査・差分検査・merge または no-op join、`{{cmoc-run-join-commit}}`、post-join hook、refactor state 同期、workload 固有の確定処理、state 初期化、および cleanup の実際の結果を含む。no-op join の join commit は `null` とする。未実行と失敗を区別し、失敗段階、取り込み成立の有無、残存資源、必要な復旧、および次の操作を示す。
+
+重要事項の確認入力は、これらを掲載した機械生成版とする。「merge と post-join」の state 初期化前の保存 report を最終版とみなしたり、内部 join で確認用 call を追加したりしない。失敗経路では、その時点で確定できた結果と未完了処理を含める。
 
 自動 join は親の実行 ID と command を引き継ぐ内部処理とし、独立した primary report、terminal result、完了時のエディタ表示、または完了通知を追加しない。正常終了後の追加の手動 join は案内しない。
 

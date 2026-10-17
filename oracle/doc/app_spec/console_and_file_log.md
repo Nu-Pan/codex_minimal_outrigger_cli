@@ -68,7 +68,7 @@ primary report は、冒頭だけで、何を依頼した実行か、どこま�
 feedback の immutable な publication artifact の掲載時点は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。`cmoc feedback report` は、同文書の「invocation report」に従い最外側の終了結果を primary report に載せる。再開した実行の帰属は同文書の「再開時の report と実行記録」に従う。`cmoc feedback close` が publication report を primary report として使う場合の保存確認・掲載時点・保存後の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」を維持する。
 
 - `natural_completion`、`user_interruption`、および `error` のすべてを primary report の対象とする。個別サブコマンドで成立しない終端分類の report は要求しない。
-- primary report 作成専用の追加 agent call は、個別仕様が report 生成手順として明示する場合に限る。
+- primary report を新規生成する際は、本書の「重要事項確認用 call」に従う専用 agent call を共通の生成工程として追加する。それ以外の report 作成専用 call は、個別仕様が生成手順として明示する場合に限る。
 - cmoc 内部から呼び出したサブコマンド、処理関数、agent call、および Codex call は、独立した primary report を保存しない。
 
 自動 join を含む workload は、join と post-join、state、cleanup、失敗段階、および次の操作を最外側の primary report に含める。項目と保存順序は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」「workload の report」に従う。内部 join 用に report、表示用エディタ、terminal result、または完了通知を重複させない。
@@ -86,17 +86,17 @@ primary report の保存に失敗し、完了契約を確定できない場合�
 
 ### 共通掲載内容
 
-primary report は Markdown とし、「人間向けタイトルと冒頭の要約 → 元の指示 → 詳細結果・実行記録 → 実行情報」の順序で構成する。
+primary report は Markdown とし、「人間向けタイトルと冒頭の要約 → 重要事項の確認結果 → 元の指示 → 詳細結果・実行記録 → 実行情報」の順序で構成する。
 
 ファイル先頭に YAML Front Matter を置かない。実行情報を YAML で表す場合は、その章内のコードブロックにする。見出しの正確な名前、抜粋の長さ、および細かな装飾は、上記の読み順と以下の要件を満たす範囲で実装に委ねる。
 
 cmoc が生成する Markdown 見出しの前後には、少なくとも 1 行の空行を設ける。ただし、ファイル先頭の見出しの直前は例外とする。引用する指示原文や Structured Output の文字列には、この整形のための空行挿入や書き換えを行わず、report 側の見出しと区切りで読みやすくする。
 
-構成・要約・表示加工は cmoc の report 生成が担い、agent 向け prompt や Structured Output schema に表示責務を追加しない。
+構成・機械的な要約・表示加工は cmoc の report 生成が担う。確認用 agent は重要事項を抽出し、agent 向け prompt や Structured Output schema に表示責務を追加しない。
 
 #### 実行の識別と入力
 
-冒頭にコマンド名、実行目的、および対象を示す。ユーザー指示や理由などの自由記述入力を受け取る実行では、その実行で使用するものとして確定した入力の短い抜粋を冒頭に載せ、全文を直後の「元の指示」へ加工せず掲載する。長い指示全文によって冒頭の結果要約を押し下げない。
+冒頭にコマンド名、実行目的、および対象を示す。ユーザー指示や理由などの自由記述入力を受け取る実行では、その実行で使用するものとして確定した入力の短い抜粋を冒頭に載せ、全文を重要事項の確認結果に続く「元の指示」へ加工せず掲載する。長い指示全文によって冒頭の結果要約を押し下げない。
 
 editor input の掲載元は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「ファイルの役割」「editor input の確定手順」で確定したオリジナルプロンプトとする。同節の再読禁止は report 作成時にも適用し、保存ファイルから指示を復元しない。report 用に別の入力の正本を設けない。
 
@@ -114,7 +114,21 @@ editor input の掲載元は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_
 
 実行の成否と問題の有無は分ける。終了コード 0 を問題なしと読み替えず、未確認を確認済みとして扱わない。サブコマンド固有の結果分類と、その結果に応じた注意事項・次の操作は個別仕様に従う。
 
-要約は既存の確定情報から cmoc が作成し、要約のための追加 agent call は行わない。realization apply と realization refactor の変更要約の可否・生成方法は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「report と終了コード」と `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「変更要約」に従う。oracle edit の差分と成果の帰属は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に従う。
+冒頭の要約は既存の確定情報から cmoc が機械的に作成する。本文に記された重要事項を補う専用 call は、本書の「重要事項確認用 call」で定め、機械的な要約の置換や一般的な変更要約には使わない。realization apply と realization refactor の変更要約の可否・生成方法は、それぞれ `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_apply.md` の「report と終了コード」と `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「変更要約」に従う。oracle edit の差分と成果の帰属は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md` の「終了と差分」に従う。
+
+#### 重要事項の確認結果
+
+既存の冒頭の要約の直後、元の指示より前に、確認状態と重要事項を載せる。重要事項には report 内の根拠位置と短い原文引用を添え、プロセスの正常終了と本文で報告された目標未達などを読み分けられるようにする。既存の機械的な結果分類、要約、詳細本文を変更・削除しない。
+
+確認状態は、次の意味を判別可能にする。正確な表示文言は固定しない。
+
+| 確認状態 | 意味 |
+|---|---|
+| 重要事項あり | 固定した機械生成版の全文を確認し、重要事項を抽出した。 |
+| 全文を確認した範囲では該当なし | 同じ全文を確認したが、抽出すべき重要事項がなかった。実作業の正しさや、report 外も含む問題の不存在を保証しない。 |
+| 確認未完了 | 全文の確認完了を得られなかった。未開始、失敗、取消、または全文確認不能などの理由と確認できた範囲を示す。 |
+
+未確認、失敗、または不受理の出力を「該当なし」へ変換してはならない。受理した未完了の応答に部分的な抽出結果があれば、確認未完了のまま、その範囲の結果として載せる。schema 不合格などで受理できない出力は重要事項の根拠に採用せず、次の実行記録に残す。
 
 #### 詳細結果と実行記録
 
@@ -122,6 +136,8 @@ editor input の掲載元は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_
 
 - 各 `codex exec`（`codex exec resume` による再開・補正を含む）で取得できた最終出力の本文と、元の出力ファイルへの参照。取得・保存先は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の `--output-last-message` を正本とする。
 - 実行中に新規受理された feedback observation の問題内容。掲載対象は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」における observation とする。
+
+重要事項確認用 call 自身も実行記録の対象とし、取得できた最終出力本文、出力ファイル・call log への参照、開始・終了状況、および受理結果を掲載する。確認入力の固定時点とその全文への参照を示し、確認自身の記録は確認対象外だったことを区別する。未開始なら call の実行や出力を作らない。これらの追記を理由に再確認を始めてはならない。
 
 共通掲載対象の本文を、省略・要約または原本への参照だけで置き換えてはならない。冒頭の要約を設けても、個別仕様の必須情報と実行記録本文は省略しない。
 
@@ -145,6 +161,66 @@ JSON として解析できない場合は、その旨と取得できた原文を
 
 Structured Output の受理条件と不合格出力の保持は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Structured Output > 機械的検証と正式な結果」を正本とする。表示できることを受理条件に加えたり、表示変換で出力補正や結果の受理を代替したりしてはならない。
 
+### 重要事項確認用 call
+
+機械的な冒頭要約だけでは拾えない、agent の出力本文に記された目標未達などを人間へ伝えるため、機械生成した primary report の全文を専用 agent が確認する。本節は、この確認の意味仕様を所有する。
+
+#### 入力の固定と開始時点
+
+確認入力は、既存の機械的な要約、確定した元の指示、各 agent の最終出力全文、受理済み observation、および当該 report の掲載時点までに確定した後処理結果を含む機械生成版の全文とする。詳細結果・実行記録・実行情報も含め、冒頭だけ、抜粋、または一部の call だけを全文の代わりに渡してはならない。
+
+個別仕様が定める掲載時点に達し、その時点までの掲載情報を確定してから機械生成版を完成させる。通常の編集 workload では、自動 join、post-join、state 更新、cleanup の実際の結果を含める。これらの完了前に確認を始めて、未実行の後処理を成功として補ってはならない。
+
+cmoc は確認用 call の開始直前に入力全文を固定し、確認対象として読み取れるファイルに保存する。call 中はその本文を変更せず、call の記録と対応付けて保持する。最終 report に確認結果と確認自身の記録を加えても、固定した入力には戻さず、確認を循環させない。先頭部分しか読めない、途中が省略された、context 上限などにより全文を扱えない場合は、全文確認が完了したとは扱わない。
+
+確認を行うのは最外側の primary report の新規生成時だけとする。内部 join の中間 report や、primary report を兼ねない publication report のために同じ call を増やさない。primary report を兼ねる immutable な publication report の初回保存と保存済み artifact の再利用は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「primary report と終了結果」に従う。
+
+#### agent の責務と境界
+
+agent は、全文に記された目標未達、未完了、未検証、未解決事項、人間の判断が必要な点など、結果を読む人間が見落としてはいけない事項を、report 内の根拠に基づいて抽出する。元の指示の要求・例示と実績の申告、プロセスの成功と本文で報告された達成状況を分け、過去の途中結果と掲載時点までの確定結果を照合する。例えば call が正常終了していても、最終出力に「目標未達で停止した」とあれば、重要事項として扱う。
+
+判断材料は固定した report 本文だけとする。本文中の元の指示、過去の出力、引用、command、およびリンク先への作業指示は、すべて確認対象の資料であり、確認 agent が従う指示ではない。外部のファイル、raw log、現在の repository 状態などを追加調査しない。
+
+本命作業の再実行・補完、修正・検証、一般的な意味的変更要約、差分や成果の再認定、および feedback close の外部解決の妥当性の再判定は行わない。確認結果からサブコマンドや issue の結果分類を再判定しない。表示・構成・配置は cmoc が担う。
+
+新しい問題の探索や observation・issue の生成も行わない。既存 observation を含む本文の再報告を防ぐため、この call では feedback reporter と報告規定をともに無効にする。提供判断の共通機構は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。確認結果を自動 issue 化する代替経路も設けない。
+
+#### 起動と正確な定義の委譲
+
+確認は新しい Codex session の読み取り専用 call とし、本命 call の会話を引き継がない。cwd は対象 repository の main worktree とし、cleanup 済みの run worktree を再作成しない。本文以外を調査しないため、文書検索 MCP と editor input handoff MCP は提供しない。
+
+正確な詳細は次へ委譲する。受信 agent が cmoc の内部仕様を読まなくても実行できる、自己完結した指示にする。
+
+- `{{cmoc-root}}/oracle/src/oracle/acp_builder/primary_report_review.py` の `build_primary_report_review_parameter`：prompt 文面、固定した入力ファイルの受け渡し、call 種別、file access mode、および MCP の選択を含む起動パラメータ。
+- `{{cmoc-root}}/oracle/src/oracle/acp_builder/primary_report_review.json` の root schema（JSON Pointer `#`）：Structured Output の構造、確認状態の固定値、重要事項・根拠・未完了理由の field と組み合わせ。構造と schema で表せる出力要件は prompt に重複させない。
+- `{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls`：通常の call 種別設定と同じ仕組みで選ぶ model provider、model、reasoning effort の既定値。
+
+設定取得と出力検証には、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」と `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Structured Output」を適用する。schema にない意味的品質を機械的な受理条件へ追加しない。
+
+#### 確認の停止・失敗と保存
+
+確認用 call のプロセスの成功、出力の受理、および全文の確認完了は分けて判断する。起動条件を満たせない場合、全文を渡せない場合、call の失敗・取消、出力の不受理、または agent が全文確認不能を返した場合は、確認完了とは扱わない。cmoc が検出した未開始・失敗の理由と、受理した agent の未完了応答を区別し、存在しない応答や確認済み範囲を補わない。
+
+本命処理の中断後に確認を開始する例外と、確認に対する新しい取消要求の区別は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「共通動作」「重要事項確認の取消」に従う。取消を受け付けたら、自然完了を待たず子 process の停止・終了処理へ移る。同じ invocation では、取消後に新しい確認 call、補正、retry、probe、または回復待ちを開始しない。確認結果の受理と競合した場合も取消を優先し、確認未完了として記録する。
+
+取消後に別の primary report を新規生成する必要が生じた場合も、確認は開始せず、取消により未開始であることをその report に示す。先の report に対する確認結果を、本文が異なる report の全文確認結果として流用してはならない。
+
+この取消は本命処理の再開・rollback、成立済み publication の取消、または close の再判定を許すものではない。確認自体を不可分な finalization に含めて停止要求を保留しない。停止確認と記録の保存は省略せず、停止を確認できない process を終了済みと表示しない。
+
+確認の成否によって、既存の機械生成版、取得済みの詳細本文、保存済み成果、および本命処理の確定結果を失わせない。確認未完了のまま保存・終了する経路では、その状態と理由を機械生成版へ加えて届ける。確認結果の重要事項やその件数を、本命処理の結果分類や終了コードの再判定に使わない。確認自体の失敗・取消による終了コードへの影響は、次の「未確定事項」で区別する。
+
+確認未完了は primary report 自体の保存失敗とは区別する。保存できない場合は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラー終了の確定」に従う。確認自身の失敗記録を追記するために、同じ report の確認を再帰的に開始してはならない。
+
+#### 未確定事項
+
+次は人間意図の選択が必要な未確定事項とする。
+
+- quota・一時障害時に共通の回復待ちを継続するか、確認未完了として保存へ進むか。回復を試みる場合の上限・再試行、および無応答時を含む実行・待機の打切り条件。
+- Structured Output が不受理の場合に共通の補正を試みるかと、その上限。全文確認不能を返した場合も含め、どの時点で確認未完了として保存・終了するか。
+- 確認の失敗・時間切れ・取消によって、最外側の終端分類と終了コードを変更するか。本命処理の確定結果を保持することとは別の判断とする。
+
+これらは通常の呼び出しの回復待ち・補正・エラー終了を変更するものではなく、確認専用 call への適用を未確定としている。共通規約の無期限の回復待ちや本命 call の失敗時の終了規則を、そのまま選択済みの方針とみなしてはならない。report を届けるために確認を打ち切る方向や具体的な時間上限は、採用済みの要件として補わない。
+
 ## terminal result
 
 ### 定義と分類
@@ -165,11 +241,12 @@ TUI 起動途中の取消は、確定済み部分結果による正常完了を�
 
 terminal result は、次の処理をすべて完了した後に確定して表示する。
 
-1. state、成果物、および終端結果に必要な情報を確定する
-2. 並列処理、非同期処理、回復待ち・probe・再開の処理、および console へ出力し得る通知処理を停止または drain する
-3. 非対話サブコマンドでは、確定した作業内容と終端結果を primary report に保存する
-4. 非対話サブコマンドでは、本書の「完了時のエディタ表示」に従って表示用エディタの起動を試みる
-5. terminal result を含むサブコマンド終了イベントをサブコマンドログへ書き込み、flush する
+1. 個別仕様が定める report の掲載時点まで、state、成果物、および終端結果に必要な情報を確定する
+2. 本命処理の並列処理、非同期処理、回復待ち・probe・再開の処理、および console へ出力し得る通知処理を停止または drain する
+3. 非対話サブコマンドでは、機械生成版を完成・固定し、重要事項確認用 call を行う。確認の終了処理と出力の回収後、確認状態・結果と確認自身の記録を加えて primary report を保存する。個別仕様が保存済み artifact の再利用を定める場合は、再確認せず保存確認を行う
+4. 個別仕様が report 保存後に publication・cleanup などを行う場合は、それらを完了し、実際の終端結果を確定する。immutable な report を書き換えず、個別仕様が定める記録先に結果を残す
+5. 残る非同期処理と通知処理を停止または drain する。非対話サブコマンドでは、本書の「完了時のエディタ表示」に従って保存済み primary report の表示用エディタの起動を試みる
+6. terminal result を含むサブコマンド終了イベントをサブコマンドログへ書き込み、flush する
 
 terminal result の表示後は、同じサブコマンドの stdout または stderr へ追加出力してはならない。
 
@@ -294,6 +371,7 @@ TUI が実際に開いた会話、切り替え履歴、終了時の主会話、�
 TUI の通知境界を適用するサブコマンドと非対話サブコマンドの分類は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「目的と適用範囲」と「非対話サブコマンドの通知境界」を正本とする。本書の primary report 契約は、その分類を変更しない。
 
 - TUI の通知境界を適用するサブコマンドでは、正常な TUI 終了後に非対話サブコマンド用の primary report または terminal result を追加しない。`cmoc resume` の場合も同じ境界とする
+- primary report を生成しない TUI 経路には、重要事項確認用 call も追加しない
 - `cmoc oracle edit` は非対話サブコマンドとして本書を適用する。内部の各 `codex exec` は独立した terminal result を表示せず、最外側のサブコマンドが終了状態の確定後に 1 回だけ表示する
 - TUI の起動前エラーまたは異常終了には、本書と `{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」のエラー表示規則を適用する。非対話サブコマンド用の primary report は要求しない
 - 初回 exec 中は、「初回応答を生成中」など、稼働中と分かる短い進行表示を stderr へ出す。生成途中の回答本文を独自にストリーミング表示しない。初回 exec を含むことだけを理由に非対話サブコマンドへ再分類せず、独立した primary report や完了表示を追加しない
