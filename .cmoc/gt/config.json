@@ -7,12 +7,12 @@
       }
     },
     "agent_calls": {
-      "build_session_join_conflict_resolution_parameter": {
+      "realization_edit": {
         "model_provider": "openai",
-        "model": "gpt-6-astra",
-        "reasoning_effort": "max"
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "xhigh"
       },
-      "build_run_join_conflict_resolution_parameter": {
+      "build_session_join_conflict_resolution_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
         "reasoning_effort": "max"
@@ -27,16 +27,6 @@
         "model": "gpt-6-astra",
         "reasoning_effort": "max"
       },
-      "build_realization_apply_fork_launch_exec_parameter": {
-        "model_provider": "openai",
-        "model": "gpt-6.1-sol",
-        "reasoning_effort": "max"
-      },
-      "build_feedback_remediate_issue_parameter": {
-        "model_provider": "openai",
-        "model": "gpt-6.1-sol",
-        "reasoning_effort": "max"
-      },
       "build_feedback_normalize_issue_parameter": {
         "model_provider": "openai",
         "model": "gpt-6.1-sol",
@@ -45,11 +35,6 @@
       "build_tui_launch_tui_parameter": {
         "model_provider": "openai",
         "model": "gpt-6-astra",
-        "reasoning_effort": "max"
-      },
-      "build_realization_refactor_fork_file_review_and_fix_parameter": {
-        "model_provider": "openai",
-        "model": "gpt-6.1-sol",
         "reasoning_effort": "max"
       },
       "build_primary_report_review_parameter": {
