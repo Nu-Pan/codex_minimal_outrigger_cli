@@ -1687,6 +1687,9 @@ def _load_current_state(repo: Path) -> ActiveState:
             cleanup_manifest,
             cut_path,
             allow_missing_cleanup_targets=True,
+            current_state=ActiveState(
+                pointer, generation_manifest, issues, aggregates, None, None, history
+            ),
         )
         if cleanup_manifest.get("report_cut_id") != report_cut_id_value:
             raise _corruption(
@@ -1706,24 +1709,6 @@ def _load_current_state(repo: Path) -> ActiveState:
             raise _corruption(
                 "current pointer の publication section が不正です。", cut_path
             )
-        if (
-            publication.get("generation_id") != generation_id_value
-            or publication.get("generation_manifest")
-            != {
-                "path": pointer.get("generation_manifest_path"),
-                "sha256": pointer.get("generation_manifest_sha256"),
-            }
-            or publication.get("report")
-            != {
-                "path": pointer.get("report_path"),
-                "sha256": pointer.get("report_sha256"),
-            }
-            or publication.get("result") != pointer.get("result")
-        ):
-            raise _corruption(
-                "current pointer と publication artifact の参照が一致しません。",
-                cut_path,
-            )
         cleanup_path = cut_path
     return ActiveState(
         pointer,
@@ -1742,6 +1727,7 @@ def _validate_report_cut_manifest(
     path: Path,
     *,
     allow_missing_cleanup_targets: bool = False,
+    current_state: ActiveState | None = None,
 ) -> None:
     """report cut manifest の固定入力と mutable section の schema を検査する。"""
     _require_exact_fields(
@@ -1984,7 +1970,7 @@ def _validate_report_cut_manifest(
         )
     publication = manifest.get("publication")
     if publication is not None:
-        _validate_publication_section(repo, manifest, path)
+        _validate_publication_section(repo, manifest, path, current_state=current_state)
     from .runtime_feedback_run_state import validate_run_artifacts
 
     validate_run_artifacts(
@@ -2420,6 +2406,8 @@ def _validate_publication_section(
     repo: Path,
     manifest: _JsonObject,
     path: Path,
+    *,
+    current_state: ActiveState | None = None,
 ) -> None:
     """staged publication と cleanup target の閉じた schema を検査する。"""
     # 呼出し元で読んだ manifest を使い、cleanup 参照へ別の snapshot を混ぜない。
@@ -2440,6 +2428,24 @@ def _validate_publication_section(
         path,
         "report cut publication",
     )
+    if current_state is not None:
+        pointer = current_state.current
+        if (
+            pointer is None
+            or current_state.generation_manifest is None
+            or publication["generation_id"] != pointer["generation_id"]
+            or publication["generation_manifest"]
+            != {
+                "path": pointer["generation_manifest_path"],
+                "sha256": pointer["generation_manifest_sha256"],
+            }
+            or publication["report"]
+            != {"path": pointer["report_path"], "sha256": pointer["report_sha256"]}
+            or publication["result"] != pointer["result"]
+        ):
+            raise _corruption(
+                "current pointer と publication artifact の参照が一致しません。", path
+            )
     if not is_common_id(publication.get("generation_id"), "fbg"):
         raise _corruption("publication generation ID が不正です。", path)
     _require_timestamp(
@@ -2545,13 +2551,19 @@ def _validate_publication_section(
         ):
             raise _corruption("publication generation artifact path が不正です。", path)
     report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
-    report_path = _validate_artifact_reference(
-        repo,
-        report_reference,
-        expected_root=report_root,
-        description="publication Markdown report",
-        allow_missing=staged_missing,
-    )
+    if current_state is not None and not staged_missing:
+        # 同じ呼出しで pointer の参照と hash を検証済み。配置の制約はここでも保つ。
+        report_path = _resolve_reference_path(
+            repo, report_reference["path"], report_root, "publication Markdown report"
+        )
+    else:
+        report_path = _validate_artifact_reference(
+            repo,
+            report_reference,
+            expected_root=report_root,
+            description="publication Markdown report",
+            allow_missing=staged_missing,
+        )
     if (
         report_path.parent
         not in {
@@ -2571,12 +2583,17 @@ def _validate_publication_section(
             },
             "publication generation",
         )
-        loaded, _issues, _aggregates, history = _load_generation(
-            repo,
-            generation_manifest_path,
-            generation_id_value,
-            expected_sha256=generation_reference["sha256"],
-        )
+        if current_state is not None and current_state.generation_manifest is not None:
+            # cleanup の検証へ、先に検証した generation と履歴の snapshot を渡す。
+            loaded = current_state.generation_manifest
+            history = current_state.history
+        else:
+            loaded, _issues, _aggregates, history = _load_generation(
+                repo,
+                generation_manifest_path,
+                generation_id_value,
+                expected_sha256=generation_reference["sha256"],
+            )
         if loaded.get("report_cut_id") != path.parent.name:
             raise _corruption(
                 "publication generation の report cut ID が一致しません。",

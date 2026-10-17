@@ -1315,32 +1315,77 @@ def test_publication_and_active_generation_use_hash_verified_bytes(
 def test_published_active_state_reuses_one_cleanup_snapshot(
     publication_feedback, monkeypatch
 ):
-    """cleanup 待ちでも hash 検証済み manifest を再読せず、次回は改変を拒否する。"""
+    """cleanup 待ちでも検証済み artifact を再読せず、次回は改変を拒否する。"""
     h = publication_feedback
     root = h.context.repo
     expected = load_active_state(root)
     original_read = Path.read_bytes
-    original_content = original_read(h.path)
-    reads = []
+    publication = h.manifest["publication"]
+    paths = [h.path] + [
+        root / reference["path"]
+        for reference in (
+            *publication["generation_artifacts"],
+            *publication["history_artifacts"],
+            publication["report"],
+        )
+    ]
+    # 準備を共有し、cleanup manifest・generation・履歴・report の置換を個別に検査する。
+    for replaced in paths:
+        original_content = original_read(replaced)
+        reads = Counter()
 
-    def replace_after_read(path):
-        content = original_read(path)
-        if path == h.path:
-            reads.append(path)
-            if len(reads) == 1:
-                path.write_bytes(b"{}\n")
-        return content
+        def replace_after_read(path):
+            content = original_read(path)
+            if path in paths:
+                reads[path] += 1
+                if path == replaced and reads[path] == 1:
+                    path.write_bytes(b"{}\n")
+            return content
 
-    try:
-        with monkeypatch.context() as snapshot_patch:
-            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
-            assert validate_feedback_state(root) == expected
-            assert reads == [h.path]
-            with pytest.raises(CmocError, match="SHA256"):
+        try:
+            with monkeypatch.context() as snapshot_patch:
+                snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+                assert validate_feedback_state(root) == expected
+                assert reads == {path: 1 for path in paths}
+                with pytest.raises(CmocError, match="SHA256"):
+                    validate_feedback_state(root)
+                assert reads[replaced] == 2
+        finally:
+            replaced.write_bytes(original_content)
+
+
+def test_cleanup_publication_must_match_current_references(publication_feedback):
+    """cleanup の参照が current と異なる場合は検証済み snapshot を流用しない。"""
+    h = publication_feedback
+    root = h.context.repo
+    pointer_path = feedback_state.current_pointer_path(root)
+    pointer_content = pointer_path.read_bytes()
+    manifest_content = h.path.read_bytes()
+    publication = h.manifest["publication"]
+    mismatches = {
+        "generation_id": "fbg_999999_2026-09-29_15-04",
+        "generation_manifest": {
+            **publication["generation_manifest"],
+            "sha256": "0" * 64,
+        },
+        "report": {**publication["report"], "sha256": "0" * 64},
+        "result": "incomplete",
+    }
+    for name, value in mismatches.items():
+        manifest = copy.deepcopy(h.manifest)
+        manifest["publication"][name] = value
+        content = canonical_json_bytes(manifest)
+        pointer = json.loads(pointer_content)
+        pointer["report_cut_manifest_sha256"] = sha256_bytes(content)
+        try:
+            h.path.write_bytes(content)
+            pointer_path.write_bytes(canonical_json_bytes(pointer))
+            with pytest.raises(CmocError, match="publication artifact の参照"):
                 validate_feedback_state(root)
-            assert reads == [h.path, h.path]
-    finally:
-        h.path.write_bytes(original_content)
+        finally:
+            h.path.write_bytes(manifest_content)
+            pointer_path.write_bytes(pointer_content)
+    assert validate_feedback_state(root) == load_active_state(root)
 
 
 def test_published_cleanup_still_checks_work_inventory(publication_feedback):
