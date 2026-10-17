@@ -74,7 +74,7 @@ def build_realization_apply_fork_launch_exec_parameter(
         routing_policy=True,
     )
     return AgentCallParameter(
-        agent_call_kind=build_realization_apply_fork_launch_exec_parameter.__name__,
+        agent_call_kind="realization_edit",
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,

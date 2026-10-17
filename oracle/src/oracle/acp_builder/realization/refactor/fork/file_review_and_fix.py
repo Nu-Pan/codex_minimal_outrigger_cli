@@ -95,9 +95,7 @@ def build_realization_refactor_fork_file_review_and_fix_parameter(
         routing_policy=True,
     )
     return AgentCallParameter(
-        agent_call_kind=(
-            build_realization_refactor_fork_file_review_and_fix_parameter.__name__
-        ),
+        agent_call_kind="realization_edit",
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),

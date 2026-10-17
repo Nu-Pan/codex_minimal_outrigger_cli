@@ -100,18 +100,6 @@ class CmocConfigCodex:
     cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
     """
 
-    # 共有グループ名（設定取得キー）--> 所属する agent_call_kind。保存項目には含めない。
-    SHARED_AGENT_CALL_GROUPS: ClassVar[dict[str, frozenset[str]]] = {
-        "realization_edit": frozenset(
-            {
-                "build_realization_apply_fork_launch_exec_parameter",
-                "build_realization_refactor_fork_file_review_and_fix_parameter",
-                "build_feedback_remediate_issue_parameter",
-                "build_run_join_conflict_resolution_parameter",
-            }
-        )
-    }
-
     # model provider ID --> provider-local な Codex config
     model_providers: dict[str, CodexModelProviderConfig] = field(
         default_factory=lambda: {"openai": CodexModelProviderConfig()}
@@ -124,10 +112,21 @@ class CmocConfigCodex:
     #   現実には xhigh だと取りこぼしがきになるので max で運用している。
     agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
+            # NOTE
+            #   realization file の編集を主目的とする agent call で使用する共有設定。
+            #   realization file を編集する知能を単一にすることで、編集合戦の回避を狙う。
+            # NOTE
+            #   サブエージェント同士のコンディションレースが発生する危険性があるので ultra は使わない。
+            #   実装失敗は後で人間が尻を拭くことになるので避けてほしい。
+            #   一度 xhigh で様子見。
+            # NOTE
+            #   自然言語文章の品質は気にする必要がないので、Astra は間違いなく不要。
+            #   長時間反復実行でも使われるので、コスパは気にしておきたい
+            #   よって gpt-6.1-sol が一番良い
             "realization_edit": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6.1-sol",
-                reasoning_effort="max",
+                reasoning_effort="xhigh",
             ),
             # NOTE
             #   ここでミスるとブランチ上の作業結果がぶち壊しになる

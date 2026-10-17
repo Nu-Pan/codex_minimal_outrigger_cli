@@ -91,7 +91,7 @@ def build_run_join_conflict_resolution_parameter(
         aux_dynamic_prompt=dynamic_prompt,
     )
     return AgentCallParameter(
-        agent_call_kind=build_run_join_conflict_resolution_parameter.__name__,
+        agent_call_kind="realization_edit",
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,
