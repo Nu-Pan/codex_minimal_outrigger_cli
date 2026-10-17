@@ -2855,10 +2855,16 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
 
 @pytest.mark.parametrize("automatic", [False, True], ids=["explicit", "automatic"])
 def test_run_join_conflict_launch_uses_shared_settings(
-    ready_content_session, tmp_path, monkeypatch, automatic
+    join_after_preprocess, tmp_path, monkeypatch, nonpersistent_codex_ids, automatic
 ):
-    """自動・明示 join の実経路で、設定保存から競合解消の argv まで確認する。"""
-    root, _, state_path = ready_content_session
+    """自動・明示 join で、保存した共有設定を競合解消の argv まで渡す。"""
+    root, _, state_path = join_after_preprocess
+    # doctor の修復・索引同期は test_doctor_cli.py、apply・join との結合は
+    # test_realization_apply_automatically_joins_changes_and_noop と
+    # test_run_join_from_run_worktree_tracks_main_doctor_repairs に残す。
+    # 設定の保存・読込、実 builder、Git 競合と call log は本処理を通す。
+    preprocess = Mock()
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
     setup_codex_home(tmp_path, monkeypatch)
     config = load_config(root)
     config.codex.model_providers["shared"] = CodexModelProviderConfig(
@@ -2876,7 +2882,7 @@ def test_run_join_conflict_launch_uses_shared_settings(
         commit_work_unit(root, "concurrent session change")
 
     if not automatic:
-        context = _prepare_run(ready_content_session)
+        context = _prepare_run(join_after_preprocess)
         conflict(context.run_worktree)
         commit_work_unit(context.run_worktree, "run change")
 
@@ -2897,6 +2903,10 @@ def test_run_join_conflict_launch_uses_shared_settings(
     result = runner.invoke(app, command, catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
+    if automatic:
+        preprocess.assert_called_once_with(root)
+    else:
+        preprocess.assert_not_called()
     assert len(calls) == (2 if automatic else 1)
     assert (root / "README.md").read_text() == "session change\nrun change\n"
     assert _state(state_path)["run"]["state"] == "ready"
