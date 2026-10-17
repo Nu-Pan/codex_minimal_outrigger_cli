@@ -721,6 +721,9 @@ def test_initial_completion_waits_for_process_exit(directory, tmp_path, monkeypa
             release.touch()
 
 
+# 永続採番と target の結合は test_editor_input_handoff.py に残す。
+# ここでは採番 DB を準備せず、並行する実 MCP process の送信元分離を検査する。
+@pytest.mark.usefixtures("nonpersistent_handoff_ids")
 def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch):
     barrier = threading.Barrier(2)
     observed = {}
