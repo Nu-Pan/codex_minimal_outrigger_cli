@@ -45,6 +45,7 @@ from _report_support import (
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_git as git_module
+import commons.runtime_logging as logging_module
 import commons.runtime_merge_conflict as merge_conflict_module
 import commons.runtime_primary_report as primary_report_module
 import commons.runtime_primary_report_review as review_module
@@ -95,7 +96,7 @@ from main import app
 # agent 応答は差し替え、観測を送信しないため、collector の起動・probe を準備しない。
 # TCP/stdio の受理・拒否・drain と CLI との結合は test_feedback.py に残す。
 # 実行 ID の永続採番は test_runtime_ids.py、実採番と logger の結合は
-# test_runtime_cli.py に残す。run ID の発行、実ログ・report と実行 ID の対応は実検査する。
+# test_runtime_cli.py に残す。run ID と実ログ・report の対応は実検査する。
 pytestmark = pytest.mark.usefixtures(
     "feedback_without_transport", "nonpersistent_execution_ids"
 )
@@ -104,7 +105,17 @@ _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
 @pytest.fixture
-def apply_after_preprocess(monkeypatch):
+def nonpersistent_run_ids(nonpersistent_execution_ids, monkeypatch):
+    """終了・復旧の検査では、run ID の永続保存と同期待ちを繰り返さない。"""
+    # 採番の順序・永続性は test_runtime_ids.py と test_codex_runtime_paths.py、
+    # run との実結合は test_realization_apply_automatically_joins_changes_and_noop と
+    # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
+    # branch・worktree・state の作成と、発行した ID の引継ぎは実処理を通す。
+    monkeypatch.setattr(lifecycle_module, "new_id", logging_module.new_id)
+
+
+@pytest.fixture
+def apply_after_preprocess(nonpersistent_run_ids, monkeypatch):
     """apply の終了・復旧検査では、doctor と prompt の準備を繰り返さない。"""
     # 必要な設定・配置先は ready_*_session が用意する。
     # doctor の修復・失敗は test_doctor_cli.py、apply との実結合は
@@ -138,7 +149,7 @@ def join_after_preprocess(ready_join_session, monkeypatch):
 
 
 @pytest.fixture
-def refactor_after_preprocess(ready_join_session, monkeypatch):
+def refactor_after_preprocess(ready_join_session, nonpersistent_run_ids, monkeypatch):
     """終了・復旧の検査には、修復・同期済みの session から本処理を実行する。"""
     # doctor の修復・索引同期・中断は test_doctor_cli.py、fork との結合は
     # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
