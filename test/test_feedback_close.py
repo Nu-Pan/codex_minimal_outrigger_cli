@@ -1,6 +1,7 @@
 """案件の publication、手動 close、確定点前後の recovery を検証する。"""
 
 import json
+from types import SimpleNamespace
 
 import pytest
 from _cli_support import runner, seed_search_config, terminal_primary_report
@@ -27,6 +28,7 @@ from test_feedback import (
 import commons.runtime_cli as runtime_cli
 import commons.runtime_feedback_close_state as close_state
 import commons.runtime_feedback_state as feedback_state
+import commons.runtime_primary_report_review as review_module
 import sub_commands.feedback.close as close_module
 import sub_commands.feedback.decision as decision
 import sub_commands.feedback.remediation as remediation_module
@@ -334,6 +336,86 @@ def test_close_publishes_immediately_keeps_pending_and_replay_reason(
     assert report_metadata(replay)["original_human_reason"] == reason
     assert "already_closed" in replay.split("## 元の指示", 1)[0]
     assert state_before == list((root / ".cmoc/gu/session").glob("*.json"))
+
+
+@pytest.mark.parametrize("outcome", ["cancel", "failure", "incomplete"])
+def test_close_review_incomplete_preserves_close_result_and_publication(
+    open_case, monkeypatch, outcome
+):
+    root, issue = open_case
+    previous = feedback_state.load_active_state(root)
+    reviewed = []
+
+    def review(*args, **kwargs):
+        # 確認時点では current と入力がまだ切り替わっていない。
+        assert feedback_state.load_active_state(root).current == previous.current
+        frozen = next((root / ".cmoc/gu/log/codex").glob("*/*review*.md"))
+        source = frozen.read_text()
+        assert "publication・cleanup・終了処理は未完了" in source
+        assert "## 実行情報" in source and "## 実行記録" in source
+        reviewed.append(source)
+        if outcome == "cancel":
+            raise KeyboardInterrupt
+        if outcome == "failure":
+            raise CmocError("review failed", [], "cannot resume")
+        return SimpleNamespace(
+            output_json={
+                "result": {
+                    "status": "incomplete",
+                    "reason": "全文確認不能",
+                    "reviewed_scope": "冒頭のみ確認",
+                    "findings": [],
+                }
+            }
+        )
+
+    monkeypatch.setattr(review_module, "run_codex_exec", review)
+    result = _close(issue)
+    assert result.exit_code == 0, result.output
+    assert "closed" in result.output and len(reviewed) == 1
+    state = feedback_state.validate_feedback_state(root)
+    assert issue["issue_id"] not in state.issues
+    report = terminal_primary_report(result)
+    assert "エージェントによる重要事項の確認は完了していません。" in report.read_text()
+    assert state.current["report_sha256"] == sha256_bytes(report.read_bytes())
+    assert close_state.load_close_work(root) is None
+
+
+def test_cancelled_close_review_is_not_restarted_for_error_report_or_recovery(
+    open_case, monkeypatch
+):
+    root, issue = open_case
+    calls = []
+
+    def cancel(*args, **kwargs):
+        calls.append(args[0])
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(review_module, "run_codex_exec", cancel)
+    unlink = close_state._unlink_artifact_reference
+
+    def fail_cleanup(*_args, **_kwargs):
+        raise OSError("cleanup failed")
+
+    monkeypatch.setattr(
+        close_state,
+        "_unlink_artifact_reference",
+        fail_cleanup,
+    )
+    failed = _close(issue)
+    assert failed.exit_code == 1 and len(calls) == 1
+    invocation = terminal_primary_report(failed).read_text()
+    assert "開始していません" in invocation
+    fixed = close_state.load_close_work(root)
+    target = root / fixed["report"]["path"]
+    saved = target.read_bytes()
+    state = feedback_state.validate_feedback_state(root)
+    assert state.current["report_sha256"] == sha256_bytes(saved)
+    monkeypatch.setattr(close_state, "_unlink_artifact_reference", unlink)
+    resumed = _close(issue, "再開した実行の理由")
+    assert resumed.exit_code == 0 and len(calls) == 1
+    assert terminal_primary_report(resumed) == target
+    assert target.read_bytes() == saved
 
 
 @pytest.mark.parametrize(

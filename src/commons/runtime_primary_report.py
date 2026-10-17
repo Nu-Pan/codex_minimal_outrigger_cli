@@ -31,6 +31,10 @@ from .runtime_primary_report_render import (
     oracle_edit_statuses,
     render_primary_report,
 )
+from .runtime_primary_report_review import (
+    PrimaryReportReviewState,
+    add_primary_report_review,
+)
 from .runtime_primary_report_specs import (
     PrimaryReportSpec,
     TerminalClassification,
@@ -77,6 +81,7 @@ class PrimaryReportContext:
     save_failure_handler: Callable[[], None] | None = None
     completion_handler: Callable[[], None] | None = None
     finalization: ExitStack = field(default_factory=ExitStack)
+    review: PrimaryReportReviewState = field(default_factory=PrimaryReportReviewState)
 
 
 _PRIMARY_REPORT_CONTEXT: ContextVar[PrimaryReportContext | None] = ContextVar(
@@ -265,6 +270,16 @@ def prepare_primary_report(
     return render_report_document(title, fields, summary, details)
 
 
+def review_primary_report(
+    repository: Path, content: str, logger: SubcommandLogger
+) -> str:
+    """最外側で確定した全文に確認を加え、同じ invocation の取消を共有する。"""
+    # 中間 report はここへ渡さず、publication を兼ねる close は初回保存前に使う。
+    context = _PRIMARY_REPORT_CONTEXT.get()
+    state = context.review if context is not None else PrimaryReportReviewState()
+    return add_primary_report_review(repository, content, logger, state)
+
+
 def ensure_primary_report(
     repository: Path,
     command_name: str,
@@ -325,7 +340,7 @@ def ensure_primary_report(
                     )
                 rewrite_primary_report(
                     report_path,
-                    updated,
+                    review_primary_report(repository, updated, logger),
                 )
             if (
                 classification != "error"
@@ -375,7 +390,9 @@ def ensure_primary_report(
             logger,
             original_input=context.original_input if context is not None else None,
         )
-        write_reserved_primary_report(target, content)
+        write_reserved_primary_report(
+            target, review_primary_report(repository, content, logger)
+        )
     except BaseException as exc:
         if reserved and target is not None:
             try:

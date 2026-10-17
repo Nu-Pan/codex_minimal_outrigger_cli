@@ -18,7 +18,7 @@ from commons.runtime_codex_profile import (
     run_codex_subprocess,
     run_tracked_codex_subprocess,
 )
-from commons.runtime_errors import CmocError
+from commons.runtime_errors import CmocError, CodexProcessStopError
 
 
 def _cancel_when_process_is_ready(pid_path, cancellation):
@@ -1213,6 +1213,28 @@ def test_run_codex_subprocess_notifies_after_process_start(
     assert events == ["started", "callback"]
     assert result.returncode == 0
     assert result.stdout == "ok\n"
+
+
+def test_run_codex_subprocess_exposes_stop_failure_separately(monkeypatch):
+    process = MagicMock(pid=4321, returncode=None)
+    process.poll.return_value = None
+    process.communicate.side_effect = KeyboardInterrupt
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess, "Popen", Mock(return_value=process)
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_kill_codex_process_group",
+        Mock(side_effect=CmocError("stop failed", [], "process state unknown")),
+    )
+    with pytest.raises(CodexProcessStopError) as error:
+        run_codex_subprocess(
+            ["codex"], text=True, capture_output=True, cancellation=threading.Event()
+        )
+    assert isinstance(error.value.__cause__, CmocError)
+    assert "process state unknown" in error.value.detail
+    process.kill.assert_called_once_with()
+    process.wait.assert_called_once_with(timeout=5)
 
 
 def test_run_codex_subprocess_preserves_missing_cwd_error(

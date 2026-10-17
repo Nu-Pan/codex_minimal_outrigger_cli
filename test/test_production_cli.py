@@ -475,16 +475,21 @@ def _codex_call_logs(root: Path) -> set[Path]:
     return set((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
 
 
-def _run_without_codex_call(
+def _run_with_report_review(
     cmoc: Path,
     root: Path,
     environment: dict[str, str],
     *args: str,
 ) -> subprocess.CompletedProcess[str]:
-    """Codex 不要の代表正常系が予期せず agent call しないことも確認する。"""
+    """本命の agent call が不要な経路も、primary report の確認は実行する。"""
     before = _codex_call_logs(root)
     result = _run_cmoc(cmoc, root, environment, *args)
-    assert _codex_call_logs(root) == before
+    calls = _codex_call_logs(root) - before
+    assert calls
+    assert {_assert_real_codex_call(path)["agent_call_kind"] for path in calls} <= {
+        "build_primary_report_review_parameter",
+        "build_quota_availability_probe_parameter",
+    }
     return result
 
 
@@ -519,20 +524,28 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
         assert "--enable" not in argv
     assert override["model_reasoning_effort"] == call_config.reasoning_effort
     search_server = override["mcp_servers"]["cmoc_document_search"]
-    assert search_server["enabled"] is True
-    search_context = json.loads(search_server["args"][-1])
-    caller_log = path.parents[2] / "sub_command" / f"{payload['execution_id']}.jsonl"
-    caller = json.loads(caller_log.read_text().splitlines()[0])
-    assert search_context["log_context"] == {
-        "path": str(caller_log.resolve()),
-        "command": caller["command"],
-        "execution_id": payload["execution_id"],
-        "codex_call_id": payload["codex_call_id"],
-    }
-    tuning = search_context["config"]
-    assert search_server["tool_timeout_sec"] > (
-        tuning["search_request_timeout_seconds"] + tuning["shutdown_grace_seconds"]
-    )
+    if agent_call_kind in {
+        "build_primary_report_review_parameter",
+        "build_quota_availability_probe_parameter",
+    }:
+        assert search_server["enabled"] is False
+    else:
+        assert search_server["enabled"] is True
+        search_context = json.loads(search_server["args"][-1])
+        caller_log = (
+            path.parents[2] / "sub_command" / f"{payload['execution_id']}.jsonl"
+        )
+        caller = json.loads(caller_log.read_text().splitlines()[0])
+        assert search_context["log_context"] == {
+            "path": str(caller_log.resolve()),
+            "command": caller["command"],
+            "execution_id": payload["execution_id"],
+            "codex_call_id": payload["codex_call_id"],
+        }
+        tuning = search_context["config"]
+        assert search_server["tool_timeout_sec"] > (
+            tuning["search_request_timeout_seconds"] + tuning["shutdown_grace_seconds"]
+        )
     provider_id = call_config.model_provider
     assert override["model_provider"] == provider_id
     providers = override.get("model_providers", {})
@@ -545,6 +558,8 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     feedback_reporting_enabled = agent_call_kind not in {
         "build_feedback_normalize_issue_parameter",
         "build_feedback_remediate_issue_parameter",
+        "build_primary_report_review_parameter",
+        "build_quota_availability_probe_parameter",
     }
     assert feedback_server["enabled"] is feedback_reporting_enabled
     assert feedback_server["enabled_tools"] == (
@@ -575,7 +590,7 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
             EDITOR_INPUT_SOURCE_ENV,
         ]
     else:
-        assert "cmoc_editor_input" not in override["mcp_servers"]
+        assert override["mcp_servers"]["cmoc_editor_input"]["enabled"] is False
     return payload
 
 
@@ -850,7 +865,7 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
         tmp_path, isolated_cmoc_installation
     )
 
-    first = _run_without_codex_call(cmoc, root, environment, "doctor")
+    first = _run_with_report_review(cmoc, root, environment, "doctor")
     first_report_path = terminal_primary_report(first.stdout)
     first_report = first_report_path.read_text(encoding="utf-8")
     assert "照合と実モデル検証: `成功`" in first_report
@@ -865,7 +880,7 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
         str(first_report_path)
     ]
 
-    repeated = _run_without_codex_call(cmoc, root, environment, "doctor")
+    repeated = _run_with_report_review(cmoc, root, environment, "doctor")
     repeated_report = terminal_primary_report(repeated.stdout).read_text(
         encoding="utf-8"
     )
@@ -895,14 +910,14 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         executed_commands.add(args)
         return _run_cmoc(cmoc, root, environment, *args)
 
-    def run_without_codex(*args: str) -> subprocess.CompletedProcess[str]:
-        """Codex 不要の leaf も実行済み集合へ記録する。"""
+    def run_with_report_review(*args: str) -> subprocess.CompletedProcess[str]:
+        """確認用 call だけを実行する leaf も実行済み集合へ記録する。"""
         executed_commands.add(args)
-        return _run_without_codex_call(cmoc, root, environment, *args)
+        return _run_with_report_review(cmoc, root, environment, *args)
 
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    # doctor は provider lifecycle に触れず本番 preprocess を完了する。
-    run_without_codex("doctor")
+    # doctor は本番 preprocess を完了してから report を確認する。
+    run_with_report_review("doctor")
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert run_git(root, "ls-files", ".cmoc/gt/config.json").stdout.strip()
     assert run_git(
@@ -911,7 +926,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 
     # active session 上の各 workload を検証する。
     home_branch = current_branch(root)
-    run_without_codex("session", "fork")
+    run_with_report_review("session", "fork")
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
 
@@ -1049,7 +1064,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     close_parent = tmp_path / "close-scenario"
     close_parent.mkdir()
     close_root = make_repo(close_parent)
-    _run_without_codex_call(cmoc, close_root, environment, "doctor")
+    _run_with_report_review(cmoc, close_root, environment, "doctor")
     history = load_active_state(root).history
     basis = next(
         event["agent_result"]["decision_basis"]
@@ -1059,7 +1074,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     )
     case = _write_close_fixture(close_root, basis)
     executed_commands.add(("feedback", "close"))
-    closed = _run_without_codex_call(
+    closed = _run_with_report_review(
         cmoc,
         close_root,
         environment,
@@ -1103,7 +1118,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
             setup.chdir(root)
             context = start_editing_run("realization_apply")
             set_run_state(context, "joinable")
-        finished = run_without_codex("run", operation)
+        finished = run_with_report_review("run", operation)
         _state_path, ready_state = _load_session_state(root, session_branch)
         assert ready_state["run"]["state"] == "ready"
         assert not context.run_worktree.exists()
@@ -1111,15 +1126,15 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 
     # 同じ home branch で join と abandon の両 session 完了経路を観測する。
     state_path, _state = _load_session_state(root, session_branch)
-    run_without_codex("session", "join")
+    run_with_report_review("session", "join")
     assert current_branch(root) == home_branch
     assert json.loads(state_path.read_text())["session"]["state"] == "joined"
     assert run_git(root, "branch", "--list", session_branch).stdout.strip() == ""
 
-    run_without_codex("session", "fork")
+    run_with_report_review("session", "fork")
     abandoned_session_branch = current_branch(root)
     abandoned_state_path, _state = _load_session_state(root, abandoned_session_branch)
-    run_without_codex("session", "abandon")
+    run_with_report_review("session", "abandon")
     assert current_branch(root) == home_branch
     assert json.loads(abandoned_state_path.read_text())["session"]["state"] == (
         "abandoned"
@@ -1148,7 +1163,7 @@ def test_tui_leaf_commands_and_resume_use_real_codex_response_over_production_pt
     cmoc, environment, codex_home = _production_environment(
         tmp_path, isolated_cmoc_installation
     )
-    _run_without_codex_call(cmoc, root, environment, "doctor")
+    _run_with_report_review(cmoc, root, environment, "doctor")
     # component 検証と doctor 同期の期限は維持し、MCP 全体期限だけを短くする。
     config = load_config(root)
     assert config.document_search is not None

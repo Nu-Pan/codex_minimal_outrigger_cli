@@ -46,6 +46,7 @@ from cmoc_runtime import (
 )
 from commons.runtime_errors import TuiStartupCancelled
 from commons.runtime_ids import is_common_id
+from commons.runtime_report_markdown import ReportSummary, render_report_document
 from main import app
 
 
@@ -257,7 +258,11 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
     root = cli_terminal_directory
     report_path = root / "report.md"
-    report_path.write_text("# report\n")
+    report_path.write_text(
+        render_report_document(
+            "report", {"command": "cmoc probe"}, ReportSummary("完了"), "詳細結果"
+        )
+    )
 
     def completion_counts(repository: Path) -> tuple[int, list[str]]:
         """検証済みの件数・warning を正しい repository の終端処理へ渡す。"""
@@ -383,7 +388,14 @@ def test_error_terminal_result_does_not_repeat_primary_report_path(
     """error detail 内の primary report path は console で重複させない。"""
     root = cli_terminal_directory
     report_path = root / "error-report.md"
-    report_path.write_text("# error report\n")
+    report_path.write_text(
+        render_report_document(
+            "error report",
+            {"command": "cmoc probe"},
+            ReportSummary("失敗"),
+            "エラー詳細",
+        )
+    )
 
     def fail() -> None:
         raise CmocError(
@@ -1111,8 +1123,8 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
         result = runner.invoke(app, ["doctor"], catch_exceptions=False)
         assert result.exit_code == 0, result.output
         assert explicit_doctor_roots[-1] == work.resolve()
-        # wrapper、本体の両 root、前処理の再確認が、それぞれ一度だけ探索する。
-        assert root_queries == 3
+        # wrapper、本体、前処理の再確認と、独立した確認 call の root をそれぞれ解決する。
+        assert root_queries == 4
         assert terminal_primary_report(result).parent == root / ".cmoc/gu/report/doctor"
 
     assert doctor_roots == [linked.resolve()]
