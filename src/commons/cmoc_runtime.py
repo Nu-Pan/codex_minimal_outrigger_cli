@@ -42,10 +42,7 @@ from .runtime_config import (
     sync_config,
     write_config,
 )
-from .runtime_content import (
-    file_sha256,
-    write_hashed_file,
-)
+from .runtime_content import write_hashed_file
 from .runtime_doctor import run_doctor_preprocess
 from .runtime_errors import CmocError, render_error
 from .runtime_git import (
@@ -139,7 +136,6 @@ __all__ = (
     "ensure_cmoc_ignored_in_exclude",
     "extract_resume_token",
     "file_access_to_sandbox_mode",
-    "file_sha256",
     "format_duration",
     "head_commit",
     "is_git_ignored",

@@ -403,7 +403,7 @@ _EARLY_ERROR_SECTIONS = {
         "## 追従差分と Codex result",
         "## feedback observation",
     ),
-    "realization refactor": ("## Current fork", "## Refactor state"),
+    "realization refactor": ("## Current fork", "## Processing units"),
     "run join": (
         "## run join",
         "## 差分検査と merge / no-op join",
@@ -491,7 +491,8 @@ def test_early_error_saves_command_specific_primary_report(
         assert "- count: not_fixed" in rendered
         assert "## Unresolved findings" in rendered
         assert "## Processing units" in rendered
-        assert "## Refactor state" in rendered
+        assert "## Refactor state" not in rendered
+        assert "investigation_required" not in rendered
         assert "## Change summary" in rendered
     if command_name == "realization apply":
         assert 'completion_reason: "error"' in information

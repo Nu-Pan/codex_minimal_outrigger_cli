@@ -4,22 +4,20 @@ import json
 import re
 import stat
 from pathlib import Path
-from typing import Literal, TypedDict, cast
+from typing import TypedDict
 
-from .runtime_content import file_sha256
 from .runtime_errors import CmocError
-from .runtime_git import enumerate_oracle_and_realization_files
+from .runtime_git import (
+    enumerate_oracle_and_realization_files,
+    literal_pathspec,
+    run_git,
+)
 from .runtime_paths import refactor_state_path
-
-_InvestigationResult = Literal["not_investigated", "no_findings", "findings"]
 
 
 class RefactorEntry(TypedDict):
-    """単一の oracle または realization file の調査履歴。"""
+    """run をまたぐ選択順序に使う、起点ごとの最終調査日時。"""
 
-    investigation_required: bool
-    last_investigation_result: _InvestigationResult
-    last_investigated_sha256: str | None
     last_investigated_at: str | None
 
 
@@ -27,7 +25,7 @@ RefactorState = dict[str, RefactorEntry]
 
 
 def load_refactor_state(root: Path) -> RefactorState:
-    """refactor state を読み、履歴を破棄せず schema を検証する。
+    """refactor state を読み、永続情報を破棄せず schema を検証する。
 
     根拠: {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     """
@@ -35,10 +33,10 @@ def load_refactor_state(root: Path) -> RefactorState:
     if not _validate_refactor_state_path(path):
         return {}
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
         raise _invalid_refactor_state(path, "JSON を読み込めません。") from exc
-    return _validated_state(path, data)
+    return _parse_state(path, content)
 
 
 def write_refactor_state(root: Path, state: RefactorState) -> None:
@@ -61,25 +59,56 @@ def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorSta
     """schema を検証し、必要なら oracle/realization file 集合と同期する。"""
     path = refactor_state_path(root)
     original = load_refactor_state(root)
-    state = original
-    if sync_entries:
-        synchronized: RefactorState = {}
-        for relative in enumerate_refactor_targets(root):
-            entry = state.get(relative)
-            if entry is None:
-                entry = new_refactor_entry()
-            # 新規・要求済み file は内容比較が不要。変更する entry だけをコピーし、
-            # original との差分比較を保ちながら、同じ履歴の再構築を省く。
-            elif not entry["investigation_required"] and (
-                entry["last_investigated_sha256"] is None
-                or entry["last_investigated_sha256"] != file_sha256(root / relative)
-            ):
-                entry = {**entry, "investigation_required": True}
-            synchronized[relative] = entry
-        state = synchronized
+    state = _synchronized_entries(root, original) if sync_entries else original
     if not path.exists() or original != state:
         write_refactor_state(root, state)
     return state
+
+
+def merge_refactor_states(
+    root: Path, refs: tuple[str, ...], *, sync_entries: bool = True
+) -> RefactorState:
+    """両 branch の確定日時を統合し、必要なら統合後の tree と同期する。"""
+    # Git の自動 merge が古い日時を採用した場合も、確定済みの両側から決め直す。
+    path = refactor_state_path(root)
+    relative = path.relative_to(root).as_posix()
+    merged: RefactorState = {}
+    for ref in refs:
+        tracked = run_git(
+            ["ls-tree", "-z", ref, "--", literal_pathspec(relative)], root
+        ).stdout
+        if not tracked:
+            continue
+        if not tracked.startswith(("100644 blob ", "100755 blob ")):
+            raise _invalid_refactor_state(path, f"通常 file ではありません: {ref}")
+        content = run_git(["show", f"{ref}:{relative}"], root).stdout
+        for target, entry in _parse_state(path, content).items():
+            previous = merged.get(target)
+            if previous is None or (entry["last_investigated_at"] or "") > (
+                previous["last_investigated_at"] or ""
+            ):
+                merged[target] = entry
+    if sync_entries:
+        merged = _synchronized_entries(root, merged)
+    write_refactor_state(root, merged)
+    return merged
+
+
+def _synchronized_entries(root: Path, state: RefactorState) -> RefactorState:
+    # 内容は読まず、同じ path の日時をそのまま保持する。
+    return {
+        relative: state.get(relative, new_refactor_entry())
+        for relative in enumerate_refactor_targets(root)
+    }
+
+
+def _parse_state(path: Path, content: str) -> RefactorState:
+    # worktree と確定済み branch に同じ schema 検証を適用する。
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise _invalid_refactor_state(path, "JSON を読み込めません。") from exc
+    return _validated_state(path, data)
 
 
 def enumerate_refactor_targets(root: Path) -> list[str]:
@@ -98,30 +127,19 @@ def enumerate_refactor_targets(root: Path) -> list[str]:
 def new_refactor_entry() -> RefactorEntry:
     """未調査 file の初期 entry を返す。"""
     return {
-        "investigation_required": True,
-        "last_investigation_result": "not_investigated",
-        "last_investigated_sha256": None,
         "last_investigated_at": None,
     }
 
 
 def refactor_cycle_targets(state: RefactorState) -> list[str]:
-    """引継ぎ要求、未調査、保存日時、path の順で全対象の巡回順を固定する。"""
+    """未調査、保存日時の古い順、path の順で全対象の巡回順を固定する。"""
     return sorted(
         state,
         key=lambda path: (
-            not state[path]["investigation_required"],
-            state[path]["last_investigation_result"] != "not_investigated",
             state[path]["last_investigated_at"] or "",
             path,
         ),
     )
-
-
-def mark_all_refactor_targets_required(state: RefactorState) -> None:
-    """調査履歴を保持したまま全 entry に次巡の調査要求を設定する。"""
-    for entry in state.values():
-        entry["investigation_required"] = True
 
 
 def _validate_refactor_state_path(path: Path) -> bool:
@@ -195,39 +213,9 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
     """
     if not isinstance(value, dict):
         raise _invalid_refactor_state(path, f"entry は object ではありません: {key}")
-    expected = {
-        "investigation_required",
-        "last_investigation_result",
-        "last_investigated_sha256",
-        "last_investigated_at",
-    }
-    if set(value) != expected:
+    if set(value) != {"last_investigated_at"}:
         raise _invalid_refactor_state(path, f"entry field が不正です: {key}")
-    required = value["investigation_required"]
-    result = value["last_investigation_result"]
-    digest = value["last_investigated_sha256"]
     investigated_at = value["last_investigated_at"]
-    if (
-        type(required) is not bool
-        or not isinstance(result, str)
-        or result
-        not in {
-            "not_investigated",
-            "no_findings",
-            "findings",
-        }
-    ):
-        raise _invalid_refactor_state(path, f"entry value が不正です: {key}")
-    validated_result = cast(_InvestigationResult, result)
-    if digest is not None:
-        if (
-            not isinstance(digest, str)
-            or re.fullmatch(r"[0-9a-fA-F]{64}", digest) is None
-        ):
-            raise _invalid_refactor_state(path, f"SHA256 が不正です: {key}")
-        # file_sha256 は小文字を返すため、既存 state の大文字 hex も
-        # 同じ digest として扱い、変更なしの file を再調査へ戻さない。
-        digest = digest.lower()
     # {{work-root}}/oracle/doc/app_spec/timestamp.md
     # state の履歴時刻はミリ秒精度の {{time-stamp}} として保存する。
     if investigated_at is not None and (
@@ -239,14 +227,7 @@ def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
         is None
     ):
         raise _invalid_refactor_state(path, f"調査日時が不正です: {key}")
-    if result == "not_investigated" and (
-        digest is not None or investigated_at is not None
-    ):
-        raise _invalid_refactor_state(path, f"未調査 entry に履歴があります: {key}")
     return {
-        "investigation_required": required,
-        "last_investigation_result": validated_result,
-        "last_investigated_sha256": digest,
         "last_investigated_at": investigated_at,
     }
 
@@ -255,6 +236,6 @@ def _invalid_refactor_state(path: Path, reason: str) -> CmocError:
     """不正な refactor state を利用者向け例外へ変換する。"""
     return CmocError(
         "realization refactor state が不正です。",
-        ["既存の調査履歴を保持したまま state file を修復してください。"],
+        ["既存の永続情報を保持したまま state file を修復してください。"],
         f"{path}\n{reason}",
     )

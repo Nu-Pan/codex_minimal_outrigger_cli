@@ -15,7 +15,6 @@ from cmoc_runtime import (
     TerminalResult,
     console_timestamp,
     current_subcommand_logger,
-    file_sha256,
     load_config,
     mark_current_subcommand_interrupted,
     refactor_state_path,
@@ -41,12 +40,11 @@ from commons.runtime_primary_report_specs import TerminalClassification
 from commons.runtime_refactor import (
     RefactorState,
     load_refactor_state,
-    mark_all_refactor_targets_required,
     refactor_cycle_targets,
     sync_refactor_state,
     write_refactor_state,
 )
-from commons.runtime_report_markdown import ReportSummary, terminal_outcome, yaml_scalar
+from commons.runtime_report_markdown import ReportSummary, terminal_outcome
 from commons.runtime_results import StructuredOutputValidationIssue
 from commons.runtime_run import (
     read_run_process_id,
@@ -511,14 +509,10 @@ def _set_refactor_error_state(
 def _initialize_cycle(
     context: EditingRunContext, *, progress: _RefactorProgress | None = None
 ) -> list[str]:
-    """全対象へ調査要求を設定し、引継ぎ要求を先にする巡の順序を返す。"""
-    # 履歴と新目的での調査機会を分離し、同期・列挙は確定区間の外で行う。
+    """全対象を同期し、未調査・古い日時を優先する巡の順序を返す。"""
+    # 永続日時と巡内の調査機会を分離し、同期・列挙は確定区間の外で行う。
     state = sync_refactor_state(context.run_worktree)
     pending = refactor_cycle_targets(state)
-    # 同期済みの調査要求は再保存せず、要求を新たに設定する場合だけ書き込む。
-    if any(not entry["investigation_required"] for entry in state.values()):
-        mark_all_refactor_targets_required(state)
-        write_refactor_state(context.run_worktree, state)
     pending_paths = worktree_change_paths(
         context.run_worktree, include_rename_sources=True
     )
@@ -530,7 +524,7 @@ def _initialize_cycle(
             "\n".join(unexpected),
         )
     with defer_recovery_interruption():
-        # 同期・要求設定後の差分が空なら git add と commit 判定も不要。
+        # 同期後の差分が空なら git add と commit 判定も不要。
         if pending_paths:
             commit_work_unit(context.run_worktree, "cmoc realization refactor cycle")
         if progress is not None:
@@ -572,7 +566,6 @@ def _run_refactor_unit(
         if progress is not None:
             progress.targets.discard(target)
         return
-    investigated_hash = file_sha256(target_path)
     state_paths_before = set(load_refactor_state(context.run_worktree))
     agent_head = run_git(["rev-parse", "HEAD"], context.run_worktree).stdout.strip()
 
@@ -652,13 +645,7 @@ def _run_refactor_unit(
     declared_changed_paths = tuple(
         finding["changed_paths"] for finding in normalized_findings
     )
-    _update_refactor_state(
-        context,
-        target,
-        investigated_hash,
-        bool(normalized_findings),
-        actual_changed_paths,
-    )
+    _update_refactor_state(context, target)
     all_unit_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,
@@ -926,30 +913,13 @@ def _unexpected_refresh_paths(
 def _update_refactor_state(
     context: EditingRunContext,
     target: str,
-    investigated_hash: str,
-    has_findings: bool,
-    changed_realization: list[str],
 ) -> None:
-    """調査結果と変更された realization の再調査要求を state に保存する。"""
-    state = load_refactor_state(context.run_worktree)
-    entry = state.get(target)
-    if entry is None:
-        raise CmocError(
-            "refactor target の state entry がありません。",
-            ["refactor state を同期してから新しい run を開始してください。"],
-            target,
-        )
-    entry["last_investigated_sha256"] = investigated_hash
-    entry["last_investigated_at"] = timestamp()
-    entry["last_investigation_result"] = "findings" if has_findings else "no_findings"
-    entry["investigation_required"] = has_findings
-    # 変更 path は内容が同一でも再調査する。同期前に要求を設定して、不要な
-    # hash 比較と同期後の重複保存を省く。新規・削除・rename は同期で反映する。
-    for changed in changed_realization:
-        if changed in state:
-            state[changed]["investigation_required"] = True
-    write_refactor_state(context.run_worktree, state)
-    sync_refactor_state(context.run_worktree)
+    """追加・削除を同期し、引き続き存在する起点だけの調査日時を更新する。"""
+    # rename 先は新規 entry とし、起点以外の編集・参照で日時を進めない。
+    state = sync_refactor_state(context.run_worktree)
+    if target in state:
+        state[target]["last_investigated_at"] = timestamp()
+        write_refactor_state(context.run_worktree, state)
 
 
 def _changed_path_postcondition(
@@ -998,12 +968,6 @@ def _write_refactor_report(
         if current_primary_report_fields().get("merge_status") in {"merged", "no_op"}
         else context.run_worktree
     )
-    try:
-        state = load_refactor_state(state_worktree)
-    except BaseException as state_error:
-        state = None
-        report_cleanup_errors.append(f"state inspection failed: {state_error!r}")
-    counts = _state_counts(state)
     try:
         uncommitted_paths = worktree_change_paths(
             context.run_worktree, include_rename_sources=True
@@ -1059,17 +1023,6 @@ def _write_refactor_report(
         ),
         "## Unresolved findings",
         *_render_unresolved_findings(unresolved_findings),
-        "## Refactor state",
-        *(
-            f"- {label}: {yaml_scalar(counts[key])}"
-            for label, key in (
-                ("entries", "entries"),
-                ("investigation_required", "required"),
-                ("not_investigated", "not_investigated"),
-                ("no_findings", "no_findings"),
-                ("findings", "findings"),
-            )
-        ),
         "## Change summary",
         *(
             _render_summary(
@@ -1164,29 +1117,6 @@ def _write_refactor_report(
         },
         body_lines=body,
     )
-
-
-def _state_counts(state: RefactorState | None) -> dict[str, int | None]:
-    """refactor state の entry 数と調査結果別の件数を集計する。"""
-    if state is None:
-        return dict.fromkeys(
-            ("entries", "required", "not_investigated", "no_findings", "findings")
-        )
-    return {
-        "entries": len(state),
-        "required": sum(entry["investigation_required"] for entry in state.values()),
-        "not_investigated": sum(
-            entry["last_investigation_result"] == "not_investigated"
-            for entry in state.values()
-        ),
-        "no_findings": sum(
-            entry["last_investigation_result"] == "no_findings"
-            for entry in state.values()
-        ),
-        "findings": sum(
-            entry["last_investigation_result"] == "findings" for entry in state.values()
-        ),
-    }
 
 
 def _render_summary(
