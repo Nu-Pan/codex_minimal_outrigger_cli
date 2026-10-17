@@ -52,10 +52,10 @@
         "model": "gpt-6.1-sol",
         "reasoning_effort": "max"
       },
-      "build_realization_refactor_fork_change_summary_parameter": {
+      "build_primary_report_review_parameter": {
         "model_provider": "openai",
-        "model": "gpt-6-luna",
-        "reasoning_effort": "medium"
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "max"
       },
       "build_quota_availability_probe_parameter": {
         "model_provider": "openai",
@@ -76,8 +76,8 @@
     "request_timeout_seconds": 600.0,
     "shutdown_grace_seconds": 5.0,
     "resource_wait_timeout_seconds": 600.0,
-    "sync_no_progress_timeout_seconds": 600.0,
-    "post_sync_search_timeout_seconds": 600.0,
+    "sync_no_progress_timeout_seconds": 60.0,
+    "post_sync_search_timeout_seconds": 300.0,
     "search_request_timeout_seconds": 3600.0
   }
 }
