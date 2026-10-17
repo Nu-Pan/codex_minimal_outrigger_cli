@@ -1056,7 +1056,7 @@
     "last_investigated_at": "2026-10-16_12-48-48_367"
   },
   "src/main.py": {
-    "investigation_required": false,
+    "investigation_required": true,
     "last_investigation_result": "no_findings",
     "last_investigated_sha256": "21d951ce3621b42a5023ee0e24c2c1e70c8c6562c03e6537d12115f7925776e0",
     "last_investigated_at": "2026-10-16_12-52-16_990"
@@ -1133,29 +1133,17 @@
     "last_investigated_sha256": "45f2cdf62d9edd181a1f1cc14734db2757e556059630746b1486c1bd5d1101b4",
     "last_investigated_at": "2026-10-16_14-00-24_082"
   },
-  "src/sub_commands/realization/apply/__init__.py": {
+  "src/sub_commands/realization/apply.py": {
     "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "d6d2ca470e50cfd6872e3d6ceaaf3a134b7f0dc8205826c843ca70d79352d5f7",
-    "last_investigated_at": "2026-10-16_14-06-43_891"
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
-  "src/sub_commands/realization/apply/fork.py": {
+  "src/sub_commands/realization/refactor.py": {
     "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "1d356e7c53e0629dd24e25e2f17bef46eb4e221d1946ab1ee9f8d775f71ce9d3",
-    "last_investigated_at": "2026-10-16_14-12-32_750"
-  },
-  "src/sub_commands/realization/refactor/__init__.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "d070e139f0ebc38e439ff4bf3b37f76a7a536a3424248e4afcc0525de0573746",
-    "last_investigated_at": "2026-10-16_14-18-18_794"
-  },
-  "src/sub_commands/realization/refactor/fork.py": {
-    "investigation_required": true,
-    "last_investigation_result": "findings",
-    "last_investigated_sha256": "6354e8fdc09b0e18fffad6cc1e1bac9df2f6c3b3299473e9501ea5b99b19aa2c",
-    "last_investigated_at": "2026-10-16_14-26-13_869"
+    "last_investigation_result": "not_investigated",
+    "last_investigated_sha256": null,
+    "last_investigated_at": null
   },
   "src/sub_commands/resume.py": {
     "investigation_required": true,
