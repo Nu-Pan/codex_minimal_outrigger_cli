@@ -457,9 +457,8 @@ def test_refactor_cycle_prioritizes_null_then_milliseconds_then_path():
     assert refactor_cycle_targets({}) == []
 
 
-@pytest.mark.parametrize("reverse_refs", [False, True])
 def test_merge_refactor_states_uses_committed_dates_and_current_paths(
-    cli_repository, monkeypatch, reverse_refs
+    cli_repository, monkeypatch
 ):
     root = cli_repository
     older = "2026-10-18_00-00-00_001"
@@ -487,24 +486,25 @@ def test_merge_refactor_states_uses_committed_dates_and_current_paths(
     run_git(root, "add", ".cmoc/gt/realization/refactor/state.json")
     run_git(root, "commit", "-m", "right state")
     right = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    # Git の統合結果や作業中の値から日時を作らず、確定済みの両側を使う。
-    write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
     targets = ["README.md", "oracle/spec.md", "left.py", "right.py", "added.py"]
     monkeypatch.setattr(
         refactor_module, "enumerate_refactor_targets", lambda _: targets
     )
 
-    refs = (right, left) if reverse_refs else (left, right)
-    state = merge_refactor_states(root, refs)
+    # 順序だけが異なる検査で同じ commit 履歴を作り直さない。
+    for refs in ((left, right), (right, left)):
+        # 各順序で作業中の値を戻し、前回の統合結果からの読み込みも検出する。
+        write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
+        state = merge_refactor_states(root, refs)
 
-    assert state == {
-        "README.md": {"last_investigated_at": newer},
-        "oracle/spec.md": {"last_investigated_at": older},
-        "left.py": {"last_investigated_at": older},
-        "right.py": {"last_investigated_at": None},
-        "added.py": {"last_investigated_at": None},
-    }
-    assert load_refactor_state(root) == state
+        assert state == {
+            "README.md": {"last_investigated_at": newer},
+            "oracle/spec.md": {"last_investigated_at": older},
+            "left.py": {"last_investigated_at": older},
+            "right.py": {"last_investigated_at": None},
+            "added.py": {"last_investigated_at": None},
+        }, refs
+        assert load_refactor_state(root) == state, refs
 
 
 def test_managed_state_conflict_merges_without_agent(cli_repository):
