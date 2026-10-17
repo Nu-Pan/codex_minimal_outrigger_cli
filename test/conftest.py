@@ -20,6 +20,9 @@ import commons.runtime_document_search_observation as observation_module
 import commons.runtime_download_asset_cache as asset_cache_module
 import commons.runtime_editor_input_handoff_protocol as handoff_protocol
 import commons.runtime_feedback as runtime_feedback
+import commons.runtime_feedback_run_state as feedback_run_state
+import commons.runtime_feedback_state as feedback_state
+import commons.runtime_feedback_store as feedback_store
 import commons.runtime_logging as runtime_logging
 import commons.runtime_primary_report_review as report_review
 import commons.runtime_windows_toast as runtime_windows_toast
@@ -127,6 +130,7 @@ def ready_join_session(
 def feedback_publication_session(
     ready_join_session: tuple[Path, str, Path],
     feedback_without_transport: None,
+    nonpersistent_execution_ids: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
     """案件の publication 検査には、修復不要の session と同期を待たない保存を使う。"""
@@ -135,6 +139,16 @@ def feedback_publication_session(
     # fsync の順序・失敗・再保存は test_feedback_store.py、実同期との結合は
     # 上記の wave test に残す。write・rename・hash 検査と recovery は実行する。
     monkeypatch.setattr("os.fsync", lambda _fd: None)
+    # SQLite の FULL 同期は os.fsync の置換では省けない。永続採番は
+    # test_runtime_ids.py と test_codex_runtime_paths.py、feedback との結合は
+    # 上記の wave test に残し、ここでは ID の対応・再発時の非再利用を検査する。
+    for module in (
+        feedback_run_state,
+        feedback_state,
+        feedback_store,
+        remediation_module,
+    ):
+        monkeypatch.setattr(module, "new_id", runtime_logging.new_id)
     # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
     monkeypatch.setattr(
         remediation_module, "doctor_preprocess_for_join", lambda **_kwargs: None
