@@ -6,8 +6,10 @@ cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行�
 
 | 用語 | 実行単位 | cmoc が付与する識別情報 |
 |---|---|---|
-| agent call | 1 個の `AgentCallParameter` を入力とする論理的な実行。初回実行、Structured Output の補正、retry、および回復待ち後の再開を合わせて 1 回と数える。回復確認 probe は別の agent call とする。 | 対応する builder を表す安定した低カーディナリティの `agent_call_kind` と、一意な agent call ID |
+| agent call | 1 個の `AgentCallParameter` を入力とする論理的な実行。初回実行、Structured Output の補正、retry、および回復待ち後の再開を合わせて 1 回と数える。回復確認 probe は別の agent call とする。 | 呼び出し種別を表す安定した低カーディナリティの `agent_call_kind` と、一意な agent call ID |
 | Codex call | 初回実行、補正、retry、回復待ち後の再開、および probe を含む個々の Codex CLI 呼び出し。 | 各 CLI 呼び出し、および TUI process ごとに一意な Codex call ID |
+
+`agent_call_kind` は各 builder が指定し、ログ・feedback の分類にも同じ値を使う。複数の builder が同じ種別を使う場合も、各実行は agent call ID で区別する。共有対象と設定取得の規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」に従う。
 
 agent call ID と Codex call ID の書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」に従う。cmoc は、論理 agent call の開始前に agent call ID を発行し、上表の同じ論理 call を通して保持する。Codex call ID は、個々の CLI 呼び出しまたは TUI process の開始前に発行する。同じ TUI process の各 turn では同じ Codex call ID を使う。
 
@@ -257,7 +259,7 @@ caller 固有の objective は、名目的な担当 role ではなく、その a
 - completion criteria は、agent call 終了後に検証可能で、schema または policy だけでは表現されない call 固有の完了状態がある場合に設ける。
 - non-goals は、隣接作業への逸脱が予想される場合に限り、call 固有の対象外を示す。一般的な禁止操作またはアクセス制限を置かない。
 
-独立した role または role 用の構造は設けない。agent call の機械的な識別は `AgentCallParameter.agent_call_kind` が担う。評価方向または責務に意味がある場合は、task の行為と判断対象、named policy、または call 固有の static prompt で具体化する。
+独立した role または role 用の構造は設けない。agent call の種別を機械的に識別する値は `AgentCallParameter.agent_call_kind` とする。評価方向または責務に意味がある場合は、task の行為と判断対象、named policy、または call 固有の static prompt で具体化する。
 
 objective は、専用機構が所有する次の内容を重複させない。
 

@@ -51,11 +51,8 @@ class AgentCallParameter:
     AI コーディングエージェント (e.g. Codex CLI) の呼び出しパラメータをまとめたクラス
     """
 
-    # エージェント呼び出しの種類を表す安定した低カーディナリティ識別子
-    # 典型的には対応する builder 関数名を使う
-    # ログ・cmoc feedback 用の問題分類に使う call 固有の値。
-    # 設定取得キーとの対応は `{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の
-    # 「agent call ごとの直接設定」に従う
+    # 呼び出し種別の正確な値は各 builder が指定する。
+    # 意味と用途は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」に従う。
     agent_call_kind: str
 
     # ファイルアクセスモード

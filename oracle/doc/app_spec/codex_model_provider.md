@@ -7,21 +7,19 @@
 
 ## agent call ごとの直接設定
 
-通常の agent call は、以下の規則で設定取得キーを決め、`CmocConfigCodex.agent_calls` の対応する一つの entry から設定を直接取得する。この規則から外れる設定取得は、本書の「回復確認 probe の設定例外」に限定する。取得した設定を二つの agent call で共用する TUI の経路は、本節の「TUI 起動での設定の確定」に従う。
+通常の agent call は、builder が指定した `AgentCallParameter.agent_call_kind` をそのまま設定取得キーとし、`CmocConfigCodex.agent_calls` の対応する一つの entry から設定を直接取得する。この規則から外れる設定取得は、本書の「回復確認 probe の設定例外」に限定する。取得した設定を二つの agent call で共用する TUI の経路は、本節の「TUI 起動での設定の確定」に従う。
 
-- `AgentCallParameter.agent_call_kind` は、ログ・feedback 分類などに用いる安定した call 種別の識別子として保持する。設定元を共有する場合も識別子を統合せず、call の識別と設定元の選択を分ける
-- 共有グループに所属する call はグループ名を、所属しない call は自身の `agent_call_kind` を設定取得キーとして使う
-- realization apply の本命 call、realization refactor の所見調査・修正 call、feedback の issue remediation call、および run join の競合解消 call は、realization 編集用の共有グループに所属する。run join は、workload の自動 join と明示的な `cmoc run join` の両方を含む
+- realization apply の本命 call、realization refactor の所見調査・修正 call、feedback の issue remediation call、および run join の競合解消 call は、各 builder で realization 編集用の同じ `agent_call_kind` を直接指定し、設定を共有する。run join は、workload の自動 join と明示的な `cmoc run join` の両方を含む
 - session join、汎用 TUI、oracle 調査、oracle 編集、feedback normalization、primary report の重要事項確認、および quota availability probe は、それぞれ独立した個別設定を持つ
-- `agent_calls` に受理するキーは、委譲先が定める共有グループ名と共有対象外の call 名に限る。共有対象の call 名をキーとする個別 entry や、共有設定への call ごとの個別上書きは受理しない
+- `agent_calls` に受理するキーは、委譲先が定める `agent_call_kind` の集合に限る。共有対象の builder 関数名をキーとする個別 entry や、共有設定への call ごとの個別上書きは受理しない
 - 共有設定と各個別設定は、model provider ID、Model 名、および Reasoning Effort 名を必須の直接文字列として持つ
-- 共有設定、必要な個別設定、または provider 定義が欠落しているか、定められた構造・型・値の制約・参照整合性を満たさない場合は、値を推測せず Codex CLI の起動前にエラーとする。共有設定が欠落しても、所属 call 自身の名前を使う設定取得へ fallback してはならない
+- 共有設定、必要な個別設定、または provider 定義が欠落しているか、定められた構造・型・値の制約・参照整合性を満たさない場合は、値を推測せず Codex CLI の起動前にエラーとする。対応する entry が欠落しても、`agent_call_kind` と異なるキーを使う設定取得へ fallback してはならない
 - primary report の重要事項確認には、確認対象に含まれる本命 call の設定を流用しない。call の責務と builder は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従う
 - cmoc は、三つの直接文字列について、別名への解決、近い値への丸め、または fallback を行ってはならない
 - cmoc は、Model、Reasoning Effort、および model provider の組み合わせに対する互換性検査や allowlist を持たない
 - Codex CLI が設定を拒否した場合は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」に従う。TUI への適用範囲は同文書の「TUI の新規起動と対話 resume」に従い、非対話の回復待ちを持ち込まない
 - Structured Output の補正、retry、および回復待ち後の再開を個別の設定単位にしてはならない
-- 設定データ構造、field 名、型、および既定値の正確な詳細は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CodexCallConfig`、`CodexModelProviderConfig`、および `CmocConfigCodex` へ委譲する。共有グループ名と所属する正確な call 識別子の対応は `CmocConfigCodex.SHARED_AGENT_CALL_GROUPS`、共有設定の配置と既定値は `CmocConfigCodex.agent_calls["realization_edit"]`、共有対象外の正確な call 名と個別設定は `CmocConfigCodex.agent_calls` を正本とする
+- 設定データ構造、field 名、型、および既定値の正確な詳細は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CodexCallConfig`、`CodexModelProviderConfig`、および `CmocConfigCodex` へ委譲する。受理する設定キーと各 entry の既定値は `CmocConfigCodex.agent_calls` を正本とする
 - 取得した設定を Codex CLI の argv へ反映し、同じ agent call で維持する規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Model provider、Model、Reasoning Effort」を正本とする
 
 ### TUI 起動での設定の確定

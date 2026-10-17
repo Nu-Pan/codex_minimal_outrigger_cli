@@ -17,7 +17,6 @@
 
 # std
 from dataclasses import dataclass, field
-from typing import ClassVar
 
 # JSON と TOML の両方で表現できる設定値
 type JsonTomlValue = (
@@ -105,7 +104,7 @@ class CmocConfigCodex:
         default_factory=lambda: {"openai": CodexModelProviderConfig()}
     )
 
-    # 設定取得キー（共有グループ名または共有対象外の agent_call_kind）--> 直接設定
+    # agent_call_kind --> 直接設定
     # NOTE
     #   ベンチマークスコア上、GPT-5.6 Astra は xhigh, max に知能差はほとんど無いが、料金差はきっちりある
     #   なので、GPT-5.6 Astra xhigh にして料金をケチりたい所だった。

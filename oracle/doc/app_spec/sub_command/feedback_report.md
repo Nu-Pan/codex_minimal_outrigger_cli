@@ -109,7 +109,6 @@ normalization と remediation の agent 入出力は、引き続き issue ID を
 
 正規化済み issue identity の初回処理と、同じ run 内で判定根拠の変化に伴って行う各再確認を、それぞれ独立した論理 issue remediation agent call とする。
 
-- remediation call は feedback 固有の安定した `agent_call_kind` を使用する。
 - issue ID は runtime input とし、`agent_call_kind` に含めない。
 - Structured Output correction、retry、および quota または一時障害の回復待ち後の再開は、同じ論理 agent call として数える。回復確認 probe は issue remediation call に数えない。
 - issue remediation call は、同じ run branch の最新状態を順に参照できるよう逐次実行する。
