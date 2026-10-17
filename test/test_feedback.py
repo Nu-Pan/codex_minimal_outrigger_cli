@@ -201,9 +201,15 @@ def _context(
 
 
 @pytest.fixture
-def stored_feedback_context(feedback_directory: Path) -> dict[str, object]:
-    """保存検査には、collector 確定済みの context と実 evidence file を渡す。"""
+def stored_feedback_context(
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, object]:
+    """受付・保存内容の検査に、実 evidence file と同期待ちのない context を用意する。"""
     # HEAD の取得は collector test、Git lifecycle は CLI test で検証する。
+    # flush の順序・失敗・再保存は test_feedback_store.py、実同期との結合は
+    # validates_context_rate_and_durable_observation と後続 wave の test に残す。
+    # raw・receipt の write・rename・hash 検査と、TCP の drain・call 分離は実行する。
+    monkeypatch.setattr(os, "fsync", lambda _fd: None)
     (feedback_directory / "README.md").write_text("# repo\n")
     return _context(feedback_directory, head_commit="a" * 40)
 
