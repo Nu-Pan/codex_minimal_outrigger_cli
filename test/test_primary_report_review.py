@@ -7,6 +7,7 @@ import threading
 from functools import partial
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
 import typer
 from _cli_support import terminal_primary_report
@@ -24,6 +25,7 @@ import commons.runtime_codex_profile as profile_module
 import commons.runtime_codex_recovery as recovery
 import commons.runtime_primary_report_review as review_module
 from commons.runtime_errors import CmocError, CodexProcessStopError
+from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_logging import SubcommandLogger
 from commons.runtime_primary_report_review import (
     PrimaryReportReviewState,
@@ -56,13 +58,31 @@ def mechanical_report():
 
 @pytest.fixture
 def review_runtime(
-    cli_repository,
     tmp_path,
     monkeypatch,
     primary_report_review_runner,
     nonpersistent_codex_ids,
 ):
+    """確認の制御・保存を、解決済み root と変更のない作業成果物で検証する。"""
+    root = tmp_path / "repo"
+    root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
+
+    # 実 Git の root・linked worktree 解決は test_codex_runtime_paths.py に残し、
+    # ここでは完全な builder・prompt と実 exec 制御を同じ対象 root で通す。
+    def resolve_roots(cwd):
+        assert cwd == root
+        return root, root
+
+    monkeypatch.setattr(path_model_module, "_resolve_git_worktree_roots", resolve_roots)
+
+    # Fake は .cmoc 内の応答・診断だけを保存する。実成果物の変動検出と復元は
+    # test_codex_runtime_retry.py の restores_artifacts_changed_by_correction に残す。
+    def unchanged_artifacts(work_root):
+        assert work_root == root
+        return WorktreeSnapshot(work_root, ())
+
+    monkeypatch.setattr(exec_module, "capture_worktree_snapshot", unchanged_artifacts)
     monkeypatch.setattr(
         review_module,
         "run_codex_exec",
@@ -73,7 +93,7 @@ def review_runtime(
             transient_poll_interval_sec=0,
         ),
     )
-    return cli_repository, SubcommandLogger(cli_repository, "doctor")
+    return root, SubcommandLogger(root, "doctor")
 
 
 @pytest.mark.parametrize(
