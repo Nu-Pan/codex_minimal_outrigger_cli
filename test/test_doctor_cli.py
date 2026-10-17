@@ -356,7 +356,7 @@ def test_doctor_preprocess_repairs_git_state(
 def test_doctor_preprocess_restores_empty_work_directories(
     cli_repository, explicit_doctor, doctor_repair_events
 ):
-    """両入口の修復順序を守り、不足の補完と再実行で既存内容・差分を保つ。"""
+    """両入口で配置先と placeholder を復元し、再実行で既存内容・差分を保つ。"""
     # 修復済みの管理 file だけ用意し、配置先を作るための doctor 全体を重ねない。
     # 初期内容を最初の commit に揃え、参照しない空 commit を準備しない。
     root = cli_repository
@@ -365,13 +365,17 @@ def test_doctor_preprocess_restores_empty_work_directories(
     preserved.write_text("kept content\n")
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     (root / ".agents").mkdir()
-    (root / ".agents/.gitkeep").write_text("")
+    gitkeep = root / ".agents/.gitkeep"
+    gitkeep.write_text("")
     seed_search_config(root)
     doctor_module.sync_refactor_state(root)
     run_git(root, "add", ".gitignore", ".agents", ".cmoc/gt", "src")
     run_git(root, "commit", "-m", "prepare management files and kept content")
     head_before = run_git(root, "rev-parse", "HEAD").stdout
     preserved_before = (preserved.stat().st_ino, preserved.stat().st_mtime_ns)
+    # placeholder 復元と index flag の保持も、この両入口の lifecycle で検査する。
+    run_git(root, "update-index", "--skip-worktree", ".agents/.gitkeep")
+    gitkeep.unlink()
 
     # 準備用の state 同期を除き、各前処理だけの順序を観測する。
     doctor_repair_events.clear()
@@ -379,6 +383,7 @@ def test_doctor_preprocess_restores_empty_work_directories(
 
     expected_order = ["ignore", "agents", "config", "state", "reporter"]
     assert doctor_repair_events == expected_order
+    assert gitkeep.read_text() == ""
     assert all((root / relative).is_dir() for relative in _WORK_DIRECTORIES)
     assert all(
         not list((root / relative).iterdir())
@@ -408,6 +413,9 @@ def test_doctor_preprocess_restores_empty_work_directories(
     }
     assert run_git(root, "rev-parse", "HEAD").stdout == head_before
     assert run_git(root, "status", "--short").stdout == ""
+    assert run_git(root, "ls-files", "-v", ".agents/.gitkeep").stdout == (
+        "S .agents/.gitkeep\n"
+    )
     assert run_git(root, "ls-files", "--", *_WORK_DIRECTORIES).stdout.splitlines() == [
         "src/kept.txt"
     ]
@@ -1437,27 +1445,30 @@ def test_agents_tracking_preserves_existing_files_and_index(
 
 
 @pytest.mark.parametrize("index_flag", [None, "--skip-worktree"])
-def test_doctor_restores_missing_tracked_gitkeep(
+def test_agents_tracking_restores_missing_tracked_gitkeep(
     cli_repository: Path,
     index_flag: str | None,
 ) -> None:
-    """tracked な `.agents/.gitkeep` の unstaged deletion を復元する。"""
+    """tracked placeholder の内容を復元し、通常 entry と skip-worktree を保つ。"""
 
     root = cli_repository
-    # 必要な追跡 entry だけを準備し、doctor の全修復を setup で重ねない。
+    # doctor 全体との結合は配置先復元の test に残し、ここでは復元の境界条件を扱う。
     gitkeep = root / ".agents" / ".gitkeep"
     gitkeep.parent.mkdir()
-    gitkeep.write_text("")
+    gitkeep.write_text("tracked placeholder content\n")
     run_git(root, "add", ".agents/.gitkeep")
     run_git(root, "commit", "-m", "track agents placeholder")
     if index_flag is not None:
         run_git(root, "update-index", index_flag, ".agents/.gitkeep")
     before_flags = run_git(root, "ls-files", "-v", ".agents/.gitkeep").stdout
+    index = root / ".git/index"
+    before_index = index.read_bytes()
     gitkeep.unlink()
 
-    doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
+    assert doctor_module._ensure_agents_tracked(root) is False
 
-    assert gitkeep.read_text() == ""
+    assert gitkeep.read_text() == "tracked placeholder content\n"
+    assert index.read_bytes() == before_index
     assert run_git(root, "status", "--short").stdout == ""
     assert run_git(root, "ls-files", "-v", ".agents/.gitkeep").stdout == before_flags
 
