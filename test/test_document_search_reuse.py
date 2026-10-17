@@ -132,18 +132,18 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
     (run / "oracle/doc/allowed.md").rename(run / "oracle/doc/moved.md")
     (run / "oracle/doc/copy.md").write_text(original)
     with closing(create(run, events=events)) as search:
-        result = search.synchronize()
-        assert result.chunk_count == result.reused_embeddings == 2
+        # 検索の初回同期で再利用と現在位置を共に検査し、直前の明示同期を重ねない。
+        hits = search.search("原文")["hits"]
+        assert len(hits) == 2
+        assert search.sync_progress["reused_embeddings"] == 2
         assert search.sync_progress["generated_embeddings"] == 0
         assert search.sync_progress["reused_other_worktree"] == 2
+        assert search.sync_progress["reused_same_worktree"] == 0
         assert inputs() == [original]
-        assert {hit["path"] for hit in search.search("原文")["hits"]} == {
+        assert {hit["path"] for hit in hits} == {
             "oracle/doc/moved.md",
             "oracle/doc/copy.md",
         }
-        # 直前の検索が再同期も行うので、その再利用元を検査する。
-        assert search.sync_progress["reused_other_worktree"] == 2
-        assert search.sync_progress["reused_same_worktree"] == 0
     finished = [
         event for event in events if event["event"] == "document_search_sync_finished"
     ]
