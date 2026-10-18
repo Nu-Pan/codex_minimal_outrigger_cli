@@ -250,14 +250,14 @@ def test_partial_failure_preserves_published_assets(
 
 def test_parallel_installations_download_once(tmp_path, distribution, monkeypatch):
     """独立 process と異なる cmoc 配置でも、待機後に完成品を再利用する。"""
-    context = multiprocessing.get_context("spawn")
+    # lock は親子の obtain 内で別々に開き、interpreter の再起動だけを省く。
+    context = multiprocessing.get_context("fork")
     downloading = context.Event()
     waiting = context.Event()
     asset = _asset(distribution)
     receive, send = context.Pipe(duplex=False)
     destination = tmp_path / "child-result"
     process = context.Process(
-        # spawn がテスト全体と CLI を再 import しない、小さな worker を使う。
         target=process_obtain,
         args=(
             cache_module.asset_cache_directory(),
