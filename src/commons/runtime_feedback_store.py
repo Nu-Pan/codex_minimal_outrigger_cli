@@ -412,10 +412,10 @@ def _store_observation(
                             "context_invalid",
                             f"observation ID collision or corruption: {existing}",
                         )
-                    record_observation_receipt(repo, existing)
+                    record_observation_receipt(repo, existing, digest)
                     return existing.resolve()
-                write_immutable_bytes(path, content)
-                record_observation_receipt(repo, path)
+                saved_digest = write_immutable_bytes(path, content)
+                record_observation_receipt(repo, path, saved_digest)
                 return path.resolve()
             finally:
                 fcntl.flock(directory_fd, fcntl.LOCK_UN)
