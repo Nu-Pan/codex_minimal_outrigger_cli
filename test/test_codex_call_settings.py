@@ -16,34 +16,34 @@ from _codex_support import (
     setup_codex_home,
 )
 from oracle.acp_builder.feedback.normalize_issue import (
-    build_feedback_normalize_issue_parameter,
+    build_feedback_issue_normalization_request,
 )
 from oracle.acp_builder.feedback.remediate_issue import (
-    build_feedback_remediate_issue_parameter,
+    build_feedback_issue_remediation_request,
 )
 from oracle.acp_builder.oracle.edit.launch_exec import (
-    build_oracle_edit_main_launch_exec_parameter,
+    build_oracle_edit_request,
 )
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_launch_tui_parameter,
+    build_oracle_investigation_request,
 )
 from oracle.acp_builder.primary_report_review import (
-    build_primary_report_review_parameter,
+    build_primary_report_review_request,
 )
-from oracle.acp_builder.quota_probe import build_quota_availability_probe_parameter
+from oracle.acp_builder.quota_probe import build_quota_availability_probe_request
 from oracle.acp_builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_fork_launch_exec_parameter,
+    build_realization_apply_request,
 )
 from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
-    build_realization_refactor_fork_file_review_and_fix_parameter,
+    build_realization_refactor_request,
 )
 from oracle.acp_builder.run.join.conflict_resolution import (
-    build_run_join_conflict_resolution_parameter,
+    build_run_join_conflict_resolution_request,
 )
 from oracle.acp_builder.session.join.conflict_resolution import (
-    build_session_join_conflict_resolution_parameter,
+    build_session_join_conflict_resolution_request,
 )
-from oracle.acp_builder.tui.launch_tui import build_tui_launch_tui_parameter
+from oracle.acp_builder.tui.launch_tui import build_tui_request
 
 from commons.runtime_codex_exec import run_codex_exec
 from commons.runtime_config import config_from_dict, config_to_dict
@@ -122,12 +122,10 @@ def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
 ):
     root = settings_root
     parameters = [
-        build_realization_apply_fork_launch_exec_parameter("base", "head", root),
-        build_realization_refactor_fork_file_review_and_fix_parameter(
-            root / "src.py", root
-        ),
-        build_feedback_remediate_issue_parameter('{"issue_id":"issue"}', root),
-        build_run_join_conflict_resolution_parameter("run", "session", root),
+        build_realization_apply_request("base", "head", root),
+        build_realization_refactor_request(root / "src.py", root),
+        build_feedback_issue_remediation_request('{"issue_id":"issue"}', root),
+        build_run_join_conflict_resolution_request("run", "session", root),
     ]
     assert {parameter.agent_call_kind for parameter in parameters} == {
         "realization_edit"
@@ -161,20 +159,22 @@ def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
 
 def test_individual_builders_select_their_own_entries(settings_root, monkeypatch):
     root = settings_root
-    parameters = [
-        build_session_join_conflict_resolution_parameter("session", "home", root),
-        build_tui_launch_tui_parameter("task"),
-        build_oracle_investigation_launch_tui_parameter("question"),
-        build_oracle_edit_main_launch_exec_parameter("edit"),
-        build_feedback_normalize_issue_parameter("{}", "[]", root),
-        build_primary_report_review_parameter(root / "report.md", root),
-        build_quota_availability_probe_parameter(root),
+    builders_and_args = [
+        (build_session_join_conflict_resolution_request, ("session", "home", root)),
+        (build_tui_request, ("task",)),
+        (build_oracle_investigation_request, ("question",)),
+        (build_oracle_edit_request, ("edit",)),
+        (build_feedback_issue_normalization_request, ("{}", "[]", root)),
+        (build_primary_report_review_request, (root / "report.md", root)),
+        (build_quota_availability_probe_request, (root,)),
     ]
+    parameters = [builder(*args) for builder, args in builders_and_args]
     config = configured_calls()
     kinds = {parameter.agent_call_kind for parameter in parameters}
     assert kinds == config.codex.agent_calls.keys() - {"realization_edit"}
     calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "done")] * len(parameters))
-    for parameter in parameters:
+    for (builder, _args), parameter in zip(builders_and_args, parameters, strict=True):
+        assert parameter.agent_call_kind == builder.__name__
         run_codex_exec(
             replace(parameter, structured_output_schema_path=None),
             root=root,
@@ -188,9 +188,7 @@ def test_shared_settings_remain_fixed_across_output_corrections(
     settings_root, monkeypatch, unchanged_artifacts
 ):
     root = settings_root
-    parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
-        root / "src.py", root
-    )
+    parameter = build_realization_refactor_request(root / "src.py", root)
     config = configured_calls()
     original = deepcopy(config)
 
@@ -230,7 +228,7 @@ def test_invalid_saved_settings_fail_before_codex_launch(
     settings_root, monkeypatch, invalid
 ):
     root = settings_root
-    parameter = build_realization_apply_fork_launch_exec_parameter("base", "head", root)
+    parameter = build_realization_apply_request("base", "head", root)
     data = config_to_dict(CmocConfig())
     if invalid == "missing_shared":
         del data["codex"]["agent_calls"]["realization_edit"]
@@ -273,10 +271,8 @@ def test_shared_structured_output_failures_keep_feedback_kind_and_call_ids(
     calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "{}")] * 6)
     # schema のある 2 種だけを構築し、使わない prompt の描画と Git 探索を省く。
     parameters = [
-        build_realization_refactor_fork_file_review_and_fix_parameter(
-            root / "src.py", root
-        ),
-        build_feedback_remediate_issue_parameter('{"issue_id":"issue"}', root),
+        build_realization_refactor_request(root / "src.py", root),
+        build_feedback_issue_remediation_request('{"issue_id":"issue"}', root),
     ]
     for parameter in parameters:
         with pytest.raises(CmocError, match="Structured Output"):

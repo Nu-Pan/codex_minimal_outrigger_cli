@@ -8,7 +8,7 @@
 """
 
 from oracle.acp_builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_fork_launch_exec_parameter,
+    build_realization_apply_request,
 )
 
-__all__ = ["build_realization_apply_fork_launch_exec_parameter"]
+__all__ = ["build_realization_apply_request"]

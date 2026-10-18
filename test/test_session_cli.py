@@ -962,7 +962,7 @@ def session_conflict_parameter(
     # 文面と起動値は test_acp_builder_session_join_parameters.py、実 builder と
     # linked worktree の結合は merges_conflict_and_incidental_changes に残す。
     parameter = AgentCallParameter(
-        agent_call_kind="build_session_join_conflict_resolution_parameter",
+        agent_call_kind="build_session_join_conflict_resolution_request",
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt="conflict resolution",
         structured_output_schema_path=None,
@@ -971,7 +971,7 @@ def session_conflict_parameter(
     )
     builder = Mock(return_value=parameter)
     monkeypatch.setattr(
-        session_join_module, "build_session_join_conflict_resolution_parameter", builder
+        session_join_module, "build_session_join_conflict_resolution_request", builder
     )
     yield parameter
     builder.assert_called_once()

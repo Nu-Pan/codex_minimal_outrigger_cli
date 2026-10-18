@@ -355,7 +355,7 @@ def merge_run(
             }
             if merge.returncode != 0:
                 from oracle.acp_builder.run.join.conflict_resolution import (
-                    build_run_join_conflict_resolution_parameter,
+                    build_run_join_conflict_resolution_request,
                 )
 
                 write_run_process_id(context.repo, context.session_id, os.getpid())
@@ -363,7 +363,7 @@ def merge_run(
                     resolution = resolve_merge_conflicts(
                         context.run_worktree,
                         partial(
-                            build_run_join_conflict_resolution_parameter,
+                            build_run_join_conflict_resolution_request,
                             run_head,
                             record.session_head,
                             context.run_worktree,

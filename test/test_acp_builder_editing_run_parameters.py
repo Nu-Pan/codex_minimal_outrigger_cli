@@ -13,17 +13,17 @@ import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
 from oracle.acp_builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_fork_launch_exec_parameter as build_canonical_apply_parameter,
+    build_realization_apply_request as build_canonical_apply_parameter,
 )
 from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
-    build_realization_refactor_fork_file_review_and_fix_parameter as build_canonical_review_parameter,
+    build_realization_refactor_request as build_canonical_review_parameter,
 )
 
 from acp.builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_fork_launch_exec_parameter,
+    build_realization_apply_request,
 )
 from acp.builder.realization.refactor.fork.file_review_and_fix import (
-    build_realization_refactor_fork_file_review_and_fix_parameter,
+    build_realization_refactor_request,
 )
 from basic.acp import FileAccessMode
 
@@ -60,14 +60,8 @@ def editing_run_paths(
 
 def test_editing_run_compatibility_builders_reexport_canonical_functions() -> None:
     """互換 import 経路が prompt を加工せず正本 builder を再公開する。"""
-    assert (
-        build_realization_apply_fork_launch_exec_parameter
-        is build_canonical_apply_parameter
-    )
-    assert (
-        build_realization_refactor_fork_file_review_and_fix_parameter
-        is build_canonical_review_parameter
-    )
+    assert build_realization_apply_request is build_canonical_apply_parameter
+    assert build_realization_refactor_request is build_canonical_review_parameter
 
 
 def test_realization_apply_builder_passes_commit_references(
@@ -75,7 +69,7 @@ def test_realization_apply_builder_passes_commit_references(
 ) -> None:
     """apply builder が commit 参照と取得条件を prompt に含める。"""
     root, run_worktree = editing_run_paths
-    parameter = build_realization_apply_fork_launch_exec_parameter(
+    parameter = build_realization_apply_request(
         "base-commit",
         "fork-commit",
         run_worktree,
@@ -114,9 +108,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     """refactor builder が canonical schema と要求された実行設定を使うことを確認する。"""
     root, run_worktree = editing_run_paths
     target_path = run_worktree / "README.md"
-    review = build_realization_refactor_fork_file_review_and_fix_parameter(
-        target_path, run_worktree
-    )
+    review = build_realization_refactor_request(target_path, run_worktree)
 
     assert review.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert review.structured_output_schema_path is not None

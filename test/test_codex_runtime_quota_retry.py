@@ -18,7 +18,7 @@ from _codex_support import (
     stub_codex_overrides,
 )
 from oracle.acp_builder.quota_probe import (
-    build_quota_availability_probe_parameter as build_canonical_quota_probe_parameter,
+    build_quota_availability_probe_request as build_canonical_quota_probe_parameter,
 )
 
 import commons.runtime_codex_exec as runtime_codex_exec
@@ -136,7 +136,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     config = CmocConfig()
     base_call_config = config.codex.agent_calls[parameter.agent_call_kind]
     probe_call_config = config.codex.agent_calls[
-        "build_quota_availability_probe_parameter"
+        "build_quota_availability_probe_request"
     ]
 
     result = run_codex_exec(
@@ -308,7 +308,7 @@ def test_run_codex_exec_logs_keyboard_interrupt_from_quota_probe(
     with pytest.raises(KeyboardInterrupt):
         run_codex_exec(
             AgentCallParameter(
-                "build_feedback_normalize_issue_parameter",
+                "build_feedback_issue_normalization_request",
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
@@ -354,14 +354,14 @@ def test_quota_probe_uses_canonical_complete_prompt(
     # 正本の生成結果を一度だけ作り、runtime が cwd を渡してそのまま返すことを確かめる。
     builder = Mock(return_value=build_canonical_quota_probe_parameter(root))
     monkeypatch.setattr(
-        "oracle.acp_builder.quota_probe.build_quota_availability_probe_parameter",
+        "oracle.acp_builder.quota_probe.build_quota_availability_probe_request",
         builder,
     )
     probe = runtime_codex_exec._quota_availability_probe_parameter(base)
 
     builder.assert_called_once_with(root)
     assert probe is builder.return_value
-    assert probe.agent_call_kind == "build_quota_availability_probe_parameter"
+    assert probe.agent_call_kind == "build_quota_availability_probe_request"
     assert probe.file_access_mode == FileAccessMode.READONLY
     assert probe.prompt
     assert "# feedback observation reporting" in probe.prompt
@@ -397,7 +397,7 @@ def test_run_codex_exec_reruns_after_quota_without_session_id(
         ],
     )
     parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
+        "build_feedback_issue_normalization_request",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -454,7 +454,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
         on_call=during_probe,
     )
     parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
+        "build_feedback_issue_normalization_request",
         FileAccessMode.READONLY,
         "prompt",
         None,
@@ -502,7 +502,7 @@ def test_quota_probe_rejects_invalid_jsonl_with_zero_returncode_and_valid_output
     with pytest.raises(CmocError) as exc_info:
         run_codex_exec(
             AgentCallParameter(
-                "build_feedback_normalize_issue_parameter",
+                "build_feedback_issue_normalization_request",
                 FileAccessMode.READONLY,
                 "prompt",
                 None,
@@ -586,7 +586,7 @@ def test_parallel_quota_calls_share_probe_result(
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
     parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
+        "build_feedback_issue_normalization_request",
         FileAccessMode.READONLY,
         "prompt",
         None,

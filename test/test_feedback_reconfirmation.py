@@ -195,11 +195,11 @@ def feedback_run(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(report, "run_codex_exec", call)
     schema = Path(
-        report.build_feedback_remediate_issue_parameter.__code__.co_filename
+        report.build_feedback_issue_remediation_request.__code__.co_filename
     ).with_suffix(".json")
     monkeypatch.setattr(
         remediation,
-        "build_feedback_remediate_issue_parameter",
+        "build_feedback_issue_remediation_request",
         lambda text, root, **_kwargs: SimpleNamespace(
             prompt=text, agent_call_cwd=root, structured_output_schema_path=schema
         ),

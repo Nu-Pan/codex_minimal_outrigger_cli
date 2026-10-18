@@ -209,7 +209,7 @@ def apply_after_preprocess(
     # 実 builder との結合は上記の fork→join test に残す。
     monkeypatch.setattr(
         apply_module,
-        "build_realization_apply_fork_launch_exec_parameter",
+        "build_realization_apply_request",
         lambda _base, _fork, run_worktree: SimpleNamespace(agent_call_cwd=run_worktree),
     )
     yield
@@ -256,12 +256,10 @@ def real_refactor_builder(monkeypatch):
     # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を繰り返さない。
     # builder の選択値・文面は test_acp_builder_editing_run_parameters.py、
     # 実 worktree と call の結合は mixed_results_until_user_interruption に残す。
-    builder = (
-        refactor_module.build_realization_refactor_fork_file_review_and_fix_parameter
-    )
+    builder = refactor_module.build_realization_refactor_request
     monkeypatch.setattr(
         refactor_module,
-        "build_realization_refactor_fork_file_review_and_fix_parameter",
+        "build_realization_refactor_request",
         lambda _target_path, run_worktree: SimpleNamespace(agent_call_cwd=run_worktree),
     )
     return builder
@@ -757,7 +755,7 @@ def test_realization_apply_automatically_joins_changes_and_noop(
     (root / "oracle/reference_only.md").write_text("oracle payload\n" * 1000)
     run_git(root, "add", "oracle/reference_only.md")
     run_git(root, "commit", "-m", "oracle change")
-    original_builder = apply_module.build_realization_apply_fork_launch_exec_parameter
+    original_builder = apply_module.build_realization_apply_request
     built: list[AgentCallParameter] = []
     calls: list[tuple[Path, str]] = []
     notifications = []
@@ -783,7 +781,7 @@ def test_realization_apply_automatically_joins_changes_and_noop(
 
     monkeypatch.setattr(
         apply_module,
-        "build_realization_apply_fork_launch_exec_parameter",
+        "build_realization_apply_request",
         capture_builder,
     )
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
@@ -3287,7 +3285,7 @@ def test_refactor_fork_commits_mixed_results_until_user_interruption(
     # 代表的な一巡では実 builder を使い、run cwd と target の引き渡しを検査する。
     monkeypatch.setattr(
         refactor_module,
-        "build_realization_refactor_fork_file_review_and_fix_parameter",
+        "build_realization_refactor_request",
         real_refactor_builder,
     )
 
@@ -4113,7 +4111,7 @@ def test_refactor_interruption_allows_only_join_conflict_call(
     monkeypatch.setattr(refactor_module, "run_codex_exec", review)
     monkeypatch.setattr(
         refactor_module,
-        "build_realization_refactor_fork_file_review_and_fix_parameter",
+        "build_realization_refactor_request",
         lambda target, worktree: SimpleNamespace(
             agent_call_cwd=worktree, target_path=target
         ),
@@ -4948,7 +4946,7 @@ def test_join_merges_committed_timestamps_before_sync(
         lambda *_args, **_kwargs: pytest.fail("managed state needs no agent call"),
     )
     monkeypatch.setattr(
-        "oracle.acp_builder.run.join.conflict_resolution.build_run_join_conflict_resolution_parameter",
+        "oracle.acp_builder.run.join.conflict_resolution.build_run_join_conflict_resolution_request",
         lambda *_args, **_kwargs: pytest.fail("managed state needs no agent parameter"),
     )
 

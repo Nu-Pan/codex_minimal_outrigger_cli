@@ -12,7 +12,7 @@ import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import codex_arg_value, codex_override_config
 from oracle.acp_builder.session.join.conflict_resolution import (
-    build_session_join_conflict_resolution_parameter,
+    build_session_join_conflict_resolution_request,
 )
 
 from basic.acp import FileAccessMode
@@ -44,7 +44,7 @@ def test_session_join_conflict_resolution_preserves_prompt_and_launch_parameters
     """Git 入力を prompt のみに渡し、起動設定・編集範囲を維持する。"""
 
     source, target = "c" * 40, "d" * 40
-    parameter = build_session_join_conflict_resolution_parameter(
+    parameter = build_session_join_conflict_resolution_request(
         source, target, home_worktree
     )
 

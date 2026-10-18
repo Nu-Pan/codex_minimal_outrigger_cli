@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from acp.builder.oracle.edit.launch_exec import (
-    build_oracle_edit_main_launch_exec_parameter,
+    build_oracle_edit_request,
 )
 from cmoc_runtime import (
     CmocError,
@@ -52,7 +52,7 @@ def _cmoc_oracle_edit_body() -> None:
     # oracle 編集契約を含む完全 prompt の skeleton を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
     start_subcommand_step(2, "編集 prompt の skeleton を構築", "build edit skeleton")
-    complete_prompt_skeleton = build_oracle_edit_main_launch_exec_parameter(
+    complete_prompt_skeleton = build_oracle_edit_request(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
     assert complete_prompt_skeleton is not None
@@ -79,7 +79,7 @@ def _cmoc_oracle_edit_body() -> None:
     update_primary_report_input(instruction)
 
     start_subcommand_step(5, "共用する入力と設定を確定", "prepare edit calls")
-    parameter = build_oracle_edit_main_launch_exec_parameter(instruction)
+    parameter = build_oracle_edit_request(instruction)
     # JSON から復元した設定を両回で共用し、自己編集後の定義・設定を再取得しない。
     config = load_config(current_root)
     start_subcommand_step(6, "編集起動の事前条件を確認", "validate edit launch")

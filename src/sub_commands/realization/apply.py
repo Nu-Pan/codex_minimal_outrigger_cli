@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from acp.builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_fork_launch_exec_parameter,
+    build_realization_apply_request,
 )
 from cmoc_runtime import (
     CmocError,
@@ -94,7 +94,7 @@ def _cmoc_realization_apply_body() -> TerminalResult:
             context.run_worktree,
         ).stdout.strip()
         update_primary_report_fields(diff_base_commit=diff_base_commit)
-        parameter = build_realization_apply_fork_launch_exec_parameter(
+        parameter = build_realization_apply_request(
             diff_base_commit,
             context.run_fork_commit,
             context.run_worktree,

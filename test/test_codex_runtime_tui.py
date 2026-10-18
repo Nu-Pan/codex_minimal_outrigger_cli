@@ -24,9 +24,9 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _handoff_support import handoff_input
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_launch_tui_parameter,
+    build_oracle_investigation_request,
 )
-from oracle.acp_builder.tui.launch_tui import build_tui_launch_tui_parameter
+from oracle.acp_builder.tui.launch_tui import build_tui_request
 from oracle.other.cmoc_config import CodexCallConfig
 
 import commons.runtime_cli as runtime_cli
@@ -58,9 +58,9 @@ SUCCESS = (
     + "\n"
 )
 BUILDERS = [
-    pytest.param(build_tui_launch_tui_parameter, "tui", id="tui"),
+    pytest.param(build_tui_request, "tui", id="tui"),
     pytest.param(
-        build_oracle_investigation_launch_tui_parameter,
+        build_oracle_investigation_request,
         "oracle investigation",
         id="investigation",
     ),
@@ -317,7 +317,7 @@ def test_initial_terminal_failure_never_retries_or_transitions(
     with call_log(directory) as logger:
         with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗"):
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"),
+                build_tui_request("request"),
                 root=directory,
                 config=CmocConfig(),
             )
@@ -353,7 +353,7 @@ def test_initial_success_requires_saved_output_and_unique_uuid(
     monkeypatch.setattr(tui_module, "_run_codex_tui_process", transition)
     with pytest.raises(CmocError, match="再開に必要な記録"):
         tui_module.run_codex_tui(
-            build_tui_launch_tui_parameter("request"),
+            build_tui_request("request"),
             root=directory,
             config=CmocConfig(),
         )
@@ -369,7 +369,7 @@ def test_prompt_save_failure_starts_no_process(directory, monkeypatch):
     )
     with pytest.raises(OSError, match="disk full"):
         tui_module.run_codex_tui(
-            build_tui_launch_tui_parameter("request"),
+            build_tui_request("request"),
             root=directory,
             config=CmocConfig(),
         )
@@ -377,7 +377,7 @@ def test_prompt_save_failure_starts_no_process(directory, monkeypatch):
 
 
 def test_initial_and_transition_share_start_time_settings(directory, monkeypatch):
-    parameter = build_tui_launch_tui_parameter("original task")
+    parameter = build_tui_request("original task")
     config = CmocConfig()
     config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
         "openai", "initial-model", "low"
@@ -426,7 +426,7 @@ def test_accepted_cancellation_wins_over_success(directory, monkeypatch):
     with call_log(directory) as logger:
         with pytest.raises(TuiStartupCancelled):
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"),
+                build_tui_request("request"),
                 root=directory,
                 config=CmocConfig(),
             )
@@ -461,7 +461,7 @@ def test_cancel_stops_fake_process_and_preserves_partial_logs(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
     parameter = replace(
-        build_tui_launch_tui_parameter("request"),
+        build_tui_request("request"),
         enable_feedback_reporting=False,
         enable_document_search_mcp=False,
     )
@@ -504,7 +504,7 @@ def test_cancel_stops_fake_process_and_preserves_partial_logs(
 
 
 def failed_initial_success(
-    directory, monkeypatch, builder=build_tui_launch_tui_parameter, command="tui"
+    directory, monkeypatch, builder=build_tui_request, command="tui"
 ):
     calls = fake_initial(monkeypatch)
     with monkeypatch.context() as patch:
@@ -689,9 +689,7 @@ def test_completion_probe_prepares_no_calls(directory, monkeypatch):
     run = Mock()
     monkeypatch.setattr(tui_module, "run_codex_exec", run)
     monkeypatch.setenv("_CMOC_COMPLETE", "")
-    result = tui_module.run_codex_tui(
-        build_tui_launch_tui_parameter("request"), root=directory
-    )
+    result = tui_module.run_codex_tui(build_tui_request("request"), root=directory)
     assert result.returncode == 0
     run.assert_not_called()
 
@@ -717,7 +715,7 @@ def test_initial_completion_waits_for_process_exit(directory, tmp_path, monkeypa
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
     parameter = replace(
-        build_tui_launch_tui_parameter("request"),
+        build_tui_request("request"),
         enable_document_search_mcp=False,
         enable_feedback_reporting=False,
     )
@@ -840,9 +838,9 @@ def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch
             pool.map(
                 launch,
                 [
-                    (build_tui_launch_tui_parameter, "tui"),
+                    (build_tui_request, "tui"),
                     (
-                        build_oracle_investigation_launch_tui_parameter,
+                        build_oracle_investigation_request,
                         "oracle investigation",
                     ),
                 ],
@@ -952,7 +950,7 @@ def test_notification_failure_preserves_tui_execution(directory, monkeypatch, fa
     with call_log(directory):
         assert (
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"),
+                build_tui_request("request"),
                 root=directory,
                 config=CmocConfig(),
             ).returncode
@@ -1012,7 +1010,7 @@ def test_initial_and_tui_keep_separate_process_resources(directory, monkeypatch)
     fake_tui(monkeypatch, on_call=observe)
     with call_log(directory):
         tui_module.run_codex_tui(
-            build_tui_launch_tui_parameter("request"),
+            build_tui_request("request"),
             root=directory,
             config=CmocConfig(),
         )
@@ -1036,7 +1034,7 @@ def test_session_lease_covers_initial_transition_and_public_validation(
     runtime_cli.run_cli_subcommand(
         lambda: (
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"), root=directory
+                build_tui_request("request"), root=directory
             ).returncode
         ),
         command_name="tui",
@@ -1068,7 +1066,7 @@ def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
     with call_log(directory) as logger:
         with pytest.raises(OSError, match="exit cannot be confirmed"):
             tui_module.run_codex_tui(
-                build_tui_launch_tui_parameter("request"),
+                build_tui_request("request"),
                 root=directory,
                 config=CmocConfig(),
             )
@@ -1121,7 +1119,7 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
         future = pool.submit(
             copy_context().run,
             tui_module.run_codex_tui,
-            build_tui_launch_tui_parameter("request"),
+            build_tui_request("request"),
             root=directory,
             config=CmocConfig(),
         )

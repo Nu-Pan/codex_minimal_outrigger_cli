@@ -66,9 +66,7 @@ def test_oracle_investigation_has_no_session_precondition(
         events.append("load-config")
         return config
 
-    real_build_parameter = (
-        investigation_module.build_oracle_investigation_launch_tui_parameter
-    )
+    real_build_parameter = investigation_module.build_oracle_investigation_request
 
     def record_build_parameter(
         user_instruction: str,
@@ -131,7 +129,7 @@ def test_oracle_investigation_has_no_session_precondition(
     )
     monkeypatch.setattr(
         investigation_module,
-        "build_oracle_investigation_launch_tui_parameter",
+        "build_oracle_investigation_request",
         record_build_parameter,
     )
     monkeypatch.setattr(

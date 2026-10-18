@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from oracle.acp_builder.primary_report_review import (
-    build_primary_report_review_parameter,
+    build_primary_report_review_request,
 )
 
 from .runtime_codex_exec import run_codex_exec
@@ -61,7 +61,7 @@ def add_primary_report_review(
                 )
                 # builder は oracle の定義を直接使用し、MCP の選択も引き継ぐ。
                 try:
-                    parameter = build_primary_report_review_parameter(
+                    parameter = build_primary_report_review_request(
                         mechanical_report_path=input_path,
                         agent_call_cwd=repository,
                     )

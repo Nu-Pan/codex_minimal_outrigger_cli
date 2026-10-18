@@ -255,7 +255,7 @@ def _real_path_config() -> CmocConfig:
     # の直接設定を全 agent call 種別へ適用する。
     config = CmocConfig(num_parallel=1)
     quota_saving_call = config.codex.agent_calls[
-        "build_quota_availability_probe_parameter"
+        "build_quota_availability_probe_request"
     ]
     return replace(
         config,
@@ -487,8 +487,8 @@ def _run_with_report_review(
     calls = _codex_call_logs(root) - before
     assert calls
     assert {_assert_real_codex_call(path)["agent_call_kind"] for path in calls} <= {
-        "build_primary_report_review_parameter",
-        "build_quota_availability_probe_parameter",
+        "build_primary_report_review_request",
+        "build_quota_availability_probe_request",
     }
     return result
 
@@ -525,8 +525,8 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     assert override["model_reasoning_effort"] == call_config.reasoning_effort
     search_server = override["mcp_servers"]["cmoc_document_search"]
     if agent_call_kind in {
-        "build_primary_report_review_parameter",
-        "build_quota_availability_probe_parameter",
+        "build_primary_report_review_request",
+        "build_quota_availability_probe_request",
     }:
         assert search_server["enabled"] is False
     else:
@@ -556,9 +556,9 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
         )
     feedback_server = override["mcp_servers"]["cmoc_feedback"]
     feedback_reporting_enabled = agent_call_kind not in {
-        "build_feedback_normalize_issue_parameter",
-        "build_primary_report_review_parameter",
-        "build_quota_availability_probe_parameter",
+        "build_feedback_issue_normalization_request",
+        "build_primary_report_review_request",
+        "build_quota_availability_probe_request",
     } and not str(payload.get("purpose", "")).startswith("feedback issue remediation")
     assert feedback_server["enabled"] is feedback_reporting_enabled
     assert feedback_server["enabled_tools"] == (
@@ -575,8 +575,8 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
         FEEDBACK_PROTOCOL_ENV,
     ]
     if agent_call_kind in {
-        "build_tui_launch_tui_parameter",
-        "build_oracle_investigation_launch_tui_parameter",
+        "build_tui_request",
+        "build_oracle_investigation_request",
     }:
         editor_input_server = override["mcp_servers"]["cmoc_editor_input"]
         assert editor_input_server["enabled_tools"] == [

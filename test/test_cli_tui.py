@@ -158,9 +158,9 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
     skeleton = "test skeleton {{original-prompt-here}}"
     builders = []
     for module, name in (
-        (tui_module, "build_tui_launch_tui_parameter"),
-        (investigation_module, "build_oracle_investigation_launch_tui_parameter"),
-        (oracle_edit_module, "build_oracle_edit_main_launch_exec_parameter"),
+        (tui_module, "build_tui_request"),
+        (investigation_module, "build_oracle_investigation_request"),
+        (oracle_edit_module, "build_oracle_edit_request"),
     ):
         builder = Mock(return_value=SimpleNamespace(prompt=skeleton))
         builders.append(builder)
@@ -264,7 +264,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     builder_calls: list[tuple[str, AgentCallParameter]] = []
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
-    real_build_parameter = tui_module.build_tui_launch_tui_parameter
+    real_build_parameter = tui_module.build_tui_request
 
     def record_build_parameter(
         original_prompt: str,
@@ -299,7 +299,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     )
     monkeypatch.setattr(
         tui_module,
-        "build_tui_launch_tui_parameter",
+        "build_tui_request",
         record_build_parameter,
     )
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)

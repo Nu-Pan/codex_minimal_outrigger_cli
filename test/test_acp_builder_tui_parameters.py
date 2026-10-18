@@ -8,9 +8,9 @@ from pathlib import Path
 import oracle.other.path_model as path_model_module
 import pytest
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_launch_tui_parameter,
+    build_oracle_investigation_request,
 )
-from oracle.acp_builder.tui.launch_tui import build_tui_launch_tui_parameter
+from oracle.acp_builder.tui.launch_tui import build_tui_request
 
 from basic.acp import FileAccessMode, TuiResumeTarget
 
@@ -49,9 +49,9 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
     """オリジナル prompt によらず固定の規定と実行設定を使用する。"""
     # parameter と文面は、root 導出だけを代替した実 builder から取得する。
     root = tui_builder_directory
-    parameter = build_tui_launch_tui_parameter(original_prompt)
+    parameter = build_tui_request(original_prompt)
 
-    assert parameter.agent_call_kind == "build_tui_launch_tui_parameter"
+    assert parameter.agent_call_kind == "build_tui_request"
     assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert parameter.structured_output_schema_path is None
     assert parameter.agent_call_cwd == root.resolve()
@@ -100,7 +100,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
 
 @pytest.mark.parametrize(
     "builder",
-    [build_tui_launch_tui_parameter, build_oracle_investigation_launch_tui_parameter],
+    [build_tui_request, build_oracle_investigation_request],
 )
 def test_resume_builder_keeps_workload_without_initial_input(
     tui_builder_directory, tmp_path, monkeypatch, builder

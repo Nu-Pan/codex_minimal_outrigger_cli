@@ -17,7 +17,7 @@ from commons.prompt_editor_input import (
 )
 from commons.runtime_paths import reuse_root_queries
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_launch_tui_parameter,
+    build_oracle_investigation_request,
 )
 
 
@@ -46,7 +46,7 @@ def _cmoc_oracle_investigation_body() -> None:
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"
     )
     input_path = reserve_prompt_editor_input(root)
-    complete_prompt_skeleton = build_oracle_investigation_launch_tui_parameter(
+    complete_prompt_skeleton = build_oracle_investigation_request(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
     assert complete_prompt_skeleton is not None
@@ -63,7 +63,7 @@ def _cmoc_oracle_investigation_body() -> None:
     )
 
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
-    parameter = build_oracle_investigation_launch_tui_parameter(instruction)
+    parameter = build_oracle_investigation_request(instruction)
     start_subcommand_step(
         5, "初回 exec と対話再開を起動", "launch initial exec and resume"
     )

@@ -25,10 +25,10 @@ from jsonschema.exceptions import SchemaError
 from oracle.other.struct_doc import render_sd_node_as_markdown
 
 from acp.builder.feedback.normalize_issue import (
-    build_feedback_normalize_issue_parameter,
+    build_feedback_issue_normalization_request,
 )
 from acp.builder.feedback.remediate_issue import (
-    build_feedback_remediate_issue_parameter,
+    build_feedback_issue_remediation_request,
 )
 from cmoc_runtime import (
     CmocError,
@@ -502,8 +502,8 @@ def _capture_repository_reference(
 
 def _processing_versions() -> _JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
-    normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
-    verify_builder = _builder_source_path(build_feedback_remediate_issue_parameter)
+    normalize_builder = _builder_source_path(build_feedback_issue_normalization_request)
+    verify_builder = _builder_source_path(build_feedback_issue_remediation_request)
     # 動的 code fence を構築する canonical renderer も checkpoint version に含める。
     prompt_renderer = _builder_source_path(render_sd_node_as_markdown)
     normalize_schema = normalize_builder.with_suffix(".json")
@@ -1164,7 +1164,7 @@ def _normalize_issue_identity(
             if key != "deduplication_hint"
         },
     }
-    parameter = build_feedback_normalize_issue_parameter(
+    parameter = build_feedback_issue_normalization_request(
         json.dumps(normalization_observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
         worktree,
