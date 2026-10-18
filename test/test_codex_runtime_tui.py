@@ -606,6 +606,8 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
     other_home = tmp_path / "other_home"
     other_home.mkdir()
     tui_calls = fake_tui(monkeypatch)
+    # 正常な共通記録は一度検査し、各条件ではその bytes と環境を復元する。
+    tui_module._validated_resume_record(source.stem, directory)
 
     for condition in (
         "unfinished",
@@ -625,8 +627,6 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
         # 削除・書き換えた通常 file、JSON の入れ子、環境変数を条件ごとに復元する。
         for path, content in saved_files.items():
             path.write_bytes(content)
-        # 前の不備を理由に拒否されないよう、変更前は再開可能であることも確かめる。
-        tui_module._validated_resume_record(source.stem, directory)
         rows = [json.loads(line) for line in source_text.splitlines()]
         record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
         with monkeypatch.context() as patch:
