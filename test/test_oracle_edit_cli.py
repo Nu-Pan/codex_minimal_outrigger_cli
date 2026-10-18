@@ -62,11 +62,18 @@ def _write_session_state(
 
 @pytest.fixture(scope="module")
 def oracle_edit_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """各ケースへコピーする初期履歴を一度だけ作成する。"""
+    """各ケースへコピーする初期履歴と既存差分を一度だけ作成する。"""
     seed = tmp_path_factory.mktemp("oracle-edit-seed")
     with pytest.MonkeyPatch.context() as patch:
         setup_codex_home(seed, patch)
-        return make_repo(seed, initial_branch=SESSION_BRANCH)
+        root = make_repo(seed, initial_branch=SESSION_BRANCH)
+        # 全ケースで同じ staged/unstaged 差分を使い、準備用の Git 起動を共有する。
+        # index と working tree は下の fixture でそれぞれ独立して複製する。
+        readme_path = root / "README.md"
+        readme_path.write_text("# staged change\n")
+        run_git(root, "add", "README.md")
+        readme_path.write_text("# unstaged change\n")
+        return root
 
 
 @pytest.fixture
@@ -142,9 +149,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     session_state_path = _write_session_state(root, run=active_run)
     state_before = json.loads(session_state_path.read_text())
     readme_path = root / "README.md"
-    readme_path.write_text("# staged change\n")
-    run_git(root, "add", "README.md")
-    readme_path.write_text("# unstaged change\n")
     # HEAD・branch・index の blob/mode と working tree の mode を一度に取得する。
     # working tree の本文は下で直接比較し、patch 生成と個別の Git 起動を省く。
     status_args = (
@@ -156,6 +160,10 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         "oracle/spec.md",
     )
     status_before = run_git(root, *status_args).stdout.splitlines()
+    assert any(
+        line.startswith("1 MM ") and line.endswith(" README.md")
+        for line in status_before
+    )
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_main_parameters: list[AgentCallParameter] = []
