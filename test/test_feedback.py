@@ -3525,6 +3525,11 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     # 手動操作の拒否は merge 記録（参照回復を含む）と finalization journal の両経路で検査する。
     # completion/publication の障害種別や raw cleanup の進捗は、この拒否条件を変えない。
     if fault in {"merge_reference", "cleanup", "branch_cleanup"}:
+        # doctor の修復・索引同期は test_doctor_cli.py、abandon との結合は
+        # test_editing_run_cli.py の preserves_active_state_when_cleanup_fails に残す。
+        # join は取り込み済み記録を検証して doctor を省く経路をそのまま通す。
+        preprocess = Mock()
+        monkeypatch.setattr(run_abandon_module, "run_doctor_preprocess", preprocess)
         for operation in ("join", "abandon"):
             rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
             assert rejected.exit_code == 1, rejected.output
@@ -3535,6 +3540,7 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
             assert 'run_kind: "feedback_report"' in rejected_report
             assert 'state_before: "error"' in rejected_report
             assert 'state_after: "error"' in rejected_report
+        preprocess.assert_called_once_with(root)
     monkeypatch.setattr(target, name, original)
     monkeypatch.setattr(
         feedback_report_module,

@@ -549,7 +549,7 @@
     "last_investigated_at": "2026-10-18_18-02-03_554"
   },
   "src/sub_commands/feedback/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-07-26_982"
   },
   "src/sub_commands/feedback/close.py": {
     "last_investigated_at": null
