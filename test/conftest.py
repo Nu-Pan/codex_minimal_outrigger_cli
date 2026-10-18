@@ -307,26 +307,23 @@ def _isolate_download_asset_cache(request, monkeypatch):
 
 @pytest.fixture
 def unsynced_search_storage(monkeypatch):
-    """耐久性を判定しない検索 test では、データ更新ごとのディスク同期を省く。"""
+    """耐久性を判定しない検索 test では、初期化・更新時のディスク同期を省く。"""
     # 実 sqlite-vec、ファイルへの保存、commit/rollback は維持する。
     # 途中保存・再開・別 worktree での再利用は、この fixture を使わず検査する。
-    open_database = runtime_document_search._open_database
+    sqlite = runtime_document_search.sqlite3
 
-    def open_unsynced_database(path):
-        connection = open_database(path)
+    def connect_unsynced(*args, **kwargs):
+        connection = sqlite.connect(*args, **kwargs)
+        # 索引・cache のテーブル作成も同期を伴うため、作成前の接続で設定する。
         connection.execute("pragma synchronous = off")
         return connection
 
+    # 他 module の採番 DB や、test が直接開く検証用 connection には適用しない。
     monkeypatch.setattr(
-        runtime_document_search, "_open_database", open_unsynced_database
+        runtime_document_search,
+        "sqlite3",
+        SimpleNamespace(**(vars(sqlite) | {"connect": connect_unsynced})),
     )
-
-    class _UnsyncedCache(runtime_document_search._EmbeddingCache):
-        def __init__(self, path):
-            super().__init__(path)
-            self.connection.execute("pragma synchronous = off")
-
-    monkeypatch.setattr(runtime_document_search, "_EmbeddingCache", _UnsyncedCache)
 
 
 @pytest.fixture
