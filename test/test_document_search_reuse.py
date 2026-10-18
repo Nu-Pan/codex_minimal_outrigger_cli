@@ -229,7 +229,7 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_s
 
 
 def test_reuse_compatibility_is_independent_of_partition(
-    document_repository, cache_search, monkeypatch
+    document_repository, cache_search, monkeypatch, unsynced_search_storage
 ):
     """入力片を固定し、分割条件と推論条件による cache の互換性だけを検査する。"""
     from commons import runtime_document_search as module

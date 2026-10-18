@@ -304,6 +304,30 @@ def _isolate_download_asset_cache(request, monkeypatch):
 
 
 @pytest.fixture
+def unsynced_search_storage(monkeypatch):
+    """耐久性を判定しない検索 test では、データ更新ごとのディスク同期を省く。"""
+    # 実 sqlite-vec、ファイルへの保存、commit/rollback は維持する。
+    # 途中保存・再開・別 worktree での再利用は、この fixture を使わず検査する。
+    open_database = runtime_document_search._open_database
+
+    def open_unsynced_database(path):
+        connection = open_database(path)
+        connection.execute("pragma synchronous = off")
+        return connection
+
+    monkeypatch.setattr(
+        runtime_document_search, "_open_database", open_unsynced_database
+    )
+
+    class _UnsyncedCache(runtime_document_search._EmbeddingCache):
+        def __init__(self, path):
+            super().__init__(path)
+            self.connection.execute("pragma synchronous = off")
+
+    monkeypatch.setattr(runtime_document_search, "_EmbeddingCache", _UnsyncedCache)
+
+
+@pytest.fixture
 def document_repository(tmp_path, monkeypatch):
     """Git 検査以外の検索契約に、検証済みの root・文書集合を渡す。"""
     root = tmp_path / "repo"

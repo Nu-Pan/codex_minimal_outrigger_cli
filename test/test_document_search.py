@@ -765,7 +765,10 @@ def test_worker_limits_overlap_and_tokenization_to_heading_sections(
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_changed_sections_and_moved_files_reuse_saved_embeddings(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document_repository: Path
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    document_repository: Path,
+    unsynced_search_storage,
 ) -> None:
     """実 chunker で変更・重複・移動・削除後の再利用と現在位置を検査する。"""
     pytest.importorskip("sqlite_vec")
@@ -1133,7 +1136,7 @@ def test_mcp_rejects_invalid_arguments_before_search(tmp_path, monkeypatch, argu
 
 
 @pytest.fixture
-def candidate_worker(monkeypatch):
+def candidate_worker(monkeypatch, unsynced_search_storage):
     """候補の順位・上限・統合は、零埋めを省いた同じコサイン類似度で検査する。"""
     from commons import runtime_document_search as module
 
@@ -1144,24 +1147,6 @@ def candidate_worker(monkeypatch):
         "SEARCH_MATERIALS",
         replace(SEARCH_MATERIALS, embedding_dimensions=2),
     )
-
-    # 候補の検査では障害後の永続化を扱わないため、索引・cache の fsync を省く。
-    # 実 sqlite-vec と commit/rollback は保ち、途中保存・復旧の test は通常設定で通す。
-    open_database = module._open_database
-
-    def open_candidate_database(path):
-        connection = open_database(path)
-        connection.execute("pragma synchronous = off")
-        return connection
-
-    monkeypatch.setattr(module, "_open_database", open_candidate_database)
-
-    class _CandidateCache(module._EmbeddingCache):
-        def __init__(self, path):
-            super().__init__(path)
-            self.connection.execute("pragma synchronous = off")
-
-    monkeypatch.setattr(module, "_EmbeddingCache", _CandidateCache)
 
     class _CandidateWorker:
         def __init__(self, ranges, *, vectors=None):
