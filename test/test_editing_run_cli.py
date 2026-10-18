@@ -4787,6 +4787,24 @@ def test_join_prepares_and_syncs_run_before_import(
     sync = run_join_module.merge_refactor_states
     observed = []
 
+    # merge・同期後と取り込み直前の再検査は残し、同じ HEAD の重複照会を制限する。
+    merge = run_join_module.merge_run
+    subprocess_run = git_module.subprocess.run
+    head_queries = []
+
+    def record_query(argv, *args, **kwargs):
+        if (
+            argv == ["git", "rev-parse", "HEAD"]
+            and kwargs.get("cwd") == context.run_worktree
+        ):
+            head_queries.append(argv)
+        return subprocess_run(argv, *args, **kwargs)
+
+    def merge_with_bounded_queries(*args, **kwargs):
+        with monkeypatch.context() as probe:
+            probe.setattr(git_module.subprocess, "run", record_query)
+            return merge(*args, **kwargs)
+
     def sync_run(worktree, refs):
         assert worktree == context.run_worktree
         assert run_git(root, "rev-parse", "HEAD").stdout.strip() == baseline
@@ -4795,6 +4813,7 @@ def test_join_prepares_and_syncs_run_before_import(
         return sync(worktree, refs)
 
     monkeypatch.setattr(run_join_module, "merge_refactor_states", sync_run)
+    monkeypatch.setattr(run_join_module, "merge_run", merge_with_bounded_queries)
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert joined.exit_code == 0, joined.output
     from commons.runtime_run_join_state import load_join_record, tree_id
@@ -4809,6 +4828,7 @@ def test_join_prepares_and_syncs_run_before_import(
     ).stdout.split() == [baseline, record.prepared_run_head]
     assert observed == [context.run_worktree]
     assert "oracle/new.md" in load_refactor_state(root)
+    assert 0 < len(head_queries) <= 5
 
 
 @pytest.mark.parametrize("scenario", ["older_run", "older_session", "conflict"])
