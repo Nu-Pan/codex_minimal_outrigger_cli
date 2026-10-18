@@ -36,22 +36,31 @@ from commons.runtime_state import SessionPart, SessionState, state_path, write_s
 from config.cmoc_config import CmocConfig
 
 
-@pytest.fixture
-def cli_repository(tmp_path: Path) -> Path:
-    """履歴を参照しない CLI lifecycle test に実 Git root を用意する。"""
-    # root 解決とログ・report 保存は実経路を通し、追跡ファイルと初期 commit は作らない。
-    root = tmp_path / "repo"
-    root.mkdir()
+@pytest.fixture(scope="session")
+def _empty_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """履歴不要な test に複製する空の Git repository を一度だけ初期化する。"""
+    root = tmp_path_factory.mktemp("empty-repository-seed")
     init_repo(root)
     return root
 
 
+@pytest.fixture
+def cli_repository(tmp_path: Path, _empty_repository_seed: Path) -> Path:
+    """履歴を参照しない CLI lifecycle test に実 Git root を用意する。"""
+    # Git の初期化だけを共有し、設定・index・refs は各 test 内に独立して複製する。
+    return shutil.copytree(_empty_repository_seed, tmp_path / "repo")
+
+
 @pytest.fixture(scope="session")
-def _committed_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+def _committed_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory, _empty_repository_seed: Path
+) -> Path:
     """HEAD だけが必要な test に複製する初期履歴を一度だけ作る。"""
     # 修復や linked metadata の作成は各ケースで行い、準備用の init・commit を共有する。
-    root = tmp_path_factory.mktemp("committed-repository-seed")
-    init_repo(root)
+    root = shutil.copytree(
+        _empty_repository_seed,
+        tmp_path_factory.mktemp("committed-repository-seed") / "repo",
+    )
     run_git(root, "commit", "--allow-empty", "-m", "initial")
     return root
 
