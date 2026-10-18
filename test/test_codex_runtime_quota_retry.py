@@ -35,7 +35,7 @@ def quota_prompt_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
     # 実 Git の root 導出は test_basic_runtime.py と test_codex_runtime_paths.py に残し、
-    # context と正本 probe builder は実物を使う。
+    # prompt の結合検査では context と正本 probe builder を実物で使う。
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
     )
@@ -49,17 +49,33 @@ def quota_control_root(
     monkeypatch: pytest.MonkeyPatch,
     nonpersistent_codex_ids: None,
 ) -> Path:
-    """回復制御に必要な HOME・設定を隔離し、execution・call ID の永続採番を省く。"""
+    """回復制御に必要な HOME・設定・probe を用意し、永続採番を省く。"""
     root = quota_prompt_root
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_overrides(monkeypatch)
+
+    # 完全 prompt の生成と受け渡しは canonical_complete_prompt と
+    # polls_and_resumes に残し、制御の検査では期待値・実行用の再生成を省く。
+    def probe_parameter(base: AgentCallParameter) -> AgentCallParameter:
+        return AgentCallParameter(
+            agent_call_kind="build_quota_availability_probe_request",
+            file_access_mode=FileAccessMode.READONLY,
+            prompt="quota probe",
+            structured_output_schema_path=None,
+            agent_call_cwd=base.agent_call_cwd,
+            enable_document_search_mcp=False,
+        )
+
+    monkeypatch.setattr(
+        runtime_codex_exec, "_quota_availability_probe_parameter", probe_parameter
+    )
     # logger・current_execution_id・agent・Codex call の採番は共通 fixture を使う。
     # 永続性・process 間の採番は test_runtime_ids.py と test_codex_runtime_paths.py で検証する。
     return root
 
 
 def quota_probe_prompt(agent_call_cwd: Path) -> str:
-    """runtime が正本 builder から生成する quota probe の prompt を返す。"""
+    """runtime が使用する quota probe の prompt を返す。"""
     return runtime_codex_exec._quota_availability_probe_parameter(
         AgentCallParameter(
             agent_call_kind="realization_edit",
