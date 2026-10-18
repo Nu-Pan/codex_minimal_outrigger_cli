@@ -747,9 +747,9 @@ def test_worker_limits_overlap_and_tokenization_to_heading_sections(
     assert all(
         index in covered for index, char in enumerate(body) if not char.isspace()
     )
-    # 実時間のばらつきに依存せず、残り全文の反復 token 化への回帰を検出する。
+    # 残り全文や確認済み範囲の反復 token 化を、実時間のばらつきなしで検出する。
     tokenized_characters = int((tmp_path / "tokenized-characters.json").read_text())
-    assert tokenized_characters < 32 * len(body)
+    assert tokenized_characters < 17 * len(body)
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
@@ -872,6 +872,9 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
         assert search.sync_progress["reused_embeddings"] == 3
         assert search.sync_progress["generated_embeddings"] == 0
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
+        # 短い節は一度の token 化で収まり、全再利用時には推論用の再検査も不要。
+        tokenized_characters = int((runtime / "tokenized-characters.json").read_text())
+        assert tokenized_characters <= len(a + b + c)
         assert worker.operations == ["embed_query"]
     finished = [
         event for event in events if event["event"] == "document_search_sync_finished"
