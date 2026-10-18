@@ -221,6 +221,9 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
         open_report.assert_not_called()
 
 
+# 途中保存・再開は test_document_search.py に実同期を残す。
+# ここでは実 DB と索引同期ログを検査し、耐久性を判定しないディスク同期を省く。
+@pytest.mark.usefixtures("unsynced_search_storage")
 def test_tui_runs_editor_and_launches_codex_directly(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
