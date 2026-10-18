@@ -679,7 +679,10 @@ def test_saved_individual_report_uses_final_result_and_late_notices(
     assert report_metadata(report)["exit_code"] == 1
 
 
-def test_inherited_report_notices_belong_to_original_execution(tmp_path, monkeypatch):
+def test_inherited_report_notices_belong_to_original_execution(
+    tmp_path, monkeypatch, nonpersistent_execution_ids
+):
+    # 警告の実行帰属は実ログで検査し、永続採番は logger・ID の専用 test に残す。
     original = SubcommandLogger(tmp_path, "feedback report")
     original.record_warning("original warning", emit=False)
     resumed = SubcommandLogger(tmp_path, "feedback report")
