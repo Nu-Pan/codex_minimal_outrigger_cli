@@ -135,13 +135,20 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     )
     integrated_case = failure_stage is None and first_changes
     if not integrated_case:
-        # root 探索の結合は edit-success と専用テストに残す。
+        # root 探索・branch 取得との結合は edit-success に残す。
         # ここでも実 Git の staged/unstaged 差分、branch、session state は検証する。
         monkeypatch.setattr(
             path_model_module,
             "_resolve_git_worktree_roots",
             lambda _start_path=None: (root, root),
         )
+
+        def session_branch(target_root: Path) -> str:
+            # 前提違反は下の launch_preconditions test に残し、同じ Git 取得を重ねない。
+            assert target_root == root
+            return SESSION_BRANCH
+
+        monkeypatch.setattr(oracle_edit_module, "current_branch", session_branch)
     active_run = RunPart(
         "running",
         "realization_apply",
