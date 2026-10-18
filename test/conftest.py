@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
@@ -45,12 +46,21 @@ def cli_repository(tmp_path: Path) -> Path:
     return root
 
 
+@pytest.fixture(scope="session")
+def _committed_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """HEAD だけが必要な test に複製する初期履歴を一度だけ作る。"""
+    # 修復や linked metadata の作成は各ケースで行い、準備用の init・commit を共有する。
+    root = tmp_path_factory.mktemp("committed-repository-seed")
+    init_repo(root)
+    run_git(root, "commit", "--allow-empty", "-m", "initial")
+    return root
+
+
 @pytest.fixture
-def committed_repository(cli_repository: Path) -> Path:
-    """履歴内容を参照せず HEAD が必要な test に空 commit を用意する。"""
-    # root・branch・linked metadata は実 Git を使い、追跡 file と git add は準備しない。
-    run_git(cli_repository, "commit", "--allow-empty", "-m", "initial")
-    return cli_repository
+def committed_repository(tmp_path: Path, _committed_repository_seed: Path) -> Path:
+    """独立した index・refs・設定を持つ実 repository を各 test 内に用意する。"""
+    # hardlink や linked worktree を使わず、変更可能な Git metadata もすべて複製する。
+    return shutil.copytree(_committed_repository_seed, tmp_path / "repo")
 
 
 def _prepare_run_session(
