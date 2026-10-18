@@ -1321,16 +1321,19 @@ def test_apply_fork_checks_stopped_children_before_commit(
     )
 
 
+@pytest.mark.usefixtures("join_after_preprocess")
 def test_refactor_fork_stops_tracked_codex_children_before_joinable(
-    ready_run_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """refactor は joinable 公開前に残存 Codex child を停止する。"""
-    # 巡の初期化前に中断するため、内容検査用の追加 file・commit は準備しない。
-    _root, _session_branch, state_path = ready_run_session
+    # 停止順序の検査では、修復・同期・採番を重ねず既存の準備済み fixture を使う。
+    # doctor・採番との実結合は mixed_results_until_user_interruption に残す。
+    # run 作成、tracking scope、rollback、自動 join、state・report 保存は実処理を通す。
+    _root, _session_branch, state_path = refactor_after_preprocess
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
-    stopped: list[object] = []
+    stopped: list[tuple[object, str]] = []
     monkeypatch.setattr(
         runtime_run_module,
         "read_run_process_id",
@@ -1339,7 +1342,7 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     monkeypatch.setattr(
         runtime_run_module,
         "stop_child_process_group",
-        lambda process: stopped.append(process),
+        lambda process: stopped.append((process, _state(state_path)["run"]["state"])),
     )
     monkeypatch.setattr(
         refactor_module,
@@ -1354,7 +1357,8 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
     )
 
     assert result.exit_code == 0, result.output
-    assert stopped and all(item == child for item in stopped)
+    assert stopped and all(process == child for process, _state_at_stop in stopped)
+    assert stopped[0] == (child, "running")
     assert _state(state_path)["run"]["state"] == "ready"
 
 
