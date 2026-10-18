@@ -681,7 +681,7 @@
     "last_investigated_at": "2026-10-19_06-30-30_503"
   },
   "test/test_codex_runtime_recovery.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-35-22_659"
   },
   "test/test_codex_runtime_retry.py": {
     "last_investigated_at": null

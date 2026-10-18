@@ -21,6 +21,7 @@ from _codex_support import (
     codex_parameter,
     script_codex_calls,
     setup_codex_home,
+    stub_codex_overrides,
 )
 
 from commons import runtime_codex_exec as runtime
@@ -164,6 +165,15 @@ def recovery_case(tmp_path, monkeypatch):
         CmocConfig(),
         SubcommandLogger(root, "test"),
     )
+
+
+@pytest.fixture
+def recovery_control_case(recovery_case, monkeypatch):
+    """回復制御の検査では、設定 argv の反復生成を省く。"""
+    # 設定継承・理由変更と並列の条件照合は recovery_case の実 argv で検証する。
+    # probe・resume の制御と出力・ログ保存はここでも実処理を通す。
+    stub_codex_overrides(monkeypatch)
+    return recovery_case
 
 
 @pytest.fixture
@@ -349,7 +359,9 @@ def test_quota_to_capacity_inherits_only_until_resume(
 
 
 @pytest.mark.parametrize("reason", [QUOTA, CAPACITY])
-def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, reason):
+def test_recovery_does_not_stop_at_old_retry_limits(
+    recovery_control_case, monkeypatch, reason
+):
     calls = script_codex_calls(
         monkeypatch,
         [
@@ -359,7 +371,7 @@ def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, 
             (0, jsonl(COMPLETED), "done"),
         ],
     )
-    assert execute(recovery_case).output_text == "done"
+    assert execute(recovery_control_case).output_text == "done"
     assert len(calls) == 13
     assert sum(c["prompt"] == "prompt" for c in calls) == 2
 
@@ -378,15 +390,15 @@ def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, 
     ],
 )
 def test_unconfirmed_or_unrecoverable_probe_stops(
-    recovery_case, monkeypatch, probe_reply
+    recovery_control_case, monkeypatch, probe_reply
 ):
     calls = script_codex_calls(monkeypatch, [(1, jsonl(CAPACITY), None), probe_reply])
     with pytest.raises(CmocError, match="回復確認 probe"):
-        execute(recovery_case)
+        execute(recovery_control_case)
     assert len(calls) == 2
 
 
-def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
+def test_resume_failure_never_starts_fresh_session(recovery_control_case, monkeypatch):
     calls = script_codex_calls(
         monkeypatch,
         [
@@ -396,14 +408,14 @@ def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
         ],
     )
     with pytest.raises(CmocError, match="呼び出しが失敗"):
-        execute(recovery_case)
+        execute(recovery_control_case)
     assert len(calls) == 3
     assert codex_arg_value(calls[-1]["argv"], "resume") == "original-session"
 
 
 @pytest.fixture
-def structured_recovery_case(recovery_case, monkeypatch):
-    root, parameter, config, logger = recovery_case
+def structured_recovery_case(recovery_control_case, monkeypatch):
+    root, parameter, config, logger = recovery_control_case
     # 成果物の列挙・補正中の変動検出・復元は test_codex_runtime_retry.py に残す。
     # ここでは成果物が変わらない前提で、回復と補正予算・診断の結合を検証する。
     monkeypatch.setattr(
@@ -491,7 +503,9 @@ def test_probe_failure_during_correction_records_original_call(
 
 
 @pytest.mark.parametrize("point", ["wait", "probe_success"])
-def test_interruption_wins_over_probe_success(recovery_case, monkeypatch, point):
+def test_interruption_wins_over_probe_success(
+    recovery_control_case, monkeypatch, point
+):
     restore = recovery.install_recovery_interruption()
     try:
         cancellation = recovery.current_recovery_cancellation()
@@ -516,7 +530,7 @@ def test_interruption_wins_over_probe_success(recovery_case, monkeypatch, point)
             on_call=on_call,
         )
         with pytest.raises(KeyboardInterrupt):
-            execute(recovery_case)
+            execute(recovery_control_case)
         assert len(calls) == (1 if point == "wait" else 2)
     finally:
         restore()
