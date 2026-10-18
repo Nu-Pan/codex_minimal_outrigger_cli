@@ -179,17 +179,31 @@ def nonpersistent_run_ids(nonpersistent_execution_ids, monkeypatch):
 
 
 @pytest.fixture
-def apply_after_preprocess(nonpersistent_run_ids, monkeypatch):
+def automatic_join_after_preprocess(monkeypatch):
+    """制御 test の自動 join では、開始時と同じ doctor の準備を重ねない。"""
+    # doctor の修復・失敗は test_doctor_cli.py、自動 join との結合は
+    # test_realization_apply_automatically_joins_changes_and_noop と
+    # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
+    # join 時の再検査・復旧判定、merge 前の state 同期と保存は実処理を通す。
+    preprocess = Mock()
+    monkeypatch.setattr(run_join_module, "run_doctor_preprocess", preprocess)
+    yield
+    if preprocess.called:
+        preprocess.assert_called_once_with(
+            Path.cwd().resolve(), sync_refactor_entries=False
+        )
+
+
+@pytest.fixture
+def apply_after_preprocess(
+    nonpersistent_run_ids, automatic_join_after_preprocess, monkeypatch
+):
     """apply の終了・復旧検査では、doctor と prompt の準備を繰り返さない。"""
     # 必要な設定・配置先は ready_*_session が用意する。
     # doctor の修復・失敗は test_doctor_cli.py、apply との実結合は
     # test_realization_apply_automatically_joins_changes_and_noop に残す。
     preprocess = Mock()
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
-    # 自動 join でも doctor の修復・索引同期を重ねない。
-    # join 時の再検査・復旧判定と、merge 前の state 同期は実処理を通す。
-    join_preprocess = Mock()
-    monkeypatch.setattr(run_join_module, "run_doctor_preprocess", join_preprocess)
     # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を省く。
     # builder の選択値・文面は test_acp_builder_editing_run_parameters.py、
     # 実 builder との結合は上記の fork→join test に残す。
@@ -201,10 +215,6 @@ def apply_after_preprocess(nonpersistent_run_ids, monkeypatch):
     yield
     # CLI が対象 root の前処理を省略する回帰も検出する。
     preprocess.assert_called_with(Path.cwd().resolve())
-    if join_preprocess.called:
-        join_preprocess.assert_called_once_with(
-            Path.cwd().resolve(), sync_refactor_entries=False
-        )
 
 
 @pytest.fixture
@@ -221,7 +231,12 @@ def join_after_preprocess(ready_join_session, monkeypatch):
 
 
 @pytest.fixture
-def refactor_after_preprocess(ready_join_session, nonpersistent_run_ids, monkeypatch):
+def refactor_after_preprocess(
+    ready_join_session,
+    nonpersistent_run_ids,
+    automatic_join_after_preprocess,
+    monkeypatch,
+):
     """所見追従・終了・復旧は、修復・同期済みの session から検査する。"""
     # doctor の修復・索引同期・中断は test_doctor_cli.py、fork との結合は
     # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
