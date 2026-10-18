@@ -262,6 +262,12 @@ def test_shared_structured_output_failures_keep_feedback_kind_and_call_ids(
     # feedback の保存 context に必要な HEAD は、実 Git で用意する。
     root = committed_repository
     setup_codex_home(tmp_path, monkeypatch)
+    # root 導出は test_basic_runtime.py、builder の cwd 選択は
+    # test_acp_builder_editing_run_parameters.py に残し、同じ Git 探索を重ねない。
+    # feedback が保存する branch・HEAD の取得は実 Git のまま検査する。
+    monkeypatch.setattr(
+        path_model, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
+    )
     logger = SubcommandLogger(root, "settings test")
     invocation = FeedbackInvocation(root, root, "settings test", logger)
     calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "{}")] * 6)
