@@ -61,6 +61,20 @@ pytestmark = pytest.mark.usefixtures(
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
+@pytest.fixture(scope="module")
+def _initial_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """修復前の追跡 file と初期履歴を一度だけ作る。"""
+    return make_repo(tmp_path_factory.mktemp("doctor-initial-seed"))
+
+
+@pytest.fixture
+def initial_repository(tmp_path: Path, _initial_repository_seed: Path) -> Path:
+    """修復・index 検査に同じ初期履歴を渡し、変更可能な状態は独立させる。"""
+    # init・add・commit は共有し、修復・競合・index の変更は各ケースで実行する。
+    # hardlink や linked worktree を使わず、設定・index・refs も独立して複製する。
+    return shutil.copytree(_initial_repository_seed, tmp_path / "repo")
+
+
 @pytest.fixture
 def managed_repository(cli_repository: Path) -> Path:
     """既存管理物を前提にするケースでは、準備用 doctor の修復・検索・report を省く。"""
@@ -272,12 +286,12 @@ def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -
 
 
 def test_doctor_preprocess_repairs_git_state(
-    tmp_path: Path,
+    initial_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """doctor が共通修復と既定 config の生成・追跡・報告を完了する。"""
 
-    root = make_repo(tmp_path)
+    root = initial_repository
     config_path = root / ".cmoc" / "gt" / "config.json"
 
     # 公開 doctor と実 collector の結合を、この初回修復ケースで一度検証する。
@@ -1020,12 +1034,12 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
 
 @pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preserves_preexisting_unmerged_index(
-    tmp_path: Path,
+    initial_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """doctor が既存の unmerged index を検査・解消せず保持する。"""
 
-    root = make_repo(tmp_path)
+    root = initial_repository
     base_branch = run_git(root, "branch", "--show-current").stdout.strip()
     run_git(root, "checkout", "-b", "doctor-conflict-side")
     (root / "README.md").write_text("# side\n")
@@ -1051,11 +1065,11 @@ def test_doctor_preserves_preexisting_unmerged_index(
 
 @pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_repairs_missing_index_without_dropping_tracked_files(
-    tmp_path: Path,
+    initial_repository: Path,
 ) -> None:
     """欠落した Git index を復元し、既存の tracked file を保持する。"""
 
-    root = make_repo(tmp_path)
+    root = initial_repository
     (root / ".git" / "index").unlink()
 
     doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
@@ -1067,12 +1081,12 @@ def test_doctor_repairs_missing_index_without_dropping_tracked_files(
 
 @pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preserves_preexisting_index_flags_and_intent_to_add(
-    tmp_path: Path,
+    initial_repository: Path,
 ) -> None:
     """doctor が二種類の index flag と intent-to-add をそれぞれ保持する。"""
 
     # 同じ index の退避・復元を検査するため、各状態を別 file に置き修復を一度にする。
-    root = make_repo(tmp_path)
+    root = initial_repository
     flagged_paths = {
         "README.md": "--assume-unchanged",
         "oracle/spec.md": "--skip-worktree",
