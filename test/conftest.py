@@ -65,14 +65,13 @@ def committed_repository(tmp_path: Path, _committed_repository_seed: Path) -> Pa
 
 def _prepare_run_session(
     root: Path,
-    monkeypatch: pytest.MonkeyPatch,
     *,
     with_content: bool,
     with_managed_files: bool = False,
-) -> tuple[Path, str, Path]:
+) -> Path:
     """必要な初期内容と設定を一つの commit に揃えて session を用意する。"""
     # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
-    monkeypatch.chdir(root)
+    init_repo(root)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
         (root / relative).mkdir(parents=True, exist_ok=True)
@@ -105,23 +104,48 @@ def _prepare_run_session(
             )
         ),
     )
-    return root, SESSION_BRANCH, path
+    return root
+
+
+def _copy_run_session(
+    seed: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """空 directory も複製し、各 test の index・refs・state を独立させる。"""
+    root = shutil.copytree(seed, tmp_path / "repo")
+    monkeypatch.chdir(root)
+    return root, SESSION_BRANCH, state_path(root, SESSION_ID)
+
+
+@pytest.fixture(scope="session")
+def _ready_run_session_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """run の前提だけの init・commit・branch 作成を一度だけ行う。"""
+    return _prepare_run_session(
+        tmp_path_factory.mktemp("run-session-seed"), with_content=False
+    )
 
 
 @pytest.fixture
 def ready_run_session(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, _ready_run_session_seed: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, str, Path]:
     """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
-    return _prepare_run_session(cli_repository, monkeypatch, with_content=False)
+    return _copy_run_session(_ready_run_session_seed, tmp_path, monkeypatch)
+
+
+@pytest.fixture(scope="session")
+def _ready_content_session_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """oracle・realization の初期内容を含む履歴も一度だけ作る。"""
+    return _prepare_run_session(
+        tmp_path_factory.mktemp("content-session-seed"), with_content=True
+    )
 
 
 @pytest.fixture
 def ready_content_session(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, _ready_content_session_seed: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, str, Path]:
     """run の検査に使う oracle と realization の初期内容を用意する。"""
-    return _prepare_run_session(cli_repository, monkeypatch, with_content=True)
+    return _copy_run_session(_ready_content_session_seed, tmp_path, monkeypatch)
 
 
 @pytest.fixture(scope="session")
@@ -129,11 +153,11 @@ def _ready_join_session_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """join の前提となる初期履歴・管理物・state を一度だけ作る。"""
     # fixture では doctor 全体を実行しない。修復・索引同期は CLI 本処理と
     # test_doctor_cli.py に残し、join 前後の HEAD と state の比較条件を保つ。
-    root = tmp_path_factory.mktemp("join-session-seed")
-    init_repo(root)
-    with pytest.MonkeyPatch.context() as patch:
-        _prepare_run_session(root, patch, with_content=True, with_managed_files=True)
-    return root
+    return _prepare_run_session(
+        tmp_path_factory.mktemp("join-session-seed"),
+        with_content=True,
+        with_managed_files=True,
+    )
 
 
 @pytest.fixture
@@ -141,10 +165,7 @@ def ready_join_session(
     tmp_path: Path, _ready_join_session_seed: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, str, Path]:
     """同期済み管理物と独立した Git metadata を各 test の session に複製する。"""
-    # copytree で空の作業 directory も保ち、index・refs・state を共有しない。
-    root = shutil.copytree(_ready_join_session_seed, tmp_path / "repo")
-    monkeypatch.chdir(root)
-    return root, SESSION_BRANCH, state_path(root, SESSION_ID)
+    return _copy_run_session(_ready_join_session_seed, tmp_path, monkeypatch)
 
 
 @pytest.fixture

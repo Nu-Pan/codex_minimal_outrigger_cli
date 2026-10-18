@@ -105,24 +105,43 @@ pytestmark = pytest.mark.usefixtures(
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
-def test_ready_join_session_is_independent_of_seed(
-    ready_join_session, _ready_join_session_seed, tmp_path
+@pytest.mark.parametrize(
+    ("fixture_name", "with_content", "with_managed_files"),
+    [
+        ("ready_run_session", False, False),
+        ("ready_content_session", True, False),
+        ("ready_join_session", True, True),
+    ],
+)
+def test_ready_session_is_independent_of_seed(
+    request, tmp_path, fixture_name, with_content, with_managed_files
 ):
     """複製後も初期状態を保ち、file・Git metadata の変更を共有元へ漏らさない。"""
-    root, branch, path = ready_join_session
-    seed = _ready_join_session_seed
-    originals = {
-        relative: (seed / relative).read_bytes()
-        for relative in (
-            "README.md",
-            ".cmoc/gt/config.json",
+    root, branch, path = request.getfixturevalue(fixture_name)
+    seed = request.getfixturevalue(f"_{fixture_name}_seed")
+    relative_paths = [
+        ".cmoc/gt/config.json",
+        path.relative_to(root).as_posix(),
+        ".git/HEAD",
+        ".git/index",
+        ".git/config",
+        f".git/refs/heads/{branch}",
+    ]
+    assert (root / "README.md").exists() is with_content
+    assert (root / "oracle/spec.md").exists() is with_content
+    assert (root / ".agents/.gitkeep").exists() is with_managed_files
+    assert (root / ".cmoc/gt/realization/refactor/state.json").exists() is (
+        with_managed_files
+    )
+    if with_content:
+        relative_paths += ["README.md", "oracle/spec.md"]
+    if with_managed_files:
+        relative_paths += [
+            ".agents/.gitkeep",
             ".cmoc/gt/realization/refactor/state.json",
-            path.relative_to(root).as_posix(),
-            ".git/HEAD",
-            ".git/index",
-            ".git/config",
-            f".git/refs/heads/{branch}",
-        )
+        ]
+    originals = {
+        relative: (seed / relative).read_bytes() for relative in relative_paths
     }
     assert all(
         (root / relative).read_bytes() == content
