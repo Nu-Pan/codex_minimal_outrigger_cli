@@ -3837,39 +3837,40 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
 
+    # 全対象の選択順序は repeats_cycles_with_oldest_timestamp_priority に残し、
+    # 中断前の余分な call と state-only commit を省く。未処理 target は残し、
+    # 一巡の途中で中断する条件を保つ。
+    monkeypatch.setattr(
+        refactor_module,
+        "refactor_cycle_targets",
+        lambda _state: ["README.md", "oracle/spec.md"],
+    )
+    reviewed = []
+    interruptions = []
+
     def fake_refactor(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """README の commit 済み処理単位に unresolved finding を返す。"""
-        target = str(kwargs["purpose"]).removeprefix("realization refactor: ")
-        if target == "README.md":
-            worktree = parameter.agent_call_cwd
-            (worktree / "README.md").write_text("# repo\n\nfixed\n")
-            return SimpleNamespace(
-                returncode=0,
-                call_log_path=call_log,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "README unresolved finding",
-                            "changed_paths": ["README.md"],
-                            "resolution": {
-                                "status": "unresolved",
-                                "summary": "人間の判断が必要",
-                            },
-                        }
-                    ],
-                    "verification": {
-                        "status": "passed",
-                        "summary": "fake full quality gate passed",
-                    },
-                },
-            )
+        assert kwargs["purpose"] == "realization refactor: README.md"
+        reviewed.append("README.md")
+        worktree = parameter.agent_call_cwd
+        (worktree / "README.md").write_text("# repo\n\nfixed\n")
         return SimpleNamespace(
             returncode=0,
+            call_log_path=call_log,
             output_json={
-                "findings": [],
+                "findings": [
+                    {
+                        "title": "README unresolved finding",
+                        "changed_paths": ["README.md"],
+                        "resolution": {
+                            "status": "unresolved",
+                            "summary": "人間の判断が必要",
+                        },
+                    }
+                ],
                 "verification": {
                     "status": "passed",
                     "summary": "fake full quality gate passed",
@@ -3892,6 +3893,7 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
             interrupt_point == "commit"
             and message == "cmoc realization refactor README.md"
         ):
+            interruptions.append("commit")
             raise KeyboardInterrupt()
         return result
 
@@ -3909,6 +3911,7 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
             and any("README.md" in change.paths for change in changes)
         ):
             tree_interrupted = True
+            interruptions.append("post_commit_record")
             raise KeyboardInterrupt()
         return changes
 
@@ -3923,7 +3926,9 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
         catch_exceptions=False,
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
+    assert interruptions == [interrupt_point]
+    assert reviewed == ["README.md"]
     state = _state(state_path)
     assert state["run"]["state"] == "ready"
     run_worktree = root
@@ -3936,7 +3941,8 @@ def test_refactor_interrupt_after_unit_commit_reports_confirmed_unit(
     )
     report = terminal_primary_report(result)
     report_text = report.read_text()
-    assert "- processed targets: 2" in report_text
+    assert "- processed targets: 1" in report_text
+    assert "- completed cycles: 0" in report_text
     assert "- `README.md`: 1 finding(s)" in report_text
     assert "- count: 1" in report_text
     assert "README unresolved finding" in report_text
@@ -4492,9 +4498,13 @@ def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
 ):
     """旧履歴を調査機会にせず、未解決を次巡で再検討して全対象を公平に処理する。"""
     root, _, state_path = refactor_after_preprocess
-    _mark_refactor_target_investigated(root, "README.md")
     reviewed = []
     if interrupt_next_cycle_start:
+        # 全対象の順序・再調査は False 側で検査する。次巡の集合初期化と
+        # 前巡の unresolved の保持には 1 target で足り、他の確定処理は不要。
+        monkeypatch.setattr(
+            refactor_module, "refactor_cycle_targets", lambda _state: ["README.md"]
+        )
         initialize = refactor_module._initialize_cycle
 
         def interrupt_second_cycle(context, **kwargs):
@@ -4507,6 +4517,7 @@ def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
             refactor_module, "_initialize_cycle", interrupt_second_cycle
         )
     else:
+        _mark_refactor_target_investigated(root, "README.md")
         _stop_after_cycles(monkeypatch, cycles=2)
 
     def review(parameter, **kwargs):
@@ -4542,10 +4553,9 @@ def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
     assert _state(state_path)["run"]["state"] == "ready"
     worktree = root
     state = load_refactor_state(worktree)
-    count = len(state)
     report = terminal_primary_report(result).read_text()
     if interrupt_next_cycle_start:
-        assert len(reviewed) == count
+        assert reviewed == ["README.md"]
         assert "- completed cycles: 1" in report
         assert "- current cycle: 2" in report
         assert "- cycle confirmed investigations: 0" in report
@@ -4553,6 +4563,7 @@ def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
         assert "## Unresolved findings\n\n- `README.md`: deferred" in report
         assert "try next cycle" in report
         return
+    count = len(state)
     assert len(reviewed) == count * 2
     assert set(reviewed[:count]) == set(state) == set(reviewed[count:])
     assert reviewed[count - 1] == "README.md"
