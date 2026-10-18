@@ -17,6 +17,7 @@ fixture を追う文脈が分散する。現状は session CLI 回帰として�
 """
 
 import json
+import shutil
 import stat
 import subprocess
 from collections.abc import Iterator
@@ -36,6 +37,7 @@ from _git_support import (
     SESSION_BRANCH,
     SESSION_ID,
     current_branch,
+    init_repo,
     run_git,
 )
 
@@ -879,14 +881,15 @@ def session_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
     return roots
 
 
-@pytest.fixture
-def session_completion_repository(
-    cli_repository: Path, session_preprocess: list[Path]
+@pytest.fixture(scope="module")
+def _session_completion_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory,
 ) -> Path:
-    """前処理を置換した session 終了の検査に、実 Git と追跡済みの基準 file を用意する。"""
+    """session 終了 test で共通の初期履歴を一度だけ作る。"""
     # config・.agents・refactor state と全 file の列挙は前処理の結合検査に残す。
     # .cmoc/gu の ignore は、実 join/abandon の clean 検査とログ・state 保存に必要。
-    root = cli_repository
+    root = tmp_path_factory.mktemp("session-completion-seed")
+    init_repo(root)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
@@ -894,6 +897,18 @@ def session_completion_repository(
     run_git(root, "add", ".gitignore", "README.md", "oracle/spec.md")
     run_git(root, "commit", "-m", "initial")
     return root
+
+
+@pytest.fixture
+def session_completion_repository(
+    tmp_path: Path,
+    _session_completion_repository_seed: Path,
+    session_preprocess: list[Path],
+) -> Path:
+    """実 Git の履歴・index・refs・設定を各 test の専用 root に複製する。"""
+    # seed は変更せず、hardlink や linked worktree による書き込みの共有を避ける。
+    # 競合履歴の作成と CLI の branch・state 操作は各 test で実行する。
+    return shutil.copytree(_session_completion_repository_seed, tmp_path / "repo")
 
 
 @pytest.fixture
