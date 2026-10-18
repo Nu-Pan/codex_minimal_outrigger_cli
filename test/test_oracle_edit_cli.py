@@ -26,6 +26,7 @@ from _git_support import (
 from _report_support import assert_report_layout, original_report_input, report_section
 
 import commons.runtime_cli as runtime_cli_module
+import commons.runtime_primary_report_review as report_review
 import sub_commands.oracle.edit as oracle_edit_module
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
@@ -87,6 +88,14 @@ def oracle_edit_repository(
     # cmoc は各ケースの tmp_path 内でだけ起動し、index・履歴もケース間で共有しない。
     root = shutil.copytree(oracle_edit_repository_seed, tmp_path / "repo")
     monkeypatch.chdir(root)
+    # 確認応答は共通 fixture で固定済み。消費されない確認用 prompt の構築と
+    # Git 探索を省き、正本 builder・起動設定は test_primary_report_review.py に残す。
+    # 確認入力の固定・report の組み立てと保存は実経路を通す。
+    monkeypatch.setattr(
+        report_review,
+        "build_primary_report_review_parameter",
+        lambda **_kwargs: object(),
+    )
     return root
 
 
