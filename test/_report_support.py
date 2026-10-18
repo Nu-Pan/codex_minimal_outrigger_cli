@@ -8,6 +8,8 @@ from markdown_it import MarkdownIt
 
 # 設定だけ共有する。parse は呼び出しごとに本文の状態と参照定義を作る。
 _REPORT_MARKDOWN = MarkdownIt()
+# LibYAML があれば同じ安全な型変換を使う C parser でメタデータを読む。
+_REPORT_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 @lru_cache(maxsize=4)
@@ -43,7 +45,7 @@ def report_metadata(content):
 
 @lru_cache(maxsize=4)
 def _parse_report_metadata(information):
-    metadata = yaml.safe_load(information)
+    metadata = yaml.load(information, Loader=_REPORT_YAML_LOADER)
     assert isinstance(metadata, dict)
     return metadata
 
