@@ -87,7 +87,7 @@ def test_invalid_codex_home_fails_before_startup_and_log_preparation(
         codex_home.write_text("not a directory\n")
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
     parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
+        "build_feedback_issue_normalization_request",
         FileAccessMode.READONLY,
         "prompt",
         None,

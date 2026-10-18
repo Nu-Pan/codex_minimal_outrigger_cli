@@ -392,7 +392,7 @@ def test_review_process_start_failure_is_incomplete(review_runtime, monkeypatch)
         raise PermissionError("executable permission denied")
 
     # Git 解決は Popen の置換より前に終え、子 process の開始不能だけを注入する。
-    parameter_builder = review_module.build_primary_report_review_parameter
+    parameter_builder = review_module.build_primary_report_review_request
     parameter = parameter_builder(
         mechanical_report_path=root / "input.md", agent_call_cwd=root
     )
@@ -400,7 +400,7 @@ def test_review_process_start_failure_is_incomplete(review_runtime, monkeypatch)
     monkeypatch.setattr(profile_module.subprocess, "Popen", denied)
     monkeypatch.setattr(
         review_module,
-        "build_primary_report_review_parameter",
+        "build_primary_report_review_request",
         lambda **kwargs: parameter,
     )
     monkeypatch.setattr(exec_module, "AgentCallPathContext", lambda *_args: context)

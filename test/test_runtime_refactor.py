@@ -625,7 +625,7 @@ def test_managed_state_conflict_merges_without_agent(cli_repository, monkeypatch
     report_fields = {}
     monkeypatch.setattr(
         session_join_module,
-        "build_session_join_conflict_resolution_parameter",
+        "build_session_join_conflict_resolution_request",
         build_parameter,
     )
     monkeypatch.setattr(

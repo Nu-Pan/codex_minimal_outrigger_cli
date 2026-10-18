@@ -563,7 +563,7 @@ def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
     expected_config["num_parallel"] = 3
     expected_config["codex"]["model_providers"]["custom"] = {"settings": {}}
     expected_config["codex"]["num_try_falv_recovery"] = 4
-    expected_config["codex"]["agent_calls"]["build_tui_launch_tui_parameter"] = {
+    expected_config["codex"]["agent_calls"]["build_tui_request"] = {
         "model_provider": "custom",
         "model": "CUSTOM",
         "reasoning_effort": "CUSTOM-EFFORT",

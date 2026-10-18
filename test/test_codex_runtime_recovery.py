@@ -144,7 +144,7 @@ def recovery_case(tmp_path, monkeypatch):
         "_quota_availability_probe_parameter",
         lambda base: replace(
             codex_parameter(agent_call_cwd=base.agent_call_cwd),
-            agent_call_kind="build_quota_availability_probe_parameter",
+            agent_call_kind="build_quota_availability_probe_request",
             prompt="recovery probe",
         ),
     )
@@ -203,7 +203,7 @@ def execute(case, **kwargs):
 
 
 @pytest.mark.parametrize(
-    "call_kind", ["realization_edit", "build_feedback_normalize_issue_parameter"]
+    "call_kind", ["realization_edit", "build_feedback_issue_normalization_request"]
 )
 def test_reason_changes_preserve_settings_session_and_work(
     recovery_case, monkeypatch, call_kind
@@ -222,7 +222,7 @@ def test_reason_changes_preserve_settings_session_and_work(
             "http_headers": headers,
         }
     )
-    config.codex.agent_calls["build_quota_availability_probe_parameter"] = (
+    config.codex.agent_calls["build_quota_availability_probe_request"] = (
         CodexCallConfig("openai", "probe-model", "low")
     )
     artifact = root / "result.txt"
@@ -299,7 +299,7 @@ def test_reason_changes_preserve_settings_session_and_work(
 
 
 @pytest.mark.parametrize(
-    "call_kind", ["realization_edit", "build_feedback_normalize_issue_parameter"]
+    "call_kind", ["realization_edit", "build_feedback_issue_normalization_request"]
 )
 def test_quota_to_capacity_inherits_only_until_resume(
     recovery_case, monkeypatch, call_kind
@@ -310,7 +310,7 @@ def test_quota_to_capacity_inherits_only_until_resume(
     config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
         "openai", "work", "high"
     )
-    config.codex.agent_calls["build_quota_availability_probe_parameter"] = (
+    config.codex.agent_calls["build_quota_availability_probe_request"] = (
         CodexCallConfig("openai", "probe", "low")
     )
     calls = script_codex_calls(

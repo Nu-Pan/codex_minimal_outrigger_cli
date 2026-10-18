@@ -5,7 +5,7 @@
 """
 
 from oracle.acp_builder.feedback.normalize_issue import (
-    build_feedback_normalize_issue_parameter,
+    build_feedback_issue_normalization_request,
 )
 
-__all__ = ["build_feedback_normalize_issue_parameter"]
+__all__ = ["build_feedback_issue_normalization_request"]

@@ -11,9 +11,9 @@ from typing import Any
 from uuid import UUID
 
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_launch_tui_parameter,
+    build_oracle_investigation_request,
 )
-from oracle.acp_builder.tui.launch_tui import build_tui_launch_tui_parameter
+from oracle.acp_builder.tui.launch_tui import build_tui_request
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 from basic.acp import AgentCallParameter, TuiResumeTarget
@@ -52,8 +52,8 @@ from .runtime_windows_toast import (
 )
 
 _BUILDERS = {
-    "tui": build_tui_launch_tui_parameter,
-    "oracle_investigation": build_oracle_investigation_launch_tui_parameter,
+    "tui": build_tui_request,
+    "oracle_investigation": build_oracle_investigation_request,
 }
 
 

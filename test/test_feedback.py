@@ -39,10 +39,10 @@ from _cli_support import runner, seed_search_config, terminal_primary_report
 from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from _report_support import assert_report_layout, report_metadata, report_section
 from oracle.acp_builder.feedback.normalize_issue import (
-    build_feedback_normalize_issue_parameter as _build_canonical_normalize_parameter,
+    build_feedback_issue_normalization_request as _build_canonical_normalize_parameter,
 )
 from oracle.acp_builder.feedback.remediate_issue import (
-    build_feedback_remediate_issue_parameter as _build_canonical_remediate_parameter,
+    build_feedback_issue_remediation_request as _build_canonical_remediate_parameter,
 )
 
 import commons.runtime_feedback as feedback_module
@@ -60,10 +60,10 @@ import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
 import sub_commands.run.abandon as run_abandon_module
 from acp.builder.feedback.normalize_issue import (
-    build_feedback_normalize_issue_parameter,
+    build_feedback_issue_normalization_request,
 )
 from acp.builder.feedback.remediate_issue import (
-    build_feedback_remediate_issue_parameter,
+    build_feedback_issue_remediation_request,
 )
 from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError, load_state_for_branch
@@ -829,7 +829,7 @@ def test_feedback_normalize_builder_protects_nested_code_fences(
         [{"candidate_id": "fbi_" + "a" * 26, "summary": nested}]
     )
 
-    parameter = build_feedback_normalize_issue_parameter(
+    parameter = build_feedback_issue_normalization_request(
         observation_json,
         candidate_json,
         root,
@@ -930,7 +930,7 @@ def test_feedback_remediate_builder_disables_reporting(
 ) -> None:
     """remediation は追加報告を無効化し、prompt からも報告指示を外す。"""
     root = feedback_prompt_directory
-    parameter = build_feedback_remediate_issue_parameter(
+    parameter = build_feedback_issue_remediation_request(
         json.dumps({"issue_id": "fbi_" + "a" * 26}),
         root,
     )
@@ -952,10 +952,11 @@ def test_feedback_processing_versions_hash_canonical_builders() -> None:
     )
 
     assert (
-        build_feedback_normalize_issue_parameter is _build_canonical_normalize_parameter
+        build_feedback_issue_normalization_request
+        is _build_canonical_normalize_parameter
     )
     assert (
-        build_feedback_remediate_issue_parameter is _build_canonical_remediate_parameter
+        build_feedback_issue_remediation_request is _build_canonical_remediate_parameter
     )
     versions = feedback_report_module._processing_versions()
     normalization_version = feedback_report_module._builder_version_hash(

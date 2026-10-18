@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, NoReturn
 
 from oracle.acp_builder.feedback.remediate_issue import (
-    build_feedback_remediate_issue_parameter,
+    build_feedback_issue_remediation_request,
 )
 
 from cmoc_runtime import (
@@ -589,7 +589,7 @@ def _remediate_issue(
         for reference in manifest["inputs"]["observations"]
         if reference["observation_id"] in additional_sources
     ]
-    parameter = build_feedback_remediate_issue_parameter(
+    parameter = build_feedback_issue_remediation_request(
         json.dumps(payload, ensure_ascii=False, sort_keys=True),
         context.run_worktree,
     )

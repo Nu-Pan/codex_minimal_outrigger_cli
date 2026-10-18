@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from oracle.acp_builder.session.join.conflict_resolution import (
-    build_session_join_conflict_resolution_parameter,
+    build_session_join_conflict_resolution_request,
 )
 
 from cmoc_runtime import (
@@ -178,7 +178,7 @@ def resolve_session_join_conflict(
     resolution = resolve_merge_conflicts(
         root,
         partial(
-            build_session_join_conflict_resolution_parameter,
+            build_session_join_conflict_resolution_request,
             session_head_commit,
             home_head_commit,
             root,

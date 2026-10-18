@@ -67,8 +67,8 @@ from .runtime_results import (
 _MAX_OUTPUT_CORRECTIONS = 2
 _TUI_AGENT_CALL_KINDS = frozenset(
     {
-        "build_tui_launch_tui_parameter",
-        "build_oracle_investigation_launch_tui_parameter",
+        "build_tui_request",
+        "build_oracle_investigation_request",
     }
 )
 
@@ -272,10 +272,10 @@ def _quota_availability_probe_parameter(
     """quota判定用のprobe parameterをcanonical builderから作る。"""
     try:
         from oracle.acp_builder.quota_probe import (
-            build_quota_availability_probe_parameter,
+            build_quota_availability_probe_request,
         )
 
-        return build_quota_availability_probe_parameter(base_parameter.agent_call_cwd)
+        return build_quota_availability_probe_request(base_parameter.agent_call_cwd)
     except (AttributeError, ModuleNotFoundError) as exc:
         raise CmocError(
             "quota availability probe の builder が見つかりません。",

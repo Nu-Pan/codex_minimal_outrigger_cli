@@ -438,7 +438,7 @@ def primary_report_review_runner(monkeypatch):
     runner = report_review.run_codex_exec
     monkeypatch.setattr(
         report_review,
-        "build_primary_report_review_parameter",
+        "build_primary_report_review_request",
         lambda **_kwargs: object(),
     )
     monkeypatch.setattr(
@@ -455,13 +455,13 @@ def primary_report_review_runner(monkeypatch):
 def primary_report_review_builder(primary_report_review_runner, monkeypatch):
     """確認の起動引数や Git 境界を検査するケースでは正本 builder を使う。"""
     from oracle.acp_builder.primary_report_review import (
-        build_primary_report_review_parameter,
+        build_primary_report_review_request,
     )
 
     monkeypatch.setattr(
         report_review,
-        "build_primary_report_review_parameter",
-        build_primary_report_review_parameter,
+        "build_primary_report_review_request",
+        build_primary_report_review_request,
     )
 
 

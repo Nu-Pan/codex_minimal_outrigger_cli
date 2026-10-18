@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import NoReturn, TypedDict, cast
 
 from acp.builder.realization.refactor.fork.file_review_and_fix import (
-    build_realization_refactor_fork_file_review_and_fix_parameter,
+    build_realization_refactor_request,
 )
 from cmoc_runtime import (
     CmocError,
@@ -571,7 +571,7 @@ def _run_refactor_unit(
 
     if progress is not None:
         progress.agent_head = agent_head
-    parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
+    parameter = build_realization_refactor_request(
         target_path,
         context.run_worktree,
     )

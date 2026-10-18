@@ -58,13 +58,13 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
     assert config.codex.model_providers == {"openai": CodexModelProviderConfig()}
     assert set(config.codex.agent_calls) == {
         "realization_edit",
-        "build_session_join_conflict_resolution_parameter",
-        "build_tui_launch_tui_parameter",
-        "build_oracle_investigation_launch_tui_parameter",
-        "build_oracle_edit_main_launch_exec_parameter",
-        "build_feedback_normalize_issue_parameter",
-        "build_primary_report_review_parameter",
-        "build_quota_availability_probe_parameter",
+        "build_session_join_conflict_resolution_request",
+        "build_tui_request",
+        "build_oracle_investigation_request",
+        "build_oracle_edit_request",
+        "build_feedback_issue_normalization_request",
+        "build_primary_report_review_request",
+        "build_quota_availability_probe_request",
     }
     for agent_call_kind, call_config in config.codex.agent_calls.items():
         assert agent_call_kind
@@ -220,27 +220,20 @@ def test_saved_agent_call_settings_require_all_call_kinds_and_provider_definitio
     path = root / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     data = config_to_dict(CmocConfig())
-    data["codex"]["agent_calls"].pop("build_tui_launch_tui_parameter")
+    data["codex"]["agent_calls"].pop("build_tui_request")
     path.write_text(json.dumps(data) + "\n")
 
     for repair_missing in (False, True):
         with pytest.raises(CmocError) as exc_info:
             sync_config(root, repair_missing=repair_missing)
-        assert (
-            "codex.agent_calls.build_tui_launch_tui_parameter" in exc_info.value.detail
-        )
+        assert "codex.agent_calls.build_tui_request" in exc_info.value.detail
 
     data = config_to_dict(CmocConfig())
-    data["codex"]["agent_calls"]["build_tui_launch_tui_parameter"]["model_provider"] = (
-        "missing"
-    )
+    data["codex"]["agent_calls"]["build_tui_request"]["model_provider"] = "missing"
     path.write_text(json.dumps(data) + "\n")
     with pytest.raises(CmocError) as exc_info:
         load_config(root)
-    assert (
-        "codex.agent_calls.build_tui_launch_tui_parameter.model_provider"
-        in exc_info.value.detail
-    )
+    assert "codex.agent_calls.build_tui_request.model_provider" in exc_info.value.detail
 
 
 @pytest.mark.parametrize("kind", list(CmocConfig().codex.agent_calls))
@@ -269,10 +262,10 @@ def test_saved_config_rejects_missing_call_without_doctor_completion(
 @pytest.mark.parametrize(
     "kind",
     [
-        "build_realization_apply_fork_launch_exec_parameter",
-        "build_realization_refactor_fork_file_review_and_fix_parameter",
-        "build_feedback_remediate_issue_parameter",
-        "build_run_join_conflict_resolution_parameter",
+        "build_realization_apply_request",
+        "build_realization_refactor_request",
+        "build_feedback_issue_remediation_request",
+        "build_run_join_conflict_resolution_request",
         "custom_call",
     ],
 )

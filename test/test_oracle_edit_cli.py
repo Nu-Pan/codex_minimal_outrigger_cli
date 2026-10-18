@@ -192,9 +192,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         if integrated_case:
             real_ensure_prompt_editor_roots_ignored(target_root)
 
-    real_build_main_parameter = (
-        oracle_edit_module.build_oracle_edit_main_launch_exec_parameter
-    )
+    real_build_main_parameter = oracle_edit_module.build_oracle_edit_request
 
     def record_build_main_parameter(
         user_instruction: str,
@@ -249,7 +247,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     )
     monkeypatch.setattr(
         oracle_edit_module,
-        "build_oracle_edit_main_launch_exec_parameter",
+        "build_oracle_edit_request",
         record_build_main_parameter,
     )
     monkeypatch.setattr(
@@ -268,7 +266,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     config_file = config_path(root)
     # doctor 成功後の設定を直接用意し、直後に上書きする既定設定の保存・再読込を省く。
     configured = config_to_dict(CmocConfig())
-    call_kind = "build_oracle_edit_main_launch_exec_parameter"
+    call_kind = "build_oracle_edit_request"
     configured["codex"]["agent_calls"][call_kind] = {
         "model_provider": "custom",
         "model": "custom-model",
@@ -325,7 +323,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
 
             monkeypatch.setattr(
                 oracle_edit_module,
-                "build_oracle_edit_main_launch_exec_parameter",
+                "build_oracle_edit_request",
                 reject_rebuild,
             )
             configured["codex"]["agent_calls"][call_kind]["model"] = "changed-model"
@@ -531,7 +529,7 @@ def test_oracle_edit_builder_failure_does_not_reserve_editor_input_file(
 
     monkeypatch.setattr(
         oracle_edit_module,
-        "build_oracle_edit_main_launch_exec_parameter",
+        "build_oracle_edit_request",
         fail_build_main_parameter,
     )
 
@@ -563,7 +561,7 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
 
     monkeypatch.setattr(
         oracle_edit_module,
-        "build_oracle_edit_main_launch_exec_parameter",
+        "build_oracle_edit_request",
         build_parameter,
     )
     # 起動前提は失敗境界の double へ置き換えるため、session は不要。

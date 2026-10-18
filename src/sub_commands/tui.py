@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from oracle.acp_builder.tui.launch_tui import build_tui_launch_tui_parameter
+from oracle.acp_builder.tui.launch_tui import build_tui_request
 
 from cmoc_runtime import (
     load_config,
@@ -51,7 +51,7 @@ def _cmoc_tui_body(
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"
     )
     input_path = reserve_prompt_editor_input(root)
-    complete_prompt_skeleton = build_tui_launch_tui_parameter(
+    complete_prompt_skeleton = build_tui_request(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
     assert complete_prompt_skeleton is not None
@@ -71,7 +71,7 @@ def _cmoc_tui_body(
     # 抽出した入力から担当固有の完全 prompt と起動パラメータを構築する。
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
-    parameter = build_tui_launch_tui_parameter(original_prompt)
+    parameter = build_tui_request(original_prompt)
 
     start_subcommand_step(
         5, "初回 exec と対話再開を起動", "launch initial exec and resume"
