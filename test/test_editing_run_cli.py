@@ -857,9 +857,10 @@ def test_apply_join_hook_runs_after_merge_or_noop(
     previous = state.session.session_fork_commit
     state.session.last_joined_apply_fork_commit = previous
     write_state(state_path, state)
-    # 比較始点と fork を区別するだけなので、同期対象を増やさず HEAD を進める。
-    # oracle の entry 同期は test_join_prepares_and_syncs_run_before_import に残す。
-    run_git(root, "commit", "--allow-empty", "-m", "advance apply fork")
+    # 空 commit の代わりに既存 oracle の変更で比較始点と fork を区別する。
+    # error run の merge 後も未追従差分が残る検査を、同じ join にまとめる。
+    (root / "oracle/spec.md").write_text("pending oracle change\n")
+    run_git(root, "commit", "-am", "pending oracle change")
     context = _prepare_run(join_after_preprocess, run_state=run_state)
     if has_run_change:
         (context.run_worktree / "result.txt").write_text("result\n")
@@ -871,53 +872,32 @@ def test_apply_join_hook_runs_after_merge_or_noop(
     assert saved["session"]["last_joined_apply_fork_commit"] == (
         context.run_fork_commit if run_state == "joinable" else previous
     )
-    metadata = report_metadata(terminal_primary_report(result).read_text())
-    assert (
-        metadata["post_join_hook"]
-        == f"session.last_joined_apply_fork_commit {'updated' if run_state == 'joinable' else 'preserved'}"
-    )
+    report = terminal_primary_report(result).read_text()
+    metadata = report_metadata(report)
+    hook = "updated" if run_state == "joinable" else "preserved"
+    other_hook = "preserved" if run_state == "joinable" else "updated"
+    assert metadata["post_join_hook"] == f"session.last_joined_apply_fork_commit {hook}"
+    for output in (result.output, report):
+        assert f"session.last_joined_apply_fork_commit {hook}" in output
+        assert f"session.last_joined_apply_fork_commit {other_hook}" not in output
     assert metadata["merge_status"] == ("merged" if has_run_change else "no_op")
     assert (metadata["run_join_commit"] is not None) == has_run_change
     assert (metadata["refactor_state_sync_commit"] is not None) == has_run_change
     assert not context.run_worktree.exists()
-
-
-def test_apply_join_preserves_diff_base_for_error_run(
-    join_after_preprocess: tuple[Path, str, Path],
-) -> None:
-    """error run の成果物を merge しても、未追従の oracle 変更を比較範囲に残す。"""
-    # 既存値の有無は hook の条件表、実 merge/no-op は上記の CLI test に残す。
-    # doctor と join の結合も fork→join test に残し、ここでは修復・索引同期を重ねない。
-    # 既存の比較始点と異なる fork commit を用意し、未追従の変更が残るか確かめる。
-    root, _session_branch, state_path = join_after_preprocess
-    state = _state(state_path)
-    previous_base = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    state["session"]["last_joined_apply_fork_commit"] = previous_base
-    state_path.write_text(json.dumps(state))
-    (root / "oracle" / "spec.md").write_text("pending oracle change\n")
-    run_git(root, "add", "oracle/spec.md")
-    run_git(root, "commit", "-m", "pending oracle change")
-    context = _prepare_run(join_after_preprocess, run_state="error")
-    (context.run_worktree / "README.md").write_text("realized\n")
-    commit_work_unit(context.run_worktree, "run change")
-
-    joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
-
-    assert joined.exit_code == 0, joined.output
-    state = _state(state_path)
-    assert state["session"]["last_joined_apply_fork_commit"] == previous_base
-    assert state["run"]["state"] == "ready"
-    assert (root / "README.md").read_text() == "realized\n"
-    report = terminal_primary_report(joined).read_text()
-    for output in (joined.output, report):
-        assert "session.last_joined_apply_fork_commit preserved" in output
-        assert "session.last_joined_apply_fork_commit updated" not in output
-    assert "run_join_commit: null" not in report
-
-    # 次回 fork の始点選択は fork→join 統合 test に任せ、ここでは保存した範囲を検査する。
-    joined_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    oracle_diff = run_git(root, "diff", previous_base, joined_head, "--", "oracle")
-    assert "pending oracle change" in oracle_diff.stdout
+    assert (root / "result.txt").exists() is has_run_change
+    if has_run_change:
+        assert (root / "result.txt").read_text() == "result\n"
+    # 保存された比較始点からの実 Git 差分も確認し、未追従変更の除外を検出する。
+    # 次回 fork の始点選択は fork→join 統合 test に残す。
+    oracle_diff = run_git(
+        root,
+        "diff",
+        saved["session"]["last_joined_apply_fork_commit"],
+        "HEAD",
+        "--",
+        "oracle",
+    )
+    assert ("pending oracle change" in oracle_diff.stdout) is (run_state == "error")
 
 
 def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
