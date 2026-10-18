@@ -3328,8 +3328,8 @@ def publish_current_pointer(
     report: _JsonObject,
     published_at: str,
     result: str,
-) -> _JsonObject:
-    """generation と Markdown report の検証後に current pointer を切り替える。"""
+) -> ActiveState:
+    """current pointer を切り替え、保存後に再読・検証した active state を返す。"""
     if result not in {"ok", "attention", "incomplete"}:
         raise ValueError(f"invalid normal feedback result: {result!r}")
     _require_timestamp(published_at, current_pointer_path(repo), "feedback publication")
@@ -3442,7 +3442,7 @@ def publish_current_pointer(
             "切替後の feedback current pointer が一致しません。",
             current_pointer_path(repo),
         )
-    return pointer
+    return loaded_state
 
 
 def cleanup_published_report(repo: Path, state: ActiveState) -> bool:

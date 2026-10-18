@@ -146,7 +146,7 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
                         ],
                         str(close_work_path(repository)),
                     )
-                path, state = complete_close(repository, work)
+                path, state = complete_close(repository, work, state)
                 cleanup_completed = True
                 return _completed(
                     state,
@@ -210,7 +210,7 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
             fixed = _prepare_close(repository, state, target, reason)
             fixed_update = fixed
             write_immutable_json(close_work_path(repository), fixed)
-            path, state = complete_close(repository, fixed)
+            path, state = complete_close(repository, fixed, state)
             cleanup_completed = True
             return _completed(state, path, "closed", fixed, reason)
         except BaseException:
