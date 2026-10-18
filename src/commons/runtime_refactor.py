@@ -73,6 +73,7 @@ def merge_refactor_states(
     path = refactor_state_path(root)
     relative = path.relative_to(root).as_posix()
     merged: RefactorState = {}
+    merged_snapshots: set[str] = set()
     # no-op join で両 HEAD が同じ場合、同じ確定済み state を再取得しない。
     for ref in dict.fromkeys(refs):
         tracked = run_git(
@@ -82,6 +83,10 @@ def merge_refactor_states(
             continue
         if not tracked.startswith(("100644 blob ", "100755 blob ")):
             raise _invalid_refactor_state(path, f"通常 file ではありません: {ref}")
+        # 異なる commit でも tree entry が同じなら、本文取得・検証を繰り返さない。
+        if tracked in merged_snapshots:
+            continue
+        merged_snapshots.add(tracked)
         content = run_git(["show", f"{ref}:{relative}"], root).stdout
         for target, entry in _parse_state(path, content).items():
             previous = merged.get(target)

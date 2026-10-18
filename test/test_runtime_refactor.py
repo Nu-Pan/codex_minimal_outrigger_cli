@@ -499,10 +499,11 @@ def test_refactor_cycle_prioritizes_null_then_milliseconds_then_path():
 
 
 @pytest.mark.parametrize("has_committed_state", [False, True])
-def test_merge_refactor_states_reads_same_commit_once(
-    refactor_files, monkeypatch, has_committed_state
+@pytest.mark.parametrize("same_ref", [False, True])
+def test_merge_refactor_states_reads_shared_snapshot_once(
+    refactor_files, monkeypatch, has_committed_state, same_ref
 ):
-    """no-op join の同一 commit を再照会せず、現在の対象集合へ同期して保存する。"""
+    """同一 ref の照会と同一 snapshot の本文取得を繰り返さず、同期して保存する。"""
     root = refactor_files
     committed = {
         "README.md": {"last_investigated_at": "2026-10-18_00-00-00_001"},
@@ -534,7 +535,8 @@ def test_merge_refactor_states_reads_same_commit_once(
     # 作業中の値は採用せず、確定済み snapshot からだけ日時を引き継ぐ。
     write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
 
-    state = merge_refactor_states(root, ("fixed-commit", "fixed-commit"))
+    refs = ("first-commit", "first-commit" if same_ref else "second-commit")
+    state = merge_refactor_states(root, refs)
 
     assert state == {
         "README.md": committed["README.md"]
@@ -543,8 +545,8 @@ def test_merge_refactor_states_reads_same_commit_once(
         "added.md": {"last_investigated_at": None},
     }
     assert load_refactor_state(root) == state
-    # 存在確認と、存在する場合の本文取得を同じ commit に繰り返さない。
-    assert query.call_count == (2 if has_committed_state else 1)
+    # 種類・存在は各 ref で検証し、同じ tree entry の本文取得は一度にする。
+    assert query.call_count == len(set(refs)) + int(has_committed_state)
 
 
 def test_merge_refactor_states_uses_committed_dates_and_current_paths(
