@@ -279,7 +279,7 @@
     "last_investigated_at": "2026-10-18_11-20-54_803"
   },
   "oracle/src/oracle/prompt_builder/policy/oracle.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-26-40_209"
   },
   "oracle/src/oracle/prompt_builder/policy/realization.py": {
     "last_investigated_at": null
