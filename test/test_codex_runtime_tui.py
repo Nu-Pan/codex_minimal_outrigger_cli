@@ -564,9 +564,28 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize(
-    "condition",
-    [
+def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_path):
+    # 設定・MCP と起動記録の結合は current_settings・separate_process_resources・
+    # accepts_fixed_id のケースに残し、拒否条件だけが異なる検査の正常記録は一度作る。
+    stub_codex_overrides(monkeypatch)
+    calls, source = failed_initial_success(directory, monkeypatch)
+    source_text = source.read_text()
+    baseline = [json.loads(line) for line in source_text.splitlines()]
+    record = next(row for row in reversed(baseline) if row["event"] == "tui_startup")
+    prepared = next(row for row in baseline if row["event"] == "tui_process_prepared")
+    saved_files = {
+        path: path.read_bytes()
+        for path in (
+            source,
+            Path(record["initial_output_path"]),
+            Path(prepared["call_log_path"]),
+        )
+    }
+    other_home = tmp_path / "other_home"
+    other_home.mkdir()
+    tui_calls = fake_tui(monkeypatch)
+
+    for condition in (
         "unfinished",
         "failed",
         "cancelled",
@@ -580,55 +599,56 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
         "initial_exit_unknown",
         "missing_tui_call",
         "different_requested_session",
-    ],
-)
-def test_public_resume_rejects_ineligible_source(
-    directory, monkeypatch, tmp_path, condition
-):
-    # current_settings と separate_process_resources のケースが設定・MCP の結合を検査する。
-    # 不適格な記録を用意するためだけの初回起動・TUI 移行には固定設定を使う。
-    stub_codex_overrides(monkeypatch)
-    calls, source = failed_initial_success(directory, monkeypatch)
-    rows = [json.loads(line) for line in source.read_text().splitlines()]
-    record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
-    if condition == "unfinished":
-        rows.pop()
-    elif condition in {"failed", "cancelled"}:
-        record["initial_status"] = condition
-    elif condition == "unknown_exit":
-        record["tui_process_state"] = "unknown"
-    elif condition == "unknown_session":
-        record["fixed_session_id"] = None
-    elif condition == "inconsistent_kind":
-        record["tui_kind"] = "oracle_investigation"
-    elif condition == "missing_output":
-        Path(record["initial_output_path"]).unlink()
-    elif condition == "bad_uuid":
-        record["initial_session_id"] = "unknown-session"
-    elif condition == "home_changed":
-        home = tmp_path / "other_home"
-        home.mkdir()
-        monkeypatch.setenv("CODEX_HOME", str(home))
-    elif condition == "initial_exit_unknown":
-        initial = [row for row in rows if row["event"] == "tui_initial_exec"][-1]
-        initial["process_state"] = "unknown"
-    elif condition in {"missing_tui_call", "different_requested_session"}:
-        prepared = next(row for row in rows if row["event"] == "tui_process_prepared")
-        path = Path(prepared["call_log_path"])
-        if condition == "missing_tui_call":
-            path.unlink()
-        else:
-            call = json.loads(path.read_text())
-            call["argv"][-1] = "019efe07-4886-7423-b252-625febbe31ec"
-            path.write_text(json.dumps(call))
-    source.write_text(
-        "invalid JSON\n"
-        if condition == "broken_json"
-        else "".join(json.dumps(row) + "\n" for row in rows)
-    )
-    with pytest.raises(CmocError, match="再開条件を満たしません"):
-        tui_module.resume_codex_tui(source.stem, directory)
-    assert len(calls) == 1
+    ):
+        # 削除・書き換えた通常 file、JSON の入れ子、環境変数を条件ごとに復元する。
+        for path, content in saved_files.items():
+            path.write_bytes(content)
+        # 前の不備を理由に拒否されないよう、変更前は再開可能であることも確かめる。
+        tui_module._validated_resume_record(source.stem, directory)
+        rows = [json.loads(line) for line in source_text.splitlines()]
+        record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
+        with monkeypatch.context() as patch:
+            if condition == "unfinished":
+                rows.pop()
+            elif condition in {"failed", "cancelled"}:
+                record["initial_status"] = condition
+            elif condition == "unknown_exit":
+                record["tui_process_state"] = "unknown"
+            elif condition == "unknown_session":
+                record["fixed_session_id"] = None
+            elif condition == "inconsistent_kind":
+                record["tui_kind"] = "oracle_investigation"
+            elif condition == "missing_output":
+                Path(record["initial_output_path"]).unlink()
+            elif condition == "bad_uuid":
+                record["initial_session_id"] = "unknown-session"
+            elif condition == "home_changed":
+                patch.setenv("CODEX_HOME", str(other_home))
+            elif condition == "initial_exit_unknown":
+                initial = [row for row in rows if row["event"] == "tui_initial_exec"][
+                    -1
+                ]
+                initial["process_state"] = "unknown"
+            elif condition in {"missing_tui_call", "different_requested_session"}:
+                prepared = next(
+                    row for row in rows if row["event"] == "tui_process_prepared"
+                )
+                path = Path(prepared["call_log_path"])
+                if condition == "missing_tui_call":
+                    path.unlink()
+                else:
+                    call = json.loads(path.read_text())
+                    call["argv"][-1] = "019efe07-4886-7423-b252-625febbe31ec"
+                    path.write_text(json.dumps(call))
+            source.write_text(
+                "invalid JSON\n"
+                if condition == "broken_json"
+                else "".join(json.dumps(row) + "\n" for row in rows)
+            )
+            with pytest.raises(CmocError, match="再開条件を満たしません"):
+                tui_module.resume_codex_tui(source.stem, directory)
+        assert len(calls) == 1, condition
+        assert tui_calls == [], condition
 
 
 def test_public_resume_rejects_non_tui_and_invalid_id(directory):
