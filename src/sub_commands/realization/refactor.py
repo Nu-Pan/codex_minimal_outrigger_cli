@@ -645,7 +645,7 @@ def _run_refactor_unit(
     declared_changed_paths = tuple(
         finding["changed_paths"] for finding in normalized_findings
     )
-    _update_refactor_state(context, target)
+    state = _update_refactor_state(context, target)
     all_unit_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,
@@ -675,6 +675,7 @@ def _run_refactor_unit(
         units,
         unresolved_findings,
         f"cmoc realization refactor {target}",
+        state=state,
         pending_realization_paths=actual_changed_paths,
         state_paths_before=state_paths_before,
         declared_changed_paths=declared_changed_paths,
@@ -721,6 +722,7 @@ def _commit_refactor_unit(
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
     message: str,
     *,
+    state: RefactorState,
     pending_realization_paths: Collection[str] = (),
     state_paths_before: Collection[str] = (),
     declared_changed_paths: Collection[Collection[str]] = (),
@@ -737,8 +739,7 @@ def _commit_refactor_unit(
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
-    # state の読み取りは長い同期と同様、停止可能な準備として区間の外に置く。
-    state = load_refactor_state(context.run_worktree)
+    # child 停止後に同期・保存済みの state を使い、全 entry の再読・再検証を省く。
     if progress is not None:
         progress.phase = f"commit artifacts / refactor state: {target}"
         _emit_refactor_progress(progress)
@@ -913,13 +914,14 @@ def _unexpected_refresh_paths(
 def _update_refactor_state(
     context: EditingRunContext,
     target: str,
-) -> None:
+) -> RefactorState:
     """追加・削除を同期し、引き続き存在する起点だけの調査日時を更新する。"""
     # rename 先は新規 entry とし、起点以外の編集・参照で日時を進めない。
     state = sync_refactor_state(context.run_worktree)
     if target in state:
         state[target]["last_investigated_at"] = timestamp()
         write_refactor_state(context.run_worktree, state)
+    return state
 
 
 def _changed_path_postcondition(

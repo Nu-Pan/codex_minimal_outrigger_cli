@@ -300,17 +300,57 @@ def test_refactor_state_update_only_dates_surviving_origin(
     investigated_at = "2026-10-11_00-00-00_001"
     monkeypatch.setattr(refactor_workload, "timestamp", lambda: investigated_at)
 
-    refactor_workload._update_refactor_state(
+    updated = refactor_workload._update_refactor_state(
         SimpleNamespace(run_worktree=root), "README.md"
     )
 
-    updated = load_refactor_state(root)
+    assert updated == load_refactor_state(root)
     assert set(updated) == paths
     if "README.md" in paths:
         assert updated["README.md"] == {"last_investigated_at": investigated_at}
     if change == "renamed":
         assert updated["renamed.md"] == {"last_investigated_at": None}
     assert updated["oracle/spec.md"] == state["oracle/spec.md"]
+
+
+def test_refactor_commit_reuses_synchronized_state(tmp_path, monkeypatch):
+    """同期済み state から進捗・未解決集合を更新し、全 entry を読み直さない。"""
+    state = {"README.md": {"last_investigated_at": "2026-10-11_00-00-00_001"}}
+    read = Mock(side_effect=AssertionError("state was already synchronized"))
+    monkeypatch.setattr(refactor_workload, "load_refactor_state", read)
+    # Git commit と中断の結合は test_editing_run_cli.py に残す。
+    monkeypatch.setattr(
+        refactor_workload,
+        "run_git",
+        Mock(return_value=SimpleNamespace(stdout="before")),
+    )
+    monkeypatch.setattr(
+        refactor_workload, "commit_work_unit", Mock(return_value="after")
+    )
+    progress = refactor_workload._RefactorProgress(
+        cycle=1, targets={"README.md", "removed.md"}, deferred={"removed.md"}
+    )
+    units = []
+    unresolved = {"removed.md": [("old finding", "reason", tmp_path / "call.json")]}
+
+    refactor_workload._commit_refactor_unit(
+        SimpleNamespace(run_worktree=tmp_path),
+        "README.md",
+        0,
+        [],
+        units,
+        unresolved,
+        "unit",
+        state=state,
+        progress=progress,
+    )
+
+    read.assert_not_called()
+    assert units == [("README.md", 0)]
+    assert progress.targets == progress.processed == {"README.md"}
+    assert progress.completed_cycles == 1
+    assert not progress.deferred
+    assert not unresolved
 
 
 @pytest.mark.parametrize(
