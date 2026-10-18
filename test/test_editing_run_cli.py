@@ -4502,14 +4502,14 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
     _root, _, _state_path = refactor_after_preprocess
     reviewed = []
     classified = Counter()
-    classify = lifecycle_module.is_realization_file_path
+    classify = lifecycle_module.realization_file_paths
 
-    def record_classification(root, path, **kwargs):
-        classified[path.relative_to(root).as_posix()] += 1
-        return classify(root, path, **kwargs)
+    def record_classification(root, paths, **kwargs):
+        classified.update(path.relative_to(root).as_posix() for path in paths)
+        return classify(root, paths, **kwargs)
 
     monkeypatch.setattr(
-        lifecycle_module, "is_realization_file_path", record_classification
+        lifecycle_module, "realization_file_paths", record_classification
     )
 
     def review(parameter, **kwargs):

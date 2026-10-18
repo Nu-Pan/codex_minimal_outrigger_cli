@@ -327,7 +327,7 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
 ):
     """検査内の配置問い合わせを重複させず、次の検査で状態と失敗を再確認する。"""
     root = cli_repository
-    paths = ["first.txt", "second.txt"]
+    paths = ["first.txt", "second.txt", "space tab\tline\n.txt", ":(literal)file.txt"]
     for path in paths:
         (root / path).write_text("content\n")
     context = EditingRunContext(
@@ -368,13 +368,17 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
                 if argv[1] in {"rev-parse", "config"}
             ]
             assert max(placement_queries, default=0) <= 1, inspect.__name__
-            # 存在する ignored file も、branch/fork ごとに同じ判定を繰り返さない。
+            # file 数と特殊文字にかかわらず、同じ repository の判定を一括で行う。
             ignore_queries = sum(
                 count for argv, count in queries.items() if argv[1] == "check-ignore"
             )
-            assert ignore_queries <= len(paths), inspect.__name__
+            assert ignore_queries == 1, inspect.__name__
 
     validate([])
+
+    # ignored な特殊名も、空白・改行・pathspec magic を区切りや構文として解釈しない。
+    (root / ".gitignore").write_text("*.txt\n")
+    validate(sorted(paths))
 
     # 判定結果や index は再利用せず、tracked な ignored file は許可範囲に残す。
     (root / ".gitignore").write_text("first.txt\n")
@@ -394,3 +398,80 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
             inspect(context, changes)
     run_git(root, "config", "core.excludesFile", "/dev/null")
     validate([])
+
+
+def test_run_path_inspection_batches_each_owning_repository(
+    cli_repository, monkeypatch
+):
+    """一括化しても nested の index・ignore と agent/run の許可範囲を区別する。"""
+    root = cli_repository
+    (root / ".gitignore").write_text("*.outer\n")
+    (root / "dropped.outer").write_text("outer ignored\n")
+    (root / "visible.txt").write_text("visible\n")
+    nested = root / "nested"
+    nested.mkdir()
+    init_repo(nested)
+    (nested / ".gitignore").write_text("*.nested\n")
+    for name in ("kept.outer", "dropped.nested", "tracked.nested"):
+        (nested / name).write_text("nested content\n")
+    run_git(nested, "add", "-f", "tracked.nested")
+    (nested / "alias").symlink_to(nested / "kept.outer")
+    (root / "oracle").mkdir()
+    (root / "oracle/spec.md").write_text("oracle\n")
+    managed_state = ".cmoc/gt/realization/refactor/state.json"
+    context = EditingRunContext(
+        repo=root,
+        session_worktree=root,
+        session_id="session",
+        state_path=root / "state.json",
+        session_branch="session",
+        session_fork_commit="fork",
+        kind="realization_refactor",
+        run_branch="run",
+        run_fork_commit="fork",
+        run_worktree=root,
+    )
+    rejected = [
+        "dropped.outer",
+        "nested/.git/config",
+        "nested/alias",
+        "nested/dropped.nested",
+        "oracle/spec.md",
+    ]
+    paths = [*rejected, "visible.txt", "nested/kept.outer", "nested/tracked.nested"]
+    # 重複と rename の両端も渡し、return 値と実 Git の問い合わせ数を検査する。
+    paths += ["visible.txt", managed_state]
+    changes = [GitChange("M", (path,)) for path in paths]
+    changes.append(GitChange("R100", ("dropped.outer", "nested/kept.outer")))
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[:2] == ["git", "check-ignore"]:
+            queries[kwargs["cwd"]] += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    for inspect, inputs, expected in (
+        (unexpected_agent_paths, paths, sorted([*rejected, managed_state])),
+        (unexpected_run_paths, changes, rejected),
+    ):
+        queries.clear()
+        assert inspect(context, inputs) == expected
+        assert queries == {root: 1, nested: 1}
+
+    # 明示対象外は run 検査だけに適用し、他の想定外 path は維持する。
+    assert (
+        unexpected_run_paths(context, changes, ignored_paths=["oracle/spec.md"])
+        == (rejected[:-1])
+    )
+
+    # 一括判定の前にも nested の ignore source を検証し、特殊 file を読み込まない。
+    (nested / ".gitignore").unlink()
+    (nested / ".gitignore").mkdir()
+    for inspect, inputs in (
+        (unexpected_agent_paths, paths),
+        (unexpected_run_paths, changes),
+    ):
+        with pytest.raises(CmocError, match=".gitignore"):
+            inspect(context, inputs)

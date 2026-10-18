@@ -1193,61 +1193,84 @@ def is_realization_file_path(
     branch: str | None = None,
     fallback_branch: str | None = None,
 ) -> bool:
-    """repository path と Git 状態から realization file か判定する。
+    """repository path と Git 状態から realization file か判定する。"""
+    # 単一 path も差分検査と同じ分類・tree fallback を使う。
+    return bool(
+        realization_file_paths(
+            root, (path,), branch=branch, fallback_branch=fallback_branch
+        )
+    )
+
+
+@reuse_git_path_queries()
+def realization_file_paths(
+    root: Path,
+    paths: Collection[Path],
+    *,
+    branch: str | None = None,
+    fallback_branch: str | None = None,
+) -> set[Path]:
+    """候補の realization file を owning repository ごとに一括判定する。
 
     apply worktree が無い復旧経路では branch の tree を追跡状態の正本にする。
-    欠落 path だけは fallback_branch も確認し、存在する path の分類は一度で済ませる。
+    欠落 path だけは fallback_branch も確認し、現在の file は index-aware に判定する。
     根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
     の「分類結果」
     """
-    candidate = path if path.is_absolute() else root / path
-    if _file_classification(root, candidate) != "realization":
-        return False
-    repository = _repository_context_for_path(root, candidate)
-    if repository is None:
-        return False
-    if branch and not _path_exists_without_following_symlinks(candidate):
-        # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
-        # 含めず regular blob entry だけを branch の fallback として採用する。
-        # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
-        # の「分類結果」
-        # branch の blob は削除された path の追跡状態を補うが、現在の directory や
-        # FIFO などの特殊 file を file として扱う根拠にはならない。
-        branch_relative = candidate.absolute().relative_to(repository.absolute())
-        # nested repository は outer worktree の branch namespace を共有しないため、
-        # outer の run branch をそのまま ls-tree へ渡さず、nested repository 自身の
-        # checked-out tree を参照する。
-        tree_references = (
-            (branch, fallback_branch) if repository == root.absolute() else ("HEAD",)
+    # path と実体の検査は省略せず、現在の regular file だけを repository 別に集める。
+    work_root = root.absolute()
+    included: set[Path] = set()
+    candidates_by_repository: dict[Path, list[Path]] = {}
+    for path in dict.fromkeys(paths):
+        candidate = (path if path.is_absolute() else root / path).absolute()
+        if _file_classification(work_root, candidate) != "realization":
+            continue
+        repository = _repository_context_for_path(work_root, candidate)
+        if repository is None:
+            continue
+        if branch and not _path_exists_without_following_symlinks(candidate):
+            # rename 元・削除 path は tree から補い、nested repository は自身の HEAD を使う。
+            references = (
+                (branch, fallback_branch) if repository == work_root else ("HEAD",)
+            )
+            if _is_regular_tree_file(repository, candidate, references):
+                included.add(candidate)
+        elif _is_regular_file(candidate):
+            # 個々の親 directory の特殊 .gitignore も、Git 起動前に拒否する。
+            _validate_git_ignore_sources(repository, candidate)
+            candidates_by_repository.setdefault(repository, []).append(candidate)
+
+    # 列挙と同じ NUL framing の一括判定を使い、tracked な ignored file も保持する。
+    for repository, candidates in candidates_by_repository.items():
+        ignored = _batch_untracked_git_ignored(repository, candidates)
+        included.update(
+            candidate for candidate in candidates if candidate not in ignored
         )
-        for tree_reference in dict.fromkeys(tree_references):
-            if not tree_reference:
-                continue
-            branch_entries = run_git(
-                [
-                    "ls-tree",
-                    "-r",
-                    "-z",
-                    tree_reference,
-                    "--",
-                    literal_pathspec(branch_relative.as_posix()),
-                ],
-                repository,
-            ).stdout.split("\0")
-            for entry in branch_entries:
-                metadata, separator, entry_path = entry.partition("\t")
-                metadata_fields = metadata.split()
-                if separator and entry_path == branch_relative.as_posix():
-                    try:
-                        entry_mode = int(metadata_fields[0], 8)
-                    except (IndexError, ValueError):
-                        continue
-                    if stat.S_ISREG(entry_mode):
-                        return True
-        return False
-    if not _is_regular_file(candidate):
-        return False
-    return not _is_untracked_git_ignored_in_repository(repository, candidate)
+    return included
+
+
+def _is_regular_tree_file(
+    repository: Path, candidate: Path, references: Collection[str | None]
+) -> bool:
+    # 欠落 path だけを補完し、symlink や Gitlink を regular file として許可しない。
+    relative = candidate.relative_to(repository).as_posix()
+    for reference in dict.fromkeys(references):
+        if not reference:
+            continue
+        entries = run_git(
+            ["ls-tree", "-r", "-z", reference, "--", literal_pathspec(relative)],
+            repository,
+        ).stdout.split("\0")
+        for entry in entries:
+            metadata, separator, entry_path = entry.partition("\t")
+            if separator and entry_path == relative:
+                try:
+                    mode = int(metadata.split()[0], 8)
+                except (IndexError, ValueError):
+                    continue
+                if stat.S_ISREG(mode):
+                    return True
+    return False
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:
