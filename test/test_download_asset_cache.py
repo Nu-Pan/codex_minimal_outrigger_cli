@@ -18,6 +18,7 @@ import urllib.request
 from dataclasses import replace
 from importlib import resources
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import unquote, urlsplit
 
 import pytest
@@ -30,6 +31,7 @@ from _download_asset_support import (
 
 import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
+import commons.runtime_document_search as search_module
 import commons.runtime_document_search_assets as assets
 import commons.runtime_document_search_setup as setup
 import commons.runtime_download_asset_cache as cache_module
@@ -276,12 +278,24 @@ def test_parallel_installations_download_once(tmp_path, distribution, monkeypatc
             waiting.set()
             raise
 
+    def wait_for_publication(_seconds):
+        assert receive.poll(20), "child publication did not finish"
+
     try:
         process.start()
         send.close()
         assert downloading.wait(10), "child download did not start"
         # 親を二つ目の取得 process とし、実 lock の競合を観測する。
         monkeypatch.setattr(fcntl, "flock", observe_lock)
+        # poll 間隔を待たず、lock 解放後の子の通知で再試行する。
+        # 待機時間の計測と取消は test_document_search.py の専用 test に残す。
+        monkeypatch.setattr(
+            search_module,
+            "time",
+            SimpleNamespace(
+                monotonic=cache_module.time.monotonic, sleep=wait_for_publication
+            ),
+        )
         parent_destination = tmp_path / "parent-result"
         action = DownloadAssetCache(tmp_path / "cmoc-parent").obtain(
             asset, parent_destination
