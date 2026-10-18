@@ -342,12 +342,6 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
         run_fork_commit="fork",
         run_worktree=root,
     )
-    # 読み取り専用の両入口へ同じ状態を渡し、Git の準備と状態変更だけを共有する。
-    inspections = (
-        (unexpected_agent_paths, paths),
-        (unexpected_run_paths, [GitChange("M", (path,)) for path in paths]),
-    )
-
     queries = Counter()
     original_run = git_module.subprocess.run
 
@@ -358,21 +352,22 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
 
     monkeypatch.setattr(git_module.subprocess, "run", record_query)
 
+    # 共通の分類処理で状態変更を検査する。run 側の委譲・差分展開・例外伝播は
+    # 下の owning repository と tree fallback のテストに残す。
     def validate(expected):
-        for inspect, changes in inspections:
-            queries.clear()
-            assert inspect(context, changes) == expected, inspect.__name__
-            placement_queries = [
-                count
-                for argv, count in queries.items()
-                if argv[1] in {"rev-parse", "config"}
-            ]
-            assert max(placement_queries, default=0) <= 1, inspect.__name__
-            # file 数と特殊文字にかかわらず、同じ repository の判定を一括で行う。
-            ignore_queries = sum(
-                count for argv, count in queries.items() if argv[1] == "check-ignore"
-            )
-            assert ignore_queries == 1, inspect.__name__
+        queries.clear()
+        assert unexpected_agent_paths(context, paths) == expected
+        placement_queries = [
+            count
+            for argv, count in queries.items()
+            if argv[1] in {"rev-parse", "config"}
+        ]
+        assert max(placement_queries, default=0) <= 1
+        # file 数と特殊文字にかかわらず、同じ repository の判定を一括で行う。
+        ignore_queries = sum(
+            count for argv, count in queries.items() if argv[1] == "check-ignore"
+        )
+        assert ignore_queries == 1
 
     validate([])
 
@@ -393,9 +388,8 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
     validate(["second.txt"])
     global_ignore.unlink()
     global_ignore.mkdir()
-    for inspect, changes in inspections:
-        with pytest.raises(CmocError, match="global excludes"):
-            inspect(context, changes)
+    with pytest.raises(CmocError, match="global excludes"):
+        unexpected_agent_paths(context, paths)
     run_git(root, "config", "core.excludesFile", "/dev/null")
     validate([])
 
