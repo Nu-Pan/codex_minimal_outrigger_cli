@@ -1814,26 +1814,64 @@ def test_parallel_feedback_call_lifecycles_are_isolated(
         invocation.stop()
 
 
+@pytest.mark.parametrize("stalled", [True, False], ids=["idle", "trickle"])
 def test_collector_limits_unauthenticated_request_read_time(
-    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch, stalled: bool
 ) -> None:
-    """改行前で停止した未認証接続を短い絶対 deadline で終了する。"""
+    """無応答と小分け受信の両方を、実時間の待機なしで deadline 拒否する。"""
     root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
-    monkeypatch.setattr(feedback_module, "_COLLECTOR_IO_TIMEOUT_SECONDS", 0.05)
-    invocation.start()
-    try:
-        assert invocation.collector_port is not None
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
-            connection.settimeout(1)
-            connection.connect((FEEDBACK_COLLECTOR_HOST, invocation.collector_port))
-            connection.sendall(b"{")
-            response = json.loads(connection.recv(8192).split(b"\n", 1)[0])
+    budget = feedback_module._COLLECTOR_IO_TIMEOUT_SECONDS
+    clock = SimpleNamespace(now=0.0)
+    monkeypatch.setattr(
+        feedback_module, "time", SimpleNamespace(monotonic=lambda: clock.now)
+    )
+    # 受信ごとの timeout は超えないが、二つ目の断片で絶対 deadline を超える。
+    # deadline を毎回延長する回帰では、三つ目まで読めて probe が accepted になる。
+    chunks = iter(
+        [
+            b'{"protocol":',
+            json.dumps(REPORTER_PROTOCOL_VERSION).encode("utf-8"),
+            b',"_protocol_probe":true}\n',
+        ]
+    )
+    read_timeouts = []
+    response = bytearray()
 
-        assert response["code"] == "transport_unavailable"
-    finally:
-        invocation.stop()
+    class IncompleteConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def settimeout(self, seconds):
+            self.timeout = seconds
+
+        def recv(self, _size):
+            read_timeouts.append(self.timeout)
+            if stalled and len(read_timeouts) == 2:
+                raise TimeoutError("injected idle connection")
+            clock.now += budget * 0.75
+            return next(chunks)
+
+        def sendall(self, value):
+            response.extend(value)
+
+    # framing・拒否応答・warning は実 worker を通す。TCP の結合は受理・drain test に残す。
+    invocation._handle_connection(IncompleteConnection())  # type: ignore[arg-type]
+
+    assert read_timeouts == pytest.approx([budget, budget * 0.25])
+    assert json.loads(response) == {
+        "status": "rejected",
+        "code": "transport_unavailable",
+        "message": "collector could not process the request",
+        "retryable": True,
+    }
+    assert logger.warning_messages == [
+        "feedback submission rejected (transport_unavailable)"
+    ]
 
 
 def test_collector_rejects_observation_without_current_head(
