@@ -22,6 +22,59 @@ import commons.runtime_feedback_state as state
 import commons.runtime_feedback_store as store
 
 
+def test_symlink_check_keeps_lexical_ancestors_and_rechecks_changes(
+    tmp_path, monkeypatch
+):
+    directory = tmp_path / "入力"
+    directory.mkdir()
+    regular = directory / "record.json"
+    regular.write_bytes(b"{}\n")
+    alias = tmp_path / "alias"
+    alias.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    for path in (
+        Path("/"),
+        Path("."),
+        regular,
+        regular / "not-a-directory" / "missing.json",
+        alias / "missing" / "record.json",
+    ):
+        assert not store._has_symlink_component(path)
+
+    # 同じ path でも次回は取り直し、.. の解決前や欠落した子の先の親を検査する。
+    alias.rmdir()
+    alias.symlink_to(directory, target_is_directory=True)
+    for path in (
+        Path("alias/record.json"),
+        alias / "missing" / "record.json",
+        alias / ".." / "入力" / "record.json",
+        alias / "invalid\0name",
+    ):
+        assert store._has_symlink_component(path)
+
+    alias.unlink()
+    alias.symlink_to("alias")
+    assert store._has_symlink_component(alias / "missing" / "record.json")
+    alias.unlink()
+    alias.symlink_to(tmp_path / "missing-directory", target_is_directory=True)
+    assert store._has_symlink_component(alias / "missing" / "record.json")
+
+
+def test_symlink_check_propagates_unreadable_parent(tmp_path, monkeypatch):
+    blocked = tmp_path / "blocked"
+    original_lstat = os.lstat
+
+    def lstat(path, *args, **kwargs):
+        if os.fspath(path) == str(blocked):
+            raise PermissionError("unreadable parent")
+        return original_lstat(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "lstat", lstat)
+    with pytest.raises(PermissionError, match="unreadable parent"):
+        store._has_symlink_component(blocked / "missing.json")
+
+
 @pytest.mark.parametrize("failure", [None, "file", "directory"])
 def test_mutable_write_flushes_before_publication_and_preserves_failure_state(
     tmp_path, monkeypatch, failure

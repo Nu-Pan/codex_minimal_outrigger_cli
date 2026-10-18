@@ -12,6 +12,7 @@ record の同一性判定が重複するため、raw observation store の境界
 - `{{work-root}}/oracle/src/oracle/feedback/reporter_input.json`
 """
 
+import errno
 import fcntl
 import hashlib
 import json
@@ -213,12 +214,20 @@ def observation_path(repo: Path, observation_id: str, observed_at: str) -> Path:
 
 def _has_symlink_component(path: Path) -> bool:
     """path の lexical component に symlink が含まれるかを返す。"""
-    # resolve せず祖先を調べ、存在しない子の親 symlink も拒否する。
-    current = path.absolute()
-    while current.name:
-        if current.is_symlink():
-            return True
-        current = current.parent
+    # resolve と階層ごとの Path 再生成を避け、存在しない子の祖先も調べる。
+    current = os.fspath(path.absolute())
+    while current != os.path.dirname(current):
+        try:
+            if stat.S_ISLNK(os.lstat(current).st_mode):
+                return True
+        except OSError as exc:
+            # Path.is_symlink と同じく、欠落・非 directory・循環の先も祖先を調べる。
+            if exc.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP):
+                raise
+        except ValueError:
+            # 不正な子の表記があっても、その親の symlink を見落とさない。
+            pass
+        current = os.path.dirname(current)
     return False
 
 
