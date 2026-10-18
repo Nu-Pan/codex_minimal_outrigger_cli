@@ -401,7 +401,11 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     )
     # handoff の TCP・guide の結合は test_editor_input_handoff.py に残し、
     # linked 起動では main root への引き渡しと終了順序を観測する。
-    write_config(linked / ".cmoc/gt/config.json", CmocConfig())
+    # 設定 I/O は test_runtime_config.py と上の main 起動で通す。
+    # ここでは linked の設定を main の設定で代用しないことを直接検査する。
+    config = CmocConfig(num_parallel=3)
+    load_config = Mock(return_value=config)
+    monkeypatch.setattr(tui_module, "load_config", load_config)
     monkeypatch.chdir(linked)
     opened_inputs = editor_input("\nlinked worktree task\n")
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
@@ -418,9 +422,11 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
 
     assert result.exit_code == 0, result.output
     assert doctor_roots == [linked.resolve()]
+    load_config.assert_called_once_with(linked.resolve())
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
+    assert tui_kwargs["config"] is config
     assert tui_kwargs["purpose"] == "tui codex"
     assert parameter.agent_call_cwd == root.resolve()
     [saved_input] = (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")

@@ -16,7 +16,6 @@ from _cli_support import runner
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.investigation as investigation_module
 from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import write_config
 from commons.runtime_logging import current_subcommand_logger
 from config.cmoc_config import CmocConfig
 from main import app
@@ -38,7 +37,7 @@ def test_oracle_investigation_has_no_session_precondition(
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
     )
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    config = CmocConfig(num_parallel=3)
     instruction = "oracle の根拠を調査する"
     later_editor_content = "確定後に人間が再編集した本文"
     input_path: Path
@@ -58,6 +57,14 @@ def test_oracle_investigation_has_no_session_precondition(
         assert target_root == root
         assert not (root / ".cmoc/gu/log/editor_input").exists()
         events.append("ignore")
+
+    # 設定の保存・復元は test_runtime_config.py、CLI との実結合は
+    # test_cli_tui.py の main 起動に残し、ここでは取得元と引き渡しを検査する。
+    def record_load_config(target_root: Path) -> CmocConfig:
+        """TUI へ渡す設定の取得元と順序を記録する。"""
+        assert target_root == root
+        events.append("load-config")
+        return config
 
     real_build_parameter = (
         investigation_module.build_oracle_investigation_launch_tui_parameter
@@ -137,6 +144,7 @@ def test_oracle_investigation_has_no_session_precondition(
         "collect_prompt_editor_input",
         fake_collect_prompt_editor_input,
     )
+    monkeypatch.setattr(investigation_module, "load_config", record_load_config)
     calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
     def fake_run_codex_tui(
@@ -167,6 +175,7 @@ def test_oracle_investigation_has_no_session_precondition(
         "editor",
         "collect",
         "build-parameter",
+        "load-config",
         "tui",
     ]
     assert len(built_parameters) == 2
@@ -194,6 +203,8 @@ def test_oracle_investigation_has_no_session_precondition(
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.enable_editor_input_handoff_mcp is True
     assert parameter.enable_document_search_mcp is True
+    assert kwargs["root"] == root
+    assert kwargs["config"] is config
     assert kwargs["purpose"] == "oracle investigation"
     complete_prompt = parameter.prompt
     assert "# oracle investigation policy" not in complete_prompt
