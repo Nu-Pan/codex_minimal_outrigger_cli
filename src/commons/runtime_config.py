@@ -37,6 +37,10 @@ _CONFIG_RECORD_FIELDS = {
     )
 }
 _AGENT_CALL_KINDS = frozenset(CmocConfigCodex().agent_calls)
+_DOCUMENT_SEARCH_FIELD_ORDER = tuple(
+    field.name for field in fields(DocumentSearchConfig)
+)
+_DOCUMENT_SEARCH_FIELD_NAMES = frozenset(_DOCUMENT_SEARCH_FIELD_ORDER)
 
 
 def _reject_non_json_constant(value: str) -> NoReturn:
@@ -121,14 +125,12 @@ def _document_search_data(value: Any) -> dict[str, Any]:
         data = value
     else:
         raise SearchConfigIssue("document_search", "object が必要です")
-    schema_fields = fields(DocumentSearchConfig)
-    names = {field.name for field in schema_fields}
-    unknown = sorted(data.keys() - names)
+    unknown = sorted(data.keys() - _DOCUMENT_SEARCH_FIELD_NAMES)
     if unknown:
         raise SearchConfigIssue(
             f"document_search.{unknown[0]}", "未知の項目です。手動で除去してください"
         )
-    missing = sorted(names - data.keys())
+    missing = sorted(_DOCUMENT_SEARCH_FIELD_NAMES - data.keys())
     if missing:
         raise SearchConfigIssue(
             f"document_search.{missing[0]}",
@@ -188,7 +190,7 @@ def _document_search_data(value: Any) -> dict[str, Any]:
             "document_search.chunk_tokens, document_search.embedding_context_tokens",
             f"chunk_tokens={data['chunk_tokens']} は embedding_context_tokens={data['embedding_context_tokens']} より小さくしてください",
         )
-    return {field.name: data[field.name] for field in schema_fields}
+    return {name: data[name] for name in _DOCUMENT_SEARCH_FIELD_ORDER}
 
 
 def _document_search_config(value: Any) -> DocumentSearchConfig:
