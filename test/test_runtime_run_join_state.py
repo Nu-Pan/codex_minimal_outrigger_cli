@@ -1,0 +1,140 @@
+"""join の Git 照合を、worktree 作成や CLI 前処理を重ねずに検証する。"""
+
+from dataclasses import replace
+from unittest.mock import Mock
+
+import pytest
+from _git_support import RUN_BRANCH, SESSION_BRANCH, SESSION_ID, run_git
+
+import commons.runtime_run_join_state as join_state
+from commons.runtime_errors import CmocError
+from commons.runtime_git import head_commit
+from commons.runtime_run_lifecycle import EditingRunContext, commit_work_unit
+
+
+@pytest.fixture
+def imported_record(committed_repository):
+    root = committed_repository
+    baseline = head_commit(root)
+    (root / "result.txt").write_text("prepared result\n")
+    prepared = commit_work_unit(root, "prepared result")
+    tree = join_state.tree_id(root, prepared)
+    imported = run_git(
+        root, "commit-tree", tree, "-p", baseline, "-p", prepared, "-m", "import"
+    ).stdout.strip()
+    run_git(root, "branch", SESSION_BRANCH, imported)
+    # 照合は保存済み成果と session 履歴を使い、削除済み run 資源を必要としない。
+    context = EditingRunContext(
+        repo=root,
+        session_worktree=root,
+        session_id=SESSION_ID,
+        state_path=root / "state.json",
+        session_branch=SESSION_BRANCH,
+        session_fork_commit=baseline,
+        kind="realization_apply",
+        run_branch=RUN_BRANCH,
+        run_fork_commit=baseline,
+        run_worktree=root / "removed-run",
+    )
+    return join_state.JoinRecord(
+        context,
+        prepared,
+        session_head=baseline,
+        prepared_run_head=prepared,
+        imported=True,
+        join_commit=imported,
+        session_commit=imported,
+        session_tree=tree,
+    )
+
+
+@pytest.mark.parametrize("noop", [False, True])
+def test_import_confirmation_batches_metadata_and_rechecks_reachability(
+    imported_record, monkeypatch, noop
+):
+    record = imported_record
+    root = record.context.repo
+    if noop:
+        record = replace(
+            record,
+            session_commit=record.prepared_run_head,
+            session_head=record.prepared_run_head,
+            join_commit=None,
+        )
+    queries = Mock(wraps=join_state.run_git)
+    monkeypatch.setattr(join_state, "run_git", queries)
+
+    assert join_state.confirm_import(record)
+    assert 0 < queries.call_count <= 2
+    # 成功済みの判定を持ち越さず、session ref の変更を次回の照合で拒否する。
+    run_git(root, "update-ref", SESSION_BRANCH, record.context.run_fork_commit)
+    with pytest.raises(CmocError, match="取り込み成果を確認できません"):
+        join_state.confirm_import(record)
+
+
+def test_import_confirmation_rejects_inconsistent_receipt(imported_record):
+    record = imported_record
+    baseline = record.context.run_fork_commit
+    mismatches = [
+        {"session_tree": join_state.tree_id(record.context.repo, baseline)},
+        {"prepared_run_head": baseline},
+        {"session_head": record.prepared_run_head},
+        {"join_commit": baseline},
+        {"join_commit": None},
+        {"session_commit": None},
+        {"session_commit": record.session_tree},
+        {"prepared_run_head": record.session_tree},
+    ]
+    for mismatch in mismatches:
+        with pytest.raises(CmocError):
+            join_state.confirm_import(replace(record, **mismatch))
+
+
+@pytest.mark.parametrize("mismatch", [None, "tree", "parent_order"])
+def test_missing_receipt_checks_candidate_tree_and_parents(
+    imported_record, monkeypatch, mismatch
+):
+    record = imported_record
+    root = record.context.repo
+    imported = record.join_commit
+    if mismatch is not None:
+        tree = record.session_tree
+        parents = [record.session_head, record.prepared_run_head]
+        if mismatch == "tree":
+            tree = join_state.tree_id(root, record.session_head)
+        else:
+            parents.reverse()
+        candidate = run_git(
+            root,
+            "commit-tree",
+            tree,
+            "-p",
+            parents[0],
+            "-p",
+            parents[1],
+            "-m",
+            "different import",
+        ).stdout.strip()
+        run_git(root, "update-ref", SESSION_BRANCH, candidate)
+    record = replace(
+        record, imported=False, join_commit=None, session_commit=None, session_tree=None
+    )
+    # durable 保存と CLI の復旧は test_editing_run_cli.py に残す。
+    save = Mock()
+    monkeypatch.setattr(record, "save", save)
+    queries = Mock(wraps=join_state.run_git)
+    monkeypatch.setattr(join_state, "run_git", queries)
+
+    assert join_state.confirm_import(record) is (mismatch is None)
+    assert 0 < queries.call_count <= 2
+    if mismatch is None:
+        assert record.imported
+        assert record.join_commit == record.session_commit == imported
+        assert record.session_tree == imported_record.session_tree
+        save.assert_called_once_with()
+    else:
+        assert not record.imported
+        assert (
+            record.join_commit is record.session_commit is record.session_tree is None
+        )
+        save.assert_not_called()

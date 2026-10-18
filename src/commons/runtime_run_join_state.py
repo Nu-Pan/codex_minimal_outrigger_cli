@@ -256,9 +256,25 @@ def confirm_import(record: JoinRecord) -> bool:
             or record.session_head is None
         ):
             raise CmocError("join の取り込み記録が不完全です。", [], "")
+        # 同じ immutable commit の tree と親を、照合ごとに一括で取り直す。
+        commits = run_git(
+            [
+                "log",
+                "--no-walk=unsorted",
+                "--format=%H %T %P",
+                record.session_commit,
+                record.prepared_run_head,
+            ],
+            context.repo,
+        ).stdout.splitlines()
+        metadata = {
+            fields[0]: fields[1:] for line in commits if (fields := line.split())
+        }
         if (
-            tree_id(context.repo, record.session_commit) != record.session_tree
-            or tree_id(context.repo, record.prepared_run_head) != record.session_tree
+            record.session_commit not in metadata
+            or record.prepared_run_head not in metadata
+            or metadata[record.session_commit][0] != record.session_tree
+            or metadata[record.prepared_run_head][0] != record.session_tree
             or run_git(
                 [
                     "merge-base",
@@ -277,9 +293,9 @@ def confirm_import(record: JoinRecord) -> bool:
                 record.session_commit == record.session_head == record.prepared_run_head
             )
         else:
-            valid = record.join_commit == record.session_commit and run_git(
-                ["show", "-s", "--format=%P", record.join_commit], context.repo
-            ).stdout.split() == [record.session_head, record.prepared_run_head]
+            valid = record.join_commit == record.session_commit and metadata[
+                record.session_commit
+            ][1:] == [record.session_head, record.prepared_run_head]
         if not valid:
             raise CmocError("join の取り込み履歴と基準が一致しません。", [], "")
         return True
@@ -287,28 +303,24 @@ def confirm_import(record: JoinRecord) -> bool:
         return False
     commits = run_git(
         [
-            "rev-list",
+            "log",
             "--first-parent",
-            "--parents",
+            "--format=%H %T %P",
             f"{record.session_head}..{context.session_branch}",
         ],
         context.repo,
     ).stdout.splitlines()
-    # 親を履歴と一括取得し、後続 session commit ごとの process 起動を避ける。
+    # 親と tree を履歴と一括取得し、候補ごとの process 起動を避ける。
     candidates = [
-        fields[0]
+        (fields[0], fields[1])
         for line in commits
-        if (fields := line.split())[1:]
+        if (fields := line.split())[2:]
         == [record.session_head, record.prepared_run_head]
     ]
     if not candidates:
         return False
     prepared_tree = tree_id(context.repo, record.prepared_run_head)
-    matches = [
-        commit
-        for commit in candidates
-        if tree_id(context.repo, commit) == prepared_tree
-    ]
+    matches = [commit for commit, tree in candidates if tree == prepared_tree]
     if len(matches) > 1:
         raise CmocError("join の取り込み成立を一意に確認できません。", [], "")
     if not matches:
