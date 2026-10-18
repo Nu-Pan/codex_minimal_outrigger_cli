@@ -1,5 +1,9 @@
 """feedback artifact と mutable state の durability・再保存を検証する。
 
+同期の順序・失敗・再試行の検査では、実 fd と file 内容を観測し、ディスク同期を待たない。
+実 fsync との結合は、残存 temporary・並行保存の正常系と test_feedback.py の
+collector 受理・後続 wave の publication 検査に残す。
+
 対応する oracle file:
 
 - `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
@@ -29,7 +33,6 @@ def test_mutable_write_flushes_before_publication_and_preserves_failure_state(
     content = store.canonical_json_bytes(value)
     path.write_bytes(previous)
     events = []
-    real_fsync = os.fsync
 
     def fsync(fd):
         metadata = os.fstat(fd)
@@ -40,7 +43,6 @@ def test_mutable_write_flushes_before_publication_and_preserves_failure_state(
         assert path.read_bytes() == (previous if kind == "file" else content)
         if kind == failure:
             raise OSError("injected flush failure")
-        real_fsync(fd)
 
     monkeypatch.setattr(os, "fsync", fsync)
 
@@ -62,7 +64,7 @@ def test_immutable_write_flushes_new_data_and_reuses_published_inode(
     content = store.canonical_json_bytes({"evidence": "確認した内容"})
     events = []
     temporary_reads = []
-    real_fsync, real_rename = os.fsync, os.rename
+    real_rename = os.rename
     real_read, real_open = Path.read_bytes, Path.open
 
     def fsync(fd):
@@ -72,7 +74,6 @@ def test_immutable_write_flushes_new_data_and_reuses_published_inode(
             assert not path.exists()
         else:
             assert path.read_bytes() == content
-        real_fsync(fd)
 
     def rename(source, destination):
         assert events == ["file"]
@@ -184,7 +185,6 @@ def test_immutable_write_retries_flush_failure(tmp_path, monkeypatch, failure):
     path = tmp_path / "record.json"
     content = b"immutable\n"
     failed = False
-    real_fsync = os.fsync
     events = []
 
     def fsync(fd):
@@ -194,7 +194,6 @@ def test_immutable_write_retries_flush_failure(tmp_path, monkeypatch, failure):
         if not failed and kind == failure:
             failed = True
             raise OSError("injected flush failure")
-        real_fsync(fd)
 
     monkeypatch.setattr(os, "fsync", fsync)
     with pytest.raises(OSError, match="injected flush failure"):
