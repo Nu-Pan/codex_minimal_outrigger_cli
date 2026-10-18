@@ -287,6 +287,10 @@ def test_shared_structured_output_failures_keep_feedback_kind_and_call_ids(
     assert len(diagnostics) == 2
     assert {event["agent_call_kind"] for event in diagnostics} == {"realization_edit"}
     assert len({event["agent_call_id"] for event in diagnostics}) == 2
+    # 分類検査では実ディスクの同期を待たない。同期順序・失敗は
+    # test_feedback_store.py、実同期との結合は test_feedback.py の
+    # repairs_sequential_waves_and_preserves_late_intake に残す。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
     for event in diagnostics:
         invocation.detect_event(event, logger.path)
     observations = [
