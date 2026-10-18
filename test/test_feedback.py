@@ -2909,10 +2909,14 @@ def test_empty_report_publishes_current_generation(
         "run_codex_exec",
         lambda *_args, **_kwargs: pytest.fail("empty report must not call Codex"),
     )
-    # journal 作成を含む終了処理全体で、cleanup manifest の重複検証を検出する。
+    # journal 作成を含む終了処理全体で、cleanup manifest と初期 state の重複読込を検出する。
     finish = recovery_module.finish_feedback_run
     original_read = Path.read_bytes
+    original_read_text = Path.read_text
+    save_invocation = feedback_report_module.save_feedback_invocation_report
     cleanup_reads = []
+    session_reads = []
+    invocation_saves = []
 
     def finish_with_read_count(context, manifest, result):
         manifest_path = feedback_state_module.report_cut_manifest_path(
@@ -2924,8 +2928,24 @@ def test_empty_report_publishes_current_generation(
                 cleanup_reads.append(candidate)
             return original_read(candidate)
 
+        def read_text(candidate, *args, **kwargs):
+            if candidate == context.state_path:
+                session_reads.append(candidate)
+            return original_read_text(candidate, *args, **kwargs)
+
+        def save(*args, **kwargs):
+            if not invocation_saves:
+                # identity 検証と state_before は同じ lock 内の snapshot を使う。
+                assert session_reads == [context.state_path]
+            invocation_saves.append(True)
+            return save_invocation(*args, **kwargs)
+
         with monkeypatch.context() as finalization_patch:
             finalization_patch.setattr(Path, "read_bytes", read)
+            finalization_patch.setattr(Path, "read_text", read_text)
+            finalization_patch.setattr(
+                feedback_report_module, "save_feedback_invocation_report", save
+            )
             return finish(context, manifest, result)
 
     monkeypatch.setattr(recovery_module, "finish_feedback_run", finish_with_read_count)
