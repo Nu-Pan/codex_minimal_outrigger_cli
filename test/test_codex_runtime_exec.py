@@ -11,6 +11,7 @@ from _codex_support import (
     setup_codex_home,
 )
 from _command_support import write_python_executable
+from oracle.other import path_model as path_model_module
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_exec as exec_module
@@ -109,15 +110,19 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
 
 # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output(
-    cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capfd: pytest.CaptureFixture[str],
     nonpersistent_codex_ids: None,
 ) -> None:
     """provider・path policy の受け渡しと schema-less 出力の読み取りを検証する。"""
-    # schema-less exec は履歴を参照しない。root 探索と Fake CLI の書き込み先だけ用意する。
-    root = cli_repository
+    # Git/cwd の結合は test_codex_runtime_paths.py に残し、ここでは探索結果だけを渡す。
+    # 実 process の argv・stdin・env と log 保存は製品経路を通す。
+    root = tmp_path / "repo"
+    root.mkdir()
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
+    )
     (root / "oracle").mkdir()
     # .agents の実在 path を権限設定へ注入しない検証も同じ REPO_WRITE の起動で行う。
     agents_file = root / ".agents" / "nested" / "instructions.md"
@@ -132,7 +137,7 @@ def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
-    # 同じ起動で不正 UTF-8 の保存・未解析・置換文字も検査し、別の Git・log 準備を省く。
+    # 同じ起動で不正 UTF-8 の保存・未解析・置換文字も検査し、別の log 準備を省く。
     output_bytes = b"done\n\xff"
     write_python_executable(
         bin_dir / "codex",
@@ -158,7 +163,7 @@ def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     config = CmocConfig()
-    # provider 設定の受け渡しも同じ起動で検査し、CLI と Git の準備を重複させない。
+    # provider 設定の受け渡しも同じ起動で検査し、CLI の準備を重複させない。
     # 既定 provider と mode ごとの変換は test_runtime_codex_profile.py で検証する。
     config.codex.model_providers["local.provider"] = CodexModelProviderConfig(
         {
