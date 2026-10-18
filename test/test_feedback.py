@@ -3048,7 +3048,7 @@ def test_empty_report_publishes_current_generation(
     )
 
 
-@pytest.mark.usefixtures("feedback_without_transport")
+@pytest.mark.usefixtures("feedback_without_transport", "nonpersistent_feedback_ids")
 def test_feedback_preconditions_preserve_existing_changes_and_raw(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
@@ -3057,6 +3057,10 @@ def test_feedback_preconditions_preserve_existing_changes_and_raw(
     # doctor の修復・公開 session fork との結合は後続 wave test に残す。
     # ここでは準備済み session を使い、doctor 成功後の事前条件と保持を検査する。
     root, session_branch, _state_path = ready_content_session
+    # 採番の永続性は test_runtime_ids.py、同期順序・失敗は test_feedback_store.py、
+    # 実同期との結合は collector 受理と後続 wave test に残す。
+    # 拒否前後の write・rename・raw 本文・Git 差分の検査は実行する。
+    monkeypatch.setattr(os, "fsync", lambda _fd: None)
     doctor = Mock()
     monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", doctor)
     run_git(root, "switch", "-c", "outside-session")
