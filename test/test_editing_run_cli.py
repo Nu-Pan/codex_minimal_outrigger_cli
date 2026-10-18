@@ -803,18 +803,58 @@ def test_realization_apply_automatically_joins_changes_and_noop(
 
 
 @pytest.mark.parametrize("run_state", ["joinable", "error"])
-@pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
 @pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
+@pytest.mark.parametrize("stored_running_run", ["realization_apply"], indirect=True)
 def test_apply_join_hook_selects_diff_base(
+    stored_running_run: EditingRunContext,
+    monkeypatch: pytest.MonkeyPatch,
+    run_state: str,
+    has_previous_apply: bool,
+) -> None:
+    """取り込み確認後の hook は、既存値の有無によらず開始時 state で更新する。"""
+    # 既存値は merge 準備に使われず、取り込み後の hook で初めて参照する。
+    # 実 Git の merge/no-op と CLI の state 初期化・report・cleanup は次の test に残す。
+    context = replace(stored_running_run, state_before=run_state)
+    state = load_state_for_branch(context.repo, context.session_branch)[2]
+    state.run.state = run_state
+    previous = context.session_fork_commit if has_previous_apply else None
+    state.session.last_joined_apply_fork_commit = previous
+    write_state(context.state_path, state)
+    record = join_state_module.JoinRecord(context, "original-run-head", imported=True)
+    monkeypatch.setattr(run_join_module, "join_record", lambda _context: record)
+    # Git による取り込み成立の確認だけを境界で置換し、hook と永続化は実行する。
+    confirmed_import = Mock(return_value=True)
+    monkeypatch.setattr(run_join_module, "confirm_import", confirmed_import)
+
+    _commit, hook, _sync_commit, last_apply, _resolution = run_join_module.merge_run(
+        context, state, [], "session-head"
+    )
+
+    confirmed_import.assert_called_with(record)
+    expected = context.run_fork_commit if run_state == "joinable" else previous
+    assert last_apply == expected
+    saved = _state(context.state_path)
+    assert saved["session"]["last_joined_apply_fork_commit"] == expected
+    assert saved["run"] == state.to_dict()["run"]
+    expected_hook = f"session.last_joined_apply_fork_commit {'updated' if run_state == 'joinable' else 'preserved'}"
+    assert record.hook == hook == expected_hook
+    stored_record = json.loads(
+        (context.state_path.parent / "join" / f"{context.session_id}.json").read_text()
+    )
+    assert stored_record["hook"] == hook
+
+
+@pytest.mark.parametrize("run_state", ["joinable", "error"])
+@pytest.mark.parametrize("has_run_change", [False, True], ids=["no-op", "merge"])
+def test_apply_join_hook_runs_after_merge_or_noop(
     join_after_preprocess: tuple[Path, str, Path],
     run_state: str,
     has_run_change: bool,
-    has_previous_apply: bool,
 ) -> None:
-    """明示 join は取り込み時の state だけで比較始点の更新資格を決める。"""
+    """明示 join は merge/no-op の両方で hook・state 初期化・report・回収を行う。"""
     root, _branch, state_path = join_after_preprocess
     state = SessionState.from_dict(_state(state_path))
-    previous = state.session.session_fork_commit if has_previous_apply else None
+    previous = state.session.session_fork_commit
     state.session.last_joined_apply_fork_commit = previous
     write_state(state_path, state)
     # 比較始点と fork を区別するだけなので、同期対象を増やさず HEAD を進める。
@@ -846,7 +886,7 @@ def test_apply_join_preserves_diff_base_for_error_run(
     join_after_preprocess: tuple[Path, str, Path],
 ) -> None:
     """error run の成果物を merge しても、未追従の oracle 変更を比較範囲に残す。"""
-    # hook の全 8 条件は軽量 test、成功 merge/no-op は fork→join test に残す。
+    # 既存値の有無は hook の条件表、実 merge/no-op は上記の CLI test に残す。
     # doctor と join の結合も fork→join test に残し、ここでは修復・索引同期を重ねない。
     # 既存の比較始点と異なる fork commit を用意し、未追従の変更が残るか確かめる。
     root, _session_branch, state_path = join_after_preprocess
