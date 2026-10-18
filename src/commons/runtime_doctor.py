@@ -317,10 +317,8 @@ def run_doctor_preprocess(
                     include_gu_ignore = True
                     original_index_path = _copy_current_index(repair_root)
                     original_indexes.append((repair_root, original_index_path))
-                    preserved_runtime_paths = (
-                        _preexisting_runtime_paths(repair_root, original_index_path)
-                        if include_config
-                        else set()
+                    preserved_paths = _preexisting_repair_paths(
+                        repair_root, original_index_path, include_config=include_config
                     )
                     # ensure_cmoc_ignored と _ensure_agents_tracked は通常 index を
                     # 変更するため、後続処理の失敗時も元の staged 状態へ戻せるようにする。
@@ -336,7 +334,7 @@ def run_doctor_preprocess(
                             agents_gitkeep_added,
                             include_config,
                             include_gu_ignore,
-                            preserved_runtime_paths,
+                            preserved_paths,
                         )
                     )
 
@@ -471,16 +469,15 @@ def run_doctor_preprocess(
                 agents_gitkeep_added,
                 include_config,
                 include_gu_ignore,
-                preserved_runtime_paths,
+                preserved_paths,
             ) in repairs:
                 restored_index_path: Path | None = None
                 try:
                     restored_index_path = _restored_index(
                         repair_root,
-                        original_index_path=original_index_path,
                         include_config=include_config,
                         include_gu_ignore=include_gu_ignore,
-                        preserved_runtime_paths=preserved_runtime_paths,
+                        preserved_paths=preserved_paths,
                     )
                     with (
                         defer_recovery_interruption()
@@ -494,7 +491,7 @@ def run_doctor_preprocess(
                             agents_gitkeep_added,
                             include_config=include_config,
                             include_gu_ignore=include_gu_ignore,
-                            preserved_runtime_paths=preserved_runtime_paths,
+                            preserved_paths=preserved_paths,
                         )
                         # commit と index 復元の成功後を、次の rollback 境界とする。
                         if repair_root in preparation_snapshots:
@@ -679,15 +676,21 @@ def _validate_tracked_runtime_files(root: Path) -> None:
         )
 
 
-def _preexisting_runtime_paths(root: Path, index_path: Path) -> set[str]:
-    """doctor 開始前から差分がある runtime path を repair 対象から外す。"""
+def _preexisting_repair_paths(
+    root: Path, index_path: Path, *, include_config: bool = True
+) -> set[str]:
+    """開始前の runtime 差分と .gitignore の staged deletion を一括で保存対象にする。"""
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     # config は人間が編集するため、既存の staged/unstaged 変更を doctor の
     # repair commit に混ぜない。state も同じ一時 index で扱うため同じ境界にする。
-    paths = [
-        str(config_path(root).relative_to(root)),
-        str(refactor_state_path(root).relative_to(root)),
-    ]
+    paths = (
+        {
+            str(config_path(root).relative_to(root)),
+            str(refactor_state_path(root).relative_to(root)),
+        }
+        if include_config
+        else set()
+    )
     # staged/unstaged を同時に調べ、退避 index の stat refresh は保存しない。
     # rename の元は独立した削除として扱い、未追跡ファイルは列挙しない。
     records = _run_git_with_index(
@@ -699,14 +702,19 @@ def _preexisting_runtime_paths(root: Path, index_path: Path) -> set[str]:
             "--untracked-files=no",
             "--no-renames",
             "--",
-            *paths,
+            ".gitignore",
+            *sorted(paths),
         ],
         root,
         index_path,
     ).stdout.split("\0")
-    # 通常の staged deletion (D ) だけは entry がない。DD/DU は conflict entry を保つ。
+    # runtime の通常削除 (D ) は修復し、DD/DU の conflict entry は保つ。
+    # .gitignore は修復規則を合成するが、利用者の staged deletion には合成しない。
     return {
-        record[3:] for record in records if record[:2] != "D " and record[3:] in paths
+        record[3:]
+        for record in records
+        if (record[:2] != "D " and record[3:] in paths)
+        or (record[:2] == "D " and record[3:] == ".gitignore")
     }
 
 
@@ -718,7 +726,7 @@ def _commit_doctor_repairs(
     *,
     include_config: bool,
     include_gu_ignore: bool,
-    preserved_runtime_paths: set[str],
+    preserved_paths: set[str],
 ) -> None:
     """doctorの修復差分をcommitし、呼び出し元のGit indexを復元する。"""
     try:
@@ -727,7 +735,7 @@ def _commit_doctor_repairs(
             agents_gitkeep_added,
             include_config=include_config,
             include_gu_ignore=include_gu_ignore,
-            preserved_runtime_paths=preserved_runtime_paths,
+            preserved_paths=preserved_paths,
         )
     except BaseException:
         _restore_index(root, original_index_path)
@@ -750,7 +758,7 @@ def _commit_doctor_repairs_from_head(
     *,
     include_config: bool,
     include_gu_ignore: bool,
-    preserved_runtime_paths: set[str],
+    preserved_paths: set[str],
 ) -> None:
     """HEAD起点の一時indexでdoctor修復だけをcommitする。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -767,7 +775,7 @@ def _commit_doctor_repairs_from_head(
         _stage_tracked_runtime_repair(
             root,
             index_path,
-            skip_paths=preserved_runtime_paths,
+            skip_paths=preserved_paths,
             include_config=include_config,
             include_gu_ignore=include_gu_ignore,
         )
@@ -804,10 +812,9 @@ def _stage_agents_gitkeep_repair(
 def _restored_index(
     root: Path,
     *,
-    original_index_path: Path,
     include_config: bool,
     include_gu_ignore: bool,
-    preserved_runtime_paths: set[str],
+    preserved_paths: set[str],
 ) -> Path:
     """doctor 修復を合成した一時 index file を作る。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -817,15 +824,13 @@ def _restored_index(
     index_path = _copy_current_index(root)
     try:
         # 修復 commit は HEAD を更新するが、復元 index では利用者の staged deletion を保つ。
-        if include_gu_ignore and not _is_staged_deletion_of_head_entry(
-            root, original_index_path, ".gitignore"
-        ):
+        if include_gu_ignore and ".gitignore" not in preserved_paths:
             _stage_gitignore_repair_from_index(root, index_path)
         if include_config:
             _stage_tracked_runtime_repair(
                 root,
                 index_path,
-                skip_paths=preserved_runtime_paths,
+                skip_paths=preserved_paths,
             )
         return index_path
     except BaseException:
@@ -970,32 +975,6 @@ def _stage_tracked_runtime_repair(
             content,
             mode=mode,
         )
-
-
-def _is_staged_deletion_of_head_entry(
-    root: Path,
-    index_path: Path,
-    path: str,
-) -> bool:
-    """元 index が HEAD の tracked path を staged deletion にしているか返す。"""
-    # HEAD と退避 index の削除差分を一度に調べる。rename の元は削除とし、
-    # intent-to-add や conflict の entry が残る path は削除扱いにしない。
-    return bool(
-        _run_git_with_index(
-            [
-                "diff",
-                "--cached",
-                "--no-renames",
-                "--ita-visible-in-index",
-                "--diff-filter=D",
-                "--name-only",
-                "--",
-                path,
-            ],
-            root,
-            index_path,
-        ).stdout.strip()
-    )
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:

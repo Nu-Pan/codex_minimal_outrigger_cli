@@ -996,10 +996,10 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
         *,
         include_config: bool,
         include_gu_ignore: bool,
-        preserved_runtime_paths: set[str],
+        preserved_paths: set[str],
     ) -> None:
         """repair commit の失敗を再現する。"""
-        del include_config, include_gu_ignore, preserved_runtime_paths
+        del include_config, include_gu_ignore, preserved_paths
         raise RuntimeError("repair commit failure")
 
     monkeypatch.setattr(doctor_module, "_commit_doctor_repairs_from_head", fail_commit)
@@ -1226,7 +1226,7 @@ def test_preexisting_runtime_paths_use_original_index(cli_repository, change):
     try:
         # 現在 index が変わっても、前処理開始時の退避内容を使う。
         run_git(root, "rm", "--cached", "-f", "--ignore-unmatch", "--", *paths)
-        assert doctor_module._preexisting_runtime_paths(root, index_path) == expected
+        assert doctor_module._preexisting_repair_paths(root, index_path) == expected
     finally:
         index_path.unlink(missing_ok=True)
 
@@ -1253,7 +1253,7 @@ def test_preexisting_runtime_paths_preserves_unmerged_entries(cli_repository, st
             ["update-index", "--index-info"], root, index_path, input_text=entries
         )
         before = index_path.read_bytes()
-        assert doctor_module._preexisting_runtime_paths(root, index_path) == {relative}
+        assert doctor_module._preexisting_repair_paths(root, index_path) == {relative}
         assert index_path.read_bytes() == before
     finally:
         index_path.unlink(missing_ok=True)
@@ -1579,19 +1579,30 @@ def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
     assert run_git(root, "diff", "--name-status").stdout.strip() == ""
 
 
-def test_staged_deletion_check_preserves_saved_index_with_one_git_query(
+def test_repair_paths_share_one_query_and_preserve_saved_index(
     cli_repository, tmp_path, monkeypatch
 ):
-    """退避 index の削除だけを一度の問い合わせで判定し、index 自体は変更しない。"""
-    # 削除判定の基準となる ignore rule だけで HEAD を作る。
+    """runtime 差分と ignore 削除を一度に判定し、退避 index 自体は変更しない。"""
+    # 全対象を同じ index に置き、別 root の修復では runtime を保存対象に含めない。
     root = cli_repository
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
-    run_git(root, "add", ".gitignore")
-    run_git(root, "commit", "-m", "track ignore rule")
+    config = doctor_module.config_path(root)
+    state = doctor_module.refactor_state_path(root)
+    runtime_paths = {str(path.relative_to(root)) for path in (config, state)}
+    for path in (config, state):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n")
+    run_git(root, "add", "-f", ".gitignore", *sorted(runtime_paths))
+    run_git(root, "commit", "-m", "track repair targets")
+    config.write_text('{"staged": true}\n')
+    run_git(root, "add", "-f", str(config.relative_to(root)))
+    state.write_text('{"unstaged": true}\n')
     blob = run_git(root, "rev-parse", "HEAD:.gitignore").stdout.strip()
     original_index = (root / ".git/index").read_bytes()
     # 通常 index は退避 index と区別し、判定が渡された index を読むことも確認する。
-    run_git(root, "update-index", "--force-remove", ".gitignore")
+    run_git(
+        root, "update-index", "--force-remove", ".gitignore", *sorted(runtime_paths)
+    )
     original_run = doctor_module.subprocess.run
 
     # HEAD と repository の準備は一度にし、各ケースでは退避 index だけを作り替える。
@@ -1618,22 +1629,29 @@ def test_staged_deletion_check_preserves_saved_index_with_one_git_query(
                 input_text=f"100644 {blob} 1\t.gitignore\n100644 {blob} 3\t.gitignore\n",
             )
         before = index_path.read_bytes()
-        git_calls = 0
+        for include_config in (False, True):
+            git_calls = 0
 
-        def count_git_calls(argv, *args, **kwargs):
-            nonlocal git_calls
-            if argv[0] == "git":
-                git_calls += 1
-            return original_run(argv, *args, **kwargs)
+            def count_git_calls(argv, *args, **kwargs):
+                nonlocal git_calls
+                if argv[0] == "git":
+                    git_calls += 1
+                return original_run(argv, *args, **kwargs)
 
-        with monkeypatch.context() as observed:
-            observed.setattr(doctor_module.subprocess, "run", count_git_calls)
-            assert doctor_module._is_staged_deletion_of_head_entry(
-                root, index_path, ".gitignore"
-            ) is (change in {"delete", "rename"}), change
+            expected = runtime_paths.copy() if include_config else set()
+            if change in {"delete", "rename"}:
+                expected.add(".gitignore")
+            with monkeypatch.context() as observed:
+                observed.setattr(doctor_module.subprocess, "run", count_git_calls)
+                assert (
+                    doctor_module._preexisting_repair_paths(
+                        root, index_path, include_config=include_config
+                    )
+                    == expected
+                ), (change, include_config)
 
-        assert git_calls <= 1, change
-        assert index_path.read_bytes() == before, change
+            assert git_calls <= 1, (change, include_config)
+            assert index_path.read_bytes() == before, (change, include_config)
 
 
 @pytest.mark.usefixtures("doctor_without_index_sync")
