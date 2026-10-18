@@ -2,7 +2,7 @@
 
 ## 採用結果
 
-`.gitignore` から permission profile を動的に生成する案は採用しなかった。現行の制限は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「permission profile の不使用と動的生成禁止」を正本とする。
+`.gitignore` から permission profile を動的に生成する案は採用しなかった。現行の制限は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「permission profile の不使用と動的生成禁止」を正本とする。
 
 ## やりたかったこと
 

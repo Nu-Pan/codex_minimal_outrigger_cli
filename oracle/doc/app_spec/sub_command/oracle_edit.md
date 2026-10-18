@@ -20,7 +20,7 @@
 
 editor input handoff を含むエディタ入力は、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」が定める共通 lifecycle を使用する。editor 終了後に抽出して確定したオリジナルのユーザー指示から、両回で使用する完全 prompt と `AgentCallParameter` を一度だけ構築する。
 
-正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ委譲する。構築済み prompt の受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt の構築と受け渡し」を正本とする。
+正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_main_launch_exec_parameter` へ委譲する。構築済み prompt の受け渡しは、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「prompt の構築と受け渡し」、非対話 call への保存・入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt の保存と stdin 入力」を正本とする。
 
 handoff を受けた場合も、入力確定後は本書の「実行順序」に従って編集へ進む。送信元 Codex process の終了や最終結果の確定を開始条件にしない。
 
@@ -49,7 +49,7 @@ prompt は両回に共通とし、実行回に依存する役割や前提を設�
 ## agent call の構成
 
 - 各回は、別の新しい Codex session に対する `codex exec` の初回 call とする。2 回目を、1 回目の session に対する `codex exec resume` として起動してはならない。
-- 2 回の agent call は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従い、同じ親の実行 ID に対応付ける。各回を独立して識別・管理するため、agent call ID、Codex call ID、session ID、ログ保存先、および call-scoped な管理情報を分ける。識別とログの共通規約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」「Codex CLI 呼び出し情報の保存」「Codex session ID」を参照する。
+- 2 回の agent call は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従い、同じ親の実行 ID に対応付ける。各回を独立して識別・管理するため、agent call ID、Codex call ID、session ID、ログ保存先、および call-scoped な管理情報を分ける。識別とログの共通規約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」「Codex CLI 呼び出し情報の保存」「Codex session ID」を参照する。
 - 各 agent call 内の retry、quota または一時障害の回復待ち後の再開、および失敗処理には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」を適用し、正常系の 2 回実行とは区別する。
 - 実行パラメータを決めるための追加 agent call は行わない。
 
@@ -58,9 +58,9 @@ prompt は両回に共通とし、実行回に依存する役割や前提を設�
 - 各 agent は、ユーザー指示、現在の関連 oracle file、および oracle file に関する現在の Git 未コミット差分を照合し、目標状態との差を判断する。
 - 作業範囲は目標状態の達成に必要な関連仕様のまとまりとし、指示に明記された箇所や既に差分がある箇所だけに限定せず、必要な追加・削除・統合・再構成を選べるようにする。ユーザー指示が要求する人間意図と実装差を許容しない境界を満たし、対象外の既存仕様の意味を維持する。
 - 未コミット差分は起動前からの変更も含み得る判断材料であり、完成済みの成果や今回の呼び出しだけに由来する成果とはみなさない。
-- 各 agent は、`{{work-root}}` の Git worktree で、staging area、working tree、および Git 未追跡の新規 oracle file の状態を含めて、現在の oracle file と未コミットの変更を取得する。参照入力の渡し方と取得失敗の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
+- 各 agent は、`{{work-root}}` の Git worktree で、staging area、working tree、および Git 未追跡の新規 oracle file の状態を含めて、現在の oracle file と未コミットの変更を取得する。参照入力の渡し方と取得失敗の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「Git 差分の参照入力」に従う。
 - 完了条件は、関連する oracle file が目標状態を満たしていることとする。既に満たしていれば不必要に変更せず完了することを目指す。2 回目の追加変更、文字数の削減、または品質の向上は完了条件にしない。
-- oracle file と installed skill の共通判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」に従う。file access、oracle、routing などの共通 policy は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「caller 固有の objective」が定める責務分担に従って組み込む。
+- oracle file と installed skill の共通判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」に従う。file access、oracle、routing などの共通 policy は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「caller 固有の objective」が定める責務分担に従って組み込む。
 
 ## 実行順序
 
@@ -72,12 +72,12 @@ prompt は両回に共通とし、実行回に依存する役割や前提を設�
 6. 1 回目が成功した場合は、追加変更の有無にかかわらず 2 回目の編集 agent call を実行する。2 回目は、1 回目の編集結果が残った同じ worktree の現在状態を読む。1 回目が失敗した場合は、2 回目を開始しない。
 7. 最外側の `cmoc oracle edit` の primary report を保存して終了状態を確定し、共通の terminal result と Windows toast をそれぞれ 1 回だけ通知する。
 
-- 2 回の編集の間に、明示的な索引同期、自動 commit、または別の補完用 agent call を挟まない。各回の文書検索 MCP は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
+- 2 回の編集の間に、明示的な索引同期、自動 commit、または別の補完用 agent call を挟まない。各回の文書検索 MCP は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「文書検索 MCP」に従う。
 
 ## agent の編集境界
 
 - agent が編集する作業成果物は oracle file だけとする。realization file および `AGENTS.md` を編集させてはならない。
-- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「一時作業領域」に従う。
 - agent には `git add`、`git commit`、`git stash`、branch 切替、および worktree 操作を禁止する。
 - このサブコマンドの oracle file 編集権限によって、`cmoc oracle investigation` の file access 権限を拡張しない。
 

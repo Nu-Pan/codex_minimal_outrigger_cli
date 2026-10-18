@@ -52,7 +52,7 @@ terminal result の共通分類は、`{{cmoc-root}}/oracle/doc/app_spec/console_
 
 Codex が通知専用処理を直接呼び出し、TUI の agent turn の完了を「応答完了」として通知する。TUI の入力可能状態を保証する「入力待ち」の通知にはしない。起動管理側の終了待ちから独立して通知し、その通知処理を会話の追跡、移行確認、または起動成功の認定に使わない。
 
-通知専用処理は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の固定 session ID」で定める ID に対応する通知だけを対象とし、subagent の通知を除く。turn の識別と重複排除の範囲は、その TUI process invocation 内に限り、同じ turn の callback を複数回受け取っても通知は 1 回だけとする。
+通知専用処理は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「TUI の固定 session ID」で定める ID に対応する通知だけを対象とし、subagent の通知を除く。turn の識別と重複排除の範囲は、その TUI process invocation 内に限り、同じ turn の callback を複数回受け取っても通知は 1 回だけとする。
 
 ### 終了と取消
 

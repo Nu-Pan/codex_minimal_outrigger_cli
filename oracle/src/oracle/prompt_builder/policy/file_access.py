@@ -18,7 +18,7 @@ def build_file_access_policy(
         `None` は、有効な mode に共通 file access policy が存在しないことだけを表す。
 
     NOTE
-        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+        意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の
         「ファイルアクセス制限」を参照。
         sandbox の設定は non-goal である。
     """

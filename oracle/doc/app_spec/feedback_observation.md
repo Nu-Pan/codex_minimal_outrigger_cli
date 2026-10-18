@@ -8,7 +8,7 @@
 
 本節の報告義務は、reporter の提供を有効にした agent call に適用する。意図的な非提供は、提供が有効な call で reporter を利用できない障害とは区別する。
 
-提供判断、無効化対象への参照、prompt 注入の整合、および実効設定の管理は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。意図的に無効にした call に、報告義務や代替の報告経路を要求しない。
+提供判断、無効化対象への参照、prompt 注入の整合、および実効設定の管理は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「feedback reporter と collector context」に従う。意図的に無効にした call に、報告義務や代替の報告経路を要求しない。
 
 ### 報告基準
 
@@ -109,7 +109,7 @@ subcommand の識別情報には、サブコマンド名と、`{{cmoc-root}}/ora
 
 reporter の提供が有効な call では、同一 agent call の初回 call と Structured Output の correction call は、同じ agent call ID を使用する。Codex call ID と capability は、初回 call、correction call、および TUI process ごとに分ける。
 
-TUI 起動用の初回 exec と自動移行先 TUI の ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」に従う。collector の context と capability は各 process の call に登録し、最外側のサブコマンド名と実行 ID の共用を、agent call・Codex call の共用と混同しない。
+TUI 起動用の初回 exec と自動移行先 TUI の ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「TUI 起動と再開の call ID」に従う。collector の context と capability は各 process の call に登録し、最外側のサブコマンド名と実行 ID の共用を、agent call・Codex call の共用と混同しない。
 
 `cmoc resume` では、新しい実行 ID・agent call ID・Codex call ID に context と capability を登録し、サブコマンド名を `resume` とする。`agent_call_kind` は解決した TUI workload の種別を表し、呼び出し元のサブコマンド名とは区別する。Codex session ID や再開元の ID を、新しい観測の帰属に代用しない。再開前に受理済みの observation は、元の context に対応したまま保持する。
 

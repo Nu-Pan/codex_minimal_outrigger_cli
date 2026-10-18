@@ -69,7 +69,7 @@ Codex CLI 呼び出しには、実在の Codex CLI executable（Real Codex CLI�
 - 自動テストによる quota 消費を一律には禁止せず、テスト用 `CmocConfig` で選択される model provider の quota 消費を許容する
 - 実経路統合テストの仕様または pytest command へ、具体的な model provider または Model 名を固定してはならない
 - model provider に対する cmoc の責務境界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「cmoc の責務境界」を正本とし、実経路統合テストのために広げてはならない
-- quota 枯渇時の待機と再開を含む通常の Codex CLI 呼び出し規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` 呼び出し規約」を正本とする
+- 通常の Codex CLI の共通契約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「Codex CLI 共通呼び出し規約」、非対話 call の quota 枯渇時の待機と再開は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」を正本とする
 
 ## Fake Codex CLI
 
@@ -77,7 +77,7 @@ Fake Codex CLI は、Real Codex CLI の代わりに決定論的な応答を返�
 
 ### agent call の設定選択と固定
 
-設定の生成・検証は単体テスト、起動設定への反映は Fake Codex CLI を中心に、次を確認する。意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「回復確認 probe の設定例外」と、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」「Model provider、Model、Reasoning Effort」を正本とする。
+設定の生成・検証は単体テスト、起動設定への反映は Fake Codex CLI を中心に、次を確認する。意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「回復確認 probe の設定例外」と、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」「Model provider、Model、Reasoning Effort」を正本とする。
 
 | 検証対象 | 確認する結果 |
 |---|---|
@@ -109,6 +109,6 @@ TUI の設定確定時点は、次節の「TUI の二段階起動と公開 resum
 | 応答完了通知 | Codex から直接呼ばれる通知専用処理で、固定した ID だけを対象にし、別 ID・subagent・同じ turn の重複を除く。通知の準備・設定・送信失敗や欠落で TUI の起動・利用・主処理の結果を変更せず、再実行しない |
 | 排他 | 同じ `$CODEX_HOME`・同じ固定した session ID の競合を、初回からの移行中と公開 resume の検査から起動までを含めて防ぐ。process の終了確認前に使用を解放しない。セッション切り替えの追跡・禁止や切り替え先の排他を要求しない |
 
-意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「対象の適格性と会話選択」、および各節から参照するログ・設定・MCP・中断・通知仕様を正本とする。
+意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「TUI の新規起動と対話 resume」、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「対象の適格性と会話選択」、および各節から参照するログ・設定・MCP・中断・通知仕様を正本とする。
 
-Fake の状態は cmoc の分岐を検証するための入力であり、実 CLI に同じ API・event・callback が存在する証拠ではない。実 CLI の未検証事項は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「実装前に検証する TUI の外部契約」と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「実装前に検証する Codex CLI の外部契約」に従う。Real Codex CLI を使うテストの実行条件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」を変更しない。
+Fake の状態は cmoc の分岐を検証するための入力であり、実 CLI に同じ API・event・callback が存在する証拠ではない。実 CLI の未検証事項は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「実装前に検証する TUI の外部契約」と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「実装前に検証する Codex CLI の外部契約」に従う。Real Codex CLI を使うテストの実行条件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」を変更しない。

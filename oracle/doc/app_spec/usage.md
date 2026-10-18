@@ -63,6 +63,6 @@ cmoc resume exec_000010_2026-09-29_15-04
 
 元の TUI 種別は実行ログから自動判定される。入力エディタを経由せず、追加指示は再開した TUI で入力する。今回表示される新しい実行 ID も、終了後に次の `cmoc resume` に指定できる。
 
-再開する会話は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の固定 session ID」に従う。初回 exec の成功後に TUI の準備・起動が失敗した場合や、TUI が異常終了した場合も、下記の適格性を満たせば同じ入口で再開できる。元の prompt は再送せず、初回作業を繰り返さない。初回 exec 自体の失敗・取消は再開対象外とする。
+再開する会話は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「TUI の固定 session ID」に従う。初回 exec の成功後に TUI の準備・起動が失敗した場合や、TUI が異常終了した場合も、下記の適格性を満たせば同じ入口で再開できる。元の prompt は再送せず、初回作業を繰り返さない。初回 exec 自体の失敗・取消は再開対象外とする。
 
 `cmoc oracle edit` など非 TUI の実行 ID は拒否される。対象条件・ログ不足や未終了時の拒否・会話選択は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/resume.md` の「ログからの種別解決」「対象の適格性と会話選択」を参照する。ID の書式と採番は、`{{cmoc-root}}/oracle/doc/app_spec/id.md` の「ID のフォーマット」「採番と順序保証」を共用する。

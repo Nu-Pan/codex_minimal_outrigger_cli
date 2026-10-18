@@ -20,8 +20,8 @@ ID は `<プレフィックス>_<6桁の36進通番>_YYYY-MM-DD_HH-mm` 形式と
 | `exec` | 最外側のサブコマンド実行 | `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」 |
 | `sess` | cmoc の session | `{{cmoc-root}}/oracle/doc/app_spec/sub_command/session_fork.md` の「実行手順」と「`{{cmoc-session-branch}}` の命名規則」 |
 | `run` | 編集 run | `{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「共通開始処理」 |
-| `ac` | agent call | `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」 |
-| `cc` | Codex call | `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」 |
+| `ac` | agent call | `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」 |
+| `cc` | Codex call | `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」 |
 | `eit` | editor input の handoff target | `{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「handoff target」 |
 | `fbr` | feedback run | `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback run」 |
 | `fbg` | feedback の active generation | `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「active generation」 |

@@ -23,7 +23,7 @@ oracle file の下位概念は、正本として所有する事項で区別す�
 | realization file を扱う判断基準 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization.py` の `build_realization_policy` |
 | oracle file に対する realization file の適合性の共通基準 | `{{cmoc-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py` の `build_realization_findings_policy` |
 
-prompt literal に固有の役割、制限、および call 固有の実行時指示の優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「prompt literal の役割と制限」以降を参照する。
+prompt literal に固有の役割、制限、および call 固有の実行時指示の優先関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「prompt literal の役割と制限」「call 固有の実行時指示の優先関係」を参照する。
 
 ## 正本責務の重複禁止
 

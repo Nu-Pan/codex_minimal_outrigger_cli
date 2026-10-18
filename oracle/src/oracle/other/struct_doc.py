@@ -157,7 +157,7 @@ class SDPolicy:
 
     SDHeader 直下の単一要素として保持される事を想定している
 
-    例外の意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+    例外の意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の
     「SDPolicy の例外」を参照。
     """
 

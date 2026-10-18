@@ -12,7 +12,7 @@ class FileAccessMode(StrEnum):
     """cmoc 上の論理的なファイルアクセスモード
 
     各 mode の意味と sandbox 設定との責務分担は
-    `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+    `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の
     「ファイルアクセス制限」を正本とする。
     `build_file_access_policy` は一時作業領域の利用規定を含む正確な文面を構築する。
     """
@@ -29,7 +29,7 @@ class FileAccessMode(StrEnum):
 class TuiResumeTarget:
     """内部の自動移行と公開 resume に共用する検査済みの対話再開入力。
 
-    呼び出し管理側が、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md`
+    呼び出し管理側が、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md`
     の「検査済みの再開入力」に従って、経路ごとの適格性と環境を構築前に照合する。
     この型は検査結果を保持する入力であり、ログや process の検査は行わない。
     """
@@ -52,7 +52,7 @@ class AgentCallParameter:
     """
 
     # 呼び出し種別の正確な値は各 builder が指定する。
-    # 意味と用途は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」に従う。
+    # 意味と用途は `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」に従う。
     agent_call_kind: str
 
     # ファイルアクセスモード
@@ -74,17 +74,17 @@ class AgentCallParameter:
     enable_editor_input_handoff_mcp: bool = False
 
     # cmoc_document_search MCP server を呼び出し単位で有効化する。
-    # `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」を参照。
+    # `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「文書検索 MCP」を参照。
     enable_document_search_mcp: bool = False
 
     # feedback reporter の提供判断。完全 prompt を構築する場合も同じ値を渡す。
-    # `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+    # `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の
     # 「feedback reporter と collector context」を参照。
     enable_feedback_reporting: bool = True
 
     # 内部の自動移行と公開 resume の対話起動で使う外部 session ID。
     # 非対話 call の補正・回復には使用しない。
-    # 意味は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+    # 意味は `{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の
     # 「TUI の新規起動と対話 resume」を正本とする。
     tui_resume_session_id: str | None = None
 

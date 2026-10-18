@@ -42,8 +42,8 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
 
 ### Codex CLI の場合
 
-- `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「新規起動の二段階実行」に従う。新規入力の builder が返す完全 prompt とパラメータは初回 exec に使い、成功後は同じ builder に検査済み再開入力を渡して、初期 prompt のない TUI 起動パラメータを構築する
+- `{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「新規起動の二段階実行」に従う。新規入力の builder が返す完全 prompt とパラメータは初回 exec に使い、成功後は同じ builder に検査済み再開入力を渡して、初期 prompt のない TUI 起動パラメータを構築する
 - editor input handoff は初回 exec と TUI の両方で提供する。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
-- 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う
-- 共通呼び出し規約の適用範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」に従う
-- 管理対象の会話 ID は、同文書の「TUI の固定 session ID」に従う
+- 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「editor input handoff MCP」に従う
+- 共通呼び出し規約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「Codex CLI 共通呼び出し規約」に従う
+- 管理対象の会話 ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「TUI の固定 session ID」に従う

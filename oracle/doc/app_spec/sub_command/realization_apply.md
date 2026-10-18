@@ -17,7 +17,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 - 差分の始点は以下とする。
     - `session.last_joined_apply_fork_commit` が `null` でない場合は、その commit。
     - `null` の場合は `session.session_fork_commit`。
-- Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
+- Git 差分の参照入力は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「Git 差分の参照入力」に従う。
 - cmoc は、始点と終点の commit ID を確定して agent に渡す。agent は既存の cwd と `{{work-root}}` を用い、その repository で指定された両 commit 間の差分を Git から取得する。
 - 対象は、両端のいずれかで oracle file だった path とし、rename を考慮する。追加・削除と oracle 内外をまたぐ rename を含め、現在の oracle 配下だけを候補集合にしてはならない。
 - 上記に該当しない realization file、その他の非 oracle file の変更は追従対象外とする。
@@ -37,7 +37,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 - 本命 agent call 終了後に、別の agent call で作業を補完してはいけない。
 - installed skill の有無によって、追従要否、適合性、または完了の判定基準を変えてはいけない。
 - agent が変更する作業成果物は realization file だけとし、oracle file を変更してはならない。
-- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「一時作業領域」に従う。
 
 ## 想定内差分
 
@@ -76,7 +76,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 - report 生成時点で確定していない共通 run 項目、差分の始点 commit、Codex CLI の終了結果、または変更 path は、`null` または未実行として記録する。
 - 自動 join と必要な終了処理を終えて `ready` に戻った `natural_completion` は終了コード 0、`error` は非 0 とする。`joinable` への遷移だけでは正常終了しない。
 
-自動 join の競合解消 call を含め、feedback の収集には `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」を適用する。apply 固有の Structured Output field、終了後の発見用 agent call、または feedback 件数による終了コード変更を追加してはならない。詳細は `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」と「non-goal」を正本とする。
+自動 join の競合解消 call を含め、feedback の収集には `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「feedback reporter と collector context」を適用する。apply 固有の Structured Output field、終了後の発見用 agent call、または feedback 件数による終了コード変更を追加してはならない。詳細は `{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」と「non-goal」を正本とする。
 
 ## join 後 hook
 

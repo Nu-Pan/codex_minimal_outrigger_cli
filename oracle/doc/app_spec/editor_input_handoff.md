@@ -17,8 +17,8 @@ editor input handoff は、汎用 TUI と oracle 調査 TUI の初回 exec ま�
 ### 共通仕様
 
 - prompt editor input の writer 境界と最終読み取りは、`{{cmoc-root}}/oracle/doc/app_spec/prompt_editor_input.md` の「ファイルの役割」と「editor input の確定手順」を正本とする。
-- agent の直接編集禁止と MCP の書き込み例外は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
-- 初回 exec と TUI への MCP 提供、および handoff instruction の注入は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」を正本とする。
+- agent の直接編集禁止と MCP の書き込み例外は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
+- 初回 exec と TUI での提供判断と初回 prompt への handoff instruction の注入は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「editor input handoff MCP の準備」を正本とする。接続の共通契約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「editor input handoff MCP」に従う。
 - 送信元情報の記録と保存済みログへの到達は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「handoff 送信元情報の記録」を正本とする。
 
 ### ガイドと instruction
@@ -140,7 +140,7 @@ cmoc は実際の呼び出しに付与・保持する値を、送信元 Codex pr
 
 並行する Codex process 間でコンテキストを取り違えず、同じ送信元 TUI process の各 turn では、その process に対応する実行情報を使用する。受信先 target の情報から送信元を推定せず、target ID と送信元の識別子を相互に代用しない。必要な送信元情報を取得できない場合は、推測・捏造で補わず handoff の失敗を返す。
 
-起動・呼び出し管理経路からの供給と準備順序は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「editor input handoff MCP」に従う。内部 transport や module の分割は、本書の責務と lifecycle を満たす範囲で実装に委ねる。
+起動・呼び出し管理経路からの供給と準備順序は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「editor input handoff MCP」に従う。内部 transport や module の分割は、本書の責務と lifecycle を満たす範囲で実装に委ねる。
 
 ## non-goal
 

@@ -68,7 +68,7 @@ primary report の重要事項確認中に受けた `Ctrl+C` は、確認用 cal
 
 初回作業は未完了として記録し、起動の取消を作業の完了と混同させない。workload 固有の終了処理を保ち、一律の rollback や、途中の変更を完成済みの部分成果とする扱いは追加しない。作成済みの記録と accepted observation は、それぞれの保存契約に従って保持する。
 
-process の停止確認、MCP 接続・capability・通知 context の終了処理、および会話の使用の解放は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「対話 resume の process」「会話の使用と排他」と各 MCP 節に従う。停止や保存を確認できない状態を、終了確認済みとして扱わない。
+process の停止確認、MCP 接続・capability・通知 context の終了処理、および会話の使用の解放は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「対話 resume の process」「process ごとの資源準備」「会話の使用と排他」と、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「feedback reporter と collector context」「editor input handoff MCP」「文書検索 MCP」に従う。停止や保存を確認できない状態を、終了確認済みとして扱わない。
 
 取消の表示とログは、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「定義と分類」「TUI 再開のための実行記録」「TUI と自動補完の境界」に従う。通知は、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「TUI の通知境界」に従う。具体的なログ符号化と終了コードは、この取消と正常完了型の `user_interruption` を区別できる範囲で実装に委ねる。
 

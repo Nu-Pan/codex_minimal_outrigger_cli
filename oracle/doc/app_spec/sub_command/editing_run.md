@@ -65,7 +65,7 @@ workload は、write 権限を持つ本命 agent call の開始前に、次の�
 - 続行不能な失敗では、未確定の処理単位を commit または rollback により整合させ、`run.state` を `error` にする。
 - editing run と feedback data の境界は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「既存 workload との境界」と `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「スキーマ設計の基本原則」を正本とする。
 
-各 workload と join の call に提供する文書検索は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。検索の管理物は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「identity と保存先」に従って成果差分から分離し、cleanup 時は同節の回収責務を適用する。
+各 workload と join の call に提供する文書検索は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「文書検索 MCP」に従う。検索の管理物は、`{{cmoc-root}}/oracle/doc/app_spec/document_search.md` の「identity と保存先」に従って成果差分から分離し、cleanup 時は同節の回収責務を適用する。
 
 ## 正常終了時の自動 join
 

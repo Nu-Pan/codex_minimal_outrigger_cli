@@ -5,7 +5,7 @@
 この文書は、構築済みの cmoc 開発環境における test と品質検査の選択・起動場所・実行・完了判定・報告を定める。VS Code のテストタブ用の pytest 連携設定と操作手順も本書で扱う。関連する要件は、次の正本に従う。
 
 - realization test が満たすべき意味上の要件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「cmoc テスト実装規約」を正本とする。
-- Codex CLI の sandbox・承認設定と command 単位 sandbox escalation の共通契約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Codex CLI 引数による設定上書き」「Codex CLI sandbox」「command 単位の sandbox 外実行」を正本とする。
+- Codex CLI の sandbox・承認設定と command 単位 sandbox escalation の共通契約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「Codex CLI 引数による設定上書き」「Codex CLI sandbox」「command 単位の sandbox 外実行」を正本とする。
 - 型注釈と docstring の意味上の品質要件は、`{{cmoc-root}}/oracle/doc/dev_rule/coding_rule.md` の「型ヒント」と「docstring」が所有する。
 - Python 環境の新規構築、依存関係の追加、および pip 操作は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「cmoc 開発環境」を正本とする。
 
@@ -218,10 +218,10 @@ realization refactor で変更を確定する時点は、`{{cmoc-root}}/oracle/d
 本書の「通常検証と追加検証を選択する」に従って選択された追加検証では、テスト runner を起動する command を親 sandbox 外で実行することを必要条件とする。これは、固定 socket path の保護と内側の Codex による directory 検査が衝突する、入れ子の sandbox 構成を避けるための条件である。
 
 1. 選択した追加検証だけを起動する command を用意する。cwd と Python interpreter は本書の「repository root と Python interpreter を決定する」に従う。Python の実行設定には、本書の「Python development mode と ResourceWarning 検査を適用する」を適用する。
-2. 対象 command と入れ子を避ける理由を限定して、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「command 単位の sandbox 外実行」に従う escalation を要求する。承認された command を親 sandbox 外で実行する。
+2. 対象 command と入れ子を避ける理由を限定して、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「command 単位の sandbox 外実行」に従う escalation を要求する。承認された command を親 sandbox 外で実行する。
 3. 承認が得られない場合は追加検証を未実行とし、本書の「完了を判定する」「実行結果を報告する」に従う。
 
-被テスト cmoc の隔離は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「基本」に従う。子 Codex には、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Codex CLI 引数による設定上書き」「Codex CLI sandbox」が定める通常の呼び出し規約を適用する。
+被テスト cmoc の隔離は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「基本」に従う。子 Codex には、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「Codex CLI 引数による設定上書き」「Codex CLI sandbox」が定める通常の呼び出し規約を適用する。
 
 承認が得られない場合も含め、この回避手順を `TMPDIR` の変更、予約 socket directory などの保護ディレクトリの権限変更、子 sandbox の無効化、または CLI の旧 sandbox への切り替えで代替してはいけない。
 

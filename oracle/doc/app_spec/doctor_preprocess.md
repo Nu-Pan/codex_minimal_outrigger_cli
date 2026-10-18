@@ -16,7 +16,7 @@ doctor preprocess は、各サブコマンドに共通する実行環境・設�
 
 ## 共通実行環境の検証
 
-cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利用できることを検証する。検索用コンポーネントとして準備する依存は、本書の「検索用コンポーネントの準備と検査」の経路で扱う。Python 環境の前提は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」に従う。Codex CLI に渡す環境については、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
+cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利用できることを検証する。検索用コンポーネントとして準備する依存は、本書の「検索用コンポーネントの準備と検査」の経路で扱う。Python 環境の前提は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」に従う。Codex CLI に渡す環境については、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
 
 cmoc 本体と doctor を起動するための Python 環境・起動用依存は事前導入の範囲とする。検索用 runtime・モデル等の未準備を、doctor 自身を起動できない理由にしてはならない。doctor は OS、Git、Codex CLI、または model provider の導入・修復を担わず、自動修復しない必須依存の不足も診断してエラーとする。
 
@@ -55,7 +55,7 @@ cmoc が固定の作業用配置先として案内するディレクトリを、
 
 ### 対象 root と成立時点
 
-処理に使用する各 `{{work-root}}` に適用する。agent call では、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」が定める cwd 起点の worktree root を対象とし、repo-root や cmoc-root で代替しない。管理領域のためだけに扱う cmoc-root や、処理に使用しない worktree へ適用範囲を広げない。
+処理に使用する各 `{{work-root}}` に適用する。agent call では、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の path context」が定める cwd 起点の worktree root を対象とし、repo-root や cmoc-root で代替しない。管理領域のためだけに扱う cmoc-root や、処理に使用しない worktree へ適用範囲を広げない。
 
 通常サブコマンドと明示的な `cmoc doctor` の双方で、不足する対象と必要な親ディレクトリを作成し、正常終了を判定する検証時点で対象のすべてがディレクトリとして存在することを保証する。作成・検証は、その work-root の前処理で対象を使うファイル列挙・索引同期より前に完了する。
 

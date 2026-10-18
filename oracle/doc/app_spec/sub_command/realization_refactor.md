@@ -59,7 +59,7 @@ state は選択順序のために使い、内容変更の検知、再調査要�
 - 公開入口と help・補完・command 表記は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「公開コマンド名」に従う。
 - agent が変更する作業成果物は realization file だけとする。起点 file に限らず、関連する複数 file の改善を一つの処理単位に含めてよい。
 - agent が変更する realization file と cmoc が更新する refactor state を想定内差分とする。
-- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「一時作業領域」に従う。
 
 ## 一巡の境界
 
@@ -126,7 +126,7 @@ cmoc は、realization file の net 差分がある場合、処理単位全体�
 
 #### 処理単位の境界
 
-cmoc は、想定外 path の変更と変更禁止対象への書き込みを、`changed_paths` の照合とは別に検査する。共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」を正本とする。
+cmoc は、想定外 path の変更と変更禁止対象への書き込みを、`changed_paths` の照合とは別に検査する。共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の差分検証」を正本とする。
 
 所見なしへの正規化によって、差分検査、確定前の検証、または commit・rollback 失敗の扱いを緩和しない。unresolved があること自体は rollback や終了の理由にしないが、残す変更はすべて確定前の検証を満たさなければならない。
 

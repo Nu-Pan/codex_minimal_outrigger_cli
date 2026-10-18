@@ -1,6 +1,6 @@
 # File Access Policy Violation Post Validation
 
-本書は、file access policy 違反の事後検査と自動リカバリーを断念した当時の記録である。現行の差分検証の範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」を正本とする。
+本書は、file access policy 違反の事後検査と自動リカバリーを断念した当時の記録である。現行の差分検証の範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の差分検証」を正本とする。
 
 ## やりたかったこと
 

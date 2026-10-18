@@ -185,7 +185,7 @@ agent は、全文に記された目標未達、未完了、未検証、未解�
 
 本命作業の再実行・補完、修正・検証、一般的な意味的変更要約、差分や成果の再認定、および feedback close の外部解決の妥当性の再判定は行わない。確認結果からサブコマンドや issue の結果分類を再判定しない。表示・構成・配置は cmoc が担う。
 
-新しい問題の探索や observation・issue の生成も行わない。既存 observation を含む本文の再報告を防ぐため、この call では feedback reporter と報告規定をともに無効にする。提供判断の共通機構は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。確認結果を自動 issue 化する代替経路も設けない。
+新しい問題の探索や observation・issue の生成も行わない。既存 observation を含む本文の再報告を防ぐため、この call では feedback reporter と報告規定をともに無効にする。提供判断の共通機構は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「feedback reporter と collector context」に従う。確認結果を自動 issue 化する代替経路も設けない。
 
 #### 起動と正確な定義の委譲
 
@@ -201,15 +201,15 @@ agent は、全文に記された目標未達、未完了、未検証、未解�
 
 #### 回復待ちと出力補正
 
-確認用 call にも、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「preflight validation」「Structured Output」「`codex exec` が失敗した場合」を適用する。回復待ち・probe・再開、補正の条件と回数、同じ session の使用、補正上限の維持、および不受理出力の保持は、同文書の共通規約に従う。回復待ち中というだけで確認未完了として保存へ進まず、共通規約の待機・再開条件に従う。確認用 call 固有の時間上限や retry 方式は設けない。
+確認用 call にも、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「preflight validation」と、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Structured Output」「`codex exec` が失敗した場合」を適用する。回復待ち・probe・再開、補正の条件と回数、同じ session の使用、補正上限の維持、および不受理出力の保持は、後者の exec 規約に従う。回復待ち中というだけで確認未完了として保存へ進まず、その待機・再開条件に従う。確認用 call 固有の時間上限や retry 方式は設けない。
 
 `{{cmoc-root}}/oracle/src/oracle/acp_builder/primary_report_review.json` の `#/$defs/incomplete_result` に従う全文確認不能の応答を正式に受理した場合は、確認未完了として記録・保存へ進む。その status 自体を出力補正や再試行の理由にしない。
 
-共通規約で確認を続行できない場合の保存と最外側の終了結果には、次の「確認の停止・失敗と保存」「確認結果と終了結果の分離」を適用する。
+これらの呼び出し規約で確認を続行できない場合の保存と最外側の終了結果には、次の「確認の停止・失敗と保存」「確認結果と終了結果の分離」を適用する。
 
 #### 確認の停止・失敗と保存
 
-確認用 call のプロセスの成功、出力の受理、および全文の確認完了は分けて判断する。起動条件を満たせない場合、全文を渡せない場合、または共通規約に従っても確認を続行できない場合（回復対象外の失敗、再開不能、補正上限到達など）は、確認未完了として記録・保存へ進む。cmoc が検出した未開始・失敗の理由と、受理した agent の未完了応答を区別し、存在しない応答や確認済み範囲を補わない。未完了の表示は、本書の「重要事項の確認結果」に従う。
+確認用 call のプロセスの成功、出力の受理、および全文の確認完了は分けて判断する。起動条件を満たせない場合、全文を渡せない場合、または本書の「回復待ちと出力補正」が参照する呼び出し規約に従っても確認を続行できない場合（回復対象外の失敗、再開不能、補正上限到達など）は、確認未完了として記録・保存へ進む。cmoc が検出した未開始・失敗の理由と、受理した agent の未完了応答を区別し、存在しない応答や確認済み範囲を補わない。未完了の表示は、本書の「重要事項の確認結果」に従う。
 
 本命処理の中断後に確認を開始する例外と、確認に対する新しい取消要求の区別は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「共通動作」「重要事項確認の取消」に従う。取消を受け付けたら回復待ちを終了し、実行中の確認用 call または probe の自然完了を待たず子 process の停止・終了処理へ移る。同じ invocation では、取消後に新しい確認 call、補正、retry、probe、または回復待ちを開始しない。確認結果の受理と競合した場合も取消を優先し、確認未完了として記録する。
 
@@ -322,7 +322,7 @@ feedback detector は、安定契約として定義されていない自由文 f
 
 索引同期と MCP 検索要求について、所要時間、処理量、結果、および打切り理由を調べられるようにする。通常起動・明示 doctor の同期と、TUI 利用中も含む MCP 検索要求・自動同期・再同期を対象とする。呼出し元の最外側のサブコマンドログへ、本書の「基本要件」に従って保存する。
 
-記録から、実行 ID、サブコマンド、対象 work-root、索引 identity、および MCP 経路の Codex call・検索要求・各同期の対応を追えるようにする。並行要求や再同期を混同させない。接続側の context 供給と記録の搬送は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
+記録から、実行 ID、サブコマンド、対象 work-root、索引 identity、および MCP 経路の Codex call・検索要求・各同期の対応を追えるようにする。並行要求や再同期を混同させない。接続側の context 供給と記録の搬送は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「文書検索 MCP」に従う。
 
 検索要求と各同期について、次を記録する。
 
@@ -344,7 +344,7 @@ editor input handoff を有効にする初回 exec と対話 resume では、各
 - 起動する Codex process の Codex call ID と、対応するログ保存先
 - その実行の診断用サブコマンドログのフルパス
 
-Codex call ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」で定める識別子を使い、記録する送信元情報は同文書の「editor input handoff MCP」に従って MCP の呼び出し元コンテキストへ供給する実際の値と一致させる。送信元が実行中でも、この対応から既に保存された記録へ到達できるようにする。終了時にだけ保存される戻り値や最終結果を、対応の特定に必要としてはならない。
+Codex call ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」で定める識別子を使い、記録する送信元情報は同文書の「editor input handoff MCP」に従って MCP の呼び出し元コンテキストへ供給する実際の値と一致させる。送信元が実行中でも、この対応から既に保存された記録へ到達できるようにする。終了時にだけ保存される戻り値や最終結果を、対応の特定に必要としてはならない。
 
 この記録は送信元の識別と保存済み記録への到達を保証する。TUI 会話全文や最終回答の保存・取得保証は追加しない。本文の受け渡しと tool result・log の境界は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「agent の責務と権限」と「tool result と log」に従う。
 
@@ -364,7 +364,7 @@ Codex call ID は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の�
 
 各意味を構造化された値とイベントの順序で表し、記録形式の識別、状態遷移、および未確定値の扱いを安定させる。未起動・未発行・未取得を区別し、存在しない値を作らない。読み手が解釈できない記録や矛盾した対応を、再開可能な状態として扱わない。具体的な field 名・符号化・イベント分割は実装に委ねるが、自由文、ファイル時刻、ID の発行順、または最後に見つかった会話 ID から状態を推測する形式にしてはならない。
 
-起動前に確定できる情報は、それぞれの process の起動前に記録する。初回 exec から得た ID は取得でき次第記録し、初回成功と終了の確認結果は TUI 移行前に保存する。TUI に指定する固定した ID と process の対応は、TUI process の起動前に記録し、即時 flush する。ID の決定は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の固定 session ID」に従う。
+起動前に確定できる情報は、それぞれの process の起動前に記録する。初回 exec から得た ID は取得でき次第記録し、初回成功と終了の確認結果は TUI 移行前に保存する。TUI に指定する固定した ID と process の対応は、TUI process の起動前に記録し、即時 flush する。ID の決定は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「TUI の固定 session ID」に従う。
 
 TUI が実際に開いた会話、切り替え履歴、終了時の主会話、および入力待ち状態の確認・記録は要求しない。起動時に指定した ID を、観測済みの実会話や終了時の主会話として記録してはならない。
 

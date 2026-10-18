@@ -11,7 +11,7 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
         意味仕様は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の
         「oracle doc と oracle src の正本責務」から
         「正本責務に基づく優先関係」までと「oracle file を扱う判断基準」、
-        `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の
+        `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の
         「call 固有の実行時指示の優先関係」を参照。
     """
     return (

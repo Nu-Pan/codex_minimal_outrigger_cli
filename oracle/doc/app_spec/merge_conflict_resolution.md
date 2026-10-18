@@ -16,7 +16,7 @@ agent は競合の両側と関連する oracle を調査し、両立する意図
 
 関連する oracle と変更意図からも決められない相反する要求の採否など、新しい人間意図の選択が必要な場合は、推測で一方を破棄せず未解消として報告する。実装都合から oracle の意味を逆算・変更してはならない。
 
-共通の正本責務と判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」まで、および「oracle file を扱う判断基準」「realization file を扱う判断基準」に従う。編集と検証は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」「書き込み主体の責任分界」と各 join の編集範囲内で行う。アクセス禁止の情報を Git 履歴経由で参照したり、禁止対象を付随編集したりする権限は与えない。
+共通の正本責務と判断基準は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」まで、および「oracle file を扱う判断基準」「realization file を扱う判断基準」に従う。編集と検証は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「詳細なファイルアクセス制限」「書き込み主体の責任分界」と各 join の編集範囲内で行う。アクセス禁止の情報を Git 履歴経由で参照したり、禁止対象を付随編集したりする権限は与えない。
 
 ## agent と cmoc の責務
 
@@ -25,7 +25,7 @@ agent は、調査、内容の統合、必要な検証、および根拠を伴�
 cmoc は次の管理処理を担当する。
 
 - 各 join の事前条件を検査し、merge 前の両 branch の HEAD と初期の競合状態を把握する。
-- 内容の競合を解消する agent call を直列に実行し、その完了判断、検証結果、および未解消事項を確認する。文書検索の提供は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
+- 内容の競合を解消する agent call を直列に実行し、その完了判断、検証結果、および未解消事項を確認する。文書検索の提供は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「文書検索 MCP」に従う。
 - refactor state の競合を解消する。refactor state は agent の直接編集対象にせず、この管理物だけが競合した場合は内容解消用 agent call を必要としない。
 - 解消後の内容と管理物について、未解消の conflict marker がないことを確認する。初期の競合 path に限定せず、付随する追加・変更・rename・削除も staging し、unmerged entry が残っていないことを確認して merge commit を作成する。
 - 各 join の state 更新、生成物の同期、report、および cleanup を行う。
@@ -36,7 +36,7 @@ refactor state の値の統合と同期内容は、`{{cmoc-root}}/oracle/doc/app
 
 ## 受理と報告
 
-cmoc の差分検証は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」に従う。マージ結果が片側の内容と一致すること、または編集 path が初期の競合 path 集合と一致することを受理条件にしない。元の workload の差分受理条件は維持し、マージ調整の受理条件と混同しない。機械検査に意味的な正しさの証明を要求せず、agent の判断と検証記録を、cmoc の機械検査結果と区別して扱う。
+cmoc の差分検証は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の差分検証」に従う。マージ結果が片側の内容と一致すること、または編集 path が初期の競合 path 集合と一致することを受理条件にしない。元の workload の差分受理条件は維持し、マージ調整の受理条件と混同しない。機械検査に意味的な正しさの証明を要求せず、agent の判断と検証記録を、cmoc の機械検査結果と区別して扱う。
 
 各 join を行った最外側の invocation の primary report から、次を読み取れるようにする。自動 join 用の primary report は別に作らない。agent は内容判断に関する情報を返し、cmoc は実際の commit、state、復旧、および cleanup の結果と結び付ける。
 
@@ -48,7 +48,7 @@ cmoc の差分検証は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md`
 
 ## agent への入力と正確な定義の委譲
 
-cmoc は merge を行っている worktree を call の cwd とし、merge 前に確定した source と target の commit ID を渡す。agent はその repository で共通祖先、両側の変更、および進行中の競合状態を必要な範囲で取得する。差分本文や競合 path 一覧を初期 prompt に埋め込まない。参照入力と取得失敗の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「Git 差分の参照入力」に従う。
+cmoc は merge を行っている worktree を call の cwd とし、merge 前に確定した source と target の commit ID を渡す。agent はその repository で共通祖先、両側の変更、および進行中の競合状態を必要な範囲で取得する。差分本文や競合 path 一覧を初期 prompt に埋め込まない。参照入力と取得失敗の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「Git 差分の参照入力」に従う。
 
 run join の source は基準 session HEAD、target は差分検査と必要な取消を終えた session 統合直前の run HEAD とする。cwd と path context は run worktree から決める。共通 lifecycle の基準と call 固有の委譲先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」「競合解消」に従う。session join の統合方向は変更しない。
 

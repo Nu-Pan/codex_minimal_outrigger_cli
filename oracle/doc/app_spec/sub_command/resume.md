@@ -23,7 +23,7 @@ cmoc は、呼び出し元と同じ repository の指定実行 ID に対応す�
 
 ## 対象の適格性と会話選択
 
-再開する会話は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の固定 session ID」に従って選ぶ。対象は、次のすべてを確認できる実行とし、満たさない場合は拒否する。
+再開する会話は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「TUI の固定 session ID」に従って選ぶ。対象は、次のすべてを確認できる実行とし、満たさない場合は拒否する。
 
 - 初回 exec の正常な process 終了と call の最終成功。
 - 必要なログに欠落・破損・解釈不能・対応の不整合がなく、固定した Codex session ID を一意に特定できること。
@@ -40,14 +40,14 @@ cmoc は、呼び出し元と同じ repository の指定実行 ID に対応す�
 
 汎用 TUI の制約は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/tui.md` の「全バックエンド共通」を正本とする。oracle 調査 TUI の制約は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md` の「TUI 起動パラメータ」「調査結果と変更の扱い」を正本とする。再開によって、これらの作業範囲やファイルアクセスの権限を拡張しない。
 
-保存された agent call 種別と file access mode を維持し、解決した workload の builder の選択値と一致することを起動前に確認する。一致しない場合は値を上書きして合わせず、制約を保持できないものとして拒否する。再開用パラメータの正確な構造は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「基本」で委譲した oracle src に従う。workload ごとの正確な構築は、次の builder へ委譲する。
+保存された agent call 種別と file access mode を維持し、解決した workload の builder の選択値と一致することを起動前に確認する。一致しない場合は値を上書きして合わせず、制約を保持できないものとして拒否する。再開用パラメータの正確な構造は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」で委譲した oracle src に従う。workload ごとの正確な構築は、次の builder へ委譲する。
 
 - 汎用 TUI: `{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter`。元の agent call 種別と制約を持つ、初期 prompt なしの再開パラメータを構築する。
 - oracle 調査 TUI: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter`。調査 workload の agent call 種別と制約を保って同じ構築を行う。
 
-cwd は、ログに保存された実際の cwd を照合して明示設定する。存在するディレクトリであり、保存時の work-root と同じ worktree、かつ呼び出し元と同じ repository に属することを確認する。現在の cmoc process の cwd で代用しない。path context の導出は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」に従う。
+cwd は、ログに保存された実際の cwd を照合して明示設定する。存在するディレクトリであり、保存時の work-root と同じ worktree、かつ呼び出し元と同じ repository に属することを確認する。現在の cmoc process の cwd で代用しない。path context の導出は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の path context」に従う。
 
-現在有効な `$CODEX_HOME` が実際に指す場所を、保存された使用場所と照合し、異なる場合は拒否する。過去の環境値を黙って復元したり、別の保存場所から会話を探索したりしない。環境値の決定と事前検証は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
+現在有効な `$CODEX_HOME` が実際に指す場所を、保存された使用場所と照合し、異なる場合は拒否する。過去の環境値を黙って復元したり、別の保存場所から会話を探索したりしない。環境値の決定と事前検証は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
 
 model provider・Model・Reasoning Effort・provider-local 設定の取得は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「TUI 起動での設定の確定」に従う。内部の自動移行と後日の公開 resume の取得時点を混同しない。sandbox と承認設定も、対話 resume に適用する共通規則に従って明示設定する。
 
@@ -55,10 +55,10 @@ model provider・Model・Reasoning Effort・provider-local 設定の取得は、
 
 1. 新しい最外側の invocation を開始し、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」に従って新しい実行 ID とログを用意する。指定された再開元実行 ID との対応を記録する。
 2. `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「Doctor Preprocess」に従う doctor preprocess と、本書の種別解決・対象検査・環境照合を行う。doctor の処理対象には、照合した保存 cwd から導出する work-root を含める。
-3. `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「会話の使用と排他」に従って固定した session ID の使用を確保する。異なる実行 ID からの再開も競合として扱う。
-4. 解決した TUI 種別の builder に、確定した Codex session ID と保存された cwd を渡す。新しい agent call と Codex call を開始し、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「TUI の新規起動と対話 resume」に従って process 用の設定と接続を準備する。起動前の記録は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 再開のための実行記録」に従う。
+3. `{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「会話の使用と排他」に従って固定した session ID の使用を確保する。異なる実行 ID からの再開も競合として扱う。
+4. 解決した TUI 種別の builder に、確定した Codex session ID と保存された cwd を渡す。新しい agent call と Codex call を開始し、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「process ごとの資源準備」に従って process 用の設定と接続を準備する。起動前の記録は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「TUI 再開のための実行記録」に従う。
 5. 入力エディタを開かず、指定した会話の対話 resume を起動する。追加指示は、再開した TUI でユーザーから受け取る。
-6. 新しい process の終了を待ち、その結果を記録する。その process 用の MCP 接続・capability・通知 context を終了処理で回収する。起動失敗の場合も、確保済みの資源を回収する。会話の使用の解放は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「会話の使用と排他」に従う。
+6. 新しい process の終了を待ち、その結果を記録する。その process 用の MCP 接続・capability・通知 context を終了処理で回収する。起動失敗の場合も、確保済みの資源を回収する。会話の使用の解放は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「会話の使用と排他」に従う。
 
 ## 失敗条件と表示
 
@@ -70,7 +70,7 @@ model provider・Model・Reasoning Effort・provider-local 設定の取得は、
 
 Fake Codex CLI による通常検証は、`{{cmoc-root}}/oracle/doc/dev_rule/test_rule.md` の「TUI の二段階起動と公開 resume」に従う。新規起動から後日の公開再開までの制御を同じ検証範囲として扱う。
 
-Fake による成功は、Codex CLI が必要な外部契約を満たす証明にはしない。実装前に確認する外部契約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「実装前に検証する TUI の外部契約」に集約する。検証手段の選択と Real Codex CLI を使うテストの実行条件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」に従う。
+Fake による成功は、Codex CLI が必要な外部契約を満たす証明にはしない。実装前に確認する外部契約は、`{{cmoc-root}}/oracle/doc/app_spec/codex_tui_rule.md` の「実装前に検証する TUI の外部契約」に集約する。検証手段の選択と Real Codex CLI を使うテストの実行条件は、`{{cmoc-root}}/oracle/doc/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」に従う。
 
 ## 対象外
 

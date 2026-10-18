@@ -54,7 +54,7 @@ repository-local feedback state、subcommand log、および Codex call log は 
 
 normalization と issue remediation では、調査対象の再報告が追加 evidence として同じ issue の再確認を誘発する経路を止めるため、feedback reporter の提供を無効にする。対象は、本書の「agent observation と normalization」「issue remediation agent call」で委譲する `build_feedback_*_issue_parameter` 系とし、現在は `build_feedback_normalize_issue_parameter` と `build_feedback_remediate_issue_parameter` の 2 種類である。判定根拠の変化に伴う再確認 call も対象に含む。
 
-対象 call では、同じ issue の再報告と、作業中に見つかった別の問題の追加報告をともに行えなくてよい。MCP の非提供と報告規定の非注入、および同じ論理 call の補正・retry・再開での維持は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「feedback reporter と collector context」に従う。これは feedback report invocation 全体の無効化ではなく、別の call kind である回復確認 probe、join の競合解消、および他の workload の報告契約を変更しない。primary report の重要事項確認用 call の提供判断も、同節が参照する共通仕様に従う。
+対象 call では、同じ issue の再報告と、作業中に見つかった別の問題の追加報告をともに行えなくてよい。MCP の非提供と報告規定の非注入、および同じ論理 call の補正・retry・再開での維持は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「feedback reporter と collector context」に従う。これは feedback report invocation 全体の無効化ではなく、別の call kind である回復確認 probe、join の競合解消、および他の workload の報告契約を変更しない。primary report の重要事項確認用 call の提供判断も、同節が参照する共通仕様に従う。
 
 入力 observation の同一性判断と、入力 issue の確認・修正・検証および `human_required` を含む結果は、既存の Structured Output で返す。追加報告ができないことを結果分類の理由にしてはならない。別 issue の追加報告用 field、代替 tool、または log からの自動 issue 化など、非提供を補う収集経路は設けない。
 
@@ -134,7 +134,7 @@ call の境界を次に示す。
 - cwd は `{{cmoc-run-worktree}}` とする。
 - oracle file は読めるが変更できない。
 - agent が変更する作業成果物は realization file だけとする。
-- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「一時作業領域」に従う。
+- 一時作業領域の利用は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「一時作業領域」に従う。
 - agent に feedback state file、Git index、branch、commit、または worktree lifecycle を操作させない。
 - candidate 外の issue を remediation 対象として探索させない。
 
@@ -164,7 +164,7 @@ cmoc は、論理 agent call の開始時点から正式な終了時点までの
 
 処理単位の commit 受理条件として、`changed_paths` の照合とは別に、run worktree の全 net 差分を検査する。oracle file、禁止 path、または workload の想定外 path に変更があれば、その処理単位を確定してはならない。
 
-差分検証の共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の差分検証」を正本とする。
+差分検証の共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の差分検証」を正本とする。
 
 agent が返した `fixed` の自己申告だけを、意味的な正しさの証明として扱ってはならない。正式な結果とするには、次の両方を満たす必要がある。
 

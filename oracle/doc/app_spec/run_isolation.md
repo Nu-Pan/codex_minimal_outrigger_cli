@@ -25,13 +25,13 @@ session を直接編集する oracle edit、read-only の investigation、run �
 - 作成した run worktree の初回利用に先立つ配置先の準備は、`{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「作業用配置先の存在保証」に従う。
 - agent call の cwd は、個別仕様に別の定めがない限り `{{cmoc-run-worktree}}` とする。
 - run join の準備と競合解消は、session の変更を統合する run worktree で行う。編集範囲と復旧は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「競合解消」「join の失敗と復旧」を正本とし、そのために別の run は作らない。
-- run 上の agent call の root path は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」に従う。同節が正確な導出先の oracle src を定める。
+- run 上の agent call の root path は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の path context」に従う。同節が正確な導出先の oracle src を定める。
 - cmoc process の cwd が `{{repo-root}}` であっても、run 上の agent call の path context は `{{cmoc-run-worktree}}` から解決する。
 - 人間が `{{cmoc-run-worktree}}` を直接編集することは想定しない。
 
 ## run のアクセス境界と cmoc の管理処理
 
-- run 上のファイルアクセスは、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
+- run 上のファイルアクセスは、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「詳細なファイルアクセス制限」と「書き込み主体の責任分界」に従う。
 - 個別仕様が明示する cmoc 管理データは、cmoc が `{{repo-root}}` 側へ書き込んでよい。
 - 実行ログの保存先は `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「サブコマンドログファイル」、session state の保存先は `{{cmoc-root}}/oracle/doc/app_spec/session_state.md` の「概要」を正本とする。
 - feedback observation と feedback state の保存先および lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_observation.md` の「raw observation の保存」と `{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「feedback の repository-local state」を正本とする。
