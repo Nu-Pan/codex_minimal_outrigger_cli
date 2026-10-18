@@ -33,8 +33,9 @@ def test_refactor_driver_interrupts_after_a_confirmed_unit(tmp_path) -> None:
         "path.write_text(json.dumps({'event':'refactor_progress','confirmed':1})); "
         "print('confirmed', flush=True); time.sleep(30)"
     )
+    # 標準ライブラリだけの Fake は共通 command helper と同様に site 初期化を省く。
     result = _run_refactor_until_confirmed(
-        [sys.executable, "-c", script], tmp_path, dict(os.environ)
+        [sys.executable, "-S", "-c", script], tmp_path, dict(os.environ)
     )
     assert result.returncode == 0
     assert result.stdout == "confirmed\n"

@@ -452,7 +452,7 @@ def test_cancel_stops_fake_process_and_preserves_partial_logs(
         [
             "import json, os, pathlib, subprocess, sys, time",
             "sys.stdin.read()",
-            "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(100)'])",
+            "child = subprocess.Popen([sys.executable, '-S', '-c', 'import time; time.sleep(100)'])",
             f"print(json.dumps({{'type': 'thread.started', 'thread_id': {SESSION_ID!r}}}), flush=True)",
             "print('partial diagnostic', file=sys.stderr, flush=True)",
             f"pathlib.Path({str(pid_file)!r}).write_text(str(os.getpid()) + ' ' + str(child.pid))",
