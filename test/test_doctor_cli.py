@@ -540,6 +540,7 @@ def test_preprocess_reports_work_directory_permission_failure(
     assert "権限" in exc_info.value.next_actions[0]
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_rechecks_work_directories_after_repair_commit(
     committed_repository, tmp_path, monkeypatch
 ):
@@ -796,6 +797,7 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
         index_path.unlink(missing_ok=True)
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(
     committed_repository, tmp_path
 ):
@@ -1167,6 +1169,7 @@ def test_doctor_reports_unsaved_inconsistent_search_candidate(
     assert path.read_text() == original
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_generates_config_under_broad_cmoc_ignore(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
