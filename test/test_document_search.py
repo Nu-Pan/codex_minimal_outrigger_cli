@@ -333,11 +333,13 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(
         assert sync.deleted == 1 and sync.chunk_count == 0
 
 
-@pytest.mark.parametrize("edit_after_stream", [False, True])
+@pytest.mark.parametrize(
+    "edit_at", [None, "document_prepared", "chunk", "document_complete", "after_stream"]
+)
 def test_sync_rechecks_event_source_without_rereading_other_documents(
-    document_repository, monkeypatch, edit_after_stream
+    document_repository, monkeypatch, edit_at
 ):
-    """各確定時は対象本文だけを読み、同期完了時には全本文の一致を確認する。"""
+    """保存直前は対象本文だけを読み、通知時の編集も公開前に拒否する。"""
     from commons import runtime_document_search as module
 
     # Git 分類は専用ケースに残し、ここでは各確定時の本文読取りを検査する。
@@ -355,23 +357,32 @@ def test_sync_rechecks_event_source_without_rereading_other_documents(
 
     class ObservedWorker(_InferenceDouble):
         def stream_chunks(self, documents, resumes, on_event, **kwargs):
+            def edit_source():
+                (docs / "allowed.md").write_text("# 同期終了前に変更された本文\n")
+
             def observe(event):
                 opened.clear()
+                if event["kind"] == edit_at:
+                    edit_source()
                 on_event(event)
-                # 文書数によって各 event の本文読取り回数が増える回帰を検出する。
-                assert opened == [event["path"]]
+                # 保存時に他文書を読み直す回帰と、通知だけで再走査する回帰を検出する。
+                assert opened == (
+                    [event["path"]] if event["kind"] in ("chunk", "reuse") else []
+                )
 
             for path in documents:
                 observe({"kind": "document_prepared", "path": path, "chunk_count": 1})
             super().stream_chunks(documents, resumes, observe, **kwargs)
-            if edit_after_stream:
-                (docs / "allowed.md").write_text("# 同期終了前に変更された本文\n")
+            if edit_at == "after_stream":
+                edit_source()
 
     with closing(DocumentSearch(root, _tuning(), worker=ObservedWorker())) as search:
-        if edit_after_stream:
+        if edit_at is not None:
             with pytest.raises(SearchError) as failure:
                 search.synchronize()
             assert failure.value.code == "SOURCE_CHANGED"
+            if edit_at in ("document_prepared", "chunk"):
+                assert search.sync_progress["persisted_embeddings"] == 0
         else:
             result = search.synchronize()
             assert result.document_count == result.chunk_count == 2

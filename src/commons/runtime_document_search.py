@@ -1040,7 +1040,8 @@ class DocumentSearch:
                     "chunk_count"
                 ] < max(1, resumes[path]):
                     raise SearchError("MODEL_FAILURE", "document partition is invalid")
-                current_source(path)
+                # 分割通知は入力時点の本文に対する進捗であり、保存は伴わない。
+                # 現在本文は chunk 保存直前と、索引の公開前に照合する。
                 checked_document(path)
                 return
             if kind == "document_complete":
@@ -1050,7 +1051,7 @@ class DocumentSearch:
                     or next_ordinal[path] == 0
                 ):
                     raise SearchError("MODEL_FAILURE", "document chunks are incomplete")
-                current_source(path)
+                # 完了状態は公開前の全体照合まで lock 内に留める。
                 with connection:
                     connection.execute(
                         "update documents set complete = 1 where path = ?", (path,)
