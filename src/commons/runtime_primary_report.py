@@ -309,8 +309,8 @@ def ensure_primary_report(
             _require_saved_report(report_path)
             # feedback publication は hash 確定前に実行記録を描画する。
             # その他の個別 report は最外側 invocation の終了時に記録を追加する。
-            content = report_path.read_text(encoding="utf-8")
             if command_name == "feedback close":
+                content = report_path.read_text(encoding="utf-8")
                 if "\n## 実行記録\n" not in content:
                     raise PrimaryReportSaveError(report_path)
             else:
@@ -326,6 +326,7 @@ def ensure_primary_report(
                     )
                 else:
                     # 描画情報を伴わない保存済み report でも、実行情報は末尾に保つ。
+                    content = report_path.read_text(encoding="utf-8")
                     body, separator, information = content.rpartition("\n## 実行情報\n")
                     record = execution_record_markdown(logger)
                     updated = (
