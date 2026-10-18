@@ -101,10 +101,7 @@ def resolve_merge_conflicts(
             root, ("HEAD", "MERGE_HEAD"), sync_entries=sync_managed_entries
         )
     run_git(["add", "-A"], root)
-    remaining = unmerged_paths(root)
-    if remaining:
-        raise CmocError("unmerged path が残っています。", [], "\n".join(remaining))
-    _check_conflict_markers(root)
+    _check_staged_merge(root)
     run_git(["commit", "--no-edit"], root)
     return result
 
@@ -134,12 +131,17 @@ def _status_snapshot(
     return snapshot
 
 
-def _check_conflict_markers(root: Path) -> None:
-    """staging 対象の regular text に残った Git marker block を拒否する。"""
-    paths = run_git(["diff", "--cached", "--name-only", "-z"], root).stdout.split("\0")
-    for relative in paths:
-        if not relative:
-            continue
+def _check_staged_merge(root: Path) -> None:
+    """同じ index 一覧から未統合 entry と regular text の残存 marker を拒否する。"""
+    # rename を削除・追加に分け、status と path の二項を NUL 区切りで取得する。
+    fields = run_git(
+        ["diff", "--cached", "--name-status", "--no-renames", "-z"], root
+    ).stdout.split("\0")
+    staged = list(zip(fields[::2], fields[1::2]))
+    remaining = [relative for status, relative in staged if status == "U"]
+    if remaining:
+        raise CmocError("unmerged path が残っています。", [], "\n".join(remaining))
+    for _status, relative in staged:
         path = root / relative
         if path.is_symlink() or not path.is_file():
             continue

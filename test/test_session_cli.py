@@ -1108,13 +1108,14 @@ def test_session_join_merges_conflict_and_incidental_changes(
         )
         assert all("permissions" not in arg for arg in override_args)
         assert all(str(context_target) not in arg for arg in override_args)
-        assert set(merge_conflict_module.unmerged_paths(root)) == {
+        initial_conflicts = {
             "README.md",
             "oracle/spec.md",
             "oracle/mode.md",
             "oracle/deleted.md",
             "src/line\nbreak.txt",
         }
+        assert set(merge_conflict_module.unmerged_paths(root)) == initial_conflicts
         context_target.write_text(
             "prefix\nhome change\nsession change\nchanged suffix\nTitle\n=======\n"
         )
@@ -1127,6 +1128,10 @@ def test_session_join_merges_conflict_and_incidental_changes(
         modified.write_text("related implementation\n")
         deleted.unlink()
         renamed.rename(moved)
+        # 本文の解消・削除後も staging 前の実 index は未統合なので拒否する。
+        with pytest.raises(CmocError, match="unmerged path が残っています。") as error:
+            merge_conflict_module._check_staged_merge(root)
+        assert error.value.detail == "\n".join(sorted(initial_conflicts))
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
@@ -1221,7 +1226,7 @@ def test_session_join_conflict_marker_detection(text: str, expected: bool) -> No
     assert merge_conflict_module._has_conflict_marker_block(text) is expected
 
 
-def test_session_join_checks_staged_text_conflict_markers(
+def test_session_join_checks_staged_merge(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """通常 text だけを検査し、改行を含む付随 path の残存 marker を報告する。"""
@@ -1233,11 +1238,18 @@ def test_session_join_checks_staged_text_conflict_markers(
     (tmp_path / "plain.md").write_text("Title\n=======\ninline <<<<<<< HEAD\n")
     staged = ["deleted.md", "directory.md", "binary.dat", "link.md", "plain.md"]
 
-    def fake_git(_args: list[str], _root: Path) -> cmoc_runtime.CommandResult:
-        return cmoc_runtime.CommandResult(0, "\0".join(staged) + "\0", "")
+    commands = []
+
+    def fake_git(args: list[str], _root: Path) -> cmoc_runtime.CommandResult:
+        commands.append(args)
+        assert args == ["diff", "--cached", "--name-status", "--no-renames", "-z"]
+        return cmoc_runtime.CommandResult(
+            0, "".join(f"M\0{path}\0" for path in staged), ""
+        )
 
     monkeypatch.setattr(merge_conflict_module, "run_git", fake_git)
-    merge_conflict_module._check_conflict_markers(tmp_path)
+    merge_conflict_module._check_staged_merge(tmp_path)
+    assert len(commands) == 1
 
     relative = "src/line\nbreak.txt"
     marker = tmp_path / relative
@@ -1246,8 +1258,11 @@ def test_session_join_checks_staged_text_conflict_markers(
     staged.append(relative)
 
     with pytest.raises(CmocError, match="conflict marker が残っています。") as error:
-        merge_conflict_module._check_conflict_markers(tmp_path)
+        merge_conflict_module._check_staged_merge(tmp_path)
     assert error.value.detail == relative
+
+    staged.clear()
+    merge_conflict_module._check_staged_merge(tmp_path)
 
 
 def test_session_fork_and_join_repair_linked_worktree_before_failure_and_completion(

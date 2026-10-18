@@ -2951,7 +2951,7 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
         assert git_cwd == root
         commands.append(args)
         paths = (
-            f"{conflict_relative}\0{incidental}\0src/unchanged.py\0"
+            f"M\0{conflict_relative}\0A\0{incidental}\0M\0src/unchanged.py\0"
             if args[:2] == ["diff", "--cached"]
             else ""
         )
