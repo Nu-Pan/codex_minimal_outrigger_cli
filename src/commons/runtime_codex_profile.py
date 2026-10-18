@@ -843,6 +843,7 @@ def build_codex_override_args(
     *,
     path_context: AgentCallPathContext | None = None,
     notification_command: Sequence[str] | None = None,
+    include_document_search: bool = True,
 ) -> list[str]:
     """agent call の直接設定を sandbox と config argv にする。"""
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
@@ -877,13 +878,17 @@ def build_codex_override_args(
         *_config_override("notify", _toml_value(notification_argv)),
         *_config_override("tui.notifications", "false"),
         *_feedback_mcp_override_args(parameter.enable_feedback_reporting),
-        *document_search_mcp_override_args(
-            parameter, config, path_context=path_context
-        ),
         *_editor_input_handoff_mcp_override_args(
             parameter.enable_editor_input_handoff_mcp
         ),
     ]
+    # call 固有の検索 context を後で付ける runtime では、汎用設定を重ねない。
+    if include_document_search:
+        args.extend(
+            document_search_mcp_override_args(
+                parameter, config, path_context=path_context
+            )
+        )
     args.extend(_model_provider_override_args(call_config.model_provider, config))
     return args
 
@@ -925,6 +930,7 @@ def prepare_codex_override_args(
     *,
     path_context: AgentCallPathContext | None = None,
     notification_command: Sequence[str] | None = None,
+    include_document_search: bool = True,
 ) -> list[str]:
     """CmocConfig と任意の invocation-local callback から Codex argv を返す。"""
     resolved_config = config or CmocConfig()
@@ -933,6 +939,7 @@ def prepare_codex_override_args(
         resolved_config,
         path_context=path_context,
         notification_command=notification_command,
+        include_document_search=include_document_search,
     )
 
 

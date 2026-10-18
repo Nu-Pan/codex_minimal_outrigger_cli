@@ -81,7 +81,7 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
 
 def test_config_json_preserves_oracle_member_order() -> None:
     """config の JSON 化で agent call 直接設定の定義順を保つ。"""
-    config = CmocConfig()
+    config = CmocConfig(document_search=DocumentSearchConfig(chunk_tokens=256))
     data = config_to_dict(config)
 
     assert list(data) == [
@@ -96,6 +96,14 @@ def test_config_json_preserves_oracle_member_order() -> None:
     ]
     assert list(data["codex"]["agent_calls"]) == list(config.codex.agent_calls)
     assert list(data["document_search"]) == list(asdict(config.document_search))
+
+    # 保存済み object の順序が異なっても、値を保持して正本の定義順へ戻す。
+    data["document_search"] = dict(reversed(data["document_search"].items()))
+    restored = config_from_dict(data)
+    assert restored.document_search == config.document_search
+    assert list(config_to_dict(restored)["document_search"]) == list(
+        asdict(config.document_search)
+    )
 
 
 @pytest.mark.parametrize("legacy_config", [False, True])

@@ -76,11 +76,12 @@ def editor_input(
 @pytest.mark.parametrize(
     "command", [["tui"], ["oracle", "investigation"], ["oracle", "edit"]]
 )
+# 空 file と空白の分類は test_prompt_editor_input.py に残す。
+# 各 CLI は空白から EmptyPromptInput を受ける経路で、中断後の終了処理を検証する。
 @pytest.mark.parametrize(
     ("raw_input", "save_fails"),
     [
         pytest.param(b"recoverable input\r\n", True, id="save-failure"),
-        pytest.param(b"", False, id="empty"),
         pytest.param(" \t\r\n\u3000\u00a0\n".encode("utf-8"), False, id="whitespace"),
     ],
 )
@@ -119,7 +120,8 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
         monkeypatch.setattr(
             module, "ensure_prompt_editor_roots_ignored", record_editor_roots_ignored
         )
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    # doctor は上で置換済みで、入力中断は load_config より前に起きる。
+    # 消費しない設定の検証・JSON 保存と directory 作成は準備しない。
 
     # TCP・guide の cleanup は専用 test と editor 失敗 test が実経路で検証する。
     # ここでは target を閉じてから確定保存へ進む CLI の制御だけを観測する。
@@ -151,13 +153,16 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
                 raise OSError("input save failed")
         return real_replace(source, destination)
 
+    # 実 builder と skeleton の結合は各 command の成功ケースに残す。
+    # 中断後の制御では本文を構築せず、placeholder の入力と handoff への受け渡しを検査する。
+    skeleton = "test skeleton {{original-prompt-here}}"
     builders = []
     for module, name in (
         (tui_module, "build_tui_launch_tui_parameter"),
         (investigation_module, "build_oracle_investigation_launch_tui_parameter"),
         (oracle_edit_module, "build_oracle_edit_main_launch_exec_parameter"),
     ):
-        builder = Mock(wraps=getattr(module, name))
+        builder = Mock(return_value=SimpleNamespace(prompt=skeleton))
         builders.append(builder)
         monkeypatch.setattr(module, name, builder)
 
@@ -184,8 +189,7 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
     assert ignored_roots == [root]
     files = list((root / ".cmoc/gu/log/editor_input").iterdir())
     assert len(files) == 1
-    handoff_start.assert_called_once()
-    assert handoff_start.call_args.args[:2] == (root, files[0])
+    handoff_start.assert_called_once_with(root, files[0], skeleton)
     assert save_destinations == files
     assert files[0].name.endswith("_orig.md")
     assert files[0].read_bytes() == raw_input
@@ -397,7 +401,11 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     )
     # handoff の TCP・guide の結合は test_editor_input_handoff.py に残し、
     # linked 起動では main root への引き渡しと終了順序を観測する。
-    write_config(linked / ".cmoc/gt/config.json", CmocConfig())
+    # 設定 I/O は test_runtime_config.py と上の main 起動で通す。
+    # ここでは linked の設定を main の設定で代用しないことを直接検査する。
+    config = CmocConfig(num_parallel=3)
+    load_config = Mock(return_value=config)
+    monkeypatch.setattr(tui_module, "load_config", load_config)
     monkeypatch.chdir(linked)
     opened_inputs = editor_input("\nlinked worktree task\n")
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
@@ -414,9 +422,11 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
 
     assert result.exit_code == 0, result.output
     assert doctor_roots == [linked.resolve()]
+    load_config.assert_called_once_with(linked.resolve())
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
+    assert tui_kwargs["config"] is config
     assert tui_kwargs["purpose"] == "tui codex"
     assert parameter.agent_call_cwd == root.resolve()
     [saved_input] = (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")

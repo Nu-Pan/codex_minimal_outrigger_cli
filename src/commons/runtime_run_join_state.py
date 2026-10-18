@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .runtime_errors import CmocError
 from .runtime_git import head_commit, run_git
-from .runtime_paths import sessions_dir
+from .runtime_paths import reuse_root_queries, sessions_dir
 from .runtime_run_lifecycle import EditingRunContext
 from .runtime_state import (
     RunPart,
@@ -220,8 +220,10 @@ def load_join_record(repo: Path, session_id: str) -> JoinRecord | None:
         raise CmocError("join 復旧記録を検証できません。", [], str(path)) from exc
 
 
+@reuse_root_queries()
 def join_record(context: EditingRunContext) -> JoinRecord:
     """同じ run の記録を再利用し、新規 run では元の成果を先に固定する。"""
+    # 配置の探索だけを取得内で共有し、保存内容・worktree 登録は毎回検証する。
     record = load_join_record(context.repo, context.session_id)
     if record is not None and record.context.run_branch == context.run_branch:
         if (
@@ -254,9 +256,25 @@ def confirm_import(record: JoinRecord) -> bool:
             or record.session_head is None
         ):
             raise CmocError("join の取り込み記録が不完全です。", [], "")
+        # 同じ immutable commit の tree と親を、照合ごとに一括で取り直す。
+        commits = run_git(
+            [
+                "log",
+                "--no-walk=unsorted",
+                "--format=%H %T %P",
+                record.session_commit,
+                record.prepared_run_head,
+            ],
+            context.repo,
+        ).stdout.splitlines()
+        metadata = {
+            fields[0]: fields[1:] for line in commits if (fields := line.split())
+        }
         if (
-            tree_id(context.repo, record.session_commit) != record.session_tree
-            or tree_id(context.repo, record.prepared_run_head) != record.session_tree
+            record.session_commit not in metadata
+            or record.prepared_run_head not in metadata
+            or metadata[record.session_commit][0] != record.session_tree
+            or metadata[record.prepared_run_head][0] != record.session_tree
             or run_git(
                 [
                     "merge-base",
@@ -275,9 +293,9 @@ def confirm_import(record: JoinRecord) -> bool:
                 record.session_commit == record.session_head == record.prepared_run_head
             )
         else:
-            valid = record.join_commit == record.session_commit and run_git(
-                ["show", "-s", "--format=%P", record.join_commit], context.repo
-            ).stdout.split() == [record.session_head, record.prepared_run_head]
+            valid = record.join_commit == record.session_commit and metadata[
+                record.session_commit
+            ][1:] == [record.session_head, record.prepared_run_head]
         if not valid:
             raise CmocError("join の取り込み履歴と基準が一致しません。", [], "")
         return True
@@ -285,27 +303,31 @@ def confirm_import(record: JoinRecord) -> bool:
         return False
     commits = run_git(
         [
-            "rev-list",
+            "log",
             "--first-parent",
+            "--format=%H %T %P",
             f"{record.session_head}..{context.session_branch}",
         ],
         context.repo,
     ).stdout.splitlines()
-    matches = [
-        commit
-        for commit in commits
-        if run_git(["show", "-s", "--format=%P", commit], context.repo).stdout.split()
+    # 親と tree を履歴と一括取得し、候補ごとの process 起動を避ける。
+    candidates = [
+        (fields[0], fields[1])
+        for line in commits
+        if (fields := line.split())[2:]
         == [record.session_head, record.prepared_run_head]
-        and tree_id(context.repo, commit)
-        == tree_id(context.repo, record.prepared_run_head)
     ]
+    if not candidates:
+        return False
+    prepared_tree = tree_id(context.repo, record.prepared_run_head)
+    matches = [commit for commit, tree in candidates if tree == prepared_tree]
     if len(matches) > 1:
         raise CmocError("join の取り込み成立を一意に確認できません。", [], "")
     if not matches:
         return False
     record.imported = True
     record.join_commit = record.session_commit = matches[0]
-    record.session_tree = tree_id(context.repo, matches[0])
+    record.session_tree = prepared_tree
     record.save()
     return True
 

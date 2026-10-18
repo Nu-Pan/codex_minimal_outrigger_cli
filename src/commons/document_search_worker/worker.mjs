@@ -53,10 +53,18 @@ function chunkRanges(text, model, chunkTokens, overlapTokens) {
     let high = Math.min(chars.length, start + chunkTokens);
     // 残り全文を繰り返し tokenize せず、必要な範囲だけ倍増して探す。
     // 文字数と token 数は異なるので、上限は実際の tokenizer で判定する。
-    while (high < chars.length && tokensFor(model, chars, start, high) <= chunkTokens) {
+    let end = start;
+    while (true) {
+      if (tokensFor(model, chars, start, high) > chunkTokens) {
+        high--;
+        break;
+      }
+      end = high;
+      low = high + 1;
+      if (high === chars.length) break;
       high = Math.min(chars.length, start + (high - start) * 2);
     }
-    let end = start;
+    // 上限内と確認済みの範囲は探索せず、末尾まで収まれば二分探索も省く。
     while (low <= high) {
       const middle = Math.floor((low + high) / 2);
       if (tokensFor(model, chars, start, middle) <= chunkTokens) {

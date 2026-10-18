@@ -715,7 +715,7 @@ def test_remediation_checkpoint_rejects_malformed_fields(feedback_run):
 
 
 def test_remediation_state_validation_rechecks_schema_and_value(
-    feedback_run, tmp_path, monkeypatch
+    feedback_run, tmp_path, monkeypatch, request
 ):
     """同じ内容の再検証後も、入力・schema の変化と artifact の破損を拒否する。"""
     h = feedback_run
@@ -742,6 +742,8 @@ def test_remediation_state_validation_rechecks_schema_and_value(
             else original_files(package)
         ),
     )
+    run_state._remediation_schema_resource.cache_clear()
+    request.addfinalizer(run_state._remediation_schema_resource.cache_clear)
 
     # wave の生成は一度だけ行い、schema と検査対象を各ケースで初期化する。
     for target in ("checkpoint", "verification", "current_evidence"):
@@ -912,7 +914,27 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
         assert audit["before_commit"] == audit["after_commit"] == h.head
         assert audit["changed_paths"] == []
         assert audit["diff_sha256"] == sha256_bytes(b"")
-    result = _join_and_publish(h, monkeypatch)
+    read_checkpoint = Mock(wraps=remediation.read_run_artifact)
+    validate_checkpoint = Mock(wraps=remediation.validate_remediation_checkpoint)
+    with monkeypatch.context() as audit_patch:
+        audit_patch.setattr(remediation, "read_run_artifact", read_checkpoint)
+        audit_patch.setattr(
+            remediation, "validate_remediation_checkpoint", validate_checkpoint
+        )
+        result = _join_and_publish(h, monkeypatch)
+    # 採用結果は seal・join・publication で各一回読み、join 内では再読しない。
+    # 旧判定も含め、全 checkpoint の schema・audit 検査を join に残す。
+    selected = selected_remediation_checkpoints(h.manifest)
+    selected_paths = {reference["path"] for reference in selected}
+    references = h.manifest["processing"]["remediation_checkpoints"]
+    reads = Counter(call.args[1]["path"] for call in read_checkpoint.call_args_list)
+    validations = Counter(call.args[1] for call in validate_checkpoint.call_args_list)
+    for reference in references:
+        path = reference["path"]
+        assert reads[path] == (3 if path in selected_paths else 1)
+        assert validations[h.context.repo / path] == (
+            2 if path in selected_paths else 1
+        )
     assert result.result == "ok"
     assert load_active_state(h.context.repo).issues == {}
     assert "remediation_issue_count: 6" in result.primary_report.read_text()
@@ -936,6 +958,25 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
         h.head,
         h.commits[0],
     ]
+    ancestor.side_effect = None
+    # 次の join 検証では、採用済み結果も旧判定も artifact の改変を再検査する。
+    for reference in (selected[0], references[0]):
+        path = h.context.repo / reference["path"]
+        content = path.read_bytes()
+        path.write_bytes(b"{}\n")
+        try:
+            with pytest.raises(CmocError, match="SHA256"):
+                remediation._complete_join(h.context, h.manifest)
+        finally:
+            path.write_bytes(content)
+    # path が同じでも参照 hash が違う場合、検証済み snapshot を流用しない。
+    original_hash = selected[0]["sha256"]
+    selected[0]["sha256"] = "f" * 64
+    try:
+        with pytest.raises(CmocError, match="SHA256"):
+            remediation._complete_join(h.context, h.manifest)
+    finally:
+        selected[0]["sha256"] = original_hash
 
 
 @pytest.mark.parametrize("fault", ["head", "forbidden_path"])
@@ -1124,7 +1165,25 @@ def test_sealed_result_cannot_publish_or_recover_with_changed_basis(
     identity = _add_candidate(h, "a")
     h.handler = lambda _issue: _remediation_output(identity, status)
     candidates, aggregates = _run(h)
-    remediation._seal(h.context, h.manifest, candidates, aggregates)
+    # 封印時の分類には根拠検証で読んだ checkpoint を使い、再読しない。
+    read_checkpoint = Mock(wraps=remediation.read_run_artifact)
+    with monkeypatch.context() as seal_patch:
+        seal_patch.setattr(remediation, "read_run_artifact", read_checkpoint)
+        remediation._seal(h.context, h.manifest, candidates, aggregates)
+    assert read_checkpoint.call_count == 1
+    case_id = h.manifest["run"]["targets"]["case_ids"][identity]
+    assert (case_id is not None) == (status in {"human_required", "inconclusive"})
+
+    # 再利用は一回の封印内に限り、次の呼出しでは改変を拒否する。
+    [reference] = selected_remediation_checkpoints(h.manifest)
+    checkpoint_path = h.context.repo / reference["path"]
+    checkpoint_bytes = checkpoint_path.read_bytes()
+    checkpoint_path.write_bytes(b"{}\n")
+    try:
+        with pytest.raises(CmocError, match="SHA256"):
+            remediation._seal(h.context, h.manifest, candidates, aggregates)
+    finally:
+        checkpoint_path.write_bytes(checkpoint_bytes)
     seal_path = h.context.repo / h.manifest["run"]["sealed"]["path"]
     sealed_bytes = seal_path.read_bytes()
     for source in h.context.run_worktree.iterdir():
@@ -1311,36 +1370,103 @@ def test_publication_and_active_generation_use_hash_verified_bytes(
     ):
         _assert_hash_verified_state_snapshot(root, state, path, monkeypatch)
 
+    # 次の cut は検証した generation と同じ参照だけを受理する。publication を再準備しない。
+    current = report._active_state_input(root, state)
+    reference = current["issues"][0]
+    for name, references in (
+        ("issues", None),
+        ("issues", []),
+        ("issues", [reference, reference]),
+        ("issues", [{**reference, "issue_id": "invalid"}]),
+        ("issues", [{**reference, "sha256": "0" * 64}]),
+        ("issues", [{**reference, "path": "../outside.json"}]),
+        ("issues", [{**reference, "extra": True}]),
+        ("machine_aggregates", None),
+        ("machine_aggregates", [{}]),
+    ):
+        with pytest.raises(CmocError, match="generation manifest"):
+            feedback_state._validate_report_cut_current_input(
+                root,
+                {**current, name: references},
+                root / "cut.json",
+                allow_missing=False,
+            )
+
 
 def test_published_active_state_reuses_one_cleanup_snapshot(
     publication_feedback, monkeypatch
 ):
-    """cleanup 待ちでも hash 検証済み manifest を再読せず、次回は改変を拒否する。"""
+    """cleanup 待ちでも検証済み artifact を再読せず、次回は改変を拒否する。"""
     h = publication_feedback
     root = h.context.repo
     expected = load_active_state(root)
     original_read = Path.read_bytes
-    original_content = original_read(h.path)
-    reads = []
+    publication = h.manifest["publication"]
+    paths = [h.path] + [
+        root / reference["path"]
+        for reference in (
+            *publication["generation_artifacts"],
+            *publication["history_artifacts"],
+            publication["report"],
+        )
+    ]
+    # 準備を共有し、cleanup manifest・generation・履歴・report の置換を個別に検査する。
+    for replaced in paths:
+        original_content = original_read(replaced)
+        reads = Counter()
 
-    def replace_after_read(path):
-        content = original_read(path)
-        if path == h.path:
-            reads.append(path)
-            if len(reads) == 1:
-                path.write_bytes(b"{}\n")
-        return content
+        def replace_after_read(path):
+            content = original_read(path)
+            if path in paths:
+                reads[path] += 1
+                if path == replaced and reads[path] == 1:
+                    path.write_bytes(b"{}\n")
+            return content
 
-    try:
-        with monkeypatch.context() as snapshot_patch:
-            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
-            assert validate_feedback_state(root) == expected
-            assert reads == [h.path]
-            with pytest.raises(CmocError, match="SHA256"):
+        try:
+            with monkeypatch.context() as snapshot_patch:
+                snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+                assert validate_feedback_state(root) == expected
+                assert reads == {path: 1 for path in paths}
+                with pytest.raises(CmocError, match="SHA256"):
+                    validate_feedback_state(root)
+                assert reads[replaced] == 2
+        finally:
+            replaced.write_bytes(original_content)
+
+
+def test_cleanup_publication_must_match_current_references(publication_feedback):
+    """cleanup の参照が current と異なる場合は検証済み snapshot を流用しない。"""
+    h = publication_feedback
+    root = h.context.repo
+    pointer_path = feedback_state.current_pointer_path(root)
+    pointer_content = pointer_path.read_bytes()
+    manifest_content = h.path.read_bytes()
+    publication = h.manifest["publication"]
+    mismatches = {
+        "generation_id": "fbg_999999_2026-09-29_15-04",
+        "generation_manifest": {
+            **publication["generation_manifest"],
+            "sha256": "0" * 64,
+        },
+        "report": {**publication["report"], "sha256": "0" * 64},
+        "result": "incomplete",
+    }
+    for name, value in mismatches.items():
+        manifest = copy.deepcopy(h.manifest)
+        manifest["publication"][name] = value
+        content = canonical_json_bytes(manifest)
+        pointer = json.loads(pointer_content)
+        pointer["report_cut_manifest_sha256"] = sha256_bytes(content)
+        try:
+            h.path.write_bytes(content)
+            pointer_path.write_bytes(canonical_json_bytes(pointer))
+            with pytest.raises(CmocError, match="publication artifact の参照"):
                 validate_feedback_state(root)
-            assert reads == [h.path, h.path]
-    finally:
-        h.path.write_bytes(original_content)
+        finally:
+            h.path.write_bytes(manifest_content)
+            pointer_path.write_bytes(pointer_content)
+    assert validate_feedback_state(root) == load_active_state(root)
 
 
 def test_published_cleanup_still_checks_work_inventory(publication_feedback):
@@ -1416,6 +1542,58 @@ def test_publication_staging_relaxes_only_artifact_existence(publication_feedbac
                 _validate_report_cut_manifest(root, manifest, h.path)
         path.write_bytes(original_content)
         _validate_report_cut_manifest(root, h.manifest, h.path)
+
+
+def test_publication_cleanup_matches_input_references_without_repeated_scans(
+    publication_feedback,
+):
+    """消費対象を固定入力の部分集合に限定し、照合の二乗走査を検出する。"""
+    h = publication_feedback
+    staged = copy.deepcopy(h.manifest)
+    staged["processing"]["status"] = "staging"
+    comparisons = 0
+
+    class ComparedReference(dict):
+        def __eq__(self, other):
+            nonlocal comparisons
+            comparisons += 1
+            return super().__eq__(other)
+
+    # raw の hash・schema 検証は manifest の入力検査に残し、ここでは対象の照合を検査する。
+    entries = [
+        {
+            "observation_id": f"fbo_{index:06d}_2026-10-08_00-00",
+            "path": f".cmoc/gu/feedback/observation/v1/2026/10/08/fbo_{index:06d}_2026-10-08_00-00.json",
+            "sha256": f"{index:064x}",
+        }
+        for index in range(128)
+    ]
+    staged["inputs"]["observations"] = entries
+    cleanup = staged["publication"]["cleanup"]
+    selected = [
+        ComparedReference({key: entry[key] for key in ("path", "sha256")})
+        for entry in reversed(entries[::2])
+    ]
+    cleanup["observations"] = selected
+
+    def validate():
+        feedback_state._validate_publication_section(h.context.repo, staged, h.path)
+
+    # cleanup は入力順の prefix や全件でなくてもよく、未消費の入力を残せる。
+    validate()
+    assert comparisons <= 12 * len(entries)
+    for invalid in (
+        {**selected[0], "sha256": "f" * 64},
+        {**selected[0], "path": ".cmoc/gu/feedback/observation/v1/unlisted.json"},
+    ):
+        cleanup["observations"] = [invalid, *selected[1:]]
+        with pytest.raises(CmocError, match="固定した observation に含まれません"):
+            validate()
+    cleanup["observations"] = []
+    validate()
+    cleanup["observations"] = [selected[0], selected[0]]
+    with pytest.raises(CmocError, match="一意な path"):
+        validate()
 
 
 def test_unlisted_active_generation_artifact_is_corruption(published_feedback):

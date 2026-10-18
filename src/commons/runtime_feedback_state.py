@@ -1687,6 +1687,9 @@ def _load_current_state(repo: Path) -> ActiveState:
             cleanup_manifest,
             cut_path,
             allow_missing_cleanup_targets=True,
+            current_state=ActiveState(
+                pointer, generation_manifest, issues, aggregates, None, None, history
+            ),
         )
         if cleanup_manifest.get("report_cut_id") != report_cut_id_value:
             raise _corruption(
@@ -1706,24 +1709,6 @@ def _load_current_state(repo: Path) -> ActiveState:
             raise _corruption(
                 "current pointer の publication section が不正です。", cut_path
             )
-        if (
-            publication.get("generation_id") != generation_id_value
-            or publication.get("generation_manifest")
-            != {
-                "path": pointer.get("generation_manifest_path"),
-                "sha256": pointer.get("generation_manifest_sha256"),
-            }
-            or publication.get("report")
-            != {
-                "path": pointer.get("report_path"),
-                "sha256": pointer.get("report_sha256"),
-            }
-            or publication.get("result") != pointer.get("result")
-        ):
-            raise _corruption(
-                "current pointer と publication artifact の参照が一致しません。",
-                cut_path,
-            )
         cleanup_path = cut_path
     return ActiveState(
         pointer,
@@ -1742,6 +1727,7 @@ def _validate_report_cut_manifest(
     path: Path,
     *,
     allow_missing_cleanup_targets: bool = False,
+    current_state: ActiveState | None = None,
 ) -> None:
     """report cut manifest の固定入力と mutable section の schema を検査する。"""
     _require_exact_fields(
@@ -1984,7 +1970,7 @@ def _validate_report_cut_manifest(
         )
     publication = manifest.get("publication")
     if publication is not None:
-        _validate_publication_section(repo, manifest, path)
+        _validate_publication_section(repo, manifest, path, current_state=current_state)
     from .runtime_feedback_run_state import validate_run_artifacts
 
     validate_run_artifacts(
@@ -2113,13 +2099,21 @@ def _validate_report_cut_current_input(
         raise _corruption(
             "report cut current generation と pointer snapshot が一致しません。", path
         )
-    generation_path = _validate_artifact_reference(
-        repo,
-        shaped_generation_reference,
-        expected_root=expected_generation_directory,
-        description="report cut current generation",
-        allow_missing=allow_missing,
-    )
+    if allow_missing:
+        generation_path = _validate_artifact_reference(
+            repo,
+            shaped_generation_reference,
+            expected_root=expected_generation_directory,
+            description="report cut current generation",
+            allow_missing=True,
+        )
+    else:
+        generation_path = _resolve_reference_path(
+            repo,
+            shaped_generation_reference["path"],
+            expected_generation_directory,
+            "report cut current generation",
+        )
     if (
         generation_path.parent != expected_generation_directory
         or generation_path.name != "manifest.json"
@@ -2148,11 +2142,33 @@ def _validate_report_cut_current_input(
         raise _corruption(
             "report cut current Markdown report path が不正です。", report_path
         )
+    if not allow_missing:
+        # generation loader が各 record の path・hash・schema を同じ byte 列から検査する。
+        # 固定入力の参照もその一覧と照合し、hash 検査だけの先行読込を重ねない。
+        generation_manifest, _issues, _aggregates, _history = _load_generation(
+            repo,
+            generation_path,
+            str(generation_id_value),
+            expected_sha256=shaped_generation_reference["sha256"],
+        )
+        if (
+            generation_manifest.get("report_cut_id")
+            != pointer_value.get("report_cut_id")
+            or generation_manifest.get("issues") != current["issues"]
+            or generation_manifest.get("machine_aggregates")
+            != current["machine_aggregates"]
+        ):
+            raise _corruption(
+                "report cut current input が generation manifest と一致しません。",
+                generation_path,
+            )
+        return
+
+    # cleanup では旧 generation が欠落し得るため、残っている各参照を個別に検査する。
     contracts = (
         ("issues", "issue_id", "issue"),
         ("machine_aggregates", "canonical_key", "machine_aggregate"),
     )
-    reference_groups: dict[str, list[_JsonObject]] = {}
     for name, identity_name, directory_name in contracts:
         references = current.get(name)
         if not isinstance(references, list):
@@ -2188,7 +2204,7 @@ def _validate_report_cut_current_input(
                 {"path": item.get("path"), "sha256": item.get("sha256")},
                 expected_root=expected_generation_directory,
                 description=f"report cut current {name}",
-                allow_missing=allow_missing,
+                allow_missing=True,
             )
             expected_name = (
                 f"{identity}.json"
@@ -2206,22 +2222,6 @@ def _validate_report_cut_current_input(
         if identities != sorted(set(identities)):
             raise _corruption(
                 f"report cut current {name} が一意な辞書順ではありません。", path
-            )
-        reference_groups[name] = references
-    if not allow_missing:
-        generation_manifest, _issues, _aggregates, _history = _load_generation(
-            repo, generation_path, str(generation_id_value)
-        )
-        if (
-            generation_manifest.get("report_cut_id")
-            != pointer_value.get("report_cut_id")
-            or generation_manifest.get("issues") != reference_groups["issues"]
-            or generation_manifest.get("machine_aggregates")
-            != reference_groups["machine_aggregates"]
-        ):
-            raise _corruption(
-                "report cut current input が generation manifest と一致しません。",
-                generation_path,
             )
 
 
@@ -2420,6 +2420,8 @@ def _validate_publication_section(
     repo: Path,
     manifest: _JsonObject,
     path: Path,
+    *,
+    current_state: ActiveState | None = None,
 ) -> None:
     """staged publication と cleanup target の閉じた schema を検査する。"""
     # 呼出し元で読んだ manifest を使い、cleanup 参照へ別の snapshot を混ぜない。
@@ -2440,6 +2442,24 @@ def _validate_publication_section(
         path,
         "report cut publication",
     )
+    if current_state is not None:
+        pointer = current_state.current
+        if (
+            pointer is None
+            or current_state.generation_manifest is None
+            or publication["generation_id"] != pointer["generation_id"]
+            or publication["generation_manifest"]
+            != {
+                "path": pointer["generation_manifest_path"],
+                "sha256": pointer["generation_manifest_sha256"],
+            }
+            or publication["report"]
+            != {"path": pointer["report_path"], "sha256": pointer["report_sha256"]}
+            or publication["result"] != pointer["result"]
+        ):
+            raise _corruption(
+                "current pointer と publication artifact の参照が一致しません。", path
+            )
     if not is_common_id(publication.get("generation_id"), "fbg"):
         raise _corruption("publication generation ID が不正です。", path)
     _require_timestamp(
@@ -2545,13 +2565,19 @@ def _validate_publication_section(
         ):
             raise _corruption("publication generation artifact path が不正です。", path)
     report_root = repo / ".cmoc" / "gu" / "report" / "feedback"
-    report_path = _validate_artifact_reference(
-        repo,
-        report_reference,
-        expected_root=report_root,
-        description="publication Markdown report",
-        allow_missing=staged_missing,
-    )
+    if current_state is not None and not staged_missing:
+        # 同じ呼出しで pointer の参照と hash を検証済み。配置の制約はここでも保つ。
+        report_path = _resolve_reference_path(
+            repo, report_reference["path"], report_root, "publication Markdown report"
+        )
+    else:
+        report_path = _validate_artifact_reference(
+            repo,
+            report_reference,
+            expected_root=report_root,
+            description="publication Markdown report",
+            allow_missing=staged_missing,
+        )
     if (
         report_path.parent
         not in {
@@ -2571,12 +2597,17 @@ def _validate_publication_section(
             },
             "publication generation",
         )
-        loaded, _issues, _aggregates, history = _load_generation(
-            repo,
-            generation_manifest_path,
-            generation_id_value,
-            expected_sha256=generation_reference["sha256"],
-        )
+        if current_state is not None and current_state.generation_manifest is not None:
+            # cleanup の検証へ、先に検証した generation と履歴の snapshot を渡す。
+            loaded = current_state.generation_manifest
+            history = current_state.history
+        else:
+            loaded, _issues, _aggregates, history = _load_generation(
+                repo,
+                generation_manifest_path,
+                generation_id_value,
+                expected_sha256=generation_reference["sha256"],
+            )
         if loaded.get("report_cut_id") != path.parent.name:
             raise _corruption(
                 "publication generation の report cut ID が一致しません。",
@@ -2628,11 +2659,12 @@ def _validate_publication_section(
     observation_inputs = inputs.get("observations")
     if not isinstance(observation_inputs, list):
         raise _corruption("report cut observations が array ではありません。", path)
-    expected_observations = [
-        {"path": item.get("path"), "sha256": item.get("sha256")}
+    # 固定入力との照合は path と hash の組で索引化し、入力一覧の再走査を避ける。
+    expected_observations = {
+        (item["path"], item["sha256"])
         for item in observation_inputs
         if isinstance(item, dict)
-    ]
+    }
     current_input = inputs.get("current")
     expected_old_generation: list[_JsonObject] = []
     if isinstance(current_input, dict):
@@ -2666,7 +2698,7 @@ def _validate_publication_section(
     expected_work.extend(run_artifact_references(manifest))
     expected_work.sort(key=lambda item: str(item["path"]))
     if any(
-        reference not in expected_observations
+        (reference["path"], reference["sha256"]) not in expected_observations
         for reference in cleanup_lists["observations"]
     ):
         raise _corruption("cleanup input が固定した observation に含まれません。", path)
@@ -3296,8 +3328,8 @@ def publish_current_pointer(
     report: _JsonObject,
     published_at: str,
     result: str,
-) -> _JsonObject:
-    """generation と Markdown report の検証後に current pointer を切り替える。"""
+) -> ActiveState:
+    """current pointer を切り替え、保存後に再読・検証した active state を返す。"""
     if result not in {"ok", "attention", "incomplete"}:
         raise ValueError(f"invalid normal feedback result: {result!r}")
     _require_timestamp(published_at, current_pointer_path(repo), "feedback publication")
@@ -3410,7 +3442,7 @@ def publish_current_pointer(
             "切替後の feedback current pointer が一致しません。",
             current_pointer_path(repo),
         )
-    return pointer
+    return loaded_state
 
 
 def cleanup_published_report(repo: Path, state: ActiveState) -> bool:

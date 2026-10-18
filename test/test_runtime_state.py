@@ -117,8 +117,11 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
 
     # 既存 file の更新でも run payload を消去し、session branch から復元できる。
     state.run = RunPart()
+    state.session.session_home_branch = "開発/作業"
     write_state(path, state)
     assert load_state_for_branch(tmp_path, SESSION_BRANCH) == (SESSION_ID, path, state)
+    assert active_session_for_home(tmp_path, "main") is None
+    assert active_session_for_home(tmp_path, "開発/作業") == path
 
 
 @pytest.mark.parametrize("branch", [None, 1])
@@ -362,7 +365,9 @@ def test_session_state_rejects_empty_payload(part: str, field: str) -> None:
     assert f"`{part}.{field}`" in exc_info.value.detail
 
 
-@pytest.mark.parametrize("value", ["main\x00branch", "main\ud800"])
+@pytest.mark.parametrize(
+    "value", ["main\x00branch", "開発\x00branch", "main\ud800", "開発\ud800"]
+)
 def test_session_state_rejects_unrepresentable_payload(value: str) -> None:
     """state payload に process/file 境界で扱えない文字を保存しない。"""
     data = _valid_state().to_dict()

@@ -41,7 +41,11 @@ from cmoc_runtime import (
     repo_root,
     work_root,
 )
-from commons.runtime_run import expected_run_worktree, worktree_for_branch_optional
+from commons.runtime_run import (
+    expected_run_worktree,
+    worktree_for_branch_optional,
+    worktrees_for_branches,
+)
 
 
 @pytest.fixture
@@ -436,9 +440,9 @@ def test_run_worktree_lookup_and_removal_reject_symlink_components(
 
 
 def test_worktree_lookup_rejects_invalid_registered_paths(
-    committed_repository: Path, tmp_path: Path
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """run/session の stale な Git 登録先を拒否し、置換した内容も削除しない。"""
+    """照会内で配置を再利用し、次回は stale な登録先と置換した内容を保護する。"""
     # 両 branch の検査で repository と空 commit を共用し、登録先は別々に保つ。
     root = committed_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
@@ -451,6 +455,34 @@ def test_worktree_lookup_rejects_invalid_registered_paths(
         str(target),
         "HEAD",
     )
+    session_worktree = tmp_path / "session-worktree"
+    run_git(
+        root, "worktree", "add", "-b", SESSION_BRANCH, str(session_worktree), "HEAD"
+    )
+
+    queries: list[tuple[str, ...]] = []
+    original_run = runtime_git.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git":
+            queries.append(tuple(argv[1:]))
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(runtime_git.subprocess, "run", record_query)
+    # main/linked の両起点で、同じ root・common dir を branch ごとに取り直さない。
+    for anchor in (root, session_worktree):
+        queries.clear()
+        assert worktrees_for_branches(anchor, (RUN_BRANCH, SESSION_BRANCH)) == {
+            RUN_BRANCH: target,
+            SESSION_BRANCH: session_worktree,
+        }
+        assert sum("--show-toplevel" in args for args in queries) <= 1, queries
+        assert (
+            queries.count(("rev-parse", "--path-format=absolute", "--git-common-dir"))
+            <= 1
+        ), queries
+        assert queries.count(("worktree", "list", "--porcelain")) == 1, queries
+
     target.rename(tmp_path / "moved-worktree")
     assert worktree_for_branch_optional(root, RUN_BRANCH) is None
     target.mkdir(parents=True)
@@ -464,16 +496,7 @@ def test_worktree_lookup_rejects_invalid_registered_paths(
     assert (target / "keep.txt").read_text() == "keep\n"
 
     # session は管理領域外の linked worktree で、同じ stale 判定を検証する。
-    target = tmp_path / "session-worktree"
-    run_git(
-        root,
-        "worktree",
-        "add",
-        "-b",
-        SESSION_BRANCH,
-        str(target),
-        "HEAD",
-    )
+    target = session_worktree
     target.rename(tmp_path / "moved-session-worktree")
 
     # Git 登録は不変なので、欠損・file・directory 置換に同じ準備を使う。

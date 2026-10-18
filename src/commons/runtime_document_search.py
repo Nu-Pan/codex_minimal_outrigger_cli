@@ -425,21 +425,21 @@ class _EmbeddingCache:
         ).fetchone()
         if row is None:
             return None
-        return self._validated_entry(digest, row[0], row[1])
+        with self.connection:
+            return self._validated_entry(digest, row[0], row[1])
 
     def _validated_entry(
         self, digest: str, embedding: object, producer: object
     ) -> tuple[bytes, str] | None:
-        # 不正な保存結果は公開・再利用せず、不足分として再生成する。
+        # 呼出元の transaction で不正な保存結果を除き、不足分として再生成する。
         try:
             vector = _checked_cached_vector(embedding)
             if not isinstance(producer, str) or len(producer) != 64:
                 raise SearchError("SYNC_FAILED", "embedding producer is invalid")
         except SearchError:
-            with self.connection:
-                self.connection.execute(
-                    "delete from embeddings where excerpt_sha256 = ?", (digest,)
-                )
+            self.connection.execute(
+                "delete from embeddings where excerpt_sha256 = ?", (digest,)
+            )
             return None
         return vector, producer
 
@@ -455,13 +455,14 @@ class _EmbeddingCache:
     def hashes(self, check: Callable[[], None]) -> set[str]:
         # ロック取得後の保存結果を確認し、待機前の不足判定を使わない。
         hashes = set()
-        # 検証に必要な列も一度に読み、入力片ごとの再問い合わせを避ける。
-        for digest, embedding, producer in self.connection.execute(
-            "select excerpt_sha256, embedding, producer_worktree from embeddings"
-        ):
-            check()
-            if self._validated_entry(digest, embedding, producer) is not None:
-                hashes.add(digest)
+        # 検証に必要な列を一度に読み、破損結果の削除も一括して確定する。
+        with self.connection:
+            for digest, embedding, producer in self.connection.execute(
+                "select excerpt_sha256, embedding, producer_worktree from embeddings"
+            ):
+                check()
+                if self._validated_entry(digest, embedding, producer) is not None:
+                    hashes.add(digest)
         return hashes
 
 
@@ -1039,7 +1040,8 @@ class DocumentSearch:
                     "chunk_count"
                 ] < max(1, resumes[path]):
                     raise SearchError("MODEL_FAILURE", "document partition is invalid")
-                current_source(path)
+                # 分割通知は入力時点の本文に対する進捗であり、保存は伴わない。
+                # 現在本文は chunk 保存直前と、索引の公開前に照合する。
                 checked_document(path)
                 return
             if kind == "document_complete":
@@ -1049,7 +1051,7 @@ class DocumentSearch:
                     or next_ordinal[path] == 0
                 ):
                     raise SearchError("MODEL_FAILURE", "document chunks are incomplete")
-                current_source(path)
+                # 完了状態は公開前の全体照合まで lock 内に留める。
                 with connection:
                     connection.execute(
                         "update documents set complete = 1 where path = ?", (path,)

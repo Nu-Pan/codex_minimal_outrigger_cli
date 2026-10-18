@@ -11,6 +11,7 @@ import json
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import oracle.other.path_model as path_model_module
 import pytest
@@ -62,11 +63,18 @@ def _write_session_state(
 
 @pytest.fixture(scope="module")
 def oracle_edit_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """各ケースへコピーする初期履歴を一度だけ作成する。"""
+    """各ケースへコピーする初期履歴と既存差分を一度だけ作成する。"""
     seed = tmp_path_factory.mktemp("oracle-edit-seed")
     with pytest.MonkeyPatch.context() as patch:
         setup_codex_home(seed, patch)
-        return make_repo(seed, initial_branch=SESSION_BRANCH)
+        root = make_repo(seed, initial_branch=SESSION_BRANCH)
+        # 全ケースで同じ staged/unstaged 差分を使い、準備用の Git 起動を共有する。
+        # index と working tree は下の fixture でそれぞれ独立して複製する。
+        readme_path = root / "README.md"
+        readme_path.write_text("# staged change\n")
+        run_git(root, "add", "README.md")
+        readme_path.write_text("# unstaged change\n")
+        return root
 
 
 @pytest.fixture
@@ -120,6 +128,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     root = oracle_edit_repository
     instruction = (
         "oracle spec を更新する\n# 指示中の見出し\n空行を挿入しない\n"
+        "過去の agent の会話と最終回答、実行ログ /example/sender.jsonl を参考にする\n"
         "````text\n```\n## 実行情報\n````\n"
         + "長い指示の続きです。\n" * 180
         + "指示全文の末尾"
@@ -142,9 +151,6 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     session_state_path = _write_session_state(root, run=active_run)
     state_before = json.loads(session_state_path.read_text())
     readme_path = root / "README.md"
-    readme_path.write_text("# staged change\n")
-    run_git(root, "add", "README.md")
-    readme_path.write_text("# unstaged change\n")
     # HEAD・branch・index の blob/mode と working tree の mode を一度に取得する。
     # working tree の本文は下で直接比較し、patch 生成と個別の Git 起動を省く。
     status_args = (
@@ -156,6 +162,10 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         "oracle/spec.md",
     )
     status_before = run_git(root, *status_args).stdout.splitlines()
+    assert any(
+        line.startswith("1 MM ") and line.endswith(" README.md")
+        for line in status_before
+    )
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_main_parameters: list[AgentCallParameter] = []
@@ -400,7 +410,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert main_kwargs["root"] == root
     assert main_kwargs["purpose"] == "oracle edit first"
     complete_prompt = main_parameter.prompt
-    assert "oracle spec を更新する" in complete_prompt
+    assert instruction in complete_prompt
+    # ユーザーのログ参照は保持し、自動生成文面には過去会話への参照を加えない。
+    # 同じ完成 prompt で検査し、文面検査だけの fixture と builder 実行を重ねない。
+    generated = complete_prompt.replace(instruction, "", 1)
+    for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):
+        assert prior_context not in generated
     assert oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert "# oracle policy" in complete_prompt
     assert "# routing policy" in complete_prompt
@@ -538,6 +553,19 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
 ) -> None:
     """共用入力確定後の準備失敗では、どちらの編集も開始済みにしない。"""
     root = oracle_edit_failure_repository
+    # 完全 prompt と起動 parameter の結合は上の CLI test に残す。
+    # 準備失敗では消費されない本文を構築せず、builder への入力を観測する。
+    builder_inputs: list[str] = []
+
+    def build_parameter(user_instruction: str) -> SimpleNamespace:
+        builder_inputs.append(user_instruction)
+        return SimpleNamespace(prompt="test skeleton")
+
+    monkeypatch.setattr(
+        oracle_edit_module,
+        "build_oracle_edit_main_launch_exec_parameter",
+        build_parameter,
+    )
     # 起動前提は失敗境界の double へ置き換えるため、session は不要。
     monkeypatch.setattr(
         oracle_edit_module, "edit_prompt_editor_input", lambda *_args: None
@@ -573,6 +601,10 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == 1
+    assert builder_inputs == [
+        oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER,
+        "edit oracle",
+    ]
     stages = ["config", "preconditions"]
     assert events == stages[: stages.index(failure_stage) + 1]
     report = terminal_primary_report(result).read_text()
@@ -622,24 +654,3 @@ def test_oracle_edit_launch_preconditions(
             root,
             current_root,
         )
-
-
-def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
-    """ユーザーのログ参照は保持し、自動生成の過去会話参照は含めない。"""
-    # 実 Git の root 解決は test_basic_runtime.py と上の CLI 結合 test に残す。
-    # 文面の検査では探索結果だけを置換し、builder と renderer は実物を使う。
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(
-        path_model_module,
-        "_resolve_git_worktree_roots",
-        lambda _start_path=None: (tmp_path, tmp_path),
-    )
-    instruction = "過去の agent の会話と最終回答、実行ログ /example/sender.jsonl を参考に oracle を編集する"
-    prompt = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
-        instruction
-    ).prompt
-    assert instruction in prompt
-    # ユーザー入力を除いた自動生成文面は、同じ完全 prompt から検査する。
-    generated = prompt.replace(instruction, "", 1)
-    for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):
-        assert prior_context not in generated

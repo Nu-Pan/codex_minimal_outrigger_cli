@@ -238,12 +238,12 @@ def _remove_run_branch(
     warnings: list[str],
 ) -> bool:
     """active run の branch を強制削除し、削除結果を返す。"""
+    # 成功時は Git の終了結果で削除を確認できるため、存在照会は失敗時だけ行う。
+    result = delete_branch(context.repo, context.run_branch, force=True)
+    if result.returncode == 0:
+        return True
     if not branch_exists(context.repo, context.run_branch):
         warnings.append("run branch was already absent")
         return True
-    result = delete_branch(context.repo, context.run_branch, force=True)
-    if result.returncode != 0:
-        warnings.append(result.stderr.strip() or "run branch removal failed")
-        return False
-    # Git の正常終了で削除は完了しているため、同じ branch を再照会しない。
-    return True
+    warnings.append(result.stderr.strip() or "run branch removal failed")
+    return False

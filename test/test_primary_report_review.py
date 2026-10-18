@@ -7,6 +7,7 @@ import threading
 from functools import partial
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
 import typer
 from _cli_support import terminal_primary_report
@@ -24,6 +25,7 @@ import commons.runtime_codex_profile as profile_module
 import commons.runtime_codex_recovery as recovery
 import commons.runtime_primary_report_review as review_module
 from commons.runtime_errors import CmocError, CodexProcessStopError
+from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_logging import SubcommandLogger
 from commons.runtime_primary_report_review import (
     PrimaryReportReviewState,
@@ -56,13 +58,32 @@ def mechanical_report():
 
 @pytest.fixture
 def review_runtime(
-    cli_repository,
     tmp_path,
     monkeypatch,
     primary_report_review_runner,
+    primary_report_review_builder,
     nonpersistent_codex_ids,
 ):
+    """確認の制御・保存を、解決済み root と変更のない作業成果物で検証する。"""
+    root = tmp_path / "repo"
+    root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
+
+    # 実 Git の root・linked worktree 解決は test_codex_runtime_paths.py に残し、
+    # ここでは完全な builder・prompt と実 exec 制御を同じ対象 root で通す。
+    def resolve_roots(cwd):
+        assert cwd == root
+        return root, root
+
+    monkeypatch.setattr(path_model_module, "_resolve_git_worktree_roots", resolve_roots)
+
+    # Fake は .cmoc 内の応答・診断だけを保存する。実成果物の変動検出と復元は
+    # test_codex_runtime_retry.py の restores_artifacts_changed_by_correction に残す。
+    def unchanged_artifacts(work_root):
+        assert work_root == root
+        return WorktreeSnapshot(work_root, ())
+
+    monkeypatch.setattr(exec_module, "capture_worktree_snapshot", unchanged_artifacts)
     monkeypatch.setattr(
         review_module,
         "run_codex_exec",
@@ -73,7 +94,7 @@ def review_runtime(
             transient_poll_interval_sec=0,
         ),
     )
-    return cli_repository, SubcommandLogger(cli_repository, "doctor")
+    return root, SubcommandLogger(root, "doctor")
 
 
 @pytest.mark.parametrize(
@@ -281,18 +302,23 @@ def test_review_starts_after_main_interruption_and_accepts_new_signal(
 
 
 @pytest.mark.parametrize("ending", ["natural_completion", "user_interruption", "error"])
-@pytest.mark.parametrize("failure", ["call", "cancel", "stop", "log"])
-@pytest.mark.parametrize("result_field", ["result", "completion_reason"])
+@pytest.mark.parametrize(
+    ("failure", "result_field"),
+    [
+        ("call", "result"),
+        ("call", "completion_reason"),
+        ("cancel", "result"),
+        ("cancel", "completion_reason"),
+        # 必須後処理の失敗は元の固有結果を破棄するため、field との直積は不要。
+        # 両失敗と全終端分類を残し、両 field の保持は上の call・cancel で検証する。
+        ("stop", "result"),
+        ("log", "completion_reason"),
+    ],
+)
 def test_review_failure_preserves_main_outcome_except_required_finalization(
     cli_terminal_directory, monkeypatch, capsys, ending, failure, result_field
 ):
     root = cli_terminal_directory
-    # この fixture は root 解決を省く。builder の対象だけ実際のパラメータに置換する。
-    monkeypatch.setattr(
-        review_module,
-        "build_primary_report_review_parameter",
-        lambda **kwargs: object(),
-    )
 
     def failed_review(*args, **kwargs):
         if failure == "cancel":

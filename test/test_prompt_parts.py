@@ -82,11 +82,24 @@ def path_context(tmp_path_factory: pytest.TempPathFactory) -> AgentCallPathConte
 
 @pytest.fixture(scope="module")
 def default_prompt_markdown(path_context: AgentCallPathContext) -> str:
-    """既定 prompt の構成検査で、不変の Markdown を共有して再描画を省く。"""
+    """既定規定・objective 省略・入力保持の検査で、構築と描画を共有する。"""
     prompt = build_complete_prompt(
-        task="- 短い応答を返すこと",
+        task="- {{repo-root}} ツリー内の realization file を修正すること",
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
+        aux_dynamic_prompt=[
+            SDHeader(
+                "aux realization file",
+                "- {{cmoc-root}} と {{run-root}} と {{work-root}} 配下を確認すること",
+            ),
+            SDHeader(
+                "所見本文",
+                SDCodeBlock(
+                    "json",
+                    '{"summary": "realization file and {{repo-root}} stay in code block"}',
+                ),
+            ),
+        ],
     )
     return render_sd_node_as_markdown(*prompt)
 
@@ -327,7 +340,9 @@ def test_complete_prompt_omits_unset_optional_objective_sections(
     objective = default_prompt_markdown.split('<cmoc_block id="objective">', 1)[
         1
     ].split("</cmoc_block>", 1)[0]
-    assert "# task\n\n- 短い応答を返すこと" in objective
+    assert "# task\n\n- {{repo-root}} ツリー内の realization file を修正すること" in (
+        objective
+    )
     for omitted_heading in ("# scope", "# completion criteria", "# non-goals"):
         assert omitted_heading not in objective
 
@@ -567,28 +582,10 @@ def test_complete_prompt_preserves_injected_policy_terms(
 
 def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     path_context: AgentCallPathContext,
+    default_prompt_markdown: str,
 ) -> None:
     """complete promptが入力root tokenを保持し、実pathの定義行を追加することを検証する。"""
-    prompt = build_complete_prompt(
-        task="- {{repo-root}} ツリー内の realization file を修正すること",
-        file_access_mode=FileAccessMode.READONLY,
-        path_context=path_context,
-        aux_dynamic_prompt=[
-            SDHeader(
-                "aux realization file",
-                "- {{cmoc-root}} と {{run-root}} と {{work-root}} 配下を確認すること",
-            ),
-            SDHeader(
-                "所見本文",
-                SDCodeBlock(
-                    "json",
-                    '{"summary": "realization file and {{repo-root}} stay in code block"}',
-                ),
-            ),
-        ],
-    )
-
-    rendered = render_sd_node_as_markdown(*prompt)
+    rendered = default_prompt_markdown
 
     assert "# aux realization file" in rendered
     assert "{{repo-root}} ツリー内の realization file" in rendered

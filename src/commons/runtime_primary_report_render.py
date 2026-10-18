@@ -416,6 +416,9 @@ def _render_structured_value(value: Any) -> str:
 
 def _display_json_string(value: str) -> str:
     """引用符とバックスラッシュを区切りと区別して一度だけ表示する。"""
+    # 改行のないキー・文字列は、行分割と引用符の組み直しを省く。
+    if "\n" not in value:
+        return _DISPLAY_JSON_ENCODER.encode(value)
     # 改行で先に分割し、元のリテラル \\n を再解釈しない。
     segments = [
         _DISPLAY_JSON_ENCODER.encode(segment)[1:-1] for segment in value.split("\n")

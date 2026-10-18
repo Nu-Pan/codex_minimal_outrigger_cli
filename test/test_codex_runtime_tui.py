@@ -33,6 +33,7 @@ import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_exec as exec_module
 import commons.runtime_codex_tui as tui_module
 import commons.runtime_logging as logging_module
+import commons.runtime_windows_toast as toast_module
 from commons.runtime_codex_profile import process_group_has_running_member
 from commons.runtime_codex_recovery import install_recovery_interruption
 from commons.runtime_codex_session import CodexSessionLease
@@ -67,11 +68,16 @@ BUILDERS = [
 
 
 @pytest.fixture
-def directory(tmp_path, monkeypatch, toast_clock, nonpersistent_execution_ids):
+def directory(tmp_path, monkeypatch, nonpersistent_execution_ids):
     # 永続採番とログ保存の結合は test_codex_runtime_paths.py に残す。
     # TUI の制御検査では、ログ間の ID 対応を保って採番用 DB の準備を省く。
     for module in (exec_module, tui_module):
         monkeypatch.setattr(module, "new_id", logging_module.new_id)
+    # この Fake は通知 callback を起動しないため、空の state の drain は省く。
+    # 待機の期限・遅延起動・実 marker と cleanup の結合は test_windows_toast.py に残す。
+    monkeypatch.setattr(
+        toast_module, "_wait_for_tui_callback_drain", lambda _root: None
+    )
     root = tmp_path / "repo"
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
@@ -171,6 +177,9 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
     directory, monkeypatch, capsys, builder, command
 ):
     parameter = builder("long request " * 10000 + "\r\noriginal instruction")
+    # 起動準備の root はログにも再利用し、別 process の context は個別に導出する。
+    path_contexts = Mock(wraps=tui_module.AgentCallPathContext)
+    monkeypatch.setattr(tui_module, "AgentCallPathContext", path_contexts)
     stale = directory / ".cmoc/gu/log/editor_input/input_orig.md"
     stale.parent.mkdir(parents=True)
     stale.write_text("unrelated editor contents")
@@ -185,6 +194,7 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
     with call_log(directory, command) as logger:
 
         def observe(call):
+            assert path_contexts.call_count == 1
             source = json.loads(call["env"][EDITOR_INPUT_SOURCE_ENV])
             handoff = next(
                 row
@@ -234,12 +244,19 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
         assert "conversation_state" not in prepared
         assert prepared["prompt_log_path"] is None
         resume_call = json.loads(Path(prepared["call_log_path"]).read_text())
+        # 検索設定は call 固有の context で一度だけ渡し、汎用設定を重ねない。
+        for argv in (calls[0]["argv"], resume_call["argv"]):
+            assert (
+                sum(arg.startswith("mcp_servers.cmoc_document_search=") for arg in argv)
+                == 1
+            )
         assert resume_call["argv"][-2:] == ["resume", SESSION_ID]
         assert "--json" not in resume_call["argv"]
         assert "--output-last-message" not in resume_call["argv"]
         assert list(Path(prepared["call_log_path"]).parent.glob("*_prompt.md")) == [
             Path(initial[-1]["prompt_log_path"])
         ]
+    assert path_contexts.call_count == 2
     assert len(calls) == 1
     assert calls[0]["prompt"] == parameter.prompt
     assert calls[0]["argv"][0] == "codex"
@@ -511,6 +528,8 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
     directory, monkeypatch, builder, command
 ):
     calls, source = failed_initial_success(directory, monkeypatch, builder, command)
+    path_contexts = Mock(wraps=tui_module.AgentCallPathContext)
+    monkeypatch.setattr(tui_module, "AgentCallPathContext", path_contexts)
     source_text = source.read_text()
     config = CmocConfig()
     config.codex.agent_calls[builder.__name__] = CodexCallConfig(
@@ -519,6 +538,7 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
     write_config(directory / ".cmoc/gt/config.json", config)
 
     def resume(execution_id):
+        path_contexts.reset_mock()
         existing = set(logs_dir(directory).glob("*.jsonl"))
         runtime_cli.run_cli_subcommand(
             lambda: tui_module.resume_codex_tui(execution_id, directory).returncode,
@@ -527,6 +547,8 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
             doctor_preprocess=False,
             tui_process=True,
         )
+        # 適格性の検査・今回の準備・対話 process の導出を保ち、ログ用には増やさない。
+        assert path_contexts.call_count == 3
         [current] = set(logs_dir(directory).glob("*.jsonl")) - existing
         rows = [json.loads(line) for line in current.read_text().splitlines()]
         prepared = next(row for row in rows if row["event"] == "tui_process_prepared")
@@ -564,9 +586,30 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize(
-    "condition",
-    [
+def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_path):
+    # 設定・MCP と起動記録の結合は current_settings・separate_process_resources・
+    # accepts_fixed_id のケースに残し、拒否条件だけが異なる検査の正常記録は一度作る。
+    stub_codex_overrides(monkeypatch)
+    calls, source = failed_initial_success(directory, monkeypatch)
+    source_text = source.read_text()
+    baseline = [json.loads(line) for line in source_text.splitlines()]
+    record = next(row for row in reversed(baseline) if row["event"] == "tui_startup")
+    prepared = next(row for row in baseline if row["event"] == "tui_process_prepared")
+    saved_files = {
+        path: path.read_bytes()
+        for path in (
+            source,
+            Path(record["initial_output_path"]),
+            Path(prepared["call_log_path"]),
+        )
+    }
+    other_home = tmp_path / "other_home"
+    other_home.mkdir()
+    tui_calls = fake_tui(monkeypatch)
+    # 正常な共通記録は一度検査し、各条件ではその bytes と環境を復元する。
+    tui_module._validated_resume_record(source.stem, directory)
+
+    for condition in (
         "unfinished",
         "failed",
         "cancelled",
@@ -580,55 +623,54 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
         "initial_exit_unknown",
         "missing_tui_call",
         "different_requested_session",
-    ],
-)
-def test_public_resume_rejects_ineligible_source(
-    directory, monkeypatch, tmp_path, condition
-):
-    # current_settings と separate_process_resources のケースが設定・MCP の結合を検査する。
-    # 不適格な記録を用意するためだけの初回起動・TUI 移行には固定設定を使う。
-    stub_codex_overrides(monkeypatch)
-    calls, source = failed_initial_success(directory, monkeypatch)
-    rows = [json.loads(line) for line in source.read_text().splitlines()]
-    record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
-    if condition == "unfinished":
-        rows.pop()
-    elif condition in {"failed", "cancelled"}:
-        record["initial_status"] = condition
-    elif condition == "unknown_exit":
-        record["tui_process_state"] = "unknown"
-    elif condition == "unknown_session":
-        record["fixed_session_id"] = None
-    elif condition == "inconsistent_kind":
-        record["tui_kind"] = "oracle_investigation"
-    elif condition == "missing_output":
-        Path(record["initial_output_path"]).unlink()
-    elif condition == "bad_uuid":
-        record["initial_session_id"] = "unknown-session"
-    elif condition == "home_changed":
-        home = tmp_path / "other_home"
-        home.mkdir()
-        monkeypatch.setenv("CODEX_HOME", str(home))
-    elif condition == "initial_exit_unknown":
-        initial = [row for row in rows if row["event"] == "tui_initial_exec"][-1]
-        initial["process_state"] = "unknown"
-    elif condition in {"missing_tui_call", "different_requested_session"}:
-        prepared = next(row for row in rows if row["event"] == "tui_process_prepared")
-        path = Path(prepared["call_log_path"])
-        if condition == "missing_tui_call":
-            path.unlink()
-        else:
-            call = json.loads(path.read_text())
-            call["argv"][-1] = "019efe07-4886-7423-b252-625febbe31ec"
-            path.write_text(json.dumps(call))
-    source.write_text(
-        "invalid JSON\n"
-        if condition == "broken_json"
-        else "".join(json.dumps(row) + "\n" for row in rows)
-    )
-    with pytest.raises(CmocError, match="再開条件を満たしません"):
-        tui_module.resume_codex_tui(source.stem, directory)
-    assert len(calls) == 1
+    ):
+        # 削除・書き換えた通常 file、JSON の入れ子、環境変数を条件ごとに復元する。
+        for path, content in saved_files.items():
+            path.write_bytes(content)
+        rows = [json.loads(line) for line in source_text.splitlines()]
+        record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
+        with monkeypatch.context() as patch:
+            if condition == "unfinished":
+                rows.pop()
+            elif condition in {"failed", "cancelled"}:
+                record["initial_status"] = condition
+            elif condition == "unknown_exit":
+                record["tui_process_state"] = "unknown"
+            elif condition == "unknown_session":
+                record["fixed_session_id"] = None
+            elif condition == "inconsistent_kind":
+                record["tui_kind"] = "oracle_investigation"
+            elif condition == "missing_output":
+                Path(record["initial_output_path"]).unlink()
+            elif condition == "bad_uuid":
+                record["initial_session_id"] = "unknown-session"
+            elif condition == "home_changed":
+                patch.setenv("CODEX_HOME", str(other_home))
+            elif condition == "initial_exit_unknown":
+                initial = [row for row in rows if row["event"] == "tui_initial_exec"][
+                    -1
+                ]
+                initial["process_state"] = "unknown"
+            elif condition in {"missing_tui_call", "different_requested_session"}:
+                prepared = next(
+                    row for row in rows if row["event"] == "tui_process_prepared"
+                )
+                path = Path(prepared["call_log_path"])
+                if condition == "missing_tui_call":
+                    path.unlink()
+                else:
+                    call = json.loads(path.read_text())
+                    call["argv"][-1] = "019efe07-4886-7423-b252-625febbe31ec"
+                    path.write_text(json.dumps(call))
+            source.write_text(
+                "invalid JSON\n"
+                if condition == "broken_json"
+                else "".join(json.dumps(row) + "\n" for row in rows)
+            )
+            with pytest.raises(CmocError, match="再開条件を満たしません"):
+                tui_module.resume_codex_tui(source.stem, directory)
+        assert len(calls) == 1, condition
+        assert tui_calls == [], condition
 
 
 def test_public_resume_rejects_non_tui_and_invalid_id(directory):
@@ -721,6 +763,9 @@ def test_initial_completion_waits_for_process_exit(directory, tmp_path, monkeypa
             release.touch()
 
 
+# 永続採番と target の結合は test_editor_input_handoff.py に残す。
+# ここでは採番 DB を準備せず、並行する実 MCP process の送信元分離を検査する。
+@pytest.mark.usefixtures("nonpersistent_handoff_ids")
 def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch):
     barrier = threading.Barrier(2)
     observed = {}
@@ -812,6 +857,9 @@ def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch
 def test_public_resume_accepts_fixed_id_after_initial_success(
     directory, monkeypatch, builder, command, outcome
 ):
+    # argv 設定は complete_prompt・current_settings・notification_failure で検査する。
+    # 終了状態ごとの再開適格性では、既存 helper で起動設定の再構築を省く。
+    stub_codex_overrides(monkeypatch)
     write_config(directory / ".cmoc/gt/config.json", CmocConfig())
     fake_initial(monkeypatch)
     notifications = []
@@ -911,6 +959,13 @@ def test_notification_failure_preserves_tui_execution(directory, monkeypatch, fa
             == 0
         )
     assert len(calls) == 1
+    assert (
+        sum(
+            arg.startswith("mcp_servers.cmoc_document_search=")
+            for arg in calls[0]["argv"]
+        )
+        == 1
+    )
     if failure in {"prepare", "configure", "unavailable"}:
         assert codex_override_config(calls[0]["argv"])["notify"] == []
     else:
@@ -1027,14 +1082,14 @@ def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
             contender.acquire(SESSION_ID)
 
 
-@pytest.mark.parametrize("returncode", [0, 19])
 def test_tui_process_waits_with_inherited_output_and_records_exit(
-    directory, monkeypatch, tmp_path, capfd, returncode
+    directory, monkeypatch, tmp_path, capfd
 ):
     import commons.runtime_codex_profile as profile
 
     # 初回 process の終了待ちは test_initial_completion_waits_for_process_exit に残す。
-    # ここでは初回応答を既存 helper で返し、検証対象の TUI process だけを起動する。
+    # 正常終了の結果・ログ・再開適格性は public_resume_accepts_fixed_id_after_initial_success
+    # で検査する。端末継承と終了待ちは非ゼロ終了の実 process に集約し、異常終了も検出する。
     initial_calls = fake_initial(monkeypatch)
     ready = tmp_path / "tui-ready"
     release = tmp_path / "tui-release"
@@ -1051,7 +1106,7 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
             "for _ in range(1000):",
             f"    if pathlib.Path({str(release)!r}).exists(): break",
             "    time.sleep(0.01)",
-            f"sys.exit({returncode})",
+            "sys.exit(19)",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin")
@@ -1081,16 +1136,13 @@ def test_tui_process_waits_with_inherited_output_and_records_exit(
                 row["event"] == "tui_process_finished" for row in events(logger)
             )
             release.touch()
-            if returncode:
-                with pytest.raises(CmocError, match="異常終了"):
-                    future.result(timeout=5)
-            else:
-                assert future.result(timeout=5).returncode == 0
+            with pytest.raises(CmocError, match="異常終了"):
+                future.result(timeout=5)
             [finished] = [
                 row for row in events(logger) if row["event"] == "tui_process_finished"
             ]
             assert finished["process_state"] == "exited"
-            assert finished["returncode"] == returncode
+            assert finished["returncode"] == 19
         finally:
             release.touch()
     assert len(initial_calls) == 1

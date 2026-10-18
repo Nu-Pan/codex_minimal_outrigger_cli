@@ -1,600 +1,600 @@
 {
   ".gitignore": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_04-59-40_222"
   },
   ".vscode/python_testing.env": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-07-01_759"
   },
   "LICENSE": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-08-02_297"
   },
   "README.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-14-54_485"
   },
   "bin/cmoc": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-16-49_670"
   },
   "codex_minimal_outrigger_cli.code-workspace": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-19-42_009"
   },
   "oracle/doc/app_spec/cli_auto_completion.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-21-13_692"
   },
   "oracle/doc/app_spec/codex_exec_rule.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-26-57_459"
   },
   "oracle/doc/app_spec/codex_model_provider.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-31-15_799"
   },
   "oracle/doc/app_spec/console_and_file_log.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-36-25_703"
   },
   "oracle/doc/app_spec/doctor_preprocess.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-40-42_408"
   },
   "oracle/doc/app_spec/document_search.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-45-32_201"
   },
   "oracle/doc/app_spec/download_asset_cache.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-47-13_750"
   },
   "oracle/doc/app_spec/editor_input_handoff.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-52-27_868"
   },
   "oracle/doc/app_spec/error_handling.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_05-59-00_739"
   },
   "oracle/doc/app_spec/feedback.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-05-05_055"
   },
   "oracle/doc/app_spec/feedback_observation.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-10-15_081"
   },
   "oracle/doc/app_spec/feedback_state.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-16-17_468"
   },
   "oracle/doc/app_spec/id.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-22-15_116"
   },
   "oracle/doc/app_spec/merge_conflict_resolution.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-26-38_046"
   },
   "oracle/doc/app_spec/oracle_and_realization.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-31-45_155"
   },
   "oracle/doc/app_spec/oracle_and_realization_file_enumeration.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-33-49_902"
   },
   "oracle/doc/app_spec/prompt_editor_input.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-38-33_282"
   },
   "oracle/doc/app_spec/run_isolation.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-45-55_546"
   },
   "oracle/doc/app_spec/session_state.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-51-31_916"
   },
   "oracle/doc/app_spec/sub_command/doctor.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_06-56-25_509"
   },
   "oracle/doc/app_spec/sub_command/editing_run.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-03-08_830"
   },
   "oracle/doc/app_spec/sub_command/feedback_close.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-07-43_292"
   },
   "oracle/doc/app_spec/sub_command/feedback_report.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-16-09_003"
   },
   "oracle/doc/app_spec/sub_command/oracle_edit.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-17-48_864"
   },
   "oracle/doc/app_spec/sub_command/oracle_investigation.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-22-45_712"
   },
   "oracle/doc/app_spec/sub_command/realization_apply.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-27-07_973"
   },
   "oracle/doc/app_spec/sub_command/realization_refactor.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-31-38_057"
   },
   "oracle/doc/app_spec/sub_command/resume.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-36-28_588"
   },
   "oracle/doc/app_spec/sub_command/session_abandon.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-41-44_060"
   },
   "oracle/doc/app_spec/sub_command/session_fork.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-48-01_051"
   },
   "oracle/doc/app_spec/sub_command/session_join.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-52-24_278"
   },
   "oracle/doc/app_spec/sub_command/tui.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_07-57-09_323"
   },
   "oracle/doc/app_spec/subcommand_interruption.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-01-31_872"
   },
   "oracle/doc/app_spec/timestamp.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-04-26_675"
   },
   "oracle/doc/app_spec/usage.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-11-06_529"
   },
   "oracle/doc/app_spec/windows_toast_notification.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-12-47_984"
   },
   "oracle/doc/branch_model.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-18-29_804"
   },
   "oracle/doc/considered_alternative/apply_behavior.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-22-55_090"
   },
   "oracle/doc/considered_alternative/cmoc_branch_hint.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-27-32_751"
   },
   "oracle/doc/considered_alternative/file_access_policy_violation_post_validation.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-33-11_648"
   },
   "oracle/doc/considered_alternative/gitignore_to_permission_profile.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-35-01_035"
   },
   "oracle/doc/considered_alternative/index_md_routing.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-39-53_376"
   },
   "oracle/doc/considered_alternative/memory_alternative.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-42-20_376"
   },
   "oracle/doc/considered_alternative/oracle_description_language.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-43-46_355"
   },
   "oracle/doc/considered_alternative/oracle_review.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-50-00_976"
   },
   "oracle/doc/considered_alternative/working_plan_review.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-51-59_726"
   },
   "oracle/doc/dev_rule/coding_rule.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_08-53-32_558"
   },
   "oracle/doc/dev_rule/design_rule.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-00-15_477"
   },
   "oracle/doc/dev_rule/development_environment.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-06-26_306"
   },
   "oracle/doc/dev_rule/test_execution.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-12-47_308"
   },
   "oracle/doc/dev_rule/test_rule.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-18-55_526"
   },
   "oracle/src/oracle/acp_builder/basic.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-24-27_855"
   },
   "oracle/src/oracle/acp_builder/feedback/normalize_issue.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-26-35_199"
   },
   "oracle/src/oracle/acp_builder/feedback/normalize_issue.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-32-09_067"
   },
   "oracle/src/oracle/acp_builder/feedback/remediate_issue.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-37-43_034"
   },
   "oracle/src/oracle/acp_builder/feedback/remediate_issue.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-42-55_041"
   },
   "oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-47-20_506"
   },
   "oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-49-00_935"
   },
   "oracle/src/oracle/acp_builder/primary_report_review.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-53-50_708"
   },
   "oracle/src/oracle/acp_builder/primary_report_review.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_09-58-23_202"
   },
   "oracle/src/oracle/acp_builder/quota_probe.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-03-07_682"
   },
   "oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-08-37_295"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-14-14_661"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-19-09_653"
   },
   "oracle/src/oracle/acp_builder/run/join/conflict_resolution.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-23-23_234"
   },
   "oracle/src/oracle/acp_builder/session/join/conflict_resolution.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-28-01_406"
   },
   "oracle/src/oracle/acp_builder/tui/launch_tui.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-32-39_342"
   },
   "oracle/src/oracle/editor_input_handoff/body.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-34-02_063"
   },
   "oracle/src/oracle/editor_input_handoff/get_handoff_guide_input.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-35-21_549"
   },
   "oracle/src/oracle/editor_input_handoff/get_handoff_guide_result.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-37-04_032"
   },
   "oracle/src/oracle/editor_input_handoff/guide.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-38-25_977"
   },
   "oracle/src/oracle/editor_input_handoff/overwrite_input.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-40-00_575"
   },
   "oracle/src/oracle/feedback/reporter_input.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-42-11_425"
   },
   "oracle/src/oracle/other/cmoc_config.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-48-14_788"
   },
   "oracle/src/oracle/other/doc_ref_model.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-49-45_347"
   },
   "oracle/src/oracle/other/document_search.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-54-08_682"
   },
   "oracle/src/oracle/other/path_model.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-55-46_258"
   },
   "oracle/src/oracle/other/struct_doc.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-57-21_641"
   },
   "oracle/src/oracle/prompt_builder/basic.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_10-58-52_752"
   },
   "oracle/src/oracle/prompt_builder/complete_prompt.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-03-57_430"
   },
   "oracle/src/oracle/prompt_builder/editor_input.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-05-26_000"
   },
   "oracle/src/oracle/prompt_builder/merge_conflict_resolution.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-11-26_593"
   },
   "oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-13-41_465"
   },
   "oracle/src/oracle/prompt_builder/policy/conflict_resolution.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-15-30_854"
   },
   "oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-17-14_365"
   },
   "oracle/src/oracle/prompt_builder/policy/feedback_reporting.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-19-30_667"
   },
   "oracle/src/oracle/prompt_builder/policy/file_access.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-20-54_803"
   },
   "oracle/src/oracle/prompt_builder/policy/oracle.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-26-40_209"
   },
   "oracle/src/oracle/prompt_builder/policy/realization.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-28-09_972"
   },
   "oracle/src/oracle/prompt_builder/policy/realization_findings.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-30-02_438"
   },
   "oracle/src/oracle/prompt_builder/policy/routing.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-31-40_311"
   },
   "pyproject.toml": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-34-52_819"
   },
   "src/acp/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-36-18_450"
   },
   "src/acp/builder/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-38-59_996"
   },
   "src/acp/builder/feedback/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-41-46_900"
   },
   "src/acp/builder/feedback/normalize_issue.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-48-00_466"
   },
   "src/acp/builder/feedback/remediate_issue.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-50-13_122"
   },
   "src/acp/builder/oracle/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-55-24_595"
   },
   "src/acp/builder/oracle/edit/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-00-30_971"
   },
   "src/acp/builder/oracle/edit/launch_exec.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-01-56_896"
   },
   "src/acp/builder/realization/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-03-34_136"
   },
   "src/acp/builder/realization/apply/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-09-49_374"
   },
   "src/acp/builder/realization/apply/fork/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-14-57_013"
   },
   "src/acp/builder/realization/apply/fork/launch_exec.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-19-29_772"
   },
   "src/acp/builder/realization/refactor/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-20-44_718"
   },
   "src/acp/builder/realization/refactor/fork/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-26-40_159"
   },
   "src/acp/builder/realization/refactor/fork/file_review_and_fix.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-32-45_897"
   },
   "src/basic/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-40-34_471"
   },
   "src/basic/acp.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-42-17_128"
   },
   "src/basic/path_model.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-48-40_652"
   },
   "src/cmoc_runtime.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-56-11_224"
   },
   "src/commons/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_12-57-40_508"
   },
   "src/commons/cmoc_runtime.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-01-30_279"
   },
   "src/commons/document_search_worker/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-07-21_373"
   },
   "src/commons/document_search_worker/package-lock.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-13-16_715"
   },
   "src/commons/document_search_worker/package.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-14-54_118"
   },
   "src/commons/document_search_worker/worker.mjs": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-20-57_096"
   },
   "src/commons/prompt_editor_input.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-22-23_440"
   },
   "src/commons/runtime_cli.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-24-20_797"
   },
   "src/commons/runtime_codex.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-30-52_998"
   },
   "src/commons/runtime_codex_exec.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-35-44_588"
   },
   "src/commons/runtime_codex_logging.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-37-49_775"
   },
   "src/commons/runtime_codex_profile.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-39-45_345"
   },
   "src/commons/runtime_codex_recovery.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-42-00_784"
   },
   "src/commons/runtime_codex_session.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-46-10_001"
   },
   "src/commons/runtime_codex_tui.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-53-35_130"
   },
   "src/commons/runtime_config.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-58-42_981"
   },
   "src/commons/runtime_content.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-00-19_047"
   },
   "src/commons/runtime_doctor.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-05-47_275"
   },
   "src/commons/runtime_document_search.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-12-46_241"
   },
   "src/commons/runtime_document_search_assets.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-17-49_842"
   },
   "src/commons/runtime_document_search_mcp.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-20-23_008"
   },
   "src/commons/runtime_document_search_observation.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-25-09_590"
   },
   "src/commons/runtime_document_search_setup.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-29-58_638"
   },
   "src/commons/runtime_document_search_types.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-36-44_195"
   },
   "src/commons/runtime_document_search_worker.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-41-01_422"
   },
   "src/commons/runtime_download_asset_cache.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-46-16_245"
   },
   "src/commons/runtime_editor.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-47-35_173"
   },
   "src/commons/runtime_editor_input_handoff.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-49-06_920"
   },
   "src/commons/runtime_editor_input_handoff_mcp.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-50-34_680"
   },
   "src/commons/runtime_editor_input_handoff_protocol.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-52-07_008"
   },
   "src/commons/runtime_errors.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-53-34_740"
   },
   "src/commons/runtime_feedback.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_14-59-46_847"
   },
   "src/commons/runtime_feedback_close_state.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-04-45_669"
   },
   "src/commons/runtime_feedback_history.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-08-45_736"
   },
   "src/commons/runtime_feedback_intake.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-14-56_351"
   },
   "src/commons/runtime_feedback_protocol.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-16-33_494"
   },
   "src/commons/runtime_feedback_render.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-21-49_014"
   },
   "src/commons/runtime_feedback_reporter.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-26-37_386"
   },
   "src/commons/runtime_feedback_run_state.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-34-37_086"
   },
   "src/commons/runtime_feedback_state.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-41-16_144"
   },
   "src/commons/runtime_feedback_store.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-46-19_843"
   },
   "src/commons/runtime_git.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-52-02_348"
   },
   "src/commons/runtime_ids.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-54-11_047"
   },
   "src/commons/runtime_json_schema.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_15-56-41_755"
   },
   "src/commons/runtime_logging.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-01-18_310"
   },
   "src/commons/runtime_merge_conflict.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-07-53_861"
   },
   "src/commons/runtime_paths.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-13-46_397"
   },
   "src/commons/runtime_primary_report.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-18-03_923"
   },
   "src/commons/runtime_primary_report_render.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-22-35_801"
   },
   "src/commons/runtime_primary_report_review.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-31-20_833"
   },
   "src/commons/runtime_primary_report_specs.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-37-32_053"
   },
   "src/commons/runtime_refactor.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-44-25_959"
   },
   "src/commons/runtime_report_markdown.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-55-26_701"
   },
   "src/commons/runtime_results.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_16-57-21_539"
   },
   "src/commons/runtime_run.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-04-46_000"
   },
   "src/commons/runtime_run_join.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-10-46_531"
   },
   "src/commons/runtime_run_join_state.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-18-36_187"
   },
   "src/commons/runtime_run_lifecycle.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-29-02_608"
   },
   "src/commons/runtime_run_report.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-34-04_996"
   },
   "src/commons/runtime_state.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-36-27_908"
   },
   "src/commons/runtime_windows_toast.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-42-08_899"
   },
   "src/config/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-44-14_405"
   },
   "src/config/cmoc_config.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-46-08_814"
   },
   "src/main.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-53-44_411"
   },
   "src/oracle.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_17-55-26_944"
   },
   "src/sub_commands/doctor.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-02-03_554"
   },
   "src/sub_commands/feedback/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-07-26_982"
   },
   "src/sub_commands/feedback/close.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-13-44_432"
   },
   "src/sub_commands/feedback/decision.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-15-29_514"
   },
   "src/sub_commands/feedback/recovery.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-22-16_606"
   },
   "src/sub_commands/feedback/remediation.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-29-43_268"
   },
   "src/sub_commands/feedback/report.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-38-12_843"
   },
   "src/sub_commands/oracle/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-39-44_249"
   },
   "src/sub_commands/oracle/edit.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-46-11_116"
   },
   "src/sub_commands/oracle/investigation.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-51-30_378"
   },
   "src/sub_commands/realization/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_18-57-46_722"
   },
   "src/sub_commands/realization/apply.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_19-07-07_604"
   },
   "src/sub_commands/realization/refactor.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_19-12-53_967"
   },
   "src/sub_commands/resume.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_19-17-28_251"
   },
   "src/sub_commands/run/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_19-24-34_730"
   },
   "src/sub_commands/run/abandon.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_19-29-56_040"
   },
   "src/sub_commands/run/join.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_19-38-06_902"
   },
   "src/sub_commands/session/__init__.py": {
     "last_investigated_at": null
@@ -773,6 +773,9 @@
   "test/test_prompt_parts.py": {
     "last_investigated_at": null
   },
+  "test/test_report_support.py": {
+    "last_investigated_at": null
+  },
   "test/test_runtime_cli.py": {
     "last_investigated_at": null
   },
@@ -800,6 +803,9 @@
   "test/test_runtime_refactor.py": {
     "last_investigated_at": null
   },
+  "test/test_runtime_run_join_state.py": {
+    "last_investigated_at": null
+  },
   "test/test_runtime_state.py": {
     "last_investigated_at": null
   },
@@ -816,6 +822,9 @@
     "last_investigated_at": null
   },
   "test/test_windows_toast.py": {
+    "last_investigated_at": null
+  },
+  "test/test_worktree_snapshot.py": {
     "last_investigated_at": null
   }
 }

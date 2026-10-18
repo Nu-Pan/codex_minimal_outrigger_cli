@@ -35,6 +35,7 @@ from .runtime_errors import CmocError
 from .runtime_git import (
     _has_linked_worktree_metadata,
     expected_run_worktree,
+    reuse_git_path_queries,
     run_git,
 )
 from .runtime_paths import repo_root, untracked_data_dir
@@ -82,6 +83,7 @@ def worktree_for_branch_optional(
     )
 
 
+@reuse_git_path_queries()
 def worktrees_for_branches(
     root: Path,
     branches: Collection[str],
@@ -89,7 +91,7 @@ def worktrees_for_branches(
     allow_missing: bool = False,
 ) -> dict[str, Path]:
     """指定 branch の安全な worktree を一回の Git 一覧照会で解決する。"""
-    # この呼び出し内だけ一覧を共有し、次の解決では登録と実体を取り直す。
+    # この呼び出し内だけ一覧と配置照会を共有し、次の解決では登録と実体を取り直す。
     output = run_git(["worktree", "list", "--porcelain"], root).stdout
     pending = set(branches)
     worktrees: dict[str, Path] = {}

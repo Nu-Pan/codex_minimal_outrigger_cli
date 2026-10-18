@@ -92,7 +92,8 @@ def test_cache_lookup_and_listing_discard_corrupt_entries(tmp_path):
     ]
     rows = [(f"{index:064x}", *entry) for index, entry in enumerate(entries)]
     valid = {rows[0][0], rows[-1][0]}
-    with closing(_EmbeddingCache(tmp_path / "cache.sqlite3")) as cache:
+    path = tmp_path / "cache.sqlite3"
+    with closing(_EmbeddingCache(path)) as cache:
         # 同じ破損条件を両入口へ渡し、一覧の途中削除で後続を見落とす回帰も検出する。
         for lookup in ("single", "listing"):
             with cache.connection:
@@ -102,14 +103,29 @@ def test_cache_lookup_and_listing_discard_corrupt_entries(tmp_path):
             if lookup == "single":
                 found = {digest for digest, *_ in rows if cache.get(digest) is not None}
             else:
+                # 破損行の削除後に取消が来ても transaction を残さず、再検査できる。
+                checked = 0
+
+                def cancel_after_invalid_entry():
+                    nonlocal checked
+                    checked += 1
+                    if checked == 3:
+                        raise SearchError("CANCELLED", "stop during cache validation")
+
+                with pytest.raises(SearchError) as failure:
+                    cache.hashes(cancel_after_invalid_entry)
+                assert failure.value.code == "CANCELLED"
+                assert not cache.connection.in_transaction
                 found = cache.hashes(lambda: None)
             assert found == valid
-            assert {
-                digest
-                for (digest,) in cache.connection.execute(
-                    "select excerpt_sha256 from embeddings"
-                )
-            } == valid
+            # 呼出元 connection の見かけだけでなく、削除が確定済みであることも確認する。
+            with closing(sqlite3.connect(path)) as observer:
+                assert {
+                    digest
+                    for (digest,) in observer.execute(
+                        "select excerpt_sha256 from embeddings"
+                    )
+                } == valid
             assert cache.get(rows[0][0]) == (vector, producer)
             assert cache.get(rows[-1][0]) == (vector, "b" * 64)
             assert cache.get("missing") is None
@@ -132,18 +148,18 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
     (run / "oracle/doc/allowed.md").rename(run / "oracle/doc/moved.md")
     (run / "oracle/doc/copy.md").write_text(original)
     with closing(create(run, events=events)) as search:
-        result = search.synchronize()
-        assert result.chunk_count == result.reused_embeddings == 2
+        # 検索の初回同期で再利用と現在位置を共に検査し、直前の明示同期を重ねない。
+        hits = search.search("原文")["hits"]
+        assert len(hits) == 2
+        assert search.sync_progress["reused_embeddings"] == 2
         assert search.sync_progress["generated_embeddings"] == 0
         assert search.sync_progress["reused_other_worktree"] == 2
+        assert search.sync_progress["reused_same_worktree"] == 0
         assert inputs() == [original]
-        assert {hit["path"] for hit in search.search("原文")["hits"]} == {
+        assert {hit["path"] for hit in hits} == {
             "oracle/doc/moved.md",
             "oracle/doc/copy.md",
         }
-        # 直前の検索が再同期も行うので、その再利用元を検査する。
-        assert search.sync_progress["reused_other_worktree"] == 2
-        assert search.sync_progress["reused_same_worktree"] == 0
     finished = [
         event for event in events if event["event"] == "document_search_sync_finished"
     ]
@@ -213,7 +229,7 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_s
 
 
 def test_reuse_compatibility_is_independent_of_partition(
-    document_repository, cache_search, monkeypatch
+    document_repository, cache_search, monkeypatch, unsynced_search_storage
 ):
     """入力片を固定し、分割条件と推論条件による cache の互換性だけを検査する。"""
     from commons import runtime_document_search as module

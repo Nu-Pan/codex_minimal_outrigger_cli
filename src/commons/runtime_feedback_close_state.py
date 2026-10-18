@@ -22,7 +22,6 @@ from .runtime_feedback_state import (
     artifact_reference,
     generation_directory,
     generation_root,
-    load_active_state,
     publish_current_pointer,
     publish_generation_artifacts,
 )
@@ -226,13 +225,16 @@ def require_no_pending_close(repo: Path) -> None:
         )
 
 
-def complete_close(repo: Path, record: dict[str, Any]) -> tuple[Path, ActiveState]:
-    """固定 artifact の publication と cleanup を完了し、検証済み状態を返す。"""
+def complete_close(
+    repo: Path, record: dict[str, Any], state: ActiveState
+) -> tuple[Path, ActiveState]:
+    """writer 排他内の検証済み state から close を完了し、更新後の状態を返す。"""
     # Publication point を通過していたら終了操作を再適用しない。
     path = close_work_path(repo)
     if load_close_work(repo) != record:
         raise _corruption("feedback close の固定記録が変化しています。", path)
-    state = load_active_state(repo)
+    # 同じ排他内で検証した state を引き継ぐ。publication 直前の base 照合は
+    # publish_current_pointer が行い、切替後に再読・検証した state を返す。
     generation = record["generation"]
     published = (
         state.current is not None
@@ -265,7 +267,7 @@ def complete_close(repo: Path, record: dict[str, Any]) -> tuple[Path, ActiveStat
         # 検証済み base から対象だけを除き、publication 側で保存済み generation と照合する。
         next_issues = dict(state.issues)
         del next_issues[record["before"]["issue_id"]]
-        publish_current_pointer(
+        state = publish_current_pointer(
             repo,
             generation_id=generation["generation_id"],
             generation_manifest={
@@ -277,7 +279,6 @@ def complete_close(repo: Path, record: dict[str, Any]) -> tuple[Path, ActiveStat
             published_at=record["closed_at"],
             result=state_summary(next_issues),
         )
-        state = load_active_state(repo)
     if (
         state.current is None
         or state.current["report_cut_manifest_sha256"]

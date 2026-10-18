@@ -3,6 +3,7 @@
 import os
 from collections.abc import Callable, Collection
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 
 from .runtime_cli import start_subcommand_step
@@ -19,7 +20,7 @@ from .runtime_git import (
     run_git,
 )
 from .runtime_merge_conflict import resolve_merge_conflicts
-from .runtime_paths import repo_root, work_root
+from .runtime_paths import repo_root, reuse_root_queries, work_root
 from .runtime_primary_report import (
     current_primary_report_fields,
     primary_report_finalization_lock,
@@ -61,10 +62,11 @@ from .runtime_state import RunPart, SessionState, load_state_for_branch, write_s
 def doctor_preprocess_for_join(*, rollback_on_interruption: bool = False) -> None:
     """join と feedback 開始前の doctor を、復旧と同期の境界に従って実行する。"""
     # 元の成果の検査範囲は journal が固定し、doctor の path 除外は不要。
-    root = work_root().resolve()
-    _run_join_doctor(
-        root, repo_root(root), rollback_on_interruption=rollback_on_interruption
-    )
+    # 両 root の探索だけを共有し、復旧・修復処理へ metadata を持ち越さない。
+    with reuse_root_queries():
+        root = work_root()
+        main_root = repo_root(root)
+    _run_join_doctor(root, main_root, rollback_on_interruption=rollback_on_interruption)
 
 
 def _run_join_doctor(
@@ -102,8 +104,7 @@ def _run_join_doctor(
     else:
         run_doctor_preprocess(root, sync_refactor_entries=sync_refactor_entries)
     if record is not None and not record.finished:
-        _require_preparation_ownership(record)
-        record.owned_run_head = head_commit(record.context.run_worktree)
+        record.owned_run_head = _require_preparation_ownership(record)
         record.pending_action = None
         record.save()
 
@@ -152,8 +153,7 @@ def validate_run_join(
         )
         record.save()
         _revert_unexpected_run_paths(context, run_changes, run_unexpected)
-        _require_preparation_ownership(record)
-        record.owned_run_head = head_commit(context.run_worktree)
+        record.owned_run_head = _require_preparation_ownership(record)
         record.pending_action = None
         record.force_paths = []
         record.save()
@@ -229,8 +229,9 @@ def rollback_join_preparation(record: JoinRecord) -> None:
     update_primary_report_fields(merge_rollback="completed", process_stop="confirmed")
 
 
-def _require_preparation_ownership(record: JoinRecord) -> None:
+def _require_preparation_ownership(record: JoinRecord) -> str:
     # commit 作成と記録保存の間に停止した場合だけ、保留した操作と履歴を照合する。
+    # 確認した HEAD を直後の記録にも使い、次の操作後は改めて検査する。
     context = record.context
     head = head_commit(context.run_worktree)
     pending_paths = set(
@@ -245,7 +246,7 @@ def _require_preparation_ownership(record: JoinRecord) -> None:
     if head == record.owned_run_head:
         if record.pending_action is None:
             require_clean_worktree(context.run_worktree)
-        return
+        return head
     parents = run_git(["show", "-s", "--format=%P", head], context.repo).stdout.split()
     expected = [record.owned_run_head]
     allowed = False
@@ -290,6 +291,7 @@ def _require_preparation_ownership(record: JoinRecord) -> None:
             ["残存する run の履歴と差分を確認してください。"],
             head,
         )
+    return head
 
 
 def _preparation_paths_match(record: JoinRecord, paths: set[str]) -> bool:
@@ -334,13 +336,13 @@ def merge_run(
             require_clean_worktree(context.run_worktree)
             record.session_head = session_head_before_join
             record.preparation_started = True
-            record.owned_run_head = head_commit(context.run_worktree)
+            run_head = head_commit(context.run_worktree)
+            record.owned_run_head = run_head
             record.pending_action = "merge"
             record.save()
             update_primary_report_fields(
                 join_phase="run preparation", **record.report_fields()
             )
-            run_head = head_commit(context.run_worktree)
             start_subcommand_step(3, "session を run へ統合", "prepare run join")
             merge = run_git(
                 ["merge", "--ff", "--no-edit", record.session_head],
@@ -360,7 +362,8 @@ def merge_run(
                 with run_process_tracking(context.repo, context.session_id):
                     resolution = resolve_merge_conflicts(
                         context.run_worktree,
-                        build_run_join_conflict_resolution_parameter(
+                        partial(
+                            build_run_join_conflict_resolution_parameter,
                             run_head,
                             record.session_head,
                             context.run_worktree,
@@ -375,13 +378,13 @@ def merge_run(
                         ),
                         sync_managed_entries=False,
                     )
-            _require_preparation_ownership(record)
+            merged_run_head = _require_preparation_ownership(record)
             # 検証記録は同期前の tree と結び付け、同期後にも適用可能性を検査する。
             record.resolution = {
                 **resolution,
-                "verified_run_commit": head_commit(context.run_worktree),
+                "verified_run_commit": merged_run_head,
             }
-            record.owned_run_head = head_commit(context.run_worktree)
+            record.owned_run_head = merged_run_head
             record.pending_action = "sync"
             record.save()
             update_primary_report_fields(join_phase="refactor state sync")
@@ -389,9 +392,9 @@ def merge_run(
             record.sync_commit = commit_work_unit(
                 context.run_worktree, "cmoc refactor state sync before run join"
             )
-            _require_preparation_ownership(record)
+            prepared_run_head = _require_preparation_ownership(record)
             require_clean_worktree(context.run_worktree)
-            record.prepared_run_head = head_commit(context.run_worktree)
+            record.prepared_run_head = prepared_run_head
             record.owned_run_head = record.prepared_run_head
             record.pending_action = None
             if verify_prepared is not None:
@@ -624,10 +627,14 @@ def _cleanup_run_matches_prepared(
 ) -> bool:
     # 削除前に branch と残存 worktree の両方を準備完了成果へ照合する。
     try:
-        if (
-            branch_exists(context.repo, context.run_branch)
-            and run_git(["rev-parse", context.run_branch], context.repo).stdout.strip()
-            != record.prepared_run_head
+        # 存在確認と HEAD 取得を一度に行い、不在 (1) と照会失敗を区別する。
+        branch = run_git(
+            ["rev-parse", "--verify", "--quiet", f"refs/heads/{context.run_branch}"],
+            context.repo,
+            check=False,
+        )
+        if branch.returncode not in {0, 1} or (
+            branch.returncode == 0 and branch.stdout.strip() != record.prepared_run_head
         ):
             return False
         if context.run_worktree.exists():

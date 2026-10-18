@@ -95,10 +95,11 @@ def _event(phase: str, record: dict[str, Any], **fields: Any) -> None:
         logger.event("tui_startup", phase=phase, **{**record, **fields})
 
 
-def _context(parameter: AgentCallParameter) -> dict[str, Any]:
-    """workload の保存 cwd から今回の実行環境を導出する。"""
-    # 現在の cmoc の cwd で、agent の実行場所を代用しない。
-    paths = AgentCallPathContext(parameter.agent_call_cwd)
+def _context(
+    parameter: AgentCallParameter, paths: AgentCallPathContext
+) -> dict[str, Any]:
+    """workload の cwd から導出済みの context を今回の実行記録に使う。"""
+    # 起動準備と同じ root を記録し、ログのためだけの Git 探索を繰り返さない。
     logger = current_subcommand_logger()
     return {
         "tui_record_version": 3,
@@ -193,13 +194,14 @@ def _run_codex_tui_process(
                     config,
                     path_context=paths,
                     notification_command=callback.command,
+                    include_document_search=False,
                 )
         except Exception:
             pass
         # 通知付きの構築が成功した場合は、同じ設定を再構築しない。
         if overrides is None:
             overrides = prepare_codex_override_args(
-                parameter, config, path_context=paths
+                parameter, config, path_context=paths, include_document_search=False
             )
         overrides.extend(
             document_search_mcp_override_args(
@@ -419,7 +421,7 @@ def run_codex_tui(
     validate_codex_home(resolve_codex_home(paths.agent_call_cwd))
     config = deepcopy(config or load_config(paths.work_root))
     with closing(CodexSessionLease(resolve_codex_home(paths.agent_call_cwd))) as lease:
-        record = _context(parameter)
+        record = _context(parameter, paths)
         if parameter.prompt is None:
             assert parameter.tui_resume_session_id is not None
             lease.acquire(parameter.tui_resume_session_id)
@@ -820,12 +822,12 @@ def resume_codex_tui(execution_id: str, root: Path) -> CommandResult:
                 ["対象の実行ログを確認してください。"],
                 str(source),
             )
-        current = _context(parameter)
+        paths = AgentCallPathContext(parameter.agent_call_cwd)
+        current = _context(parameter, paths)
         current.update(
             {key: value for key, value in record.items() if key.startswith("initial_")}
         )
         current["resumed_from_execution_id"] = execution_id
-        paths = AgentCallPathContext(parameter.agent_call_cwd)
         if paths.work_root != work_root():
             run_doctor_preprocess(paths.work_root)
         return _resume(

@@ -263,6 +263,39 @@ def test_doctor_sync_has_no_search_deadlines(
     assert events[-1]["no_progress_seconds"] is None
 
 
+def test_unbounded_sync_preserves_wait_counts_and_cancellation(
+    tmp_path, document_search_clock
+):
+    observation, events = _observation(tmp_path, request=False)
+    observation.configure(DocumentSearchConfig(), bounded=False)
+    progress = observation.begin_sync()
+    progress.update(document_count=2, checked_document_count=1, persisted_chunks=1)
+    document_search_clock.advance(10000)
+    observation.progress("document_checked", "a.md")
+    observation.start_wait()
+    document_search_clock.advance(5)
+    observation.end_wait()
+    with pytest.raises(SearchError) as failure:
+        observation.check(cancelled=True)
+    assert failure.value.code == "CANCELLED"
+    document_search_clock.advance(3)
+    observation.finish_sync()
+    assert [event["event"] for event in events] == [
+        "document_search_sync_started",
+        "document_search_sync_finished",
+    ]
+    terminal = events[-1]
+    assert terminal["status"] == "cancelled"
+    assert terminal["failure_code"] == "CANCELLED"
+    assert terminal["elapsed_seconds"] == 10008
+    assert terminal["lock_wait_seconds"] == 5
+    assert terminal["cleanup_seconds"] == 3
+    assert terminal["no_progress_seconds"] is None
+    assert terminal["checked_document_count"] == 1
+    assert terminal["persisted_chunk_count"] == 1
+    assert terminal["counts_complete"] is False
+
+
 def test_saved_deadline_growth_requires_a_new_codex_connection(document_repository):
     # 同じ接続の構築・期限短縮を共有し、両方の増加を独立した設定から試す。
     root = document_repository

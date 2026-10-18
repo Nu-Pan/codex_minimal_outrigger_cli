@@ -37,9 +37,9 @@ def tui_builder_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 @pytest.mark.parametrize(
     "original_prompt",
     [
-        "# 依頼\n\nsrc の実装を確認する。",
-        "README の構成を調査する。",
-        "{{original-prompt-here}}",
+        # 通常文の保持も複数行ケースで検査し、同じ固定規定の構築を重ねない。
+        pytest.param("# 依頼\n\nsrc の実装を確認する。", id="markdown-input"),
+        pytest.param("{{original-prompt-here}}", id="skeleton"),
     ],
 )
 def test_tui_launch_builder_uses_fixed_parameter_and_policies(

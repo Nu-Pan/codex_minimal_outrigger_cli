@@ -9,6 +9,7 @@ import json
 import shutil
 import urllib.request
 from dataclasses import replace
+from functools import cache
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -135,10 +136,18 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
         lambda _base, _root, tuning: probes.append(tuning),
     )
     monkeypatch.setattr(worker, "_sha256", checksum)
+    # この test で変更しない sqlite-vec の実ロード・演算は初回だけ通す。
+    # 設定・モデル・Node 資材の変更後も、それぞれの照合は実行する。
+    monkeypatch.setattr(
+        worker, "_verify_vector_dependency", cache(worker._verify_vector_dependency)
+    )
     first = setup.prepare_document_search_materials(tmp_path, config)
     assert first["status"] == "built"
     assert len(npm_calls) == 1
     assert probes == [config]
+    # 初回公開では実 fsync を通し、以後の状態遷移では重複する同期を省く。
+    # write・flush・原子的な置換と、失敗後の保存内容の照合は維持する。
+    monkeypatch.setattr(setup.os, "fsync", lambda _fd: None)
     assert setup.require_document_search_materials(tmp_path, config).is_dir()
 
     model_reads.clear()

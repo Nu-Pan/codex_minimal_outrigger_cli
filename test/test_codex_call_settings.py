@@ -50,6 +50,7 @@ from commons.runtime_config import config_from_dict, config_to_dict
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback import FeedbackInvocation
 from commons.runtime_feedback_store import iter_observation_paths
+from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_logging import SubcommandLogger
 from config.cmoc_config import CmocConfig, CodexCallConfig, CodexModelProviderConfig
 
@@ -72,15 +73,15 @@ def settings_root(tmp_path, monkeypatch, nonpersistent_codex_ids):
     return root
 
 
-def shared_parameters(root):
-    return [
-        build_realization_apply_fork_launch_exec_parameter("base", "head", root),
-        build_realization_refactor_fork_file_review_and_fix_parameter(
-            root / "src.py", root
-        ),
-        build_feedback_remediate_issue_parameter('{"issue_id":"issue"}', root),
-        build_run_join_conflict_resolution_parameter("run", "session", root),
-    ]
+@pytest.fixture
+def unchanged_artifacts(monkeypatch):
+    """成果物を変更しない設定・診断検査では、空の snapshot を使う。"""
+    # 実差分の照合と補正中の変動検出・復元は test_codex_runtime_retry.py の
+    # corrects_declared_postcondition と restores_artifacts_changed_by_correction に残す。
+    monkeypatch.setattr(
+        "commons.runtime_codex_exec.capture_worktree_snapshot",
+        lambda root: WorktreeSnapshot(root, ()),
+    )
 
 
 def configured_calls():
@@ -120,7 +121,14 @@ def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
     settings_root, monkeypatch
 ):
     root = settings_root
-    parameters = shared_parameters(root)
+    parameters = [
+        build_realization_apply_fork_launch_exec_parameter("base", "head", root),
+        build_realization_refactor_fork_file_review_and_fix_parameter(
+            root / "src.py", root
+        ),
+        build_feedback_remediate_issue_parameter('{"issue_id":"issue"}', root),
+        build_run_join_conflict_resolution_parameter("run", "session", root),
+    ]
     assert {parameter.agent_call_kind for parameter in parameters} == {
         "realization_edit"
     }
@@ -177,10 +185,9 @@ def test_individual_builders_select_their_own_entries(settings_root, monkeypatch
 
 
 def test_shared_settings_remain_fixed_across_output_corrections(
-    committed_repository, tmp_path, monkeypatch, nonpersistent_codex_ids
+    settings_root, monkeypatch, unchanged_artifacts
 ):
-    root = committed_repository
-    setup_codex_home(tmp_path, monkeypatch)
+    root = settings_root
     parameter = build_realization_refactor_fork_file_review_and_fix_parameter(
         root / "src.py", root
     )
@@ -223,7 +230,7 @@ def test_invalid_saved_settings_fail_before_codex_launch(
     settings_root, monkeypatch, invalid
 ):
     root = settings_root
-    parameter = shared_parameters(root)[0]
+    parameter = build_realization_apply_fork_launch_exec_parameter("base", "head", root)
     data = config_to_dict(CmocConfig())
     if invalid == "missing_shared":
         del data["codex"]["agent_calls"]["realization_edit"]
@@ -245,15 +252,33 @@ def test_invalid_saved_settings_fail_before_codex_launch(
 
 
 def test_shared_structured_output_failures_keep_feedback_kind_and_call_ids(
-    committed_repository, tmp_path, monkeypatch, nonpersistent_codex_ids
+    committed_repository,
+    tmp_path,
+    monkeypatch,
+    nonpersistent_codex_ids,
+    unchanged_artifacts,
 ):
     """異なる builder の受理失敗を共通種別で分類し、各実行の ID は分ける。"""
+    # feedback の保存 context に必要な HEAD は、実 Git で用意する。
     root = committed_repository
     setup_codex_home(tmp_path, monkeypatch)
+    # root 導出は test_basic_runtime.py、builder の cwd 選択は
+    # test_acp_builder_editing_run_parameters.py に残し、同じ Git 探索を重ねない。
+    # feedback が保存する branch・HEAD の取得は実 Git のまま検査する。
+    monkeypatch.setattr(
+        path_model, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
+    )
     logger = SubcommandLogger(root, "settings test")
     invocation = FeedbackInvocation(root, root, "settings test", logger)
     calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "{}")] * 6)
-    for parameter in shared_parameters(root)[1:3]:
+    # schema のある 2 種だけを構築し、使わない prompt の描画と Git 探索を省く。
+    parameters = [
+        build_realization_refactor_fork_file_review_and_fix_parameter(
+            root / "src.py", root
+        ),
+        build_feedback_remediate_issue_parameter('{"issue_id":"issue"}', root),
+    ]
+    for parameter in parameters:
         with pytest.raises(CmocError, match="Structured Output"):
             run_codex_exec(
                 parameter, root=root, config=CmocConfig(), subcommand_logger=logger

@@ -9,6 +9,7 @@ from typing import Any
 
 from cmoc_runtime import (
     RunPart,
+    SessionState,
     TerminalResult,
     branch_exists,
     head_commit,
@@ -81,7 +82,7 @@ def finish_feedback_run(
         "result": result.result,
     }
     write_immutable_json(path, journal)
-    return _finish_from_journal(_journal_context(context.repo, journal), journal, path)
+    return _finish_from_journal(context, journal, path)
 
 
 def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | None:
@@ -90,7 +91,7 @@ def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | No
     if not path.exists() and not path.is_symlink():
         return None
     journal = _read_canonical_object(path, "feedback finalization journal")
-    context = _journal_context(repo, journal)
+    context, _ = _journal_context(repo, journal)
     if context.session_branch != session_branch:
         from .remediation import _failure
 
@@ -116,8 +117,10 @@ def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | No
         return _finish_from_journal(context, journal, path)
 
 
-def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
-    """journal の保存先を active session と managed run の正規 path へ照合する。"""
+def _journal_context(
+    repo: Path, journal: dict[str, Any]
+) -> tuple[EditingRunContext, SessionState]:
+    """journal の identity を照合し、検証した session state とともに返す。"""
     from .remediation import _failure
 
     path = feedback_root(repo) / "finalization.json"
@@ -183,7 +186,7 @@ def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
         )
     ):
         raise _failure("feedback finalization の対象とは異なる active run があります。")
-    return context
+    return context, session
 
 
 def _finish_from_journal(
@@ -192,7 +195,7 @@ def _finish_from_journal(
     """raw/work cleanup、ready 遷移、隔離資源回収を idempotent に確定する。"""
     from .remediation import _failure
 
-    # 呼び出し側で検証済みの identity を使い、lock 内では最新状態と再照合する。
+    # 呼び出し元の session を排他対象とし、journal は lock 内で最新状態と照合する。
     repo = context.repo
     report_reference = journal["report"]
     if not isinstance(report_reference, dict) or set(report_reference) != {
@@ -227,10 +230,12 @@ def _finish_from_journal(
     ):
         raise _failure("feedback finalization の join evidence が不正です。")
     with primary_report_finalization_lock(repo, context.session_id):
-        # context 検証後に別 run が state を公開していないことを、変更操作の
-        # 直前に同じ lifecycle lock 内でも確認する。
-        context = _journal_context(repo, journal)
-        _, _, initial_session = load_state_for_branch(repo, context.session_branch)
+        # lock 取得後の identity と最新 state を照合し、同じ snapshot から
+        # state_before を得る。lock 取得前の state を使い回さない。
+        validated_context, initial_session = _journal_context(repo, journal)
+        if validated_context.session_id != context.session_id:
+            raise _failure("feedback finalization の排他対象 session が一致しません。")
+        context = validated_context
         state_before = current_primary_report_fields().get(
             "state_before", initial_session.run.state
         )

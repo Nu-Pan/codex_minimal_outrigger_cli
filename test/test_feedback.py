@@ -52,11 +52,13 @@ import commons.runtime_feedback_reporter as reporter_module
 import commons.runtime_feedback_state as feedback_state_module
 import commons.runtime_feedback_store as feedback_store_module
 import commons.runtime_logging as logging_module
+import commons.runtime_run_join as run_join_module
 import sub_commands.feedback.close as feedback_close_module
 import sub_commands.feedback.decision as decision_module
 import sub_commands.feedback.recovery as recovery_module
 import sub_commands.feedback.remediation as remediation_module
 import sub_commands.feedback.report as feedback_report_module
+import sub_commands.run.abandon as run_abandon_module
 from acp.builder.feedback.normalize_issue import (
     build_feedback_normalize_issue_parameter,
 )
@@ -201,9 +203,15 @@ def _context(
 
 
 @pytest.fixture
-def stored_feedback_context(feedback_directory: Path) -> dict[str, object]:
-    """保存検査には、collector 確定済みの context と実 evidence file を渡す。"""
+def stored_feedback_context(
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, object]:
+    """受付・保存内容の検査に、実 evidence file と同期待ちのない context を用意する。"""
     # HEAD の取得は collector test、Git lifecycle は CLI test で検証する。
+    # flush の順序・失敗・再保存は test_feedback_store.py、実同期との結合は
+    # validates_context_rate_and_durable_observation と後続 wave の test に残す。
+    # raw・receipt の write・rename・hash 検査と、TCP の drain・call 分離は実行する。
+    monkeypatch.setattr(os, "fsync", lambda _fd: None)
     (feedback_directory / "README.md").write_text("# repo\n")
     return _context(feedback_directory, head_commit="a" * 40)
 
@@ -334,6 +342,16 @@ def _assert_hash_verified_state_snapshot(root, state, path, monkeypatch):
     """一度読んだ artifact の hash と内容を使い、次回は改変を検出する。"""
     original_read = Path.read_bytes
     original_content = original_read(path)
+    current = feedback_report_module._active_state_input(root, state)
+    readers = (
+        (lambda: load_active_state(root), state),
+        (
+            lambda: feedback_state_module._validate_report_cut_current_input(
+                root, current, root / "cut.json", allow_missing=False
+            ),
+            None,
+        ),
+    )
     reads = []
 
     def replace_after_read(target):
@@ -343,16 +361,19 @@ def _assert_hash_verified_state_snapshot(root, state, path, monkeypatch):
             target.write_bytes(b"{}\n")
         return content
 
-    try:
-        with monkeypatch.context() as snapshot_patch:
-            snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
-            assert load_active_state(root) == state
-            assert reads == [path]
-            with pytest.raises(CmocError, match="SHA256"):
-                load_active_state(root)
-            assert reads == [path, path]
-    finally:
-        path.write_bytes(original_content)
+    # active の読込と次の cut の固定入力検査で、同じ publication の準備を共有する。
+    for read_state, expected in readers:
+        reads.clear()
+        try:
+            with monkeypatch.context() as snapshot_patch:
+                snapshot_patch.setattr(Path, "read_bytes", replace_after_read)
+                assert read_state() == expected
+                assert reads == [path]
+                with pytest.raises(CmocError, match="SHA256"):
+                    read_state()
+                assert reads == [path, path]
+        finally:
+            path.write_bytes(original_content)
 
 
 def test_reporter_exposes_only_canonical_submission_tool(
@@ -1146,6 +1167,49 @@ def test_agent_candidate_exact_match_requires_report_cut_fingerprint() -> None:
     assert comparison == [candidate]
 
 
+def test_report_cut_without_fingerprints_skips_path_resolution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """path fingerprint がなければ参照解決を省き、後の照合では現在の入力を使う。"""
+    observation = {
+        "observation_id": "fbo_000001_2026-08-01_00-00",
+        "evidence_fingerprints": [],
+    }
+    fingerprint = {
+        "normalized_path": str(tmp_path / "README.md"),
+        "state": "hashed",
+        "sha256": "a" * 64,
+    }
+    manifest = {
+        "inputs": {
+            "references": [
+                {
+                    "kind": "repository_content",
+                    "subjects": [observation["observation_id"]],
+                    "path": "README.md",
+                    "state": fingerprint["state"],
+                    "sha256": fingerprint["sha256"],
+                }
+            ]
+        }
+    }
+    resolve_path = Mock(wraps=feedback_report_module._repository_path)
+    monkeypatch.setattr(feedback_report_module, "_repository_path", resolve_path)
+
+    assert (
+        feedback_report_module._report_cut_fingerprint_pairs(
+            tmp_path, manifest, observation
+        )
+        == []
+    )
+    resolve_path.assert_not_called()
+
+    observation["evidence_fingerprints"].append(fingerprint)
+    assert feedback_report_module._report_cut_fingerprint_pairs(
+        tmp_path, manifest, observation
+    ) == [(fingerprint["normalized_path"], "hashed", "a" * 64)]
+
+
 def test_issue_id_collision_stops_candidate_building(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1750,26 +1814,64 @@ def test_parallel_feedback_call_lifecycles_are_isolated(
         invocation.stop()
 
 
+@pytest.mark.parametrize("stalled", [True, False], ids=["idle", "trickle"])
 def test_collector_limits_unauthenticated_request_read_time(
-    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch, stalled: bool
 ) -> None:
-    """改行前で停止した未認証接続を短い絶対 deadline で終了する。"""
+    """無応答と小分け受信の両方を、実時間の待機なしで deadline 拒否する。"""
     root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
-    monkeypatch.setattr(feedback_module, "_COLLECTOR_IO_TIMEOUT_SECONDS", 0.05)
-    invocation.start()
-    try:
-        assert invocation.collector_port is not None
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
-            connection.settimeout(1)
-            connection.connect((FEEDBACK_COLLECTOR_HOST, invocation.collector_port))
-            connection.sendall(b"{")
-            response = json.loads(connection.recv(8192).split(b"\n", 1)[0])
+    budget = feedback_module._COLLECTOR_IO_TIMEOUT_SECONDS
+    clock = SimpleNamespace(now=0.0)
+    monkeypatch.setattr(
+        feedback_module, "time", SimpleNamespace(monotonic=lambda: clock.now)
+    )
+    # 受信ごとの timeout は超えないが、二つ目の断片で絶対 deadline を超える。
+    # deadline を毎回延長する回帰では、三つ目まで読めて probe が accepted になる。
+    chunks = iter(
+        [
+            b'{"protocol":',
+            json.dumps(REPORTER_PROTOCOL_VERSION).encode("utf-8"),
+            b',"_protocol_probe":true}\n',
+        ]
+    )
+    read_timeouts = []
+    response = bytearray()
 
-        assert response["code"] == "transport_unavailable"
-    finally:
-        invocation.stop()
+    class IncompleteConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def settimeout(self, seconds):
+            self.timeout = seconds
+
+        def recv(self, _size):
+            read_timeouts.append(self.timeout)
+            if stalled and len(read_timeouts) == 2:
+                raise TimeoutError("injected idle connection")
+            clock.now += budget * 0.75
+            return next(chunks)
+
+        def sendall(self, value):
+            response.extend(value)
+
+    # framing・拒否応答・warning は実 worker を通す。TCP の結合は受理・drain test に残す。
+    invocation._handle_connection(IncompleteConnection())  # type: ignore[arg-type]
+
+    assert read_timeouts == pytest.approx([budget, budget * 0.25])
+    assert json.loads(response) == {
+        "status": "rejected",
+        "code": "transport_unavailable",
+        "message": "collector could not process the request",
+        "retryable": True,
+    }
+    assert logger.warning_messages == [
+        "feedback submission rejected (transport_unavailable)"
+    ]
 
 
 def test_collector_rejects_observation_without_current_head(
@@ -2099,10 +2201,10 @@ def test_report_reference_rejects_symlinked_parent_outside(
     assert feedback_report_module._repository_path(root, "link/secret.txt") is None
 
 
-def test_report_reference_targets_use_resolved_evidence_path(
+def test_candidate_building_skips_empty_comparison_and_merges_resolved_evidence(
     feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """同じ file への symlink alias と実体 path を同じ issue subject にする。"""
+    """空集合の照合を省き、同じ wave の alias と実体 path は同じ issue にする。"""
     root = feedback_directory
     target_directory = root / "nested"
     target_directory.mkdir()
@@ -2125,23 +2227,102 @@ def test_report_reference_targets_use_resolved_evidence_path(
         return capture.call_args.args[3]
 
     first = observation("alias/README.md")
-    candidate = feedback_report_module._new_candidate(
-        first, f"agent\0{first['observation_id']}"
-    )
-    feedback_report_module._merge_observation(root, candidate, first)
-
     second = observation("nested/README.md")
     fingerprint = second["evidence_fingerprints"][0]
-    exact, comparison = feedback_report_module._agent_comparison_candidates(
-        second,
-        {candidate["candidate_id"]: candidate},
-        current_cut_fingerprint_pairs=[
-            (fingerprint["normalized_path"], "hashed", fingerprint["sha256"])
-        ],
+    observations = {item["observation_id"]: item for item in (first, second)}
+    manifest = {
+        "cut_at": second["observed_at"],
+        "inputs": {
+            "references": [
+                {
+                    "reference_id": "ref:readme",
+                    "kind": "repository_content",
+                    "subjects": list(observations),
+                    "path": "nested/README.md",
+                    "state": fingerprint["state"],
+                    "sha256": fingerprint["sha256"],
+                }
+            ]
+        },
+    }
+    current_cut = Mock(wraps=feedback_report_module._report_cut_fingerprint_pairs)
+    monkeypatch.setattr(
+        feedback_report_module, "_report_cut_fingerprint_pairs", current_cut
     )
 
-    assert exact is candidate
-    assert comparison == [candidate]
+    candidates, aggregates = feedback_report_module._build_candidates(
+        root,
+        root,
+        manifest,
+        observations,
+        SimpleNamespace(issues={}, machine_aggregates={}),
+    )
+
+    [candidate] = candidates.values()
+    assert candidate["candidate_id"] == issue_id(f"agent\0{first['observation_id']}")
+    assert candidate["occurrence_count"] == 2
+    assert candidate["source_observation_ids"] == sorted(observations)
+    assert candidate["reference_targets"] == [
+        {"path": "nested/README.md", "kind": "file", "location": None}
+    ]
+    assert candidate["reference_ids"] == ["ref:readme"]
+    assert aggregates == {}
+    current_cut.assert_called_once_with(root, manifest, second)
+
+
+def test_candidate_references_follow_subjects_and_refresh_between_waves(
+    tmp_path: Path,
+) -> None:
+    """candidate と観測の参照を合併し、他候補との分離と wave ごとの更新を保つ。"""
+    first, second = (
+        {
+            "candidate_id": issue_id(f"agent\0{index}"),
+            "origin": "agent_report",
+            "source_observation_ids": [f"fbo_{index:06d}_2026-10-08_00-00"],
+            "reference_ids": ["ref:stale"],
+        }
+        for index in range(2)
+    )
+    candidates = {item["candidate_id"]: item for item in (first, second)}
+    manifest = {
+        "cut_at": "2026-10-08T00:00:00Z",
+        "inputs": {
+            "references": [
+                {"reference_id": "ref:z", "subjects": [first["candidate_id"]]},
+                {
+                    "reference_id": "ref:m",
+                    "subjects": [
+                        first["candidate_id"],
+                        *first["source_observation_ids"],
+                        second["candidate_id"],
+                    ],
+                },
+                {"reference_id": "ref:a", "subjects": first["source_observation_ids"]},
+                {"reference_id": "ref:unrelated", "subjects": ["unrelated"]},
+            ]
+        },
+    }
+
+    def build():
+        return feedback_report_module._build_candidates(
+            tmp_path,
+            tmp_path,
+            manifest,
+            {},
+            SimpleNamespace(issues={}, machine_aggregates={}),
+            previous_candidates=candidates,
+        )
+
+    build()
+    assert first["reference_ids"] == ["ref:a", "ref:m", "ref:z"]
+    assert second["reference_ids"] == ["ref:m"]
+
+    manifest["inputs"]["references"] = [
+        {"reference_id": "ref:next", "subjects": second["source_observation_ids"]}
+    ]
+    build()
+    assert first["reference_ids"] == []
+    assert second["reference_ids"] == ["ref:next"]
 
 
 def test_report_reference_masks_secret_across_content_limit(
@@ -2783,10 +2964,14 @@ def test_empty_report_publishes_current_generation(
         "run_codex_exec",
         lambda *_args, **_kwargs: pytest.fail("empty report must not call Codex"),
     )
-    # journal 作成を含む終了処理全体で、cleanup manifest の重複検証を検出する。
+    # journal 作成を含む終了処理全体で、cleanup manifest と初期 state の重複読込を検出する。
     finish = recovery_module.finish_feedback_run
     original_read = Path.read_bytes
+    original_read_text = Path.read_text
+    save_invocation = feedback_report_module.save_feedback_invocation_report
     cleanup_reads = []
+    session_reads = []
+    invocation_saves = []
 
     def finish_with_read_count(context, manifest, result):
         manifest_path = feedback_state_module.report_cut_manifest_path(
@@ -2798,8 +2983,24 @@ def test_empty_report_publishes_current_generation(
                 cleanup_reads.append(candidate)
             return original_read(candidate)
 
+        def read_text(candidate, *args, **kwargs):
+            if candidate == context.state_path:
+                session_reads.append(candidate)
+            return original_read_text(candidate, *args, **kwargs)
+
+        def save(*args, **kwargs):
+            if not invocation_saves:
+                # identity 検証と state_before は同じ lock 内の snapshot を使う。
+                assert session_reads == [context.state_path]
+            invocation_saves.append(True)
+            return save_invocation(*args, **kwargs)
+
         with monkeypatch.context() as finalization_patch:
             finalization_patch.setattr(Path, "read_bytes", read)
+            finalization_patch.setattr(Path, "read_text", read_text)
+            finalization_patch.setattr(
+                feedback_report_module, "save_feedback_invocation_report", save
+            )
             return finish(context, manifest, result)
 
     monkeypatch.setattr(recovery_module, "finish_feedback_run", finish_with_read_count)
@@ -3001,9 +3202,12 @@ def test_feedback_repairs_sequential_waves_and_preserves_late_intake(
 
 
 # rollback 済み error の手動終了は、障害原因によらず同じ入力状態を扱う。
-# 各障害を検査し、error（rollback 済み／checkpoint 保存済み）と joinable で両操作を残す。
-# doctor の修復・索引同期と公開 session fork の結合は後続 wave に残す。
+# 各障害の rollback を検査し、checkpoint 保存済み error では両操作を残す。
+# doctor の修復・索引同期と公開 session fork の結合は wave test に残す。
 # 準備済み session を使い、Git 差分・rollback・手動終了を実行する。
+# 手動 join/abandon と実 doctor の結合は test_editing_run_cli.py の
+# test_run_join_from_run_worktree_tracks_main_doctor_repairs と
+# test_run_join_preserves_active_state_when_cleanup_fails に残す。
 @pytest.mark.parametrize(
     ("fault", "operation"),
     [
@@ -3030,8 +3234,6 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
         target = "oracle/bad.md" if fault == "forbidden_change" else "README.md"
         (worktree / target).parent.mkdir(parents=True, exist_ok=True)
         (worktree / target).write_text("unconfirmed change\n")
-        if fault == "interrupt":
-            raise KeyboardInterrupt
         output = _remediation_output(identity, "fixed")
         output["result"]["changed_paths"] = (
             [] if fault == "unreported_change" else [target]
@@ -3049,23 +3251,30 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
             feedback_report_module, "_record_checkpoint", checkpoint_failure
         )
     result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
-    assert result.exit_code == (0 if fault == "interrupt" else 1), result.output
+    assert result.exit_code == 1, result.output
     manifest, _ = load_report_cut(root)
     _, _, session = load_state_for_branch(
         root, manifest["run"]["identity"]["session_branch"]
     )
-    assert session.run.state == ("joinable" if fault == "interrupt" else "error")
-    assert manifest["processing"]["status"] == (
-        "interrupted" if fault == "interrupt" else "failed"
-    )
+    assert session.run.state == "error"
+    assert manifest["processing"]["status"] == "failed"
     run_worktree = Path(manifest["run"]["identity"]["run_worktree"])
     assert (run_worktree / "README.md").read_text() == (
         "unconfirmed change\n" if fault == "checkpoint_reference" else initial
     )
     assert run_git(run_worktree, "status", "--porcelain").stdout == ""
     assert manifest["processing"]["remediation_checkpoints"] == []
+
+    # doctor 本体だけを省き、join の復旧検査・journal と前処理の呼出契約は保つ。
+    preprocess = Mock()
+    preprocess_module = run_join_module if operation == "join" else run_abandon_module
+    monkeypatch.setattr(preprocess_module, "run_doctor_preprocess", preprocess)
     completed = runner.invoke(app, ["run", operation], catch_exceptions=False)
     assert completed.exit_code == 0, completed.output
+    if operation == "join":
+        preprocess.assert_called_once_with(root, sync_refactor_entries=False)
+    else:
+        preprocess.assert_called_once_with(root)
     assert (root / "README.md").read_text() == (
         "unconfirmed change\n"
         if fault == "checkpoint_reference" and operation == "join"
@@ -3391,6 +3600,11 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
     # 手動操作の拒否は merge 記録（参照回復を含む）と finalization journal の両経路で検査する。
     # completion/publication の障害種別や raw cleanup の進捗は、この拒否条件を変えない。
     if fault in {"merge_reference", "cleanup", "branch_cleanup"}:
+        # doctor の修復・索引同期は test_doctor_cli.py、abandon との結合は
+        # test_editing_run_cli.py の preserves_active_state_when_cleanup_fails に残す。
+        # join は取り込み済み記録を検証して doctor を省く経路をそのまま通す。
+        preprocess = Mock()
+        monkeypatch.setattr(run_abandon_module, "run_doctor_preprocess", preprocess)
         for operation in ("join", "abandon"):
             rejected = runner.invoke(app, ["run", operation], catch_exceptions=False)
             assert rejected.exit_code == 1, rejected.output
@@ -3401,6 +3615,7 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
             assert 'run_kind: "feedback_report"' in rejected_report
             assert 'state_before: "error"' in rejected_report
             assert 'state_after: "error"' in rejected_report
+        preprocess.assert_called_once_with(root)
     monkeypatch.setattr(target, name, original)
     monkeypatch.setattr(
         feedback_report_module,
@@ -3489,6 +3704,21 @@ def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
         issue = first_state.issues[identity]
         assert issue["occurrence_count"] == 1
         assert issue["verification"]["human_action"] == "README の設定を修正する。"
+        expected_evidence = [
+            {
+                "kind": "repository_content",
+                "path": case["reference_path"],
+                "location": f"{case['reference_path']}:1",
+                "finding": "report cut で現在状態を確認した。",
+            }
+        ]
+        assert issue["verification"]["current_evidence"] == expected_evidence
+        event = next(
+            event
+            for event in first_state.history[-1]["events"]
+            if event["issue_id"] == identity
+        )
+        assert event["agent_result"]["current_evidence"] == expected_evidence
         assert "reference_id" not in json.dumps(
             issue["verification"], ensure_ascii=False
         )

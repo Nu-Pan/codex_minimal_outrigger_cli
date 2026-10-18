@@ -1,5 +1,9 @@
 """feedback artifact と mutable state の durability・再保存を検証する。
 
+同期の順序・失敗・再試行の検査では、実 fd と file 内容を観測し、ディスク同期を待たない。
+実 fsync との結合は、残存 temporary・並行保存の正常系と test_feedback.py の
+collector 受理・後続 wave の publication 検査に残す。
+
 対応する oracle file:
 
 - `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
@@ -18,6 +22,59 @@ import commons.runtime_feedback_state as state
 import commons.runtime_feedback_store as store
 
 
+def test_symlink_check_keeps_lexical_ancestors_and_rechecks_changes(
+    tmp_path, monkeypatch
+):
+    directory = tmp_path / "入力"
+    directory.mkdir()
+    regular = directory / "record.json"
+    regular.write_bytes(b"{}\n")
+    alias = tmp_path / "alias"
+    alias.mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    for path in (
+        Path("/"),
+        Path("."),
+        regular,
+        regular / "not-a-directory" / "missing.json",
+        alias / "missing" / "record.json",
+    ):
+        assert not store._has_symlink_component(path)
+
+    # 同じ path でも次回は取り直し、.. の解決前や欠落した子の先の親を検査する。
+    alias.rmdir()
+    alias.symlink_to(directory, target_is_directory=True)
+    for path in (
+        Path("alias/record.json"),
+        alias / "missing" / "record.json",
+        alias / ".." / "入力" / "record.json",
+        alias / "invalid\0name",
+    ):
+        assert store._has_symlink_component(path)
+
+    alias.unlink()
+    alias.symlink_to("alias")
+    assert store._has_symlink_component(alias / "missing" / "record.json")
+    alias.unlink()
+    alias.symlink_to(tmp_path / "missing-directory", target_is_directory=True)
+    assert store._has_symlink_component(alias / "missing" / "record.json")
+
+
+def test_symlink_check_propagates_unreadable_parent(tmp_path, monkeypatch):
+    blocked = tmp_path / "blocked"
+    original_lstat = os.lstat
+
+    def lstat(path, *args, **kwargs):
+        if os.fspath(path) == str(blocked):
+            raise PermissionError("unreadable parent")
+        return original_lstat(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "lstat", lstat)
+    with pytest.raises(PermissionError, match="unreadable parent"):
+        store._has_symlink_component(blocked / "missing.json")
+
+
 @pytest.mark.parametrize("failure", [None, "file", "directory"])
 def test_mutable_write_flushes_before_publication_and_preserves_failure_state(
     tmp_path, monkeypatch, failure
@@ -29,7 +86,6 @@ def test_mutable_write_flushes_before_publication_and_preserves_failure_state(
     content = store.canonical_json_bytes(value)
     path.write_bytes(previous)
     events = []
-    real_fsync = os.fsync
 
     def fsync(fd):
         metadata = os.fstat(fd)
@@ -40,7 +96,6 @@ def test_mutable_write_flushes_before_publication_and_preserves_failure_state(
         assert path.read_bytes() == (previous if kind == "file" else content)
         if kind == failure:
             raise OSError("injected flush failure")
-        real_fsync(fd)
 
     monkeypatch.setattr(os, "fsync", fsync)
 
@@ -62,7 +117,7 @@ def test_immutable_write_flushes_new_data_and_reuses_published_inode(
     content = store.canonical_json_bytes({"evidence": "確認した内容"})
     events = []
     temporary_reads = []
-    real_fsync, real_rename = os.fsync, os.rename
+    real_rename = os.rename
     real_read, real_open = Path.read_bytes, Path.open
 
     def fsync(fd):
@@ -72,7 +127,6 @@ def test_immutable_write_flushes_new_data_and_reuses_published_inode(
             assert not path.exists()
         else:
             assert path.read_bytes() == content
-        real_fsync(fd)
 
     def rename(source, destination):
         assert events == ["file"]
@@ -154,29 +208,39 @@ def test_immutable_write_checks_leftover_temporaries(
     if published:
         # durability は専用 test で検証し、ここでは保存済み file だけを用意する。
         path.write_bytes(content)
+    matching = tmp_path / f".{path.name}.complete.tmp"
+    matching.write_bytes(content)
     temporary = tmp_path / f".{path.name}.interrupted.tmp"
-    unrelated = tmp_path / ".other.json.interrupted.tmp"
-    unrelated.write_bytes(b"unrelated\n")
+    unrelated_paths = [
+        tmp_path / ".other.json.interrupted.tmp",
+        tmp_path / f"{path.name}.interrupted.tmp",
+        tmp_path / f".{path.name}.interrupted.tmp.bak",
+    ]
+    for unrelated in unrelated_paths:
+        unrelated.write_bytes(b"unrelated\n")
     if temporary_kind == "directory":
         temporary.mkdir()
     elif temporary_kind == "symlink":
-        temporary.symlink_to(unrelated)
+        temporary.symlink_to(unrelated_paths[0])
     else:
         temporary.write_bytes(content if temporary_kind == "matching" else b"corrupt\n")
 
     if temporary_kind == "matching":
         assert store.write_immutable_bytes(path, content) == store.sha256_bytes(content)
         assert path.read_bytes() == content
+        assert not matching.exists()
         assert not temporary.exists()
     else:
         with pytest.raises(store.FeedbackRejected) as rejected:
             store.write_immutable_bytes(path, content)
         assert rejected.value.code == "context_invalid"
+        assert matching.read_bytes() == content
         assert temporary.exists()
         assert path.exists() == published
         if published:
             assert path.read_bytes() == content
-    assert unrelated.read_bytes() == b"unrelated\n"
+    for unrelated in unrelated_paths:
+        assert unrelated.read_bytes() == b"unrelated\n"
 
 
 @pytest.mark.parametrize("failure", ["file", "directory"])
@@ -184,7 +248,6 @@ def test_immutable_write_retries_flush_failure(tmp_path, monkeypatch, failure):
     path = tmp_path / "record.json"
     content = b"immutable\n"
     failed = False
-    real_fsync = os.fsync
     events = []
 
     def fsync(fd):
@@ -194,7 +257,6 @@ def test_immutable_write_retries_flush_failure(tmp_path, monkeypatch, failure):
         if not failed and kind == failure:
             failed = True
             raise OSError("injected flush failure")
-        real_fsync(fd)
 
     monkeypatch.setattr(os, "fsync", fsync)
     with pytest.raises(OSError, match="injected flush failure"):

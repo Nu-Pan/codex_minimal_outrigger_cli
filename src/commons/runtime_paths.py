@@ -27,6 +27,10 @@ _ROOT_QUERIES: ContextVar[dict[_RootQueryKey, AgentCallPathContext] | None] = (
 @contextmanager
 def reuse_root_queries() -> Iterator[None]:
     """repository 構成を変えない処理内で、成功した root 解決を再利用する。"""
+    # 入れ子でも同じ探索結果を使い、破棄は最外の読み取り処理に任せる。
+    if _ROOT_QUERIES.get() is not None:
+        yield
+        return
     # 呼び出し間や並行する別 context に root の探索結果を持ち越さない。
     token = _ROOT_QUERIES.set({})
     try:

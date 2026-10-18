@@ -9,6 +9,7 @@ import re
 from dataclasses import asdict
 from functools import lru_cache
 from importlib import resources
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
 
@@ -158,13 +159,12 @@ def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str,
     return [selected[identity] for identity in sorted(selected)]
 
 
-def _remediation_schema_text() -> str:
-    """builder に隣接する正本 schema の現在の本文を読む。"""
+@lru_cache(maxsize=1)
+def _remediation_schema_resource() -> Traversable:
+    """正本 schema の所在だけを共有し、本文の再読込は呼出側で行う。"""
     # namespace 全体の列挙を避け、schema を所有する module を起点にする。
-    return (
-        resources.files("oracle.acp_builder.feedback.remediate_issue")
-        .joinpath("remediate_issue.json")
-        .read_text(encoding="utf-8")
+    return resources.files("oracle.acp_builder.feedback.remediate_issue").joinpath(
+        "remediate_issue.json"
     )
 
 
@@ -252,7 +252,7 @@ def validate_decision_basis(
             "feedback 循環診断の状態が一意な hash 順ではありません。", path
         )
     if compact:
-        schema_text = _remediation_schema_text()
+        schema_text = _remediation_schema_resource().read_text(encoding="utf-8")
         for field, definition in (
             ("verification", "verifications"),
             ("current_evidence", "current_evidence_optional"),
@@ -576,7 +576,7 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
     if not isinstance(input_value["issue"], dict):
         raise _corruption("remediation issue input が不正です。", path)
     output = checkpoint["structured_output"]
-    schema_text = _remediation_schema_text()
+    schema_text = _remediation_schema_resource().read_text(encoding="utf-8")
     try:
         output_json = canonical_json_bytes(output)
     except (TypeError, ValueError) as exc:

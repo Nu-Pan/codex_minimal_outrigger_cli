@@ -2,7 +2,7 @@
 
 import json
 import math
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any, NoReturn
@@ -25,6 +25,22 @@ from config.cmoc_config import (
 
 from .runtime_errors import CmocError
 from .runtime_paths import config_path
+
+# 固定の項目集合だけを正本から導出し、入力ごとの検証では再構築しない。
+_CONFIG_RECORD_FIELDS = {
+    config_type: frozenset(field.name for field in fields(config_type))
+    for config_type in (
+        CmocConfig,
+        CmocConfigCodex,
+        CodexCallConfig,
+        CodexModelProviderConfig,
+    )
+}
+_AGENT_CALL_KINDS = frozenset(CmocConfigCodex().agent_calls)
+_DOCUMENT_SEARCH_FIELD_ORDER = tuple(
+    field.name for field in fields(DocumentSearchConfig)
+)
+_DOCUMENT_SEARCH_FIELD_NAMES = frozenset(_DOCUMENT_SEARCH_FIELD_ORDER)
 
 
 def _reject_non_json_constant(value: str) -> NoReturn:
@@ -59,11 +75,10 @@ def _model_provider_id(value: Any) -> str:
     return value
 
 
-def _config_object(value: Any, names: Iterable[str], field: str) -> dict[str, Any]:
+def _config_object(value: Any, names: frozenset[str], field: str) -> dict[str, Any]:
     """正本で定義した項目集合と一致する object だけを受理する。"""
     if not isinstance(value, dict):
         raise TypeError(f"{field}: object が必要です")
-    names = set(names)
     missing = names - value.keys()
     if missing:
         raise TypeError(f"{field}.{sorted(missing)[0]}: 必須項目がありません")
@@ -110,14 +125,12 @@ def _document_search_data(value: Any) -> dict[str, Any]:
         data = value
     else:
         raise SearchConfigIssue("document_search", "object が必要です")
-    schema_fields = fields(DocumentSearchConfig)
-    names = {field.name for field in schema_fields}
-    unknown = sorted(data.keys() - names)
+    unknown = sorted(data.keys() - _DOCUMENT_SEARCH_FIELD_NAMES)
     if unknown:
         raise SearchConfigIssue(
             f"document_search.{unknown[0]}", "未知の項目です。手動で除去してください"
         )
-    missing = sorted(names - data.keys())
+    missing = sorted(_DOCUMENT_SEARCH_FIELD_NAMES - data.keys())
     if missing:
         raise SearchConfigIssue(
             f"document_search.{missing[0]}",
@@ -177,7 +190,7 @@ def _document_search_data(value: Any) -> dict[str, Any]:
             "document_search.chunk_tokens, document_search.embedding_context_tokens",
             f"chunk_tokens={data['chunk_tokens']} は embedding_context_tokens={data['embedding_context_tokens']} より小さくしてください",
         )
-    return {field.name: data[field.name] for field in schema_fields}
+    return {name: data[name] for name in _DOCUMENT_SEARCH_FIELD_ORDER}
 
 
 def _document_search_config(value: Any) -> DocumentSearchConfig:
@@ -188,9 +201,7 @@ def _document_search_config(value: Any) -> DocumentSearchConfig:
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     """正本 config 型を、永続化 JSON の object 境界へ変換する。"""
     # 設定キーを正本から取得し、共有対象の個別上書きも通常の構造検証で拒否する。
-    _config_object(
-        config.codex.agent_calls, CmocConfigCodex().agent_calls, "codex.agent_calls"
-    )
+    _config_object(config.codex.agent_calls, _AGENT_CALL_KINDS, "codex.agent_calls")
     model_providers: dict[str, dict[str, dict[str, JsonTomlValue]]] = {}
     for provider_id, provider_config in config.codex.model_providers.items():
         if not isinstance(provider_config, CodexModelProviderConfig):
@@ -303,7 +314,7 @@ def _model_provider_map_from_dict(
         normalized_provider_id = _model_provider_id(provider_id)
         value = _config_object(
             value,
-            (field.name for field in fields(CodexModelProviderConfig)),
+            _CONFIG_RECORD_FIELDS[CodexModelProviderConfig],
             f"codex.model_providers.{normalized_provider_id}",
         )
         settings = value["settings"]
@@ -323,12 +334,12 @@ def _agent_call_map_from_dict(
     data: Any,
 ) -> dict[str, CodexCallConfig]:
     """正本の種別集合と各 call の必須文字列を補完せず復元する。"""
-    data = _config_object(data, CmocConfigCodex().agent_calls, "codex.agent_calls")
+    data = _config_object(data, _AGENT_CALL_KINDS, "codex.agent_calls")
     restored = {}
     for agent_call_kind, value in data.items():
         value = _config_object(
             value,
-            (field.name for field in fields(CodexCallConfig)),
+            _CONFIG_RECORD_FIELDS[CodexCallConfig],
             f"codex.agent_calls.{agent_call_kind}",
         )
         restored[agent_call_kind] = CodexCallConfig(
@@ -352,12 +363,10 @@ def _config_from_dict(
     """保存内容の検証で復元済みの検索設定があれば、その結果を再利用する。"""
     # 新規生成には正本の既定状態を使い、入力済みの設定には既定値を混入させない。
     try:
-        data = _config_object(
-            data, (field.name for field in fields(CmocConfig)), "config"
-        )
+        data = _config_object(data, _CONFIG_RECORD_FIELDS[CmocConfig], "config")
         codex_data = _config_object(
             data["codex"],
-            (field.name for field in fields(CmocConfigCodex)),
+            _CONFIG_RECORD_FIELDS[CmocConfigCodex],
             "codex",
         )
         model_providers = _model_provider_map_from_dict(codex_data["model_providers"])

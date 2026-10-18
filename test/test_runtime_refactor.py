@@ -19,9 +19,9 @@ from _git_support import run_git
 import commons.runtime_git as git_module
 import commons.runtime_refactor as refactor_module
 import sub_commands.realization.refactor as refactor_workload
+import sub_commands.session.join as session_join_module
 from cmoc_runtime import CmocError
 from commons.runtime_git import is_oracle_file_path, is_realization_file_path
-from commons.runtime_merge_conflict import resolve_merge_conflicts
 from commons.runtime_refactor import (
     RefactorState,
     is_normalized_relative_path,
@@ -300,17 +300,58 @@ def test_refactor_state_update_only_dates_surviving_origin(
     investigated_at = "2026-10-11_00-00-00_001"
     monkeypatch.setattr(refactor_workload, "timestamp", lambda: investigated_at)
 
-    refactor_workload._update_refactor_state(
+    updated = refactor_workload._update_refactor_state(
         SimpleNamespace(run_worktree=root), "README.md"
     )
 
-    updated = load_refactor_state(root)
+    assert updated == load_refactor_state(root)
     assert set(updated) == paths
     if "README.md" in paths:
         assert updated["README.md"] == {"last_investigated_at": investigated_at}
     if change == "renamed":
         assert updated["renamed.md"] == {"last_investigated_at": None}
     assert updated["oracle/spec.md"] == state["oracle/spec.md"]
+
+
+def test_refactor_commit_reuses_verified_head_and_synchronized_state(
+    tmp_path, monkeypatch
+):
+    """検証済み HEAD・同期済み state で進捗を更新し、同じ情報を再取得しない。"""
+    state = {"README.md": {"last_investigated_at": "2026-10-11_00-00-00_001"}}
+    read = Mock(side_effect=AssertionError("state was already synchronized"))
+    monkeypatch.setattr(refactor_workload, "load_refactor_state", read)
+    # Git commit と中断の結合は test_editing_run_cli.py に残す。
+    query = Mock(side_effect=AssertionError("HEAD was already verified"))
+    monkeypatch.setattr(refactor_workload, "run_git", query)
+    monkeypatch.setattr(
+        refactor_workload, "commit_work_unit", Mock(return_value="after")
+    )
+    progress = refactor_workload._RefactorProgress(
+        cycle=1, targets={"README.md", "removed.md"}, deferred={"removed.md"}
+    )
+    units = []
+    unresolved = {"removed.md": [("old finding", "reason", tmp_path / "call.json")]}
+
+    refactor_workload._commit_refactor_unit(
+        SimpleNamespace(run_worktree=tmp_path),
+        "README.md",
+        0,
+        [],
+        units,
+        unresolved,
+        "unit",
+        before_head="before",
+        state=state,
+        progress=progress,
+    )
+
+    read.assert_not_called()
+    query.assert_not_called()
+    assert units == [("README.md", 0)]
+    assert progress.targets == progress.processed == {"README.md"}
+    assert progress.completed_cycles == 1
+    assert not progress.deferred
+    assert not unresolved
 
 
 @pytest.mark.parametrize(
@@ -457,9 +498,59 @@ def test_refactor_cycle_prioritizes_null_then_milliseconds_then_path():
     assert refactor_cycle_targets({}) == []
 
 
-@pytest.mark.parametrize("reverse_refs", [False, True])
+@pytest.mark.parametrize("has_committed_state", [False, True])
+@pytest.mark.parametrize("same_ref", [False, True])
+def test_merge_refactor_states_reads_shared_snapshot_once(
+    refactor_files, monkeypatch, has_committed_state, same_ref
+):
+    """同一 ref の照会と同一 snapshot の本文取得を繰り返さず、同期して保存する。"""
+    root = refactor_files
+    committed = {
+        "README.md": {"last_investigated_at": "2026-10-18_00-00-00_001"},
+        "removed.md": {"last_investigated_at": "2026-10-18_00-00-00_002"},
+    }
+
+    # 実 Git との結合・異なる commit の日時統合は隣接 test に残す。
+    # snapshot の有無だけを Git 境界で与え、同期・日時保持・保存は実処理を通す。
+    def committed_git(args, queried_root):
+        assert queried_root == root
+        if args[0] == "ls-tree":
+            return CommandResult(
+                0,
+                "100644 blob abc\t.cmoc/gt/realization/refactor/state.json\0"
+                if has_committed_state
+                else "",
+                "",
+            )
+        assert args[0] == "show"
+        return CommandResult(0, json.dumps(committed), "")
+
+    query = Mock(side_effect=committed_git)
+    monkeypatch.setattr(refactor_module, "run_git", query)
+    monkeypatch.setattr(
+        refactor_module,
+        "enumerate_refactor_targets",
+        lambda _: ["README.md", "added.md"],
+    )
+    # 作業中の値は採用せず、確定済み snapshot からだけ日時を引き継ぐ。
+    write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
+
+    refs = ("first-commit", "first-commit" if same_ref else "second-commit")
+    state = merge_refactor_states(root, refs)
+
+    assert state == {
+        "README.md": committed["README.md"]
+        if has_committed_state
+        else {"last_investigated_at": None},
+        "added.md": {"last_investigated_at": None},
+    }
+    assert load_refactor_state(root) == state
+    # 種類・存在は各 ref で検証し、同じ tree entry の本文取得は一度にする。
+    assert query.call_count == len(set(refs)) + int(has_committed_state)
+
+
 def test_merge_refactor_states_uses_committed_dates_and_current_paths(
-    cli_repository, monkeypatch, reverse_refs
+    cli_repository, monkeypatch
 ):
     root = cli_repository
     older = "2026-10-18_00-00-00_001"
@@ -487,27 +578,28 @@ def test_merge_refactor_states_uses_committed_dates_and_current_paths(
     run_git(root, "add", ".cmoc/gt/realization/refactor/state.json")
     run_git(root, "commit", "-m", "right state")
     right = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    # Git の統合結果や作業中の値から日時を作らず、確定済みの両側を使う。
-    write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
     targets = ["README.md", "oracle/spec.md", "left.py", "right.py", "added.py"]
     monkeypatch.setattr(
         refactor_module, "enumerate_refactor_targets", lambda _: targets
     )
 
-    refs = (right, left) if reverse_refs else (left, right)
-    state = merge_refactor_states(root, refs)
+    # 順序だけが異なる検査で同じ commit 履歴を作り直さない。
+    for refs in ((left, right), (right, left)):
+        # 各順序で作業中の値を戻し、前回の統合結果からの読み込みも検出する。
+        write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
+        state = merge_refactor_states(root, refs)
 
-    assert state == {
-        "README.md": {"last_investigated_at": newer},
-        "oracle/spec.md": {"last_investigated_at": older},
-        "left.py": {"last_investigated_at": older},
-        "right.py": {"last_investigated_at": None},
-        "added.py": {"last_investigated_at": None},
-    }
-    assert load_refactor_state(root) == state
+        assert state == {
+            "README.md": {"last_investigated_at": newer},
+            "oracle/spec.md": {"last_investigated_at": older},
+            "left.py": {"last_investigated_at": older},
+            "right.py": {"last_investigated_at": None},
+            "added.py": {"last_investigated_at": None},
+        }, refs
+        assert load_refactor_state(root) == state, refs
 
 
-def test_managed_state_conflict_merges_without_agent(cli_repository):
+def test_managed_state_conflict_merges_without_agent(cli_repository, monkeypatch):
     root = cli_repository
     (root / "README.md").write_text("readme\n")
     write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
@@ -523,13 +615,32 @@ def test_managed_state_conflict_merges_without_agent(cli_repository):
         root, {"README.md": {"last_investigated_at": "2026-10-18_00-00-00_001"}}
     )
     run_git(root, "commit", "-am", "other investigation")
+    other = run_git(root, "rev-parse", "HEAD").stdout.strip()
     merge = git_module.run_git(["merge", "--no-edit", first], root, check=False)
     assert merge.returncode != 0
 
-    resolution = resolve_merge_conflicts(root, None, purpose="test state conflict")
+    # session の入口でも、管理物だけなら完全 prompt の構築を省く。
+    build_parameter = Mock(side_effect=AssertionError("unused agent parameter"))
+    codex_exec = Mock(side_effect=AssertionError("unused agent call"))
+    report_fields = {}
+    monkeypatch.setattr(
+        session_join_module,
+        "build_session_join_conflict_resolution_parameter",
+        build_parameter,
+    )
+    monkeypatch.setattr(
+        session_join_module,
+        "update_primary_report_fields",
+        lambda **fields: report_fields.update(fields),
+    )
 
-    assert resolution["agent_status"] == "not_needed"
-    assert resolution["content_conflicts"] == []
+    session_join_module.resolve_session_join_conflict(root, first, other, codex_exec)
+
+    build_parameter.assert_not_called()
+    codex_exec.assert_not_called()
+    assert report_fields["conflict_resolution_status"] == "not_needed"
+    assert report_fields["conflict_resolution_result"] == "confirmed"
+    assert report_fields["conflict_agent_report"] is None
     assert load_refactor_state(root) == {"README.md": {"last_investigated_at": newer}}
     assert not run_git(root, "status", "--porcelain").stdout
 
