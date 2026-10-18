@@ -124,16 +124,27 @@ def ready_content_session(
     return _prepare_run_session(cli_repository, monkeypatch, with_content=True)
 
 
-@pytest.fixture
-def ready_join_session(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[Path, str, Path]:
-    """commit 参照と rollback の検査に、同期済み管理物を含む clean session を用意する。"""
+@pytest.fixture(scope="session")
+def _ready_join_session_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """join の前提となる初期履歴・管理物・state を一度だけ作る。"""
     # fixture では doctor 全体を実行しない。修復・索引同期は CLI 本処理と
     # test_doctor_cli.py に残し、join 前後の HEAD と state の比較条件を保つ。
-    return _prepare_run_session(
-        cli_repository, monkeypatch, with_content=True, with_managed_files=True
-    )
+    root = tmp_path_factory.mktemp("join-session-seed")
+    init_repo(root)
+    with pytest.MonkeyPatch.context() as patch:
+        _prepare_run_session(root, patch, with_content=True, with_managed_files=True)
+    return root
+
+
+@pytest.fixture
+def ready_join_session(
+    tmp_path: Path, _ready_join_session_seed: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """同期済み管理物と独立した Git metadata を各 test の session に複製する。"""
+    # copytree で空の作業 directory も保ち、index・refs・state を共有しない。
+    root = shutil.copytree(_ready_join_session_seed, tmp_path / "repo")
+    monkeypatch.chdir(root)
+    return root, SESSION_BRANCH, state_path(root, SESSION_ID)
 
 
 @pytest.fixture

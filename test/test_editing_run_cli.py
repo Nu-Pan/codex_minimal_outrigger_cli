@@ -105,6 +105,50 @@ pytestmark = pytest.mark.usefixtures(
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
+def test_ready_join_session_is_independent_of_seed(
+    ready_join_session, _ready_join_session_seed, tmp_path
+):
+    """複製後も初期状態を保ち、file・Git metadata の変更を共有元へ漏らさない。"""
+    root, branch, path = ready_join_session
+    seed = _ready_join_session_seed
+    originals = {
+        relative: (seed / relative).read_bytes()
+        for relative in (
+            "README.md",
+            ".cmoc/gt/config.json",
+            ".cmoc/gt/realization/refactor/state.json",
+            path.relative_to(root).as_posix(),
+            ".git/HEAD",
+            ".git/index",
+            ".git/config",
+            f".git/refs/heads/{branch}",
+        )
+    }
+    assert all(
+        (root / relative).read_bytes() == content
+        for relative, content in originals.items()
+    )
+    assert root == tmp_path / "repo" == Path.cwd()
+    assert run_git(root, "rev-parse", "--show-toplevel").stdout.strip() == str(root)
+    assert run_git(
+        root, "rev-parse", "--path-format=absolute", "--git-common-dir"
+    ).stdout.strip() == str(root / ".git")
+    assert current_branch(root) == branch == SESSION_BRANCH
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert all((root / relative).is_dir() for relative in _WORK_DIRECTORIES)
+    state = load_state_for_branch(root, branch)[2]
+    assert (
+        state.session.session_fork_commit
+        == run_git(root, "rev-parse", "HEAD").stdout.strip()
+    )
+    assert state.run == RunPart()
+
+    # hardlink・symlink・共有 common-dir の導入で、他の test の前提を変えない。
+    for relative, original in originals.items():
+        (root / relative).write_bytes(b"changed only in this test\n")
+        assert (seed / relative).read_bytes() == original
+
+
 @pytest.fixture
 def nonpersistent_run_ids(nonpersistent_execution_ids, monkeypatch):
     """終了・復旧の検査では、run ID の永続保存と同期待ちを繰り返さない。"""
