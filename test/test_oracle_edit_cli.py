@@ -11,6 +11,7 @@ import json
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import oracle.other.path_model as path_model_module
 import pytest
@@ -552,6 +553,19 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
 ) -> None:
     """共用入力確定後の準備失敗では、どちらの編集も開始済みにしない。"""
     root = oracle_edit_failure_repository
+    # 完全 prompt と起動 parameter の結合は上の CLI test に残す。
+    # 準備失敗では消費されない本文を構築せず、builder への入力を観測する。
+    builder_inputs: list[str] = []
+
+    def build_parameter(user_instruction: str) -> SimpleNamespace:
+        builder_inputs.append(user_instruction)
+        return SimpleNamespace(prompt="test skeleton")
+
+    monkeypatch.setattr(
+        oracle_edit_module,
+        "build_oracle_edit_main_launch_exec_parameter",
+        build_parameter,
+    )
     # 起動前提は失敗境界の double へ置き換えるため、session は不要。
     monkeypatch.setattr(
         oracle_edit_module, "edit_prompt_editor_input", lambda *_args: None
@@ -587,6 +601,10 @@ def test_oracle_edit_preparation_failure_leaves_both_calls_not_started(
     result = runner.invoke(app, ["oracle", "edit"], catch_exceptions=False)
 
     assert result.exit_code == 1
+    assert builder_inputs == [
+        oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER,
+        "edit oracle",
+    ]
     stages = ["config", "preconditions"]
     assert events == stages[: stages.index(failure_stage) + 1]
     report = terminal_primary_report(result).read_text()
