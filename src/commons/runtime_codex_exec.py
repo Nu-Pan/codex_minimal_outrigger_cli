@@ -1167,14 +1167,17 @@ def run_codex_exec(
             )
         if schema_path is not None:
             assert schema_validator is not None
-            if frozen_artifact_snapshot is None:
+            # 事後条件の照合がなければ、成果物の固定は補正が必要になるまで待つ。
+            if (
+                artifact_snapshot_before is not None
+                and frozen_artifact_snapshot is None
+            ):
                 frozen_artifact_snapshot = capture_worktree_snapshot(
                     path_context.work_root
                 )
-                if artifact_snapshot_before is not None:
-                    artifact_changed_paths = artifact_snapshot_before.changed_paths(
-                        frozen_artifact_snapshot
-                    )
+                artifact_changed_paths = artifact_snapshot_before.changed_paths(
+                    frozen_artifact_snapshot
+                )
             try:
                 output_text, output_json, validation_issues = (
                     _validate_structured_output(
@@ -1220,6 +1223,10 @@ def run_codex_exec(
                     if correction_session_id is None:
                         failure_reason = "Codex session ID is unavailable"
                 if failure_reason is None:
+                    if frozen_artifact_snapshot is None:
+                        frozen_artifact_snapshot = capture_worktree_snapshot(
+                            path_context.work_root
+                        )
                     output_corrections += 1
                     resume_session_id = correction_session_id
                     current_prompt = _build_output_correction_prompt(validation_issues)
