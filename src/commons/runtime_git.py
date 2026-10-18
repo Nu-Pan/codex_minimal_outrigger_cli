@@ -70,6 +70,10 @@ _GIT_PATH_QUERIES: ContextVar[dict[_GitPathQueryKey, CommandResult] | None] = (
 @contextmanager
 def reuse_git_path_queries() -> Iterator[None]:
     """Git の配置と設定を変えない処理内で、path の問い合わせを再利用する。"""
+    # 入れ子の読み取り処理も外側と同じ配置を使い、外側の終了時にまとめて破棄する。
+    if _GIT_PATH_QUERIES.get() is not None:
+        yield
+        return
     # doctor が修復する index・HEAD・ignore 内容や判定結果は保存しない。
     # 設定変更を次の doctor へ持ち越さず、例外時にも必ず破棄する。
     token = _GIT_PATH_QUERIES.set({})

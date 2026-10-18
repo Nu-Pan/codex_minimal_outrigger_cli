@@ -10,7 +10,7 @@ from _git_support import RUN_BRANCH, RUN_ID, SESSION_ID, init_repo, run_git
 import commons.runtime_git as git_module
 from commons.prompt_editor_input import ensure_prompt_editor_roots_ignored
 from commons.runtime_errors import CmocError
-from commons.runtime_paths import repo_root, work_root
+from commons.runtime_paths import repo_root, reuse_root_queries, work_root
 from commons.runtime_results import CommandResult
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -128,6 +128,12 @@ def test_git_query_reuse_keeps_worktrees_and_environment_separate(
             assert repo_root() == root
             assert git_calls == calls_after_repo_root
             assert git_module.git_common_dir(anchor) == root / ".git"
+            calls_before_nested = git_calls
+            with reuse_root_queries(), git_module.reuse_git_path_queries():
+                assert repo_root() == root
+                assert work_root() == anchor
+                assert git_module.git_common_dir(anchor) == root / ".git"
+            assert git_calls == calls_before_nested
         assert git_module.run_git(index_query, root).stdout.strip() == ".git/index"
         assert git_module.run_git(index_query, linked).stdout.strip() != ".git/index"
         with monkeypatch.context() as environment:
