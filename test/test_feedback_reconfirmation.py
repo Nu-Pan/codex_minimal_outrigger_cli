@@ -1126,7 +1126,25 @@ def test_sealed_result_cannot_publish_or_recover_with_changed_basis(
     identity = _add_candidate(h, "a")
     h.handler = lambda _issue: _remediation_output(identity, status)
     candidates, aggregates = _run(h)
-    remediation._seal(h.context, h.manifest, candidates, aggregates)
+    # 封印時の分類には根拠検証で読んだ checkpoint を使い、再読しない。
+    read_checkpoint = Mock(wraps=remediation.read_run_artifact)
+    with monkeypatch.context() as seal_patch:
+        seal_patch.setattr(remediation, "read_run_artifact", read_checkpoint)
+        remediation._seal(h.context, h.manifest, candidates, aggregates)
+    assert read_checkpoint.call_count == 1
+    case_id = h.manifest["run"]["targets"]["case_ids"][identity]
+    assert (case_id is not None) == (status in {"human_required", "inconclusive"})
+
+    # 再利用は一回の封印内に限り、次の呼出しでは改変を拒否する。
+    [reference] = selected_remediation_checkpoints(h.manifest)
+    checkpoint_path = h.context.repo / reference["path"]
+    checkpoint_bytes = checkpoint_path.read_bytes()
+    checkpoint_path.write_bytes(b"{}\n")
+    try:
+        with pytest.raises(CmocError, match="SHA256"):
+            remediation._seal(h.context, h.manifest, candidates, aggregates)
+    finally:
+        checkpoint_path.write_bytes(checkpoint_bytes)
     seal_path = h.context.repo / h.manifest["run"]["sealed"]["path"]
     sealed_bytes = seal_path.read_bytes()
     for source in h.context.run_worktree.iterdir():
