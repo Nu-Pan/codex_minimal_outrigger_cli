@@ -563,15 +563,18 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-def test_worker_preserves_text_across_utf8_input_fragments(tmp_path: Path) -> None:
-    """実 worker が受信境界をまたぐ文字と、その原文上の位置を保つ。"""
+def test_worker_streams_utf8_chunks_and_reuse_through_small_pipe(
+    tmp_path: Path,
+) -> None:
+    """入力のバイト境界と出力の部分書込みを一度の実 worker 起動で検査する。"""
     _fake_node_model(tmp_path)
-    entrypoint = tmp_path / "worker.mjs"
     # OS の pipe 分割や sleep に依存せず、実入力のバイト境界を固定する。
     preload = tmp_path / "fragmented-stdin.mjs"
     preload.write_text(
         """import { readFileSync } from "node:fs";
 import { Readable } from "node:stream";
+// 実 runtime と同様に stdout を初期化し、非同期 pipe の部分書込みを再現する。
+void process.stdout;
 const input = readFileSync(0);
 const fragments = [];
 for (let start = 0; start < input.length; start++) {
@@ -582,56 +585,10 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
     )
     text = "# 日本語\néあ😀 と ASCII\n受信境界をまたいでも末尾まで保つ。\n"
     config = _tuning()
-    request = NodeSearchWorker(tmp_path, config)._request(
-        "chunk_stream",
-        {
-            "documents": {"doc.md": text},
-            "resume": {"doc.md": 0},
-            "config": asdict(config),
-        },
-    )
-    request["dimensions"] = 2
-    result = subprocess.run(
-        ["node", "--import", str(preload), str(entrypoint)],
-        input=json.dumps(request, ensure_ascii=False).encode("utf-8"),
-        cwd=tmp_path,
-        capture_output=True,
-        timeout=10,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr.decode("utf-8")
-    events = [json.loads(line) for line in result.stdout.splitlines()]
-    chunks = [event for event in events if event["kind"] == "chunk"]
-    assert events[-2:] == [
-        {"kind": "document_complete", "path": "doc.md", "chunk_count": len(chunks)},
-        {"kind": "done"},
-    ]
-    assert [chunk["ordinal"] for chunk in chunks] == list(range(len(chunks)))
-    assert all(chunk["path"] == "doc.md" for chunk in chunks)
-    inputs = [
-        json.loads(line)
-        for line in (tmp_path / "embedding-inputs.jsonl").read_text().splitlines()
-    ]
-    assert "".join(inputs) == text
-    assert len(chunks) == len(inputs)
-    assert chunks[0]["start"] == 0 and chunks[-1]["end"] == len(text)
-    for chunk, excerpt in zip(chunks, inputs, strict=True):
-        assert 0 <= chunk["start"] < chunk["end"] <= len(text)
-        assert text[chunk["start"] : chunk["end"]] == excerpt
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
-def test_worker_streams_complete_events_through_small_pipe(tmp_path: Path) -> None:
-    """pipe より大きい embedding と再利用・完了イベントを欠落なく順送する。"""
-    _fake_node_model(tmp_path)
-    # 実 runtime と同様に stdout を初期化し、非同期 pipe の部分書込みを再現する。
-    preload = tmp_path / "initialize-stdout.mjs"
-    preload.write_text("void process.stdout;\n")
-    config = _tuning()
     documents = {
-        "日本語.md": "最初の本文",
+        "日本語.md": text,
         "next.md": "別の本文",
-        "reuse.md": "最初の本文",
+        "reuse.md": text,
     }
     request = NodeSearchWorker(tmp_path, config)._request(
         "chunk_stream",
@@ -654,24 +611,52 @@ def test_worker_streams_complete_events_through_small_pipe(tmp_path: Path) -> No
     )
     assert result.returncode == 0, result.stderr.decode("utf-8")
     events = [json.loads(line) for line in result.stdout.splitlines()]
+    chunks = [event for event in events if event["kind"] == "chunk"]
+    inputs = [
+        json.loads(line)
+        for line in (tmp_path / "embedding-inputs.jsonl").read_text().splitlines()
+    ]
+    # バイト分割した 2・3・4 byte の文字が推論入力と原文位置を保つ。
+    for chunk, excerpt in zip(chunks, inputs, strict=True):
+        body = documents[chunk["path"]]
+        assert 0 <= chunk["start"] < chunk["end"] <= len(body)
+        assert body[chunk["start"] : chunk["end"]] == excerpt
+
+    # 複数 chunk・別文書・再利用を含め、pipe より大きい各イベントを順送する。
     expected = []
     for path, body in documents.items():
-        event = {
-            "kind": "reuse" if path == "reuse.md" else "chunk",
-            "path": path,
-            "ordinal": 0,
-            "start": 0,
-            "end": len(body),
-        }
-        if event["kind"] == "chunk":
-            event["embedding"] = [1] + [0.125] * (dimensions - 1)
-            assert len(json.dumps(event).encode("utf-8")) > 4096
-        expected.extend(
-            [
-                {"kind": "document_prepared", "path": path, "chunk_count": 1},
-                event,
-                {"kind": "document_complete", "path": path, "chunk_count": 1},
-            ]
+        source_path = "日本語.md" if path == "reuse.md" else path
+        source_chunks = [chunk for chunk in chunks if chunk["path"] == source_path]
+        assert source_chunks
+        expected.append(
+            {
+                "kind": "document_prepared",
+                "path": path,
+                "chunk_count": len(source_chunks),
+            }
+        )
+        end = 0
+        for ordinal, chunk in enumerate(source_chunks):
+            assert chunk["start"] == end
+            end = chunk["end"]
+            event = {
+                "kind": "reuse" if path == "reuse.md" else "chunk",
+                "path": path,
+                "ordinal": ordinal,
+                "start": chunk["start"],
+                "end": end,
+            }
+            if event["kind"] == "chunk":
+                event["embedding"] = [1] + [0.125] * (dimensions - 1)
+                assert len(json.dumps(event).encode("utf-8")) > 4096
+            expected.append(event)
+        assert end == len(body)
+        expected.append(
+            {
+                "kind": "document_complete",
+                "path": path,
+                "chunk_count": len(source_chunks),
+            }
         )
     assert events == [*expected, {"kind": "done"}]
 
