@@ -363,7 +363,7 @@
     "last_investigated_at": "2026-10-18_13-13-16_715"
   },
   "src/commons/document_search_worker/package.json": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_13-14-54_118"
   },
   "src/commons/document_search_worker/worker.mjs": {
     "last_investigated_at": null
