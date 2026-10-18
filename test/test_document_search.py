@@ -959,7 +959,7 @@ def test_database_symlink_cannot_redirect_index_writes(
 
 
 def test_config_change_reclaims_only_inactive_index(
-    tmp_path: Path, document_repository: Path
+    tmp_path: Path, document_repository: Path, unsynced_search_storage: None
 ) -> None:
     """互換条件の変更後は旧索引を再利用せず、未参照なら回収する。"""
     pytest.importorskip("sqlite_vec")
@@ -997,7 +997,7 @@ def test_config_change_reclaims_only_inactive_index(
 
 
 def test_config_change_preserves_index_while_request_uses_it(
-    tmp_path: Path, document_repository: Path
+    tmp_path: Path, document_repository: Path, unsynced_search_storage: None
 ) -> None:
     """旧設定の要求が推論中なら、接続を閉じてもその索引を回収しない。"""
     pytest.importorskip("sqlite_vec")
@@ -1613,7 +1613,10 @@ def test_output_schema_rejects_malformed_results(value):
 
 
 def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document_repository: Path
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    document_repository: Path,
+    unsynced_search_storage: None,
 ) -> None:
     """分割実装の変更では索引を再構築し、互換な同一入力片を引き継ぐ。"""
     from commons import runtime_document_search as module
@@ -1656,7 +1659,7 @@ def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(
 
 
 def test_search_rechecks_saved_config_for_each_request(
-    tmp_path: Path, document_repository: Path
+    tmp_path: Path, document_repository: Path, unsynced_search_storage: None
 ) -> None:
     """起動後の有効な変更は新索引を使い、不備は旧設定へ戻さず拒否する。"""
     root = document_repository
