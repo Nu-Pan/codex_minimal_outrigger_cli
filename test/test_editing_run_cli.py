@@ -3989,11 +3989,14 @@ def test_apply_auto_join_rechecks_session_changes(
     assert not run_git(worktree, "status", "--porcelain").stdout
 
 
+@pytest.mark.usefixtures("join_after_preprocess")
 def test_refactor_interruption_allows_only_join_conflict_call(
-    ready_content_session, monkeypatch
+    refactor_after_preprocess, monkeypatch
 ):
     """停止後の取消状態を本命に再利用せず、join の競合解消を実行できる。"""
-    root, _, state_path = ready_content_session
+    # doctor の修復・索引同期と永続採番は各 fixture の参照先に残す。
+    # SIGINT、実 Git の競合、実 builder、統合・state・report は本処理を通す。
+    root, _, state_path = refactor_after_preprocess
     stopped = False
     reviewed = []
     conflicts = []
