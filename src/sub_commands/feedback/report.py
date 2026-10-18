@@ -696,20 +696,32 @@ def _build_candidates(
             _insert_candidate(candidates, selected)
         _merge_observation(repo, selected, observation)
 
-    # candidate ごとに許可する cut reference を固定済み subject から機械選択する。
+    # subject を逆引きし、candidate ごとの全 reference 再走査を避ける。
     references = inputs.get("references")
     assert isinstance(references, list)
+    if not candidates:
+        return candidates, machine_aggregates
+    references_by_subject: dict[str, set[str]] = {}
+    for reference in references:
+        if not isinstance(reference, dict) or not isinstance(
+            reference.get("subjects"), list
+        ):
+            continue
+        for subject in reference["subjects"]:
+            references_by_subject.setdefault(str(subject), set()).add(
+                str(reference["reference_id"])
+            )
     for candidate in candidates.values():
         subjects = {
             str(candidate["candidate_id"]),
             *[str(value) for value in candidate.get("source_observation_ids", [])],
         }
         candidate["reference_ids"] = sorted(
-            str(reference["reference_id"])
-            for reference in references
-            if isinstance(reference, dict)
-            and isinstance(reference.get("subjects"), list)
-            and subjects.intersection(str(value) for value in reference["subjects"])
+            {
+                reference_id
+                for subject in subjects
+                for reference_id in references_by_subject.get(subject, ())
+            }
         )
     return candidates, machine_aggregates
 
@@ -1673,7 +1685,6 @@ def _publish_report(
     else:
         raise ValueError("report cut publication must be an object or null")
 
-    references_by_id = _report_cut_references_by_id(manifest)
     machine_aggregates = _next_machine_aggregates(
         candidates, verdicts, machine_aggregates
     )
@@ -1682,7 +1693,6 @@ def _publish_report(
             manifest,
             candidates[candidate_id_value],
             verdicts[candidate_id_value],
-            references_by_id,
             generated_at,
         )
         for candidate_id_value in unresolved_ids
@@ -1897,7 +1907,6 @@ def _active_issue_record(
     manifest: _JsonObject,
     candidate: _JsonObject,
     verdict: _JsonObject,
-    references_by_id: dict[str, _JsonObject],
     verified_at: str,
 ) -> _JsonObject:
     """unresolved candidate と最新 verification を compact active record にする。"""
@@ -1907,7 +1916,7 @@ def _active_issue_record(
     if not isinstance(evidence, list):
         raise ValueError("unresolved verdict current_evidence must be an array")
     materialized = [
-        _materialize_current_evidence(item, references_by_id)
+        _materialize_current_evidence(item)
         for item in evidence[:5]
         if isinstance(item, dict)
     ]
@@ -1969,30 +1978,13 @@ def _active_issue_record(
     }
 
 
-def _materialize_current_evidence(
-    evidence: _JsonObject, references_by_id: dict[str, _JsonObject]
-) -> _JsonObject:
-    """cut-scoped ID を削除予定 artifact に依存しない compact evidence へ解決する。"""
-    del references_by_id
+def _materialize_current_evidence(evidence: _JsonObject) -> _JsonObject:
+    """agent の直接 evidence を secret-safe な保存用 record にする。"""
     return {
         "kind": "repository_content",
         "path": mask_feedback_text(str(evidence["path"])),
         "location": mask_feedback_text(str(evidence["location"])),
         "finding": mask_feedback_text(str(evidence["finding"])),
-    }
-
-
-def _report_cut_references_by_id(manifest: _JsonObject) -> dict[str, _JsonObject]:
-    """固定済み reference を ID で引く。"""
-    inputs = manifest.get("inputs")
-    references = inputs.get("references") if isinstance(inputs, dict) else None
-    if not isinstance(references, list):
-        raise ValueError("report cut references must be an array")
-    return {
-        str(reference["reference_id"]): reference
-        for reference in references
-        if isinstance(reference, dict)
-        and isinstance(reference.get("reference_id"), str)
     }
 
 
@@ -2079,7 +2071,6 @@ def _publication_history(
     report_path: Path,
 ) -> tuple[Path, bytes, _JsonObject]:
     """旧判定、終了結果、検証済み入力の採用先を削除に依存しない記録へ固定する。"""
-    references = _report_cut_references_by_id(manifest)
     events = []
     for identity, verdict in sorted(verdicts.items()):
         before, after = state.issues.get(identity), active.get(identity)
@@ -2102,7 +2093,7 @@ def _publication_history(
                         **verdict,
                         "summary": candidates[identity]["summary"],
                         "current_evidence": [
-                            _materialize_current_evidence(item, references)
+                            _materialize_current_evidence(item)
                             for item in verdict["current_evidence"]
                         ],
                     }

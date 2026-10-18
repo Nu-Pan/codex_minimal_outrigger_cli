@@ -180,7 +180,6 @@ def _publish_prepared_cases(root, statuses, machine_aggregates):
             },
             candidate,
             verdict,
-            {},
             observed_at,
         )
         issues[identity] = issue

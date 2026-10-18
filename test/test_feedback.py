@@ -2270,6 +2270,61 @@ def test_candidate_building_skips_empty_comparison_and_merges_resolved_evidence(
     current_cut.assert_called_once_with(root, manifest, second)
 
 
+def test_candidate_references_follow_subjects_and_refresh_between_waves(
+    tmp_path: Path,
+) -> None:
+    """candidate と観測の参照を合併し、他候補との分離と wave ごとの更新を保つ。"""
+    first, second = (
+        {
+            "candidate_id": issue_id(f"agent\0{index}"),
+            "origin": "agent_report",
+            "source_observation_ids": [f"fbo_{index:06d}_2026-10-08_00-00"],
+            "reference_ids": ["ref:stale"],
+        }
+        for index in range(2)
+    )
+    candidates = {item["candidate_id"]: item for item in (first, second)}
+    manifest = {
+        "cut_at": "2026-10-08T00:00:00Z",
+        "inputs": {
+            "references": [
+                {"reference_id": "ref:z", "subjects": [first["candidate_id"]]},
+                {
+                    "reference_id": "ref:m",
+                    "subjects": [
+                        first["candidate_id"],
+                        *first["source_observation_ids"],
+                        second["candidate_id"],
+                    ],
+                },
+                {"reference_id": "ref:a", "subjects": first["source_observation_ids"]},
+                {"reference_id": "ref:unrelated", "subjects": ["unrelated"]},
+            ]
+        },
+    }
+
+    def build():
+        return feedback_report_module._build_candidates(
+            tmp_path,
+            tmp_path,
+            manifest,
+            {},
+            SimpleNamespace(issues={}, machine_aggregates={}),
+            previous_candidates=candidates,
+        )
+
+    build()
+    assert first["reference_ids"] == ["ref:a", "ref:m", "ref:z"]
+    assert second["reference_ids"] == ["ref:m"]
+
+    manifest["inputs"]["references"] = [
+        {"reference_id": "ref:next", "subjects": second["source_observation_ids"]}
+    ]
+    build()
+    assert first["reference_ids"] == []
+    assert second["reference_ids"] == ["ref:next"]
+
+
 def test_report_reference_masks_secret_across_content_limit(
     feedback_directory: Path,
 ) -> None:
@@ -3649,6 +3704,21 @@ def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
         issue = first_state.issues[identity]
         assert issue["occurrence_count"] == 1
         assert issue["verification"]["human_action"] == "README の設定を修正する。"
+        expected_evidence = [
+            {
+                "kind": "repository_content",
+                "path": case["reference_path"],
+                "location": f"{case['reference_path']}:1",
+                "finding": "report cut で現在状態を確認した。",
+            }
+        ]
+        assert issue["verification"]["current_evidence"] == expected_evidence
+        event = next(
+            event
+            for event in first_state.history[-1]["events"]
+            if event["issue_id"] == identity
+        )
+        assert event["agent_result"]["current_evidence"] == expected_evidence
         assert "reference_id" not in json.dumps(
             issue["verification"], ensure_ascii=False
         )
