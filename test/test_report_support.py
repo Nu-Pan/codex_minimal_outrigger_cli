@@ -21,7 +21,8 @@ def test_report_helpers_keep_content_boundaries_and_independent_metadata():
             f"## 元の指示\n\n```text\n{original}\n```\n\n"
             f"## 詳細結果\n\n{details}"
             "## 実行記録\n\n`command` &amp; result\n\n"
-            f"## 実行情報\n\n```yaml\nexecution_id: {revision}\n```\n"
+            f"## 実行情報\n\n```yaml\nexecution_id: {revision}\n"
+            f"result:\n  paths:\n    - {revision}\n```\n"
         )
 
         assert_report_layout(content)
@@ -29,9 +30,11 @@ def test_report_helpers_keep_content_boundaries_and_independent_metadata():
         assert report_section(content, "詳細結果") == "\n" + details
         assert report_text(report_section(content, "実行記録")) == "command & result"
         metadata = report_metadata(content)
-        assert metadata == {"execution_id": revision}
+        expected = {"execution_id": revision, "result": {"paths": [revision]}}
+        assert metadata == expected
         metadata["execution_id"] = "modified by caller"
-        assert report_metadata(content) == {"execution_id": revision}
+        metadata["result"]["paths"].append("modified by caller")
+        assert report_metadata(content) == expected
 
         with pytest.raises(AssertionError, match="report section is missing"):
             report_section(content, "存在しない章")

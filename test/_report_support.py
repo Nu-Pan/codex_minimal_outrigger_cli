@@ -1,5 +1,6 @@
 """人間向け report を Markdown として読み、表示契約を確認する。"""
 
+from copy import deepcopy
 from functools import lru_cache
 
 import yaml
@@ -12,7 +13,7 @@ _REPORT_MARKDOWN = MarkdownIt()
 @lru_cache(maxsize=4)
 def _report_tokens(content):
     """同じ本文の解析を共有し、異なる report と抽出章の保持数を制限する。"""
-    # helper 内では token を読み取るだけとし、YAML の戻り値は毎回独立に作る。
+    # helper 内では共有した token を読み取るだけにする。
     return tuple(_REPORT_MARKDOWN.parse(content))
 
 
@@ -36,6 +37,12 @@ def report_metadata(content):
         for token in reversed(tokens)
         if token.type == "fence" and token.info == "yaml"
     )
+    # 同じ実行情報の再解析を省き、返す入れ子の値は呼び出しごとに独立させる。
+    return deepcopy(_parse_report_metadata(information))
+
+
+@lru_cache(maxsize=4)
+def _parse_report_metadata(information):
     metadata = yaml.safe_load(information)
     assert isinstance(metadata, dict)
     return metadata
