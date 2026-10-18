@@ -918,12 +918,20 @@ def session_completion_repository(
     tmp_path: Path,
     _session_completion_repository_seed: tuple[Path, str],
     session_preprocess: list[Path],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> tuple[Path, str]:
     """active session の履歴・index・refs・state を各 test に独立して複製する。"""
     # seed は変更せず、hardlink や linked worktree による書き込みの共有を避ける。
     # 各ケースの状態変更と CLI の branch・state 操作は実 Git のまま検査する。
     seed, home_branch = _session_completion_repository_seed
-    return shutil.copytree(seed, tmp_path / "repo"), home_branch
+    root = shutil.copytree(seed, tmp_path / "repo")
+    # この fixture は単一 worktree の終了処理だけを扱うため、既知の両 root を渡す。
+    # root 探索と doctor の境界は test_runtime_cli.py と上の linked abandon、
+    # 下の linked fork/join の結合ケースに残し、Git process の反復起動を省く。
+    for module in (runtime_cli, session_module, session_join_module):
+        monkeypatch.setattr(module, "repo_root", lambda: root)
+        monkeypatch.setattr(module, "work_root", lambda: root)
+    return root, home_branch
 
 
 @pytest.fixture(scope="module")

@@ -606,7 +606,7 @@
     "last_investigated_at": "2026-10-19_04-52-11_752"
   },
   "src/sub_commands/session/abandon.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_04-58-49_124"
   },
   "src/sub_commands/session/fork.py": {
     "last_investigated_at": null
