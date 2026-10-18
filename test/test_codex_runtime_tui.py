@@ -33,6 +33,7 @@ import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_exec as exec_module
 import commons.runtime_codex_tui as tui_module
 import commons.runtime_logging as logging_module
+import commons.runtime_windows_toast as toast_module
 from commons.runtime_codex_profile import process_group_has_running_member
 from commons.runtime_codex_recovery import install_recovery_interruption
 from commons.runtime_codex_session import CodexSessionLease
@@ -67,11 +68,16 @@ BUILDERS = [
 
 
 @pytest.fixture
-def directory(tmp_path, monkeypatch, toast_clock, nonpersistent_execution_ids):
+def directory(tmp_path, monkeypatch, nonpersistent_execution_ids):
     # 永続採番とログ保存の結合は test_codex_runtime_paths.py に残す。
     # TUI の制御検査では、ログ間の ID 対応を保って採番用 DB の準備を省く。
     for module in (exec_module, tui_module):
         monkeypatch.setattr(module, "new_id", logging_module.new_id)
+    # この Fake は通知 callback を起動しないため、空の state の drain は省く。
+    # 待機の期限・遅延起動・実 marker と cleanup の結合は test_windows_toast.py に残す。
+    monkeypatch.setattr(
+        toast_module, "_wait_for_tui_callback_drain", lambda _root: None
+    )
     root = tmp_path / "repo"
     root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
