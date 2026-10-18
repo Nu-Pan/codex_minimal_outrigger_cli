@@ -2659,11 +2659,12 @@ def _validate_publication_section(
     observation_inputs = inputs.get("observations")
     if not isinstance(observation_inputs, list):
         raise _corruption("report cut observations が array ではありません。", path)
-    expected_observations = [
-        {"path": item.get("path"), "sha256": item.get("sha256")}
+    # 固定入力との照合は path と hash の組で索引化し、入力一覧の再走査を避ける。
+    expected_observations = {
+        (item["path"], item["sha256"])
         for item in observation_inputs
         if isinstance(item, dict)
-    ]
+    }
     current_input = inputs.get("current")
     expected_old_generation: list[_JsonObject] = []
     if isinstance(current_input, dict):
@@ -2697,7 +2698,7 @@ def _validate_publication_section(
     expected_work.extend(run_artifact_references(manifest))
     expected_work.sort(key=lambda item: str(item["path"]))
     if any(
-        reference not in expected_observations
+        (reference["path"], reference["sha256"]) not in expected_observations
         for reference in cleanup_lists["observations"]
     ):
         raise _corruption("cleanup input が固定した observation に含まれません。", path)

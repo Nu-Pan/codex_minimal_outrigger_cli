@@ -1505,6 +1505,58 @@ def test_publication_staging_relaxes_only_artifact_existence(publication_feedbac
         _validate_report_cut_manifest(root, h.manifest, h.path)
 
 
+def test_publication_cleanup_matches_input_references_without_repeated_scans(
+    publication_feedback,
+):
+    """消費対象を固定入力の部分集合に限定し、照合の二乗走査を検出する。"""
+    h = publication_feedback
+    staged = copy.deepcopy(h.manifest)
+    staged["processing"]["status"] = "staging"
+    comparisons = 0
+
+    class ComparedReference(dict):
+        def __eq__(self, other):
+            nonlocal comparisons
+            comparisons += 1
+            return super().__eq__(other)
+
+    # raw の hash・schema 検証は manifest の入力検査に残し、ここでは対象の照合を検査する。
+    entries = [
+        {
+            "observation_id": f"fbo_{index:06d}_2026-10-08_00-00",
+            "path": f".cmoc/gu/feedback/observation/v1/2026/10/08/fbo_{index:06d}_2026-10-08_00-00.json",
+            "sha256": f"{index:064x}",
+        }
+        for index in range(128)
+    ]
+    staged["inputs"]["observations"] = entries
+    cleanup = staged["publication"]["cleanup"]
+    selected = [
+        ComparedReference({key: entry[key] for key in ("path", "sha256")})
+        for entry in reversed(entries[::2])
+    ]
+    cleanup["observations"] = selected
+
+    def validate():
+        feedback_state._validate_publication_section(h.context.repo, staged, h.path)
+
+    # cleanup は入力順の prefix や全件でなくてもよく、未消費の入力を残せる。
+    validate()
+    assert comparisons <= 12 * len(entries)
+    for invalid in (
+        {**selected[0], "sha256": "f" * 64},
+        {**selected[0], "path": ".cmoc/gu/feedback/observation/v1/unlisted.json"},
+    ):
+        cleanup["observations"] = [invalid, *selected[1:]]
+        with pytest.raises(CmocError, match="固定した observation に含まれません"):
+            validate()
+    cleanup["observations"] = []
+    validate()
+    cleanup["observations"] = [selected[0], selected[0]]
+    with pytest.raises(CmocError, match="一意な path"):
+        validate()
+
+
 def test_unlisted_active_generation_artifact_is_corruption(published_feedback):
     """manifest が列挙しない active generation file を無視しない。"""
     root, state = published_feedback
