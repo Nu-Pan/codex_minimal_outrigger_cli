@@ -301,8 +301,19 @@ def test_review_starts_after_main_interruption_and_accepts_new_signal(
 
 
 @pytest.mark.parametrize("ending", ["natural_completion", "user_interruption", "error"])
-@pytest.mark.parametrize("failure", ["call", "cancel", "stop", "log"])
-@pytest.mark.parametrize("result_field", ["result", "completion_reason"])
+@pytest.mark.parametrize(
+    ("failure", "result_field"),
+    [
+        ("call", "result"),
+        ("call", "completion_reason"),
+        ("cancel", "result"),
+        ("cancel", "completion_reason"),
+        # 必須後処理の失敗は元の固有結果を破棄するため、field との直積は不要。
+        # 両失敗と全終端分類を残し、両 field の保持は上の call・cancel で検証する。
+        ("stop", "result"),
+        ("log", "completion_reason"),
+    ],
+)
 def test_review_failure_preserves_main_outcome_except_required_finalization(
     cli_terminal_directory, monkeypatch, capsys, ending, failure, result_field
 ):
