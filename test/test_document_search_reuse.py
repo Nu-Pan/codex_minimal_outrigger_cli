@@ -92,7 +92,8 @@ def test_cache_lookup_and_listing_discard_corrupt_entries(tmp_path):
     ]
     rows = [(f"{index:064x}", *entry) for index, entry in enumerate(entries)]
     valid = {rows[0][0], rows[-1][0]}
-    with closing(_EmbeddingCache(tmp_path / "cache.sqlite3")) as cache:
+    path = tmp_path / "cache.sqlite3"
+    with closing(_EmbeddingCache(path)) as cache:
         # 同じ破損条件を両入口へ渡し、一覧の途中削除で後続を見落とす回帰も検出する。
         for lookup in ("single", "listing"):
             with cache.connection:
@@ -102,14 +103,29 @@ def test_cache_lookup_and_listing_discard_corrupt_entries(tmp_path):
             if lookup == "single":
                 found = {digest for digest, *_ in rows if cache.get(digest) is not None}
             else:
+                # 破損行の削除後に取消が来ても transaction を残さず、再検査できる。
+                checked = 0
+
+                def cancel_after_invalid_entry():
+                    nonlocal checked
+                    checked += 1
+                    if checked == 3:
+                        raise SearchError("CANCELLED", "stop during cache validation")
+
+                with pytest.raises(SearchError) as failure:
+                    cache.hashes(cancel_after_invalid_entry)
+                assert failure.value.code == "CANCELLED"
+                assert not cache.connection.in_transaction
                 found = cache.hashes(lambda: None)
             assert found == valid
-            assert {
-                digest
-                for (digest,) in cache.connection.execute(
-                    "select excerpt_sha256 from embeddings"
-                )
-            } == valid
+            # 呼出元 connection の見かけだけでなく、削除が確定済みであることも確認する。
+            with closing(sqlite3.connect(path)) as observer:
+                assert {
+                    digest
+                    for (digest,) in observer.execute(
+                        "select excerpt_sha256 from embeddings"
+                    )
+                } == valid
             assert cache.get(rows[0][0]) == (vector, producer)
             assert cache.get(rows[-1][0]) == (vector, "b" * 64)
             assert cache.get("missing") is None
