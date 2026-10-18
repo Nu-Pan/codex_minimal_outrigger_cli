@@ -146,12 +146,12 @@ def _special_path(path: Path, kind: str) -> Iterator[None]:
     yield
 
 
-def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
+def test_inventory_matches_full_glob_and_refactor_state_sync(
     cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """最適化列挙と state entry・SHA 更新を full glob 基準へ一致させる。"""
+    """非 UTF-8 名を含む列挙と state 同期・永続化を full glob 基準で検証する。"""
     root = cli_repository
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
@@ -162,6 +162,9 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (ignored / "tracked.txt").write_text("tracked ignored\n")
     (ignored / "untracked.txt").write_text("untracked ignored\n")
     (root / "visible.txt").write_text("visible\n")
+    # 通常名と同じ列挙・保存経路で surrogateescape された filename も保持する。
+    non_utf8_name = os.fsdecode(b"non-utf8-\xff.txt")
+    (root / non_utf8_name).write_bytes(b"non-utf8 filename\n")
     classification_names = (
         "AGENTS.md",
         "notes.md",
@@ -202,6 +205,8 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     run_git(nested, "add", "-f", "tracked.nested")
 
     state = sync_refactor_state(root)
+    assert non_utf8_name in state
+    assert load_refactor_state(root) == state
     for relative, entry in state.items():
         entry.update(
             {
@@ -283,21 +288,6 @@ def test_realization_classifier_uses_nested_head_for_deleted_file(
         branch=RUN_BRANCH,
         fallback_branch="outer-fork",
     )
-
-
-def test_refactor_state_sync_round_trips_non_utf8_filename(
-    cli_repository: Path,
-) -> None:
-    """非 UTF-8 filename も列挙結果と state entry を保持する。"""
-    root = cli_repository
-    invalid_name = os.fsdecode(b"non-utf8-\xff.txt")
-    invalid_path = root / invalid_name
-    invalid_path.write_bytes(b"non-utf8 filename\n")
-
-    state = sync_refactor_state(root)
-
-    assert invalid_name in state
-    assert load_refactor_state(root) == state
 
 
 def test_inventory_does_not_traverse_excluded_roots_or_ignored_symlinks(
