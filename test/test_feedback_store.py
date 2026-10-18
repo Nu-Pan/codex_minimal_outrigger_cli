@@ -208,29 +208,39 @@ def test_immutable_write_checks_leftover_temporaries(
     if published:
         # durability は専用 test で検証し、ここでは保存済み file だけを用意する。
         path.write_bytes(content)
+    matching = tmp_path / f".{path.name}.complete.tmp"
+    matching.write_bytes(content)
     temporary = tmp_path / f".{path.name}.interrupted.tmp"
-    unrelated = tmp_path / ".other.json.interrupted.tmp"
-    unrelated.write_bytes(b"unrelated\n")
+    unrelated_paths = [
+        tmp_path / ".other.json.interrupted.tmp",
+        tmp_path / f"{path.name}.interrupted.tmp",
+        tmp_path / f".{path.name}.interrupted.tmp.bak",
+    ]
+    for unrelated in unrelated_paths:
+        unrelated.write_bytes(b"unrelated\n")
     if temporary_kind == "directory":
         temporary.mkdir()
     elif temporary_kind == "symlink":
-        temporary.symlink_to(unrelated)
+        temporary.symlink_to(unrelated_paths[0])
     else:
         temporary.write_bytes(content if temporary_kind == "matching" else b"corrupt\n")
 
     if temporary_kind == "matching":
         assert store.write_immutable_bytes(path, content) == store.sha256_bytes(content)
         assert path.read_bytes() == content
+        assert not matching.exists()
         assert not temporary.exists()
     else:
         with pytest.raises(store.FeedbackRejected) as rejected:
             store.write_immutable_bytes(path, content)
         assert rejected.value.code == "context_invalid"
+        assert matching.read_bytes() == content
         assert temporary.exists()
         assert path.exists() == published
         if published:
             assert path.read_bytes() == content
-    assert unrelated.read_bytes() == b"unrelated\n"
+    for unrelated in unrelated_paths:
+        assert unrelated.read_bytes() == b"unrelated\n"
 
 
 @pytest.mark.parametrize("failure", ["file", "directory"])

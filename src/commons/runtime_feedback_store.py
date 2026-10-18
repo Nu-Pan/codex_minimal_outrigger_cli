@@ -244,11 +244,11 @@ def _atomic_create(path: Path, content: bytes) -> bool:
         # 再保存は staging を省き、先行 rename 後の flush 失敗も回復できるようにする。
         fcntl.flock(directory_fd, fcntl.LOCK_EX)
         temporary_prefix = f".{path.name}."
+        # 無関係な artifact が多い directory でも、候補だけを Path にする。
         sibling_temporaries = [
-            candidate
-            for candidate in path.parent.iterdir()
-            if candidate.name.startswith(temporary_prefix)
-            and candidate.name.endswith(".tmp")
+            path.parent / name
+            for name in os.listdir(path.parent)
+            if name.startswith(temporary_prefix) and name.endswith(".tmp")
         ]
         for candidate in sibling_temporaries:
             if (
