@@ -1167,6 +1167,49 @@ def test_agent_candidate_exact_match_requires_report_cut_fingerprint() -> None:
     assert comparison == [candidate]
 
 
+def test_report_cut_without_fingerprints_skips_path_resolution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """path fingerprint がなければ参照解決を省き、後の照合では現在の入力を使う。"""
+    observation = {
+        "observation_id": "fbo_000001_2026-08-01_00-00",
+        "evidence_fingerprints": [],
+    }
+    fingerprint = {
+        "normalized_path": str(tmp_path / "README.md"),
+        "state": "hashed",
+        "sha256": "a" * 64,
+    }
+    manifest = {
+        "inputs": {
+            "references": [
+                {
+                    "kind": "repository_content",
+                    "subjects": [observation["observation_id"]],
+                    "path": "README.md",
+                    "state": fingerprint["state"],
+                    "sha256": fingerprint["sha256"],
+                }
+            ]
+        }
+    }
+    resolve_path = Mock(wraps=feedback_report_module._repository_path)
+    monkeypatch.setattr(feedback_report_module, "_repository_path", resolve_path)
+
+    assert (
+        feedback_report_module._report_cut_fingerprint_pairs(
+            tmp_path, manifest, observation
+        )
+        == []
+    )
+    resolve_path.assert_not_called()
+
+    observation["evidence_fingerprints"].append(fingerprint)
+    assert feedback_report_module._report_cut_fingerprint_pairs(
+        tmp_path, manifest, observation
+    ) == [(fingerprint["normalized_path"], "hashed", "a" * 64)]
+
+
 def test_issue_id_collision_stops_candidate_building(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

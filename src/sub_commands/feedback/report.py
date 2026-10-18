@@ -992,6 +992,9 @@ def _report_cut_fingerprint_pairs(
     repo: Path, manifest: _JsonObject, observation: _JsonObject
 ) -> list[tuple[str, str, str | None]]:
     """observation subject に紐付く report cut current fingerprint を返す。"""
+    fingerprints = observation.get("evidence_fingerprints")
+    if not isinstance(fingerprints, list) or not fingerprints:
+        return []
     inputs = manifest.get("inputs")
     references = inputs.get("references") if isinstance(inputs, dict) else None
     observation_id_value = observation.get("observation_id")
@@ -1021,9 +1024,6 @@ def _report_cut_fingerprint_pairs(
             continue
         current[str(candidate)] = (state, sha256)
 
-    fingerprints = observation.get("evidence_fingerprints")
-    if not isinstance(fingerprints, list):
-        return []
     result: list[tuple[str, str, str | None]] = []
     for fingerprint in fingerprints:
         if not isinstance(fingerprint, dict):
