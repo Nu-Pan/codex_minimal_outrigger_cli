@@ -286,14 +286,15 @@ class SearchObservation:
             failure = SearchError("CANCELLED", "document search was cancelled")
             self.fail(failure)
             raise failure
+        if self.limits is None:
+            return
         now = time.monotonic()
         measured = self.measurements(now)
         reached = []
-        if self.limits is not None:
-            for name, limit in self.limits.items():
-                value = measured[name]
-                if isinstance(value, (int, float)) and value >= limit:
-                    reached.append(name)
+        for name, limit in self.limits.items():
+            value = measured[name]
+            if isinstance(value, (int, float)) and value >= limit:
+                reached.append(name)
         if reached:
             failure = SearchError(
                 "DEADLINE_EXCEEDED",
@@ -329,6 +330,9 @@ class SearchObservation:
         self.check()
         sync = self.sync
         assert sync is not None
+        # 期限なしの doctor 同期は無進捗を判定せず、個別の進捗も記録しない。
+        if not self.request and self.limits is None:
+            return
         key = (operation, target)
         if key in sync.completed_steps:
             return
