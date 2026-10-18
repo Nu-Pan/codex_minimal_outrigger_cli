@@ -11,7 +11,7 @@ from oracle.other.struct_doc import SDCodeBlock, SDHeader, render_sd_node_as_mar
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_primary_report_review_parameter(
+def build_primary_report_review_request(
     mechanical_report_path: Path,
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
@@ -76,7 +76,7 @@ def build_primary_report_review_parameter(
         ],
     )
     return AgentCallParameter(
-        agent_call_kind=build_primary_report_review_parameter.__name__,
+        agent_call_kind=build_primary_report_review_request.__name__,
         file_access_mode=FileAccessMode.READONLY,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),

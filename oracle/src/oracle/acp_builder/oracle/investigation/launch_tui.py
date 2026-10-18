@@ -11,7 +11,7 @@ from oracle.other.struct_doc import SDHeader, SDTagBlock, render_sd_node_as_mark
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_oracle_investigation_launch_tui_parameter(
+def build_oracle_investigation_request(
     user_instruction: str | None = None,
     *,
     resume: TuiResumeTarget | None = None,
@@ -72,7 +72,7 @@ def build_oracle_investigation_launch_tui_parameter(
         )
         prompt = render_sd_node_as_markdown(*complete_prompt)
     return AgentCallParameter(
-        agent_call_kind=build_oracle_investigation_launch_tui_parameter.__name__,
+        agent_call_kind=build_oracle_investigation_request.__name__,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         prompt=prompt,
         structured_output_schema_path=None,

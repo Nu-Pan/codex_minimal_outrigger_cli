@@ -18,7 +18,7 @@ cmoc は、oracle file に関するユーザーの調査指示をエディタか
 
 1. doctor preprocess を呼び出す
 2. prompt editor input の lifecycle に従って、oracle file に関するユーザーの調査指示を受け取る
-3. `build_oracle_investigation_launch_tui_parameter` で完全 prompt と初回 exec 用のパラメータを構築する
+3. `build_oracle_investigation_request` で完全 prompt と初回 exec 用のパラメータを構築する
 4. 下記の「Codex CLI の起動」に従い、初回 exec の成功・終了を確認して同じ会話の TUI へ自動移行する
 
 ## ユーザー指示の入力
@@ -27,10 +27,10 @@ cmoc は、oracle file に関するユーザーの調査指示をエディタか
 
 ## TUI 起動パラメータ
 
-- oracle 調査 TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、および workload 固有の新規起動・再開パラメータの構築は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter` へ委譲する
+- oracle 調査 TUI の意味上の責務と調査境界は本書を正本とする。正確な prompt 文面、prompt part の選択、および workload 固有の新規起動・再開パラメータの構築は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_request` へ委譲する
 - 初回 exec と TUI の両方で editor input handoff を提供する。共通の意味は、`{{cmoc-root}}/oracle/doc/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
 - 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「editor input handoff MCP」に従う
-- `build_oracle_investigation_launch_tui_parameter` が返したパラメータを変更せずに使う。新規入力は初回 exec 用とし、成功後は同じ builder に検査済み再開入力を渡して、初期 prompt のない TUI 起動パラメータを構築する
+- `build_oracle_investigation_request` が返したパラメータを変更せずに使う。新規入力は初回 exec 用とし、成功後は同じ builder に検査済み再開入力を渡して、初期 prompt のない TUI 起動パラメータを構築する
 - oracle file を扱う判断基準は `{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」を正本とする。正確な agent 向け文面は前述の builder を参照する
 - 実行パラメータ決定用の agent call は行わない
 

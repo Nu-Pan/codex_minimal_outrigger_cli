@@ -7,9 +7,9 @@
 
 ## agent call ごとの直接設定
 
-通常の agent call は、builder が指定した `AgentCallParameter.agent_call_kind` をそのまま設定取得キーとし、`CmocConfigCodex.agent_calls` の対応する一つの entry から設定を直接取得する。この規則から外れる設定取得は、本書の「回復確認 probe の設定例外」に限定する。取得した設定を二つの agent call で共用する TUI の経路は、本節の「TUI 起動での設定の確定」に従う。
+通常の agent call は、builder が指定した `AgentCallParameter.agent_call_kind` をそのまま設定取得キーとし、`CmocConfigCodex.agent_calls` の対応する一つの entry から設定を直接取得する。種別と builder 関数名の関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」に従う。設定取得の例外は、本書の「回復確認 probe の設定例外」に限定する。取得した設定を二つの agent call で共用する TUI の経路は、本節の「TUI 起動での設定の確定」に従う。
 
-- realization apply の本命 call、realization refactor の所見調査・修正 call、feedback の issue remediation call、および run join の競合解消 call は、各 builder で realization 編集用の同じ `agent_call_kind` を直接指定し、設定を共有する。run join は、workload の自動 join と明示的な `cmoc run join` の両方を含む
+- realization apply の本命 call、realization refactor の所見調査・修正 call、feedback の issue remediation call、および run join の競合解消 call は、各 builder で realization 編集用の共有専用キーを `agent_call_kind` に直接指定し、設定を共有する。run join は、workload の自動 join と明示的な `cmoc run join` の両方を含む
 - session join、汎用 TUI、oracle 調査、oracle 編集、feedback normalization、primary report の重要事項確認、および quota availability probe は、それぞれ独立した個別設定を持つ
 - `agent_calls` に受理するキーは、委譲先が定める `agent_call_kind` の集合に限る。共有対象の builder 関数名をキーとする個別 entry や、共有設定への call ごとの個別上書きは受理しない
 - 共有設定と各個別設定は、model provider ID、Model 名、および Reasoning Effort 名を必須の直接文字列として持つ

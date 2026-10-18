@@ -77,14 +77,14 @@ Fake Codex CLI は、Real Codex CLI の代わりに決定論的な応答を返�
 
 ### agent call の設定選択と固定
 
-設定の生成・検証は単体テスト、起動設定への反映は Fake Codex CLI を中心に、次を確認する。意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「回復確認 probe の設定例外」と、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」「Model provider、Model、Reasoning Effort」を正本とする。
+設定の生成・検証は単体テスト、起動設定への反映は Fake Codex CLI を中心に、次を確認する。意味仕様は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「回復確認 probe の設定例外」と、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」「Model provider、Model、Reasoning Effort」を正本とする。設定の正確なキーと既定値は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` を参照する。
 
 | 検証対象 | 確認する結果 |
 |---|---|
-| 共有する呼び出し種別と設定の反映 | 共有対象の4 builder が同じ `agent_call_kind` を返し、その値をキーとする `agent_calls` の各項目の変更が、すべての対象経路の起動 argv に反映される。run join は自動 join と明示 join の両方を確認する。ログ・feedback の分類も共有する種別を使い、各実行の agent call ID は区別する |
+| 共有する呼び出し種別と設定の反映 | 共有対象の4 builder が、設定定義の共有専用キーと一致する `agent_call_kind` を返し、その値をキーとする `agent_calls` の各項目の変更が、すべての対象経路の起動 argv に反映される。run join は自動 join と明示 join の両方を確認する。ログ・feedback の分類も共有する種別を使い、各実行の agent call ID は区別する |
 | 設定の配置と個別上書きの拒否 | 生成する設定では共有設定と個別設定を `agent_calls` に置き、共有対象の builder ごとの entry を含めない。保存設定に共有対象の builder 関数名の entry または個別上書きを加えると、通常の構造検証で拒否する |
 | 共有設定欠落時の拒否 | 共有する `agent_call_kind` の entry が欠けた場合、共有対象の builder 関数名の entry を代わりに置いた場合も含め、起動前に拒否し、別キーへ fallback しない |
-| 対象外の個別選択 | 共有対象外7種に異なる設定値を用意し、それぞれの `agent_call_kind` をキーとする `agent_calls` の entry を選ぶ。primary report 確認を本命 call の設定で代用しない |
+| 対象外の個別選択 | 共有対象外7種では、それぞれの builder 関数の `__name__`、返された `agent_call_kind`、および設定定義の個別キーが一致する。7種に異なる設定値を用意し、対応する `agent_calls` の entry を選ぶ。primary report 確認を本命 call の設定で代用しない |
 | その他の設定不備の拒否 | 必須の個別設定・provider 定義の欠落、構造・型・値の制約違反、および provider 参照不整合では、暗黙の補完・変換をせず起動前に拒否する |
 | 同一 call 内の固定 | 設定元を変更しても、初回・Structured Output 補正・retry・回復待ち後の再開では、確定済みの直接文字列と provider-local 設定を保持する |
 | probe の例外 | 一時障害の回復確認では、共有設定を使う本命 call を含め、停止した call の確定値と同じ認証適用先を使う。quota から一時障害の確認へ切り替わった後の条件保持と、一時障害の確認を含まない quota 待機での probe 個別設定の選択を区別する |

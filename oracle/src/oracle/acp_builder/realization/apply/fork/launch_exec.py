@@ -17,7 +17,7 @@ from oracle.other.struct_doc import (
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_realization_apply_fork_launch_exec_parameter(
+def build_realization_apply_request(
     diff_base_commit: str,
     run_fork_commit: str,
     run_worktree: Path,

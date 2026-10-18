@@ -130,7 +130,7 @@ class CmocConfigCodex:
             # NOTE
             #   ここでミスるとブランチ上の作業結果がぶち壊しになる
             #   リスクを鑑みて、品質が至上命題
-            "build_session_join_conflict_resolution_parameter": CodexCallConfig(
+            "build_session_join_conflict_resolution_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",
@@ -138,13 +138,13 @@ class CmocConfigCodex:
             # NOTE
             #   oracle file に影響を与えるので品質が至上命題
             #   TUI で人間とターンを回すので品質が至上命題
-            "build_oracle_investigation_launch_tui_parameter": CodexCallConfig(
+            "build_oracle_investigation_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",
             ),
             # NOTE oracle file に影響を与えるので品質が至上命題
-            "build_oracle_edit_main_launch_exec_parameter": CodexCallConfig(
+            "build_oracle_edit_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",
@@ -152,25 +152,25 @@ class CmocConfigCodex:
             # NOTE
             #   feedback report の整理作業が反復的かつ機械的検証不能なので、モデルがアホだと暴走しやすい
             #   怖すぎるので Astra しか選べない
-            "build_feedback_normalize_issue_parameter": CodexCallConfig(
+            "build_feedback_issue_normalization_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6.1-sol",
                 reasoning_effort="max",
             ),
             # NOTE TUI で人間とターンを回すので品質が至上命題
-            "build_tui_launch_tui_parameter": CodexCallConfig(
+            "build_tui_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",
             ),
             # NOTE report 全文の重要事項確認を独立した call 種別として調整する。
-            "build_primary_report_review_parameter": CodexCallConfig(
+            "build_primary_report_review_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6.1-sol",
                 reasoning_effort="max",
             ),
             # NOTE 終了結果だけを使う probe なので、一番安いモデルなら何でも良い
-            "build_quota_availability_probe_parameter": CodexCallConfig(
+            "build_quota_availability_probe_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-luna",
                 reasoning_effort="low",

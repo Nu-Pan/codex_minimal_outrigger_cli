@@ -15,6 +15,12 @@
     - なぜそれがおすすめなのかの説明は欲しい
 - そもそも、未確事項の提示ってどの指示が由来なんだ？
 
+## cmoc realization apply が途中停止することがある
+
+- 直近で２～３回見ている
+- 仕様不足を理由に途中でやめてしまう
+- 実装者裁量で勝手に埋めていいのに
+
 ## エージェントに書かせたあれこれの精査
 
 - MCP tool の description
@@ -24,6 +30,8 @@
 - `oracle/src/oracle/prompt_builder/policy/realization_findings.py`
 - `cmoc feedback report` の動的生成プロンプト
 - git commit `c71555d608c93043e9b8ebc1071f58b999f7bcc1` でなんか変更が入っている
+- `oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py`
+    - 「ユーザー指示が要求する事項を調査して回答する」になってるらしいんだけど、調査とは限らないよなぁ
 
 ## primary report の内容に対する不満
 
@@ -35,10 +43,6 @@
 
 - 計画は fable、日本語ライティングは gemini、問題の指摘は GPT みたいな構成
 - codex, claude, gemini の混合環境の定義から始まる
-
-## `build_*_parameter` の命名規則が終わってる
-
-- もうちょっとなんとかしたい
 
 ## git commit のコメント周りをどうにかしたい
 

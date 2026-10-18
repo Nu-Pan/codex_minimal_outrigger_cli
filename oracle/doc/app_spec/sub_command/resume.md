@@ -42,8 +42,8 @@ cmoc は、呼び出し元と同じ repository の指定実行 ID に対応す�
 
 保存された agent call 種別と file access mode を維持し、解決した workload の builder の選択値と一致することを起動前に確認する。一致しない場合は値を上書きして合わせず、制約を保持できないものとして拒否する。再開用パラメータの正確な構造は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「呼び出し単位と ID」で委譲した oracle src に従う。workload ごとの正確な構築は、次の builder へ委譲する。
 
-- 汎用 TUI: `{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_launch_tui_parameter`。元の agent call 種別と制約を持つ、初期 prompt なしの再開パラメータを構築する。
-- oracle 調査 TUI: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_launch_tui_parameter`。調査 workload の agent call 種別と制約を保って同じ構築を行う。
+- 汎用 TUI: `{{cmoc-root}}/oracle/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_request`。元の agent call 種別と制約を持つ、初期 prompt なしの再開パラメータを構築する。
+- oracle 調査 TUI: `{{cmoc-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py` の `build_oracle_investigation_request`。調査 workload の agent call 種別と制約を保って同じ構築を行う。
 
 cwd は、ログに保存された実際の cwd を照合して明示設定する。存在するディレクトリであり、保存時の work-root と同じ worktree、かつ呼び出し元と同じ repository に属することを確認する。現在の cmoc process の cwd で代用しない。path context の導出は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の path context」に従う。
 

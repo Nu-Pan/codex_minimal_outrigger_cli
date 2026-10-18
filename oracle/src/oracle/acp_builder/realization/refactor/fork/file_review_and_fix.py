@@ -13,7 +13,7 @@ from oracle.other.struct_doc import SDHeader, render_sd_node_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_realization_refactor_fork_file_review_and_fix_parameter(
+def build_realization_refactor_request(
     target_path: Path,
     run_worktree: Path,
 ) -> AgentCallParameter:

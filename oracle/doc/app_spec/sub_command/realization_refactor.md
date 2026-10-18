@@ -10,7 +10,7 @@ realization refactor は、仕様への適合と必要な回帰検出能力を�
 
 ## agent call への委譲
 
-所見調査・修正 call の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_fork_file_review_and_fix_parameter` へ委譲する。所見、対応結果、および処理単位全体の検証結果を返す Structured Output の構造と field の意味は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json` のルート object へ委譲する。
+所見調査・修正 call の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_request` へ委譲する。所見、対応結果、および処理単位全体の検証結果を返す Structured Output の構造と field の意味は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json` のルート object へ委譲する。
 
 fork、join、abandon の共通 lifecycle は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
 
@@ -89,7 +89,7 @@ state は選択順序のために使い、内容変更の検知、再調査要�
 
 ### 1 処理単位
 
-1. `build_realization_refactor_fork_file_review_and_fix_parameter` の作業入力には対象 path だけを渡す。一つの起点に関係し、検証・確定・rollback を一体として扱える小さなまとまりを選び、所見調査、realization file の修正、および検証を 1 回の agent call で行う。全 repository の改善を一つの call で完遂することは要求しない。
+1. `build_realization_refactor_request` の作業入力には対象 path だけを渡す。一つの起点に関係し、検証・確定・rollback を一体として扱える小さなまとまりを選び、所見調査、realization file の修正、および検証を 1 回の agent call で行う。全 repository の改善を一つの call で完遂することは要求しない。
 2. agent call が正常終了した後、「Structured Output の受理と正規化」に従って処理結果を決め、「確定前の検証」を満たすことを確認する。
 3. 追加・rename・削除後の entry 集合を同じ処理単位で同期する。起点の path が引き続き対象として存在すれば、所見や変更の有無、unresolved の有無にかかわらず、その entry の `last_investigated_at` を今回の調査の確定日時に更新する。起点以外の file の編集・参照は日時の更新理由にしない。削除・rename された起点の entry は再作成せず、rename 先へ日時を引き継がない。
 4. 「不可分な確定区間」に従い、realization file の差分と refactor state の更新を同じ処理単位の commit として確定する。所見、変更 path、検証結果、および commit の対応を、その後の進捗と report に利用できるよう記録する。

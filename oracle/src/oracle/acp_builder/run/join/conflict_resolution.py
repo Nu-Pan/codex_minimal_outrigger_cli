@@ -18,7 +18,7 @@ from oracle.prompt_builder.merge_conflict_resolution import (
 )
 
 
-def build_run_join_conflict_resolution_parameter(
+def build_run_join_conflict_resolution_request(
     run_head_commit: str,
     session_head_commit: str,
     run_worktree: Path,

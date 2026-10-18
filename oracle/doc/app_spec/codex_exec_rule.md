@@ -187,7 +187,7 @@ probe は、停止した本来の作業を進めず、短い応答を 1 回返�
 
 probe の設定取得と、一時障害の確認に必要な設定継承は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「回復確認 probe の設定例外」を正本とする。
 
-quota availability probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_parameter` へ委譲する。回復確認の目的、成功条件、待機・再開の判断は本書が所有し、builder または generated prompt へ委譲しない。
+quota availability probe の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/quota_probe.py` の `build_quota_availability_probe_request` へ委譲する。回復確認の目的、成功条件、待機・再開の判断は本書が所有し、builder または generated prompt へ委譲しない。
 
 ### 回復待ちと再開
 
