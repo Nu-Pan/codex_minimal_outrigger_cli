@@ -8,15 +8,18 @@ from markdown_it import MarkdownIt
 
 # 設定だけ共有する。parse は呼び出しごとに本文の状態と参照定義を作る。
 _REPORT_MARKDOWN = MarkdownIt()
+# 見出し・fence の検査では、本文の装飾・リンクを解析しない。
+_REPORT_STRUCTURE = MarkdownIt().disable("inline")
 # LibYAML があれば同じ安全な型変換を使う C parser でメタデータを読む。
 _REPORT_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 @lru_cache(maxsize=4)
-def _report_tokens(content):
+def _report_tokens(content, *, inline=False):
     """同じ本文の解析を共有し、異なる report と抽出章の保持数を制限する。"""
     # helper 内では共有した token を読み取るだけにする。
-    return tuple(_REPORT_MARKDOWN.parse(content))
+    parser = _REPORT_MARKDOWN if inline else _REPORT_STRUCTURE
+    return tuple(parser.parse(content))
 
 
 def report_text(content):
@@ -27,7 +30,7 @@ def report_text(content):
             for child in token.children or ()
             if child.type in {"text", "code_inline"}
         )
-        for token in _report_tokens(content)
+        for token in _report_tokens(content, inline=True)
         if token.type == "inline"
     )
 
