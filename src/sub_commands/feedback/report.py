@@ -673,20 +673,22 @@ def _build_candidates(
             str(item["observation_id"]),
         ),
     ):
-        exact, comparison = _agent_comparison_candidates(
-            observation,
-            candidates,
-            current_cut_fingerprint_pairs=_report_cut_fingerprint_pairs(
-                repo, manifest, observation
-            ),
-        )
-        selected: _JsonObject | None = exact
-        if selected is None and comparison:
-            selected_id = _normalize_issue_identity(
-                repo, worktree, manifest, observation, comparison
+        selected: _JsonObject | None = None
+        # 比較対象がなければ、完全一致判定用の filesystem 参照解決も不要。
+        if candidates:
+            selected, comparison = _agent_comparison_candidates(
+                observation,
+                candidates,
+                current_cut_fingerprint_pairs=_report_cut_fingerprint_pairs(
+                    repo, manifest, observation
+                ),
             )
-            if selected_id is not None:
-                selected = candidates[selected_id]
+            if selected is None and comparison:
+                selected_id = _normalize_issue_identity(
+                    repo, worktree, manifest, observation, comparison
+                )
+                if selected_id is not None:
+                    selected = candidates[selected_id]
         if selected is None:
             observation_id_value = str(observation["observation_id"])
             canonical_key = agent_canonical_key(observation_id_value)

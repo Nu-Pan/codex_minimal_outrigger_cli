@@ -2163,10 +2163,10 @@ def test_report_reference_rejects_symlinked_parent_outside(
     assert feedback_report_module._repository_path(root, "link/secret.txt") is None
 
 
-def test_report_reference_targets_use_resolved_evidence_path(
+def test_candidate_building_skips_empty_comparison_and_merges_resolved_evidence(
     feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """同じ file への symlink alias と実体 path を同じ issue subject にする。"""
+    """空集合の照合を省き、同じ wave の alias と実体 path は同じ issue にする。"""
     root = feedback_directory
     target_directory = root / "nested"
     target_directory.mkdir()
@@ -2189,23 +2189,47 @@ def test_report_reference_targets_use_resolved_evidence_path(
         return capture.call_args.args[3]
 
     first = observation("alias/README.md")
-    candidate = feedback_report_module._new_candidate(
-        first, f"agent\0{first['observation_id']}"
-    )
-    feedback_report_module._merge_observation(root, candidate, first)
-
     second = observation("nested/README.md")
     fingerprint = second["evidence_fingerprints"][0]
-    exact, comparison = feedback_report_module._agent_comparison_candidates(
-        second,
-        {candidate["candidate_id"]: candidate},
-        current_cut_fingerprint_pairs=[
-            (fingerprint["normalized_path"], "hashed", fingerprint["sha256"])
-        ],
+    observations = {item["observation_id"]: item for item in (first, second)}
+    manifest = {
+        "cut_at": second["observed_at"],
+        "inputs": {
+            "references": [
+                {
+                    "reference_id": "ref:readme",
+                    "kind": "repository_content",
+                    "subjects": list(observations),
+                    "path": "nested/README.md",
+                    "state": fingerprint["state"],
+                    "sha256": fingerprint["sha256"],
+                }
+            ]
+        },
+    }
+    current_cut = Mock(wraps=feedback_report_module._report_cut_fingerprint_pairs)
+    monkeypatch.setattr(
+        feedback_report_module, "_report_cut_fingerprint_pairs", current_cut
     )
 
-    assert exact is candidate
-    assert comparison == [candidate]
+    candidates, aggregates = feedback_report_module._build_candidates(
+        root,
+        root,
+        manifest,
+        observations,
+        SimpleNamespace(issues={}, machine_aggregates={}),
+    )
+
+    [candidate] = candidates.values()
+    assert candidate["candidate_id"] == issue_id(f"agent\0{first['observation_id']}")
+    assert candidate["occurrence_count"] == 2
+    assert candidate["source_observation_ids"] == sorted(observations)
+    assert candidate["reference_targets"] == [
+        {"path": "nested/README.md", "kind": "file", "location": None}
+    ]
+    assert candidate["reference_ids"] == ["ref:readme"]
+    assert aggregates == {}
+    current_cut.assert_called_once_with(root, manifest, second)
 
 
 def test_report_reference_masks_secret_across_content_limit(

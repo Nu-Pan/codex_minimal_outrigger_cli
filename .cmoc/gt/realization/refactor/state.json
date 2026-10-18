@@ -303,7 +303,7 @@
     "last_investigated_at": "2026-10-18_11-41-46_900"
   },
   "src/acp/builder/feedback/normalize_issue.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-18_11-48-00_466"
   },
   "src/acp/builder/feedback/remediate_issue.py": {
     "last_investigated_at": null
