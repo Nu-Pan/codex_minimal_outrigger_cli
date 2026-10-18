@@ -35,8 +35,9 @@ with closing(CodexSessionLease(Path(sys.argv[1]))) as lease:
     }
 
     # 子を保持側にし、競合拒否と解放後の再取得で Python の起動を共用する。
+    # lease とその依存は標準ライブラリだけを使うため、site-packages の初期化を省く。
     with subprocess.Popen(
-        [sys.executable, "-c", script, str(home), SESSION_ID],
+        [sys.executable, "-S", "-c", script, str(home), SESSION_ID],
         cwd=tmp_path,
         env=environment,
         stdin=subprocess.PIPE,
