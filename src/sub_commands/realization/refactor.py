@@ -675,6 +675,7 @@ def _run_refactor_unit(
         units,
         unresolved_findings,
         f"cmoc realization refactor {target}",
+        before_head=agent_head,
         state=state,
         pending_realization_paths=actual_changed_paths,
         state_paths_before=state_paths_before,
@@ -722,6 +723,7 @@ def _commit_refactor_unit(
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
     message: str,
     *,
+    before_head: str,
     state: RefactorState,
     pending_realization_paths: Collection[str] = (),
     state_paths_before: Collection[str] = (),
@@ -739,14 +741,12 @@ def _commit_refactor_unit(
 
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
-    # child 停止後に同期・保存済みの state を使い、全 entry の再読・再検証を省く。
+    # child 停止後に検証済みの HEAD と同期・保存済みの state を使う。
+    # この間は state の保存だけで commit せず、HEAD と全 entry の再取得は不要。
     if progress is not None:
         progress.phase = f"commit artifacts / refactor state: {target}"
         _emit_refactor_progress(progress)
     with defer_recovery_interruption():
-        before_head = run_git(
-            ["rev-parse", "HEAD"], context.run_worktree
-        ).stdout.strip()
         commit_result: str | None = None
         try:
             commit_result = commit_work_unit(context.run_worktree, message)

@@ -313,17 +313,16 @@ def test_refactor_state_update_only_dates_surviving_origin(
     assert updated["oracle/spec.md"] == state["oracle/spec.md"]
 
 
-def test_refactor_commit_reuses_synchronized_state(tmp_path, monkeypatch):
-    """同期済み state から進捗・未解決集合を更新し、全 entry を読み直さない。"""
+def test_refactor_commit_reuses_verified_head_and_synchronized_state(
+    tmp_path, monkeypatch
+):
+    """検証済み HEAD・同期済み state で進捗を更新し、同じ情報を再取得しない。"""
     state = {"README.md": {"last_investigated_at": "2026-10-11_00-00-00_001"}}
     read = Mock(side_effect=AssertionError("state was already synchronized"))
     monkeypatch.setattr(refactor_workload, "load_refactor_state", read)
     # Git commit と中断の結合は test_editing_run_cli.py に残す。
-    monkeypatch.setattr(
-        refactor_workload,
-        "run_git",
-        Mock(return_value=SimpleNamespace(stdout="before")),
-    )
+    query = Mock(side_effect=AssertionError("HEAD was already verified"))
+    monkeypatch.setattr(refactor_workload, "run_git", query)
     monkeypatch.setattr(
         refactor_workload, "commit_work_unit", Mock(return_value="after")
     )
@@ -341,11 +340,13 @@ def test_refactor_commit_reuses_synchronized_state(tmp_path, monkeypatch):
         units,
         unresolved,
         "unit",
+        before_head="before",
         state=state,
         progress=progress,
     )
 
     read.assert_not_called()
+    query.assert_not_called()
     assert units == [("README.md", 0)]
     assert progress.targets == progress.processed == {"README.md"}
     assert progress.completed_cycles == 1
