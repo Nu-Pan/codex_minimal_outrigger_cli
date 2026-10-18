@@ -337,7 +337,7 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(
     "edit_at", [None, "document_prepared", "chunk", "document_complete", "after_stream"]
 )
 def test_sync_rechecks_event_source_without_rereading_other_documents(
-    document_repository, monkeypatch, edit_at
+    document_repository, monkeypatch, edit_at, unsynced_search_storage
 ):
     """保存直前は対象本文だけを読み、通知時の編集も公開前に拒否する。"""
     from commons import runtime_document_search as module
@@ -398,7 +398,7 @@ def test_sync_rechecks_event_source_without_rereading_other_documents(
     ],
 )
 def test_sync_rejects_changed_or_unreadable_source_before_saving(
-    cli_repository, change, code
+    cli_repository, change, code, unsynced_search_storage
 ):
     """現在の分類・本文・安全性を確認できない生成結果は保存しない。"""
     root = cli_repository
