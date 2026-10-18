@@ -833,18 +833,6 @@ def publication_feedback(feedback_run, monkeypatch):
     return h
 
 
-@pytest.fixture
-def published_feedback(publication_feedback):
-    """publication の cleanup を完了し、一件の確定済み active state を返す。"""
-    h = publication_feedback
-    root = h.context.repo
-    assert cleanup_published_report(root, load_active_state(root))
-    assert load_report_cut(root) is None
-    state = validate_feedback_state(root)
-    assert set(state.issues) == set(h.candidates)
-    return root, state
-
-
 def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch):
     """全結果分類の再確認を同じ run で検査し、wave と publication の準備を共有する。"""
     h = feedback_run
@@ -1272,27 +1260,6 @@ def test_recovery_uses_prepared_join_record_without_new_calls(
     assert len(h.calls) == calls_before
 
 
-def test_active_issue_materializes_basis_without_checkpoint_dependency(
-    published_feedback,
-):
-    _, state = published_feedback
-    [identity] = state.issues
-    active = state.issues[identity]
-    basis = active["verification"]["decision_basis"]
-    assert basis["scope"] == "repository-inputs-v1"
-    assert len(basis["state_sha256"]) == 64
-    assert (
-        basis["verification"]
-        == _remediation_output(identity, "human_required")["result"]["verification"]
-    )
-    assert "state" not in basis
-    candidate = report._candidate_from_active(active)
-    assert (
-        report._remediation_candidate_payload(candidate)["previous_verification"]
-        == active["verification"]
-    )
-
-
 def test_current_pointer_rejects_non_markdown_report_path(feedback_run, monkeypatch):
     """current pointer が Markdown 以外の report artifact を選べない。"""
     h = feedback_run
@@ -1320,7 +1287,7 @@ def test_current_pointer_rejects_non_markdown_report_path(feedback_run, monkeypa
 def test_publication_and_active_generation_use_hash_verified_bytes(
     publication_feedback, monkeypatch
 ):
-    """公開前後で同じ byte 列を検証し、次の呼出しでは改変を検出する。"""
+    """公開から cleanup 後の active まで、hash・判定根拠・inventory を検証する。"""
     h = publication_feedback
     root = h.context.repo
     publication = h.manifest["publication"]
@@ -1359,9 +1326,28 @@ def test_publication_and_active_generation_use_hash_verified_bytes(
             replaced.write_bytes(original_content)
 
     assert cleanup_published_report(root, load_active_state(root))
+    assert load_report_cut(root) is None
     state = validate_feedback_state(root)
     assert state.current is not None
     assert state.generation_manifest is not None
+    assert set(state.issues) == set(h.candidates)
+    # checkpoint の cleanup 後も、active だけで次回の再確認入力を構築できる。
+    [identity] = state.issues
+    active = state.issues[identity]
+    basis = active["verification"]["decision_basis"]
+    assert basis["scope"] == "repository-inputs-v1"
+    assert len(basis["state_sha256"]) == 64
+    assert (
+        basis["verification"]
+        == _remediation_output(identity, "human_required")["result"]["verification"]
+    )
+    assert "state" not in basis
+    candidate = report._candidate_from_active(active)
+    assert (
+        report._remediation_candidate_payload(candidate)["previous_verification"]
+        == active["verification"]
+    )
+
     [reference] = state.generation_manifest["issues"]
     # helper が改変と patch を毎回戻すため、同じ publication で独立に検査できる。
     for path in (
@@ -1391,6 +1377,13 @@ def test_publication_and_active_generation_use_hash_verified_bytes(
                 root / "cut.json",
                 allow_missing=False,
             )
+
+    # 同じ cleanup 済み generation で、未列挙 artifact を拒否する境界も検査する。
+    manifest_path = root / str(state.current["generation_manifest_path"])
+    unexpected = manifest_path.parent / "unexpected.json"
+    unexpected.write_text("{}\n")
+    with pytest.raises(CmocError, match="未定義 artifact"):
+        validate_feedback_state(root)
 
 
 def test_published_active_state_reuses_one_cleanup_snapshot(
@@ -1594,15 +1587,3 @@ def test_publication_cleanup_matches_input_references_without_repeated_scans(
     cleanup["observations"] = [selected[0], selected[0]]
     with pytest.raises(CmocError, match="一意な path"):
         validate()
-
-
-def test_unlisted_active_generation_artifact_is_corruption(published_feedback):
-    """manifest が列挙しない active generation file を無視しない。"""
-    root, state = published_feedback
-    assert state.current is not None
-    manifest_path = root / str(state.current["generation_manifest_path"])
-    unexpected = manifest_path.parent / "unexpected.json"
-    unexpected.write_text("{}\n")
-
-    with pytest.raises(CmocError, match="未定義 artifact"):
-        validate_feedback_state(root)
