@@ -138,7 +138,7 @@ def case_report_session(feedback_publication_session, monkeypatch):
     return feedback_publication_session
 
 
-def _publish_prepared_cases(root, statuses, machine_aggregates):
+def _publish_prepared_cases(root, statuses):
     # close が保持する record を直接準備する。report→close の結合、
     # normalization・threshold・入力消費は reported_case と test_feedback.py に残す。
     watermark, inputs = capture_high_watermark(root, 0)
@@ -147,20 +147,21 @@ def _publish_prepared_cases(root, statuses, machine_aggregates):
     generation_id = feedback_state.new_generation_id(root)
     execution_id = "exec_zzzzzz_2026-10-08_00-00"
     source = {"kind": "report", "id": cut_id, "execution_id": execution_id}
+    raw_observations = {
+        entry["observation_id"]: read_json_object(root / entry["path"])
+        for entry in inputs
+    }
+    candidates, machine_aggregates = report_module._build_candidates(
+        root,
+        root,
+        {"cut_at": observed_at, "inputs": {"references": []}},
+        raw_observations,
+        feedback_state.load_active_state(root),
+    )
+    assert set(candidates) == set(statuses)
     files = decision.worktree_inputs(root)
     issues, events, observations = {}, [], []
-    for entry in inputs:
-        observation = read_json_object(root / entry["path"])
-        if observation["source"] == "machine_rule":
-            key = feedback_state.machine_canonical_key(observation)
-            assert key in machine_aggregates
-            observations.append({**entry, "issue_ids": [], "aggregate_keys": [key]})
-            continue
-        candidate = report_module._new_candidate(
-            observation, feedback_state.agent_canonical_key(entry["observation_id"])
-        )
-        report_module._merge_observation(root, candidate, observation)
-        identity = candidate["candidate_id"]
+    for identity, candidate in candidates.items():
         verdict = _remediation_output(identity, statuses[identity])["result"]
         verdict["decision_basis"] = decision.compact_basis(
             decision.decision_basis(
@@ -194,8 +195,22 @@ def _publish_prepared_cases(root, statuses, machine_aggregates):
                 "human_reason": None,
             }
         )
-        observations.append({**entry, "issue_ids": [identity], "aggregate_keys": []})
-    assert set(issues) == set(statuses)
+    issue_by_observation = {
+        observation_id: identity
+        for identity, candidate in candidates.items()
+        for observation_id in candidate["source_observation_ids"]
+    }
+    for entry in inputs:
+        identity = issue_by_observation.get(entry["observation_id"])
+        if identity is not None:
+            observations.append(
+                {**entry, "issue_ids": [identity], "aggregate_keys": []}
+            )
+        else:
+            observation = raw_observations[entry["observation_id"]]
+            key = feedback_state.machine_canonical_key(observation)
+            assert key in machine_aggregates
+            observations.append({**entry, "issue_ids": [], "aggregate_keys": [key]})
     report = root / f".cmoc/gu/report/feedback/incomplete/{execution_id}.md"
     history_path, history_bytes, history_reference = history_artifact(
         root,
@@ -261,7 +276,7 @@ def _publish_prepared_cases(root, statuses, machine_aggregates):
 def open_case(close_repository):
     root = close_repository
     _, _, identity = _store_agent_issue(root, None)
-    issues = _publish_prepared_cases(root, {identity: "inconclusive"}, {})
+    issues = _publish_prepared_cases(root, {identity: "inconclusive"})
     return root, issues[identity]
 
 
@@ -624,15 +639,9 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(
 
     observation = read_json_object(raw)
     key = feedback_state.machine_canonical_key(observation)
-    aggregate = report_module._merge_machine_aggregate(
-        root, None, [observation], rfc3339_now(), key
-    )
-    assert aggregate is not None
-    assert not report_module._machine_threshold_met(aggregate)
     _publish_prepared_cases(
         root,
         {identity: "inconclusive", other_id: "human_required"},
-        {key: aggregate},
     )
     before = feedback_state.validate_feedback_state(root)
     assert set(before.issues) == {identity, other_id}
@@ -640,6 +649,7 @@ def test_close_preserves_other_cases_and_subthreshold_aggregates(
     issue = before.issues[identity]
     assert issue["verification"]["status"] == "inconclusive"
     assert len(before.machine_aggregates) == 1
+    assert not report_module._machine_threshold_met(before.machine_aggregates[key])
     assert not issue_raw.exists()
     assert not other_raw.exists()
     assert not raw.exists()
@@ -729,7 +739,7 @@ def test_incomplete_is_reconfirmed_from_active_without_raw_and_keeps_case(
 ):
     root = case_report_session
     _, _, identity = _store_agent_issue(root, None)
-    issue = _publish_prepared_cases(root, {identity: "inconclusive"}, {})[identity]
+    issue = _publish_prepared_cases(root, {identity: "inconclusive"})[identity]
     _install_codex_outputs(
         monkeypatch, _remediation_output(issue["issue_id"], "human_required")
     )
@@ -785,12 +795,10 @@ def test_machine_recurrence_gets_new_case_and_old_close_cannot_target_it(
         return feedback_state.issue_id(canonical)
 
     identity = observe(0)
-    _install_codex_outputs(monkeypatch, _remediation_output(identity, "inconclusive"))
-    assert (
-        runner.invoke(app, ["feedback", "report"], catch_exceptions=False).exit_code
-        == 0
-    )
-    first = feedback_state.load_active_state(root).issues[identity]
+    # 初回の閾値到達・案件化は test_feedback.py の machine lifecycle test に残す。
+    # ここでは保存済み案件を close し、再発後だけ実 report の新規採番・入力消費を通す。
+    first = _publish_prepared_cases(root, {identity: "inconclusive"})[identity]
+    assert first["occurrence_count"] == 2
     assert _close(first).exit_code == 0
     assert observe(2) == identity
     _install_codex_outputs(monkeypatch, _remediation_output(identity, "inconclusive"))
