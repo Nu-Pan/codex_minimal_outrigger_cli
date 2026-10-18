@@ -911,9 +911,52 @@ def session_completion_repository(
     return shutil.copytree(_session_completion_repository_seed, tmp_path / "repo")
 
 
+@pytest.fixture(scope="module")
+def _session_conflict_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory,
+    _session_completion_repository_seed: Path,
+) -> tuple[Path, str]:
+    """失敗後の状態を検査する二つのケースに、分岐・競合履歴を一度だけ作る。"""
+    # merge と失敗処理は各ケースで実行する。linked worktree と実 builder の
+    # 結合、共通祖先から存在する file の編集は下の統合成功 test に残す。
+    root = shutil.copytree(
+        _session_completion_repository_seed,
+        tmp_path_factory.mktemp("session-conflict-seed") / "repo",
+    )
+    related = root / "src"
+    related.mkdir()
+    for name in ("modified.py", "deleted.py", "renamed.py"):
+        (related / name).write_text("previous implementation\n")
+    session_branch, home_branch = _seed_session_in_worktree(root, root)
+    target = root / "oracle" / "spec.md"
+    target.write_text("session change\n")
+    run_git(root, "add", "oracle/spec.md", "src")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+    return root, home_branch
+
+
+@pytest.fixture
+def session_conflict_repository(
+    tmp_path: Path,
+    _session_conflict_repository_seed: tuple[Path, str],
+    session_preprocess: list[Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[Path, str]:
+    """同じ競合前提を複製し、失敗した merge の index・refs・state を隔離する。"""
+    seed, home_branch = _session_conflict_repository_seed
+    root = shutil.copytree(seed, tmp_path / "repo")
+    monkeypatch.chdir(root)
+    return root, home_branch
+
+
 @pytest.fixture
 def session_conflict_parameter(
-    session_completion_repository: Path, monkeypatch: pytest.MonkeyPatch
+    session_conflict_repository: tuple[Path, str], monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[AgentCallParameter]:
     """失敗後の状態検査には、完全 prompt を構築せず parameter を渡す。"""
     # 文面と起動値は test_acp_builder_session_join_parameters.py、実 builder と
@@ -923,7 +966,7 @@ def session_conflict_parameter(
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt="conflict resolution",
         structured_output_schema_path=None,
-        agent_call_cwd=session_completion_repository,
+        agent_call_cwd=session_conflict_repository[0],
         enable_document_search_mcp=True,
     )
     builder = Mock(return_value=parameter)
@@ -935,36 +978,21 @@ def session_conflict_parameter(
 
 
 def test_session_join_preserves_work_on_incidental_conflict_marker(
-    session_completion_repository: Path,
+    session_conflict_repository: tuple[Path, str],
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
     session_conflict_parameter: AgentCallParameter,
 ) -> None:
     """付随編集先の未解消 marker で停止し、stderr と保持した作業状態を検査する。"""
-    root = session_completion_repository
+    root, home_branch = session_conflict_repository
     target = root / "oracle" / "spec.md"
     related = root / "src"
-    related.mkdir()
     added = related / "added.py"
     modified = related / "modified.py"
     deleted = related / "deleted.py"
     renamed = related / "renamed.py"
     moved = related / "moved.py"
-    for path in (modified, deleted, renamed):
-        path.write_text("previous implementation\n")
-    # 失敗後の保持には session 側の追跡 file で足り、準備だけの commit は不要。
-    # 共通祖先から存在する file の変更・削除・rename は下の統合成功 test に残す。
-    monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_session_in_worktree(root, root)
-    target.write_text("session change\n")
-    run_git(root, "add", "oracle/spec.md", "src")
-    run_git(root, "commit", "-m", "session change")
-    run_git(root, "switch", home_branch)
-    target.write_text("home change\n")
-    run_git(root, "add", "oracle/spec.md")
-    run_git(root, "commit", "-m", "home change")
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
-    run_git(root, "switch", session_branch)
 
     class FakeCodexResult:
         """conflict resolution の成功を表す最小 fake result。"""
@@ -994,8 +1022,8 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
     assert "conflict marker が残っています。" in result.stderr
     assert "src/added.py" in result.stderr
     assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
-    assert run_git(root, "branch", "--list", session_branch).stdout.strip()
-    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert run_git(root, "branch", "--list", SESSION_BRANCH).stdout.strip()
+    state = json.loads(session_state_path(root, SESSION_BRANCH).read_text())
     assert state["session"]["state"] == "active"
     assert target.read_text() == "home change\nsession change\n"
     assert modified.read_text() == "related implementation\n"
@@ -1463,24 +1491,14 @@ def test_session_join_handled_failure_is_written_to_stderr(
 
 
 def test_session_join_codex_failure_reports_unresolved_merge(
-    session_completion_repository: Path,
+    session_conflict_repository: tuple[Path, str],
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
     session_conflict_parameter: AgentCallParameter,
 ) -> None:
     """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
-    root = session_completion_repository
-    target = root / "README.md"
-    monkeypatch.chdir(root)
-    session_branch, home_branch = _seed_session_in_worktree(root, root)
-    target.write_text("session change\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "session change")
-    run_git(root, "switch", home_branch)
-    target.write_text("home change\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "home change")
-    run_git(root, "switch", session_branch)
+    root, home_branch = session_conflict_repository
+    target = root / "oracle" / "spec.md"
 
     def failing_codex_exec(parameter: object, **kwargs: object) -> object:
         """Codex CLIの既知の失敗を再現する。"""
