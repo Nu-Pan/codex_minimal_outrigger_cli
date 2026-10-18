@@ -798,7 +798,11 @@ def _seal(
     """wave loop の自然完了後に publication 入力と merge 対象を一度だけ封印する。"""
     selected = selected_remediation_checkpoints(manifest)
     files = decision.worktree_inputs(context.run_worktree)
-    statuses = _validate_selected_basis(context, selected, candidates, files)
+    checkpoints = _validate_selected_basis(context, selected, candidates, files)
+    statuses = {
+        checkpoint["candidate_id"]: checkpoint["structured_output"]["result"]["status"]
+        for checkpoint in checkpoints.values()
+    }
     owner_execution_id = current_execution_id(context.repo)
     case_ids = {
         identity: candidate.get("case_id")
@@ -914,19 +918,27 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
         raise _failure(
             "feedback join 後の入力が検証済み run の最終状態と一致しません。"
         )
-    if not adjusted:
+    checkpoints = (
         _validate_selected_basis(
             context,
             seal["selected_checkpoints"],
             seal["candidates"],
             files,
         )
+        if not adjusted
+        else {}
+    )
     paths: set[str] = set()
     for reference in manifest["processing"]["remediation_checkpoints"]:
-        checkpoint = read_run_artifact(
-            context.repo, {key: reference[key] for key in ("path", "sha256")}
-        )
-        validate_remediation_checkpoint(checkpoint, context.repo / reference["path"])
+        # 同じ join 検証内だけ、path と hash が一致する採用結果を監査にも使う。
+        checkpoint = checkpoints.get((reference["path"], reference["sha256"]))
+        if checkpoint is None:
+            checkpoint = read_run_artifact(
+                context.repo, {key: reference[key] for key in ("path", "sha256")}
+            )
+            validate_remediation_checkpoint(
+                checkpoint, context.repo / reference["path"]
+            )
         audit = checkpoint["audit"]
         if audit["wave"] not in manifest["run"]["waves"]:
             raise _failure("feedback issue checkpoint の wave が一致しません。")
@@ -1079,11 +1091,11 @@ def _validate_selected_basis(
     references: list[dict[str, Any]],
     candidates: dict[str, Any],
     files: dict[str, str],
-) -> dict[str, str]:
-    """採用結果の根拠を照合し、同じ checkpoint の検証済み分類を返す。"""
+) -> dict[tuple[str, str], dict[str, Any]]:
+    """採用結果の根拠を照合し、path・hash ごとに検証済み checkpoint を返す。"""
     if {item["candidate_id"] for item in references} != set(candidates):
         raise _failure("feedback report cut に未処理の issue があります。")
-    statuses = {}
+    checkpoints = {}
     for reference in references:
         checkpoint = read_run_artifact(
             context.repo, {key: reference[key] for key in ("path", "sha256")}
@@ -1095,10 +1107,8 @@ def _validate_selected_basis(
                 "feedback の採用結果の判定根拠が現在状態に対して有効ではありません。",
                 detail=reference["candidate_id"],
             )
-        statuses[reference["candidate_id"]] = checkpoint["structured_output"]["result"][
-            "status"
-        ]
-    return statuses
+        checkpoints[reference["path"], reference["sha256"]] = checkpoint
+    return checkpoints
 
 
 def _recover_join(context: EditingRunContext, manifest: dict[str, Any]) -> None:

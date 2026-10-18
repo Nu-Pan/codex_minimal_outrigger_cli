@@ -914,7 +914,27 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
         assert audit["before_commit"] == audit["after_commit"] == h.head
         assert audit["changed_paths"] == []
         assert audit["diff_sha256"] == sha256_bytes(b"")
-    result = _join_and_publish(h, monkeypatch)
+    read_checkpoint = Mock(wraps=remediation.read_run_artifact)
+    validate_checkpoint = Mock(wraps=remediation.validate_remediation_checkpoint)
+    with monkeypatch.context() as audit_patch:
+        audit_patch.setattr(remediation, "read_run_artifact", read_checkpoint)
+        audit_patch.setattr(
+            remediation, "validate_remediation_checkpoint", validate_checkpoint
+        )
+        result = _join_and_publish(h, monkeypatch)
+    # 採用結果は seal・join・publication で各一回読み、join 内では再読しない。
+    # 旧判定も含め、全 checkpoint の schema・audit 検査を join に残す。
+    selected = selected_remediation_checkpoints(h.manifest)
+    selected_paths = {reference["path"] for reference in selected}
+    references = h.manifest["processing"]["remediation_checkpoints"]
+    reads = Counter(call.args[1]["path"] for call in read_checkpoint.call_args_list)
+    validations = Counter(call.args[1] for call in validate_checkpoint.call_args_list)
+    for reference in references:
+        path = reference["path"]
+        assert reads[path] == (3 if path in selected_paths else 1)
+        assert validations[h.context.repo / path] == (
+            2 if path in selected_paths else 1
+        )
     assert result.result == "ok"
     assert load_active_state(h.context.repo).issues == {}
     assert "remediation_issue_count: 6" in result.primary_report.read_text()
@@ -938,6 +958,25 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
         h.head,
         h.commits[0],
     ]
+    ancestor.side_effect = None
+    # 次の join 検証では、採用済み結果も旧判定も artifact の改変を再検査する。
+    for reference in (selected[0], references[0]):
+        path = h.context.repo / reference["path"]
+        content = path.read_bytes()
+        path.write_bytes(b"{}\n")
+        try:
+            with pytest.raises(CmocError, match="SHA256"):
+                remediation._complete_join(h.context, h.manifest)
+        finally:
+            path.write_bytes(content)
+    # path が同じでも参照 hash が違う場合、検証済み snapshot を流用しない。
+    original_hash = selected[0]["sha256"]
+    selected[0]["sha256"] = "f" * 64
+    try:
+        with pytest.raises(CmocError, match="SHA256"):
+            remediation._complete_join(h.context, h.manifest)
+    finally:
+        selected[0]["sha256"] = original_hash
 
 
 @pytest.mark.parametrize("fault", ["head", "forbidden_path"])
