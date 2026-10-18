@@ -434,10 +434,11 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
 ):
     root, issue = open_case
     old = feedback_state.load_active_state(root)
-    # report の拒否は current 切替前後で確認し、他の保存障害では同じ検査を重ねない。
-    checks_report_refusal = fault in {"pointer_before", "partial_cleanup"}
+    # close/report の競合拒否は current 切替前後で確認し、障害箇所ごとに重ねない。
+    # 全障害で固定入力・artifact の検証と同じ target への recovery は通す。
+    checks_pending_conflicts = fault in {"pointer_before", "partial_cleanup"}
     session_id = None
-    if checks_report_refusal:
+    if checks_pending_conflicts:
         # 拒否の前提だけを保存する。session fork・doctor 修復との結合は
         # test_feedback.py の後続 wave test と reported_case に残す。
         session_id = SESSION_ID
@@ -501,11 +502,14 @@ def test_close_failure_recovers_fixed_targets_and_preserves_confirmed_state(
     saved = target.read_bytes() if target.exists() else None
     assert late.exists()
     assert feedback_completion_counts(root)[0] == 1
-    conflict = _close({"case_id": "fbc_zzzzzz_2026-10-08_00-00"})
-    assert conflict.exit_code == 1
-    if not published:
-        assert _close(issue, "異なる理由").exit_code == 1
-    if checks_report_refusal:
+    if checks_pending_conflicts:
+        conflict = _close({"case_id": "fbc_zzzzzz_2026-10-08_00-00"})
+        assert conflict.exit_code == 1, conflict.output
+        assert "対象または理由が異なります" in conflict.output
+        if not published:
+            conflict = _close(issue, "異なる理由")
+            assert conflict.exit_code == 1, conflict.output
+            assert "対象または理由が異なります" in conflict.output
         blocked_report = runner.invoke(
             app, ["feedback", "report"], catch_exceptions=False
         )
