@@ -574,7 +574,7 @@ def _is_bare_toml_key_segment(value: str) -> bool:
 
 def _toml_key_segment(value: str) -> str:
     """provider ID/key を意味を保つ単一の TOML key segment にする。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
     # Codex CLI の dotted override path は bare key を引用せず渡す必要がある。
     if _is_bare_toml_key_segment(value):
         return value
@@ -665,7 +665,7 @@ def _model_provider_override_args(
         normalized_settings[key] = normalized_value
         has_non_bare_segment |= not _is_bare_toml_key_segment(key)
     if has_non_bare_segment and normalized_settings:
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
         # Codex CLI の dotted override parser は quoted key segment を path として解釈せず、
         # provider ID/key に dot を含む設定を壊す。inline TOML table なら同じ
         # provider-local key を一つの config override として意味を保てる。
@@ -685,7 +685,7 @@ def _model_provider_override_args(
 
 def _feedback_mcp_override_args(enable_feedback_reporting: bool) -> list[str]:
     """cmoc_feedback server の effective configuration 全体を支配する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
     # capability value は argv に載せず、Codex process の local environment から
     # reporter process だけが whitelist 名で継承する。
     server: dict[str, JsonTomlValue] = {
@@ -948,7 +948,7 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     value = os.environ.get("CODEX_HOME")
     if value is None:
         value = str(codex_home)
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
     # 別の Codex call や親 process の MCP context を継承させず、現在 call が
     # 明示的に有効化した context だけを後から追加できるようにする。
     call_context_env_names = {

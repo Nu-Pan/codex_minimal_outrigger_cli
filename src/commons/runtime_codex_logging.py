@@ -7,7 +7,7 @@ from .runtime_errors import CmocError
 
 def write_codex_prompt_log(path: Path, prompt: str) -> None:
     """call に渡す完全 prompt を、意味内容を変更せず保存する。"""
-    # oracle/doc/app_spec/codex_exec_rule.md の「prompt の構築と受け渡し」。
+    # oracle/doc/app_spec/codex_exec_rule.md の「prompt の保存と stdin 入力」。
     path.write_text(prompt, encoding="utf-8")
 
 

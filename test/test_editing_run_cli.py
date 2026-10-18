@@ -2955,7 +2955,7 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
     tmp_path, monkeypatch, incidental, already_modified
 ):
     """応答後の差分は記録し、file access policy だけによる受理拒否を加えない。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の「agent call の差分検証」
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md の「agent call の差分検証」
     # Fake の違反編集で cmoc の検証境界を確認する。agent の編集権限は拡張しない。
     # Git 境界は double にし、snapshot の実際の本文比較と marker 検査を通す。
     # 実 Git との結合と失敗時の rollback は下の CLI test に残す。

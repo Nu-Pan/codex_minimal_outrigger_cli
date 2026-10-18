@@ -80,6 +80,7 @@ def test_interactive_resume_is_rejected_before_exec_preparation(tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
+# {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     """Codex exec の必須 argv と prompt の stdin 渡しを検証する。"""

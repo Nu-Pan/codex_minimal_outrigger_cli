@@ -350,7 +350,7 @@ def test_quota_probe_uses_canonical_complete_prompt(
         structured_output_schema_path=None,
         agent_call_cwd=root,
     )
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
     # 正本の生成結果を一度だけ作り、runtime が cwd を渡してそのまま返すことを確かめる。
     builder = Mock(return_value=build_canonical_quota_probe_parameter(root))
     monkeypatch.setattr(

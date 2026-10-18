@@ -94,7 +94,7 @@ def resolve_merge_conflicts(
             if before.get(path) != after.get(path)
         }
         # 付随編集の観測は report 用。受理条件は下記正本の検証境界に従う。
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の「agent call の差分検証」
+        # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md の「agent call の差分検証」
         result["incidental_paths"] = sorted(changed)
     if refactor_relative in managed:
         merge_refactor_states(

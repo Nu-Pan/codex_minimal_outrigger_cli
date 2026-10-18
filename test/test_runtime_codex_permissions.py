@@ -1,7 +1,7 @@
 """Codex sandbox argv が permission profile に依存しないことを検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
 """
 
