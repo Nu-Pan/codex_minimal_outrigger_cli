@@ -3792,18 +3792,14 @@ def test_feedback_basis_includes_oracle_changes_but_ignores_refactor_state(
     baseline = decision_module.worktree_inputs(root)
     assert set(baseline) == {"oracle/notes.md", "oracle/spec.md"}
 
+    # 実 Git との結合は更新・未変更入力・state 除外を二つの snapshot で確認する。
+    # 個々の入力を一つずつ変更する検査は test_feedback_decision.py に残す。
     document.write_text("updated document\n")
     state.write_text('{"entry": {}}\n')
     after_document = decision_module.worktree_inputs(root)
+    assert set(after_document) == set(baseline)
     assert after_document["oracle/notes.md"] != baseline["oracle/notes.md"]
     assert after_document["oracle/spec.md"] == baseline["oracle/spec.md"]
-    state.write_text('{"another": {}}\n')
-    assert decision_module.worktree_inputs(root) == after_document
-
-    spec.write_text("# updated spec\n")
-    after_spec = decision_module.worktree_inputs(root)
-    assert after_spec["oracle/spec.md"] != after_document["oracle/spec.md"]
-    assert after_spec["oracle/notes.md"] == after_document["oracle/notes.md"]
 
 
 def _reporter_unavailable_observation(root, context, index, occurred_at):
