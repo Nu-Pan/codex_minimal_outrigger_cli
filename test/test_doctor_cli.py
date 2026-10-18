@@ -81,7 +81,7 @@ def managed_repository(cli_repository: Path) -> Path:
 
 @pytest.fixture
 def doctor_without_index_sync(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Git 修復の検査では、参照しない検索索引の生成・永続化を省く。"""
+    """Git 修復・reporter 分岐の検査では、参照しない検索索引の生成・永続化を省く。"""
     # 実同期との結合は初回修復、配置先復元、worktree 分離のケースに残す。
     # 更新・削除・再利用とログ/report は test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports、
     # 失敗・取消の進捗は test_doctor_reports_persisted_chunks_when_sync_fails で検査する。
@@ -808,6 +808,9 @@ def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(
     )
 
 
+# reporter の分岐に索引の生成・永続化は不要。実同期から reporter までの結合は
+# test_doctor_preprocess_repairs_git_state と配置先復元の検査に残す。
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_continues_with_degraded_reporter(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -850,6 +853,7 @@ def test_doctor_preprocess_continues_with_degraded_reporter(
     ).stdout.strip()
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -870,6 +874,7 @@ def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
         doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
