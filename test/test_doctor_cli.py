@@ -21,6 +21,7 @@ lock・CLI/config・Git index はテスト観点としては分かれるが、�
 
 import json
 import multiprocessing
+import shutil
 import signal
 import subprocess
 import threading
@@ -769,9 +770,12 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
         index_path.unlink(missing_ok=True)
 
 
-def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(tmp_path):
+def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(
+    committed_repository, tmp_path
+):
     """hook が excludesFile を変えても、最終検証は新しい ignore source を検査する。"""
-    root = make_repo(tmp_path)
+    # hook の実行に必要な HEAD だけ用意し、無関係な追跡 file の準備を省く。
+    root = committed_repository
     invalid_source = tmp_path / "ignore-directory"
     invalid_source.mkdir()
     hooks = tmp_path / "hooks"
@@ -962,12 +966,12 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
 
 
 def test_doctor_restores_preexisting_index_when_repair_fails(
-    tmp_path: Path,
+    committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """doctor の修復失敗時も、呼び出し前の staged index を保持する。"""
-
-    root = make_repo(tmp_path)
+    # 検査対象の staged file で実 index を作り、参照しない初期 file は追跡しない。
+    root = committed_repository
     staged_file = root / "staged.txt"
     staged_file.write_text("staged\n")
     run_git(root, "add", "staged.txt")
@@ -1738,9 +1742,8 @@ def test_doctor_repairs_shared_cmoc_root_in_its_own_repository(
 ) -> None:
     """別 installation の共有資材書込み前に、その所有 repository の非追跡を修復する。"""
     root = committed_repository
-    installation_parent = tmp_path / "installation"
-    installation_parent.mkdir()
-    installation = make_repo(installation_parent)
+    # どちらも HEAD だけで足りる。設定・refs・index を共有せず、準備用 commit を省く。
+    installation = shutil.copytree(root, tmp_path / "installation")
     monkeypatch.setattr(doctor_module, "_installation_root", lambda _root: installation)
     monkeypatch.chdir(root)
 
