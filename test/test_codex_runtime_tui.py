@@ -171,6 +171,9 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
     directory, monkeypatch, capsys, builder, command
 ):
     parameter = builder("long request " * 10000 + "\r\noriginal instruction")
+    # 起動準備の root はログにも再利用し、別 process の context は個別に導出する。
+    path_contexts = Mock(wraps=tui_module.AgentCallPathContext)
+    monkeypatch.setattr(tui_module, "AgentCallPathContext", path_contexts)
     stale = directory / ".cmoc/gu/log/editor_input/input_orig.md"
     stale.parent.mkdir(parents=True)
     stale.write_text("unrelated editor contents")
@@ -185,6 +188,7 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
     with call_log(directory, command) as logger:
 
         def observe(call):
+            assert path_contexts.call_count == 1
             source = json.loads(call["env"][EDITOR_INPUT_SOURCE_ENV])
             handoff = next(
                 row
@@ -240,6 +244,7 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
         assert list(Path(prepared["call_log_path"]).parent.glob("*_prompt.md")) == [
             Path(initial[-1]["prompt_log_path"])
         ]
+    assert path_contexts.call_count == 2
     assert len(calls) == 1
     assert calls[0]["prompt"] == parameter.prompt
     assert calls[0]["argv"][0] == "codex"
@@ -511,6 +516,8 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
     directory, monkeypatch, builder, command
 ):
     calls, source = failed_initial_success(directory, monkeypatch, builder, command)
+    path_contexts = Mock(wraps=tui_module.AgentCallPathContext)
+    monkeypatch.setattr(tui_module, "AgentCallPathContext", path_contexts)
     source_text = source.read_text()
     config = CmocConfig()
     config.codex.agent_calls[builder.__name__] = CodexCallConfig(
@@ -519,6 +526,7 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
     write_config(directory / ".cmoc/gt/config.json", config)
 
     def resume(execution_id):
+        path_contexts.reset_mock()
         existing = set(logs_dir(directory).glob("*.jsonl"))
         runtime_cli.run_cli_subcommand(
             lambda: tui_module.resume_codex_tui(execution_id, directory).returncode,
@@ -527,6 +535,8 @@ def test_public_resume_uses_current_settings_and_self_contained_logs(
             doctor_preprocess=False,
             tui_process=True,
         )
+        # 適格性の検査・今回の準備・対話 process の導出を保ち、ログ用には増やさない。
+        assert path_contexts.call_count == 3
         [current] = set(logs_dir(directory).glob("*.jsonl")) - existing
         rows = [json.loads(line) for line in current.read_text().splitlines()]
         prepared = next(row for row in rows if row["event"] == "tui_process_prepared")
