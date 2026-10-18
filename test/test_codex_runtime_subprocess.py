@@ -9,7 +9,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from _command_support import write_python_executable
 
 import cmoc_runtime
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -233,36 +232,26 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
     tracking_path = tmp_path / "apply.pid"
     initial_tracking = "111 222\nchild 987 654 987\n"
     tracking_path.write_text(initial_tracking)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    script = bin_dir / "codex"
-    write_python_executable(
-        script,
-        [
-            "import os, pathlib, sys, time",
-            "path = pathlib.Path(sys.argv[1])",
-            "process_id = os.getpid()",
-            "child_prefix = f'child {process_id} '",
-            "deadline = time.monotonic() + 3",
-            "while True:",
-            "    tracking_text = path.read_text()",
-            "    lines = tracking_text.splitlines()",
-            "    if any(line.startswith(child_prefix) for line in lines):",
-            "        break",
-            "    if time.monotonic() >= deadline:",
-            "        break",
-            "    time.sleep(0.01)",
-            "print(os.getpid())",
-            "print(os.getpgrp())",
-            "print(tracking_text, end='')",
-        ],
-    )
+    # tracking 登録後の stdin EOF で同期し、書込み待ちの polling を省く。
+    argv = [
+        sys.executable,
+        "-S",
+        "-c",
+        "import os, pathlib, sys; "
+        "sys.stdin.read(); "
+        "print(os.getpid()); "
+        "print(os.getpgrp()); "
+        "print(pathlib.Path(sys.argv[1]).read_text(), end='')",
+        str(tracking_path),
+    ]
 
     result = run_tracked_codex_subprocess(
-        [str(script), str(tracking_path)],
+        argv,
         tracking_path,
+        input="",
         text=True,
         capture_output=True,
+        timeout=5,
     )
 
     stdout_lines = result.stdout.splitlines()

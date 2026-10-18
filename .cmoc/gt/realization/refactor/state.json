@@ -687,7 +687,7 @@
     "last_investigated_at": "2026-10-19_06-36-44_408"
   },
   "test/test_codex_runtime_subprocess.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-42-48_685"
   },
   "test/test_codex_runtime_tui.py": {
     "last_investigated_at": null
