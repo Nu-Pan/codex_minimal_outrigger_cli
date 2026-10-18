@@ -657,7 +657,7 @@
     "last_investigated_at": "2026-10-19_06-02-27_119"
   },
   "test/test_cli_command_tree.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-03-55_928"
   },
   "test/test_cli_tui.py": {
     "last_investigated_at": null
