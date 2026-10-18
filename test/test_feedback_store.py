@@ -1,7 +1,7 @@
 """feedback artifact と mutable state の durability・再保存を検証する。
 
 同期の順序・失敗・再試行の検査では、実 fd と file 内容を観測し、ディスク同期を待たない。
-実 fsync との結合は、残存 temporary・並行保存の正常系と test_feedback.py の
+実 fsync との結合は、並行保存の正常系と test_feedback.py の
 collector 受理・後続 wave の publication 検査に残す。
 
 対応する oracle file:
@@ -201,7 +201,7 @@ def test_immutable_write_rejects_conflicting_or_irregular_target(tmp_path, targe
     "temporary_kind", ["matching", "conflicting", "symlink", "directory"]
 )
 def test_immutable_write_checks_leftover_temporaries(
-    tmp_path, published, temporary_kind
+    tmp_path, monkeypatch, published, temporary_kind
 ):
     path = tmp_path / "record.json"
     content = b"immutable\n"
@@ -225,8 +225,26 @@ def test_immutable_write_checks_leftover_temporaries(
     else:
         temporary.write_bytes(content if temporary_kind == "matching" else b"corrupt\n")
 
+    # cleanup 後の directory 同期を観測し、実ディスクの同期待ちは繰り返さない。
+    events = []
+
+    def fsync(fd):
+        mode = os.fstat(fd).st_mode
+        if stat.S_ISDIR(mode):
+            assert path.read_bytes() == content
+            assert not matching.exists()
+            assert not temporary.exists()
+            events.append("directory")
+        else:
+            assert stat.S_ISREG(mode)
+            assert not path.exists()
+            events.append("file")
+
+    monkeypatch.setattr(os, "fsync", fsync)
+
     if temporary_kind == "matching":
         assert store.write_immutable_bytes(path, content) == store.sha256_bytes(content)
+        assert events == (["directory"] if published else ["file", "directory"])
         assert path.read_bytes() == content
         assert not matching.exists()
         assert not temporary.exists()
@@ -234,6 +252,7 @@ def test_immutable_write_checks_leftover_temporaries(
         with pytest.raises(store.FeedbackRejected) as rejected:
             store.write_immutable_bytes(path, content)
         assert rejected.value.code == "context_invalid"
+        assert events == []
         assert matching.read_bytes() == content
         assert temporary.exists()
         assert path.exists() == published
