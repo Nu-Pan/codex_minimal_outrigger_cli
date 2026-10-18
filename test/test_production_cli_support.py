@@ -34,8 +34,12 @@ def test_refactor_driver_interrupts_after_a_confirmed_unit(tmp_path) -> None:
         "print('confirmed', flush=True); time.sleep(30)"
     )
     # 標準ライブラリだけの Fake は共通 command helper と同様に site 初期化を省く。
+    # 推論を待たない Fake では監視間隔を短くし、実 SIGINT の配送と終了は待つ。
     result = _run_refactor_until_confirmed(
-        [sys.executable, "-S", "-c", script], tmp_path, dict(os.environ)
+        [sys.executable, "-S", "-c", script],
+        tmp_path,
+        dict(os.environ),
+        poll_interval=0.001,
     )
     assert result.returncode == 0
     assert result.stdout == "confirmed\n"
