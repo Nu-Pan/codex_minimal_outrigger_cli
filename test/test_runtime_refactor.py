@@ -457,6 +457,55 @@ def test_refactor_cycle_prioritizes_null_then_milliseconds_then_path():
     assert refactor_cycle_targets({}) == []
 
 
+@pytest.mark.parametrize("has_committed_state", [False, True])
+def test_merge_refactor_states_reads_same_commit_once(
+    refactor_files, monkeypatch, has_committed_state
+):
+    """no-op join の同一 commit を再照会せず、現在の対象集合へ同期して保存する。"""
+    root = refactor_files
+    committed = {
+        "README.md": {"last_investigated_at": "2026-10-18_00-00-00_001"},
+        "removed.md": {"last_investigated_at": "2026-10-18_00-00-00_002"},
+    }
+
+    # 実 Git との結合・異なる commit の日時統合は隣接 test に残す。
+    # snapshot の有無だけを Git 境界で与え、同期・日時保持・保存は実処理を通す。
+    def committed_git(args, queried_root):
+        assert queried_root == root
+        if args[0] == "ls-tree":
+            return CommandResult(
+                0,
+                "100644 blob abc\t.cmoc/gt/realization/refactor/state.json\0"
+                if has_committed_state
+                else "",
+                "",
+            )
+        assert args[0] == "show"
+        return CommandResult(0, json.dumps(committed), "")
+
+    query = Mock(side_effect=committed_git)
+    monkeypatch.setattr(refactor_module, "run_git", query)
+    monkeypatch.setattr(
+        refactor_module,
+        "enumerate_refactor_targets",
+        lambda _: ["README.md", "added.md"],
+    )
+    # 作業中の値は採用せず、確定済み snapshot からだけ日時を引き継ぐ。
+    write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
+
+    state = merge_refactor_states(root, ("fixed-commit", "fixed-commit"))
+
+    assert state == {
+        "README.md": committed["README.md"]
+        if has_committed_state
+        else {"last_investigated_at": None},
+        "added.md": {"last_investigated_at": None},
+    }
+    assert load_refactor_state(root) == state
+    # 存在確認と、存在する場合の本文取得を同じ commit に繰り返さない。
+    assert query.call_count == (2 if has_committed_state else 1)
+
+
 def test_merge_refactor_states_uses_committed_dates_and_current_paths(
     cli_repository, monkeypatch
 ):

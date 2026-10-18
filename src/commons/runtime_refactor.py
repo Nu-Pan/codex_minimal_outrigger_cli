@@ -73,7 +73,8 @@ def merge_refactor_states(
     path = refactor_state_path(root)
     relative = path.relative_to(root).as_posix()
     merged: RefactorState = {}
-    for ref in refs:
+    # no-op join で両 HEAD が同じ場合、同じ確定済み state を再取得しない。
+    for ref in dict.fromkeys(refs):
         tracked = run_git(
             ["ls-tree", "-z", ref, "--", literal_pathspec(relative)], root
         ).stdout
