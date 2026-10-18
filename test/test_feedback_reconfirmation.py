@@ -715,7 +715,7 @@ def test_remediation_checkpoint_rejects_malformed_fields(feedback_run):
 
 
 def test_remediation_state_validation_rechecks_schema_and_value(
-    feedback_run, tmp_path, monkeypatch
+    feedback_run, tmp_path, monkeypatch, request
 ):
     """同じ内容の再検証後も、入力・schema の変化と artifact の破損を拒否する。"""
     h = feedback_run
@@ -742,6 +742,8 @@ def test_remediation_state_validation_rechecks_schema_and_value(
             else original_files(package)
         ),
     )
+    run_state._remediation_schema_resource.cache_clear()
+    request.addfinalizer(run_state._remediation_schema_resource.cache_clear)
 
     # wave の生成は一度だけ行い、schema と検査対象を各ケースで初期化する。
     for target in ("checkpoint", "verification", "current_evidence"):
