@@ -89,9 +89,11 @@ class _AssetUse:
     def __init__(self, root: Path, asset: DownloadAsset, destination: Path) -> None:
         # 終端のない強制終了も requested/downloading のまま識別できるようにする。
         self.root = root
+        # 一回の取得で使う診断・lock・公開先には、同じ識別情報を共有する。
+        self.asset_key = asset.key
         self.fields: dict[str, object] = {
             "use_id": uuid.uuid4().hex,
-            "asset_key": asset.key,
+            "asset_key": self.asset_key,
             "asset": asdict(asset),
             "destination": str(destination),
             "download_count": 0,
@@ -246,7 +248,7 @@ class DownloadAssetCache:
         except (OSError, ValueError, SearchError):
             use.event(cache_status="write_failed")
             raise
-        entry = root / asset.key
+        entry = root / use.asset_key
         waited = False
 
         def record_wait(seconds: float) -> None:
@@ -256,10 +258,10 @@ class DownloadAssetCache:
 
         use.event(cache_path=str(entry), cache_status="pending", status="waiting")
         with _file_lock(
-            root / f"{asset.key}.lock", time.monotonic() + 7200, on_wait=record_wait
+            root / f"{use.asset_key}.lock", time.monotonic() + 7200, on_wait=record_wait
         ):
             # 公開切替前の異常終了で退避した既存資材を、先に戻して照合する。
-            backup = root / f".previous-{asset.key}"
+            backup = root / f".previous-{use.asset_key}"
             if not entry.exists() and backup.exists():
                 os.replace(backup, entry)
             status = _cache_status(entry, asset)
@@ -285,12 +287,12 @@ class DownloadAssetCache:
         self, root: Path, entry: Path, asset: DownloadAsset, use: _AssetUse
     ) -> None:
         # 同じ資材の lock 内で、前回の未公開 staging だけを回収する。
-        prefix = f".incomplete-{asset.key}-"
+        prefix = f".incomplete-{use.asset_key}-"
         for abandoned in root.glob(f"{prefix}*"):
             if abandoned.is_dir() and not abandoned.is_symlink():
                 shutil.rmtree(abandoned)
         staging = Path(tempfile.mkdtemp(prefix=prefix, dir=root))
-        backup = root / f".previous-{asset.key}"
+        backup = root / f".previous-{use.asset_key}"
         published = False
         try:
             _download(asset, staging / "content", use)
