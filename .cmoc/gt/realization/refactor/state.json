@@ -612,7 +612,7 @@
     "last_investigated_at": "2026-10-19_05-04-15_506"
   },
   "src/sub_commands/session/join.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-09-17_109"
   },
   "src/sub_commands/tui.py": {
     "last_investigated_at": null
