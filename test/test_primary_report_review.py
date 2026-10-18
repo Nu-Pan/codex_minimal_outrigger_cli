@@ -61,6 +61,7 @@ def review_runtime(
     tmp_path,
     monkeypatch,
     primary_report_review_runner,
+    primary_report_review_builder,
     nonpersistent_codex_ids,
 ):
     """確認の制御・保存を、解決済み root と変更のない作業成果物で検証する。"""

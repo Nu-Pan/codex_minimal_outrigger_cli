@@ -272,13 +272,6 @@ def cli_terminal_directory(
     monkeypatch.setattr(
         runtime_cli, "feedback_completion_counts", lambda _root: (0, [])
     )
-    # 確認用の prompt・schema・起動設定は test_primary_report_review.py で検査する。
-    # 応答を固定する表示・終了処理の検査では、Git 探索と prompt 構築を省く。
-    monkeypatch.setattr(
-        report_review,
-        "build_primary_report_review_parameter",
-        lambda **_kwargs: object(),
-    )
     return root
 
 
@@ -438,9 +431,16 @@ def _isolate_primary_report_editor(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def primary_report_review_runner(monkeypatch):
-    """一般の CLI 検査では確認用の実推論を置換し、専用検査に実 runner を渡す。"""
-    # 回復・補正・取消と掲載内容は test_primary_report_review.py で fake CLI を通す。
+    """一般の CLI 検査では確認の起動準備と応答を置換し、実 runner を渡す。"""
+    # 専用の review_runtime は正本 builder と実 runner を戻して、prompt・schema・
+    # 起動設定・回復・補正・取消を検査する。一般の CLI 検査では消費されない
+    # prompt の構築と Git 探索を省き、入力固定・report の組み立てと保存は実行する。
     runner = report_review.run_codex_exec
+    monkeypatch.setattr(
+        report_review,
+        "build_primary_report_review_parameter",
+        lambda **_kwargs: object(),
+    )
     monkeypatch.setattr(
         report_review,
         "run_codex_exec",
@@ -449,6 +449,20 @@ def primary_report_review_runner(monkeypatch):
         ),
     )
     return runner
+
+
+@pytest.fixture
+def primary_report_review_builder(primary_report_review_runner, monkeypatch):
+    """確認の起動引数や Git 境界を検査するケースでは正本 builder を使う。"""
+    from oracle.acp_builder.primary_report_review import (
+        build_primary_report_review_parameter,
+    )
+
+    monkeypatch.setattr(
+        report_review,
+        "build_primary_report_review_parameter",
+        build_primary_report_review_parameter,
+    )
 
 
 @pytest.fixture(autouse=True)

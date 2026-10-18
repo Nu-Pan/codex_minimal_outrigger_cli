@@ -1067,6 +1067,7 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
     monkeypatch: pytest.MonkeyPatch,
     _without_feedback_collector: None,
     nonpersistent_execution_ids: None,
+    primary_report_review_builder: None,
 ) -> None:
     """共通前処理と明示 doctor の対象 worktree・root 探索の再利用範囲を確認する。"""
     import sub_commands.doctor as doctor_command
