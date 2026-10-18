@@ -909,12 +909,13 @@ def test_apply_join_hook_runs_after_merge_or_noop(
 
 
 def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
-    ready_run_session: tuple[Path, str, Path],
+    join_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """cleanup 前に report を保存し、実 cleanup の停止 warning と結果で更新する。"""
+    # doctor の修復・索引準備は test_doctor_cli.py と run worktree 起点の join test に残す。
     # 内容の取り込みは fork→join test に任せ、実資源の cleanup と保存順序を検査する。
-    context = _prepare_run(ready_run_session)
+    context = _prepare_run(join_after_preprocess)
     events: list[str] = []
     saved_reports: list[Path] = []
     original_write_report = run_join_module.write_lifecycle_report
