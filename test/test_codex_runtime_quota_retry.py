@@ -638,35 +638,37 @@ def test_session_id_returns_none_for_invalid_stdout_encoding(tmp_path: Path) -> 
 
 
 def test_recovery_group_is_released_when_progress_output_fails(
-    quota_control_root, monkeypatch
+    monkeypatch,
 ):
     """通知失敗が次の同条件 call の代表選択を妨げない。"""
     import commons.runtime_codex_recovery as recovery
 
-    root = quota_control_root
-    calls = []
+    # CLI・prompt・ログとの結合は polls_and_resumes と parallel_quota_calls に残す。
+    # 同じ key で失敗後に成功させ、古い group の例外を再送するだけの実装を検出する。
+    key = (object(),)
+    probe = Mock(return_value="succeeded")
 
-    def fake_run(argv, **kwargs):
-        calls.append(kwargs["stdin"].read())
-        return subprocess.CompletedProcess(
-            argv, 1, '{"type":"error","message":"Quota exceeded"}\n', ""
+    def wait():
+        return recovery.wait_for_recovery(
+            key=key,
+            reason="quota",
+            probe=probe,
+            quota_interval=0,
+            transient_interval=0,
+            logger=None,
+            agent_call_id="agent",
+            stopped_codex_call_id="call",
+            call_log_path="call.json",
         )
 
     def fail_print(*args, **kwargs):
         raise BrokenPipeError("closed output")
 
-    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
-    monkeypatch.setattr(recovery, "print", fail_print, raising=False)
-    parameter = AgentCallParameter(
-        "build_feedback_normalize_issue_parameter",
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-        root,
-    )
-    for _ in range(2):
+    with monkeypatch.context() as output_failure:
+        output_failure.setattr(recovery, "print", fail_print, raising=False)
         with pytest.raises(BrokenPipeError, match="closed output"):
-            run_codex_exec(
-                parameter, root=root, quota_poll_interval_sec=0, config=CmocConfig()
-            )
-    assert calls == ["prompt", "prompt"]
+            wait()
+
+    probe.assert_not_called()
+    wait()
+    probe.assert_called_once()
