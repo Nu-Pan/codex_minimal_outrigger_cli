@@ -87,7 +87,10 @@ def _session_state_path(root: Path, session_id: str) -> Path:
 
 def _contains_unrepresentable_characters(value: str) -> bool:
     """filesystem と process 境界で扱えない文字を検出する。"""
-    return "\x00" in value or any(0xD800 <= ord(char) <= 0xDFFF for char in value)
+    # ASCII の branch 名や commit ID は NUL だけを調べ、surrogate の文字走査を省く。
+    return "\x00" in value or (
+        not value.isascii() and any(0xD800 <= ord(char) <= 0xDFFF for char in value)
+    )
 
 
 def _inspect_state_path(path: Path, *, directory: bool = False) -> int | None:
