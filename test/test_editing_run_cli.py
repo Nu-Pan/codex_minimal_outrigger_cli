@@ -4170,36 +4170,63 @@ def test_interruption_while_publishing_run_tracking_automatically_joins(
     assert not run_git(root, "status", "--porcelain").stdout
 
 
-@pytest.mark.parametrize("guard", ["active", "report", "reachability"])
+@pytest.mark.parametrize("guard", ["record", "active", "report", "reachability"])
 def test_join_cleanup_defers_when_a_required_guard_is_unconfirmed(
-    ready_join_session, monkeypatch, guard
+    tmp_path, cleanup_ready_report, monkeypatch, guard
 ):
-    """state・保存結果・到達可能性のいずれかを確認できなければ資源を削除しない。"""
-    root, _, state_path = ready_join_session
-    context = _prepare_run(ready_join_session)
-    if guard != "active":
-        state = SessionState.from_dict(_state(state_path))
-        state.run = RunPart()
-        write_state(state_path, state)
-    report = root / ".cmoc/gu/report/saved.md"
-    report.parent.mkdir(parents=True, exist_ok=True)
-    report.write_text("saved outcome\n")
-    if guard == "reachability":
-        (context.run_worktree / "unmerged.txt").write_text("unmerged\n")
-        commit_work_unit(context.run_worktree, "not joined")
-    monkeypatch.setattr(
-        run_join_module,
-        "remove_worktree",
-        lambda *_args: pytest.fail("cleanup without all guards"),
+    """復旧記録・state・report・到達可能性を一つずつ欠かして削除拒否を検証する。"""
+    # 他の条件を満たしておき、復旧記録の欠落だけで全ケースが終了するのを防ぐ。
+    # 実 Git の取り込み・削除・report 保存との結合は
+    # test_run_join_report_tracks_cleanup_and_child_stop_warnings、
+    # 到達可能性の照合は test_runtime_run_join_state.py に残す。
+    context = EditingRunContext(
+        repo=tmp_path,
+        session_worktree=tmp_path / "session",
+        session_id=SESSION_ID,
+        state_path=tmp_path / "state.json",
+        session_branch=SESSION_BRANCH,
+        session_fork_commit="session-fork",
+        kind="realization_apply",
+        run_branch=RUN_BRANCH,
+        run_fork_commit="run-fork",
+        run_worktree=tmp_path / "run",
     )
+    context.run_worktree.mkdir()
+    if guard == "record":
+        monkeypatch.setattr(run_join_module, "load_join_record", lambda *_args: None)
+    elif guard == "active":
+        state = SessionState(
+            run=RunPart(
+                "joinable", context.kind, context.run_branch, context.run_fork_commit
+            )
+        )
+        monkeypatch.setattr(
+            run_join_module,
+            "load_state_for_branch",
+            lambda *_args: (SESSION_ID, context.state_path, state),
+        )
+    queries = Mock(
+        return_value=SimpleNamespace(returncode=1 if guard == "reachability" else 0)
+    )
+    monkeypatch.setattr(run_join_module, "run_git", queries)
+    remove_worktree = Mock()
+    delete_branch = Mock()
+    monkeypatch.setattr(run_join_module, "remove_worktree", remove_worktree)
+    monkeypatch.setattr(run_join_module, "delete_branch", delete_branch)
     warnings = []
     cleanup = run_join_module.cleanup_joined_run(
-        context, warnings, None if guard == "report" else report
+        context, warnings, None if guard == "report" else cleanup_ready_report
     )
     assert cleanup == "deferred"
     assert warnings
+    remove_worktree.assert_not_called()
+    delete_branch.assert_not_called()
     assert context.run_worktree.exists()
-    assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
+    # 到達可能性のケースが、先行条件で早期終了していないことも確認する。
+    if guard == "reachability":
+        queries.assert_called_once()
+    else:
+        queries.assert_not_called()
 
 
 @pytest.mark.parametrize("kind", ["realization_apply", "realization_refactor"])
