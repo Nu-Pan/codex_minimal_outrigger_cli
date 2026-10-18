@@ -153,13 +153,16 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
                 raise OSError("input save failed")
         return real_replace(source, destination)
 
+    # 実 builder と skeleton の結合は各 command の成功ケースに残す。
+    # 中断後の制御では本文を構築せず、placeholder の入力と handoff への受け渡しを検査する。
+    skeleton = "test skeleton {{original-prompt-here}}"
     builders = []
     for module, name in (
         (tui_module, "build_tui_launch_tui_parameter"),
         (investigation_module, "build_oracle_investigation_launch_tui_parameter"),
         (oracle_edit_module, "build_oracle_edit_main_launch_exec_parameter"),
     ):
-        builder = Mock(wraps=getattr(module, name))
+        builder = Mock(return_value=SimpleNamespace(prompt=skeleton))
         builders.append(builder)
         monkeypatch.setattr(module, name, builder)
 
@@ -186,8 +189,7 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
     assert ignored_roots == [root]
     files = list((root / ".cmoc/gu/log/editor_input").iterdir())
     assert len(files) == 1
-    handoff_start.assert_called_once()
-    assert handoff_start.call_args.args[:2] == (root, files[0])
+    handoff_start.assert_called_once_with(root, files[0], skeleton)
     assert save_destinations == files
     assert files[0].name.endswith("_orig.md")
     assert files[0].read_bytes() == raw_input
