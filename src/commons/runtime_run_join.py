@@ -627,10 +627,14 @@ def _cleanup_run_matches_prepared(
 ) -> bool:
     # 削除前に branch と残存 worktree の両方を準備完了成果へ照合する。
     try:
-        if (
-            branch_exists(context.repo, context.run_branch)
-            and run_git(["rev-parse", context.run_branch], context.repo).stdout.strip()
-            != record.prepared_run_head
+        # 存在確認と HEAD 取得を一度に行い、不在 (1) と照会失敗を区別する。
+        branch = run_git(
+            ["rev-parse", "--verify", "--quiet", f"refs/heads/{context.run_branch}"],
+            context.repo,
+            check=False,
+        )
+        if branch.returncode not in {0, 1} or (
+            branch.returncode == 0 and branch.stdout.strip() != record.prepared_run_head
         ):
             return False
         if context.run_worktree.exists():

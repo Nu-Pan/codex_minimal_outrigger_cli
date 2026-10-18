@@ -6,6 +6,8 @@ from unittest.mock import Mock
 import pytest
 from _git_support import RUN_BRANCH, SESSION_BRANCH, SESSION_ID, run_git
 
+import commons.runtime_git as git_module
+import commons.runtime_run_join as run_join
 import commons.runtime_run_join_state as join_state
 from commons.runtime_errors import CmocError
 from commons.runtime_git import head_commit
@@ -138,3 +140,51 @@ def test_missing_receipt_checks_candidate_tree_and_parents(
             record.join_commit is record.session_commit is record.session_tree is None
         )
         save.assert_not_called()
+
+
+def test_cleanup_rechecks_resources_without_repeating_branch_query(
+    imported_record, monkeypatch
+):
+    """削除前の成果照合を一度の branch 照会で行い、次回の変更も拒否する。"""
+    record = imported_record
+    root = record.context.repo
+    context = replace(record.context, run_worktree=root)
+    branch_ref = f"refs/heads/{context.run_branch}"
+    run_git(root, "branch", context.run_branch, record.prepared_run_head)
+    queries = Mock(wraps=git_module.subprocess.run)
+    monkeypatch.setattr(git_module.subprocess, "run", queries)
+
+    def inspect(expected, active=context):
+        queries.reset_mock()
+        assert run_join._cleanup_run_matches_prepared(active, record) is expected
+        branch_queries = [
+            call.args[0]
+            for call in queries.call_args_list
+            if {branch_ref, context.run_branch}.intersection(call.args[0])
+        ]
+        assert len(branch_queries) == 1, branch_queries
+
+    inspect(True)
+    run_git(root, "update-ref", branch_ref, context.run_fork_commit)
+    inspect(False)
+    run_git(root, "update-ref", branch_ref, record.prepared_run_head)
+    inspect(True)
+
+    # branch が一致しても、残存 worktree の別 HEAD・未確定差分は削除しない。
+    run_git(root, "switch", "--detach", context.run_fork_commit)
+    inspect(False)
+    run_git(root, "switch", "--detach", record.prepared_run_head)
+    dirty = root / "untracked.txt"
+    dirty.write_text("keep this change\n")
+    inspect(False)
+    assert dirty.read_text() == "keep this change\n"
+    dirty.unlink()
+    inspect(True)
+
+    # 部分回収済みの資源を許容し、同名 tag を run branch と取り違えない。
+    run_git(root, "branch", "-D", context.run_branch)
+    run_git(root, "tag", context.run_branch, context.run_fork_commit)
+    inspect(True)
+    inspect(True, record.context)
+    # Git 自体の照会失敗は、branch 不在と区別して削除を止める。
+    inspect(False, replace(record.context, repo=root.parent))
