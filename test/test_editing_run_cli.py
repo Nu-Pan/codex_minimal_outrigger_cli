@@ -1391,6 +1391,11 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
         "rewrite.md": ("rewritten.md", True, False),
         "with-extra.md": ("renamed-extra.md", True, True),
     }
+    # 全件の選択・巡回は mixed_results_until_user_interruption と
+    # repeats_cycles_with_oldest_timestamp_priority に残し、無関係な state-only commit を省く。
+    monkeypatch.setattr(
+        refactor_module, "refactor_cycle_targets", lambda _state: sorted(cases)
+    )
     for source in ("rewrite.md", "with-extra.md"):
         (root / source).write_text(f"# {source}\n")
     run_git(root, "add", "rewrite.md", "with-extra.md")
@@ -1404,58 +1409,46 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
         """各 target の rename と unresolved finding を再現する。"""
         worktree = parameter.agent_call_cwd
         target = str(kwargs["purpose"]).removeprefix("realization refactor: ")
-        if target in cases:
-            reviewed.append(target)
-            destination, replace_content, add_unrelated_file = cases[target]
-            (worktree / target).rename(worktree / destination)
-            if replace_content:
-                (worktree / destination).write_text("completely different content\n")
-            findings = [
+        reviewed.append(target)
+        destination, replace_content, add_unrelated_file = cases[target]
+        (worktree / target).rename(worktree / destination)
+        if replace_content:
+            (worktree / destination).write_text("completely different content\n")
+        findings = [
+            {
+                "title": f"deferred {target}",
+                "changed_paths": [target, destination],
+                "resolution": {
+                    "status": "unresolved",
+                    "summary": "needs follow-up",
+                },
+            }
+        ]
+        if add_unrelated_file:
+            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+            # rename 判定の候補を増やしても unresolved の changed_paths から
+            # rename 先を特定できることを検証する。
+            (worktree / "extra.md").write_text("extra realization\n")
+            findings.append(
                 {
-                    "title": f"deferred {target}",
-                    "changed_paths": [target, destination],
+                    "title": "extra update",
+                    "changed_paths": ["extra.md"],
                     "resolution": {
-                        "status": "unresolved",
-                        "summary": "needs follow-up",
+                        "status": "fixed",
+                        "summary": "updated extra file",
                     },
                 }
-            ]
-            if add_unrelated_file:
-                # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-                # rename 判定の候補を増やしても unresolved の changed_paths から
-                # rename 先を特定できることを検証する。
-                (worktree / "extra.md").write_text("extra realization\n")
-                findings.append(
-                    {
-                        "title": "extra update",
-                        "changed_paths": ["extra.md"],
-                        "resolution": {
-                            "status": "fixed",
-                            "summary": "updated extra file",
-                        },
-                    }
-                )
-            return SimpleNamespace(
-                returncode=0,
-                output_json={
-                    "findings": findings,
-                    "verification": {
-                        "status": "passed",
-                        "summary": "fake full quality gate passed",
-                    },
-                },
-                call_log_path=worktree / f"{target}-call.json",
             )
         return SimpleNamespace(
             returncode=0,
             output_json={
-                "findings": [],
+                "findings": findings,
                 "verification": {
                     "status": "passed",
                     "summary": "fake full quality gate passed",
                 },
             },
-            call_log_path=worktree / "call.json",
+            call_log_path=worktree / f"{target}-call.json",
         )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
@@ -1501,14 +1494,19 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
     reviewed: list[str] = []
-    oracle_reviews = 0
+    # 対象の公平性と追加 file の次巡選択は does_not_reselect_related_edits_or_starve_waiting_targets
+    # に残し、ここでは既存 unresolved を後続 target が rename する 2 単位だけを実行する。
+    monkeypatch.setattr(
+        refactor_module,
+        "refactor_cycle_targets",
+        lambda _state: ["README.md", "oracle/spec.md"],
+    )
 
     def fake_refactor(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
         """README の unresolved 後、別 target で README を rename する。"""
-        nonlocal oracle_reviews
         purpose = str(kwargs["purpose"])
         target = purpose.removeprefix("realization refactor: ")
         reviewed.append(target)
@@ -1533,45 +1531,23 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
                     },
                 },
             )
-        if target == "oracle/spec.md":
-            oracle_reviews += 1
-            if oracle_reviews > 1:
-                return SimpleNamespace(
-                    returncode=0,
-                    output_json={
-                        "findings": [],
-                        "verification": {
-                            "status": "passed",
-                            "summary": "fake full quality gate passed",
-                        },
-                    },
-                )
-            worktree = parameter.agent_call_cwd
-            (worktree / "README.md").rename(worktree / "renamed.md")
-            (worktree / "renamed.md").write_text("completely different content\n")
-            return SimpleNamespace(
-                returncode=0,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "README rename",
-                            "changed_paths": ["README.md", "renamed.md"],
-                            "resolution": {
-                                "status": "fixed",
-                                "summary": "rename completed",
-                            },
-                        }
-                    ],
-                    "verification": {
-                        "status": "passed",
-                        "summary": "fake full quality gate passed",
-                    },
-                },
-            )
+        assert target == "oracle/spec.md"
+        worktree = parameter.agent_call_cwd
+        (worktree / "README.md").rename(worktree / "renamed.md")
+        (worktree / "renamed.md").write_text("completely different content\n")
         return SimpleNamespace(
             returncode=0,
             output_json={
-                "findings": [],
+                "findings": [
+                    {
+                        "title": "README rename",
+                        "changed_paths": ["README.md", "renamed.md"],
+                        "resolution": {
+                            "status": "fixed",
+                            "summary": "rename completed",
+                        },
+                    }
+                ],
                 "verification": {
                     "status": "passed",
                     "summary": "fake full quality gate passed",
@@ -1595,9 +1571,7 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
     refactor_state = load_refactor_state(worktree)
     assert "README.md" not in refactor_state
     assert refactor_state["renamed.md"] == {"last_investigated_at": None}
-    assert reviewed.count("README.md") == 1
-    assert reviewed.count("oracle/spec.md") == 1
-    assert "renamed.md" not in reviewed
+    assert reviewed == ["README.md", "oracle/spec.md"]
     report = terminal_primary_report(result).read_text()
     assert 'completion_reason: "user_interruption"' in report
     assert_report_layout(report)
