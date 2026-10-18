@@ -4303,30 +4303,39 @@ def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
     root, _, state_path = refactor_after_preprocess
     # 別 file の削除と差し戻しを同じ run で検査し、session/run 作成を共有する。
     deleted_path = "src/deleted.py"
+    # 全件の巡回・公平性は repeats_cycles_with_oldest_timestamp_priority と
+    # does_not_reselect_related_edits_or_starve_waiting_targets に残す。
+    # 要約の検査に不要な file の state-only commit は繰り返さない。
+    monkeypatch.setattr(
+        refactor_module,
+        "refactor_cycle_targets",
+        lambda state: [
+            target for target in ("README.md", deleted_path) if target in state
+        ],
+    )
     (root / deleted_path).write_text("VALUE = 1\n")
     run_git(root, "add", deleted_path)
     run_git(root, "commit", "-m", "add deletion target")
     reviewed = Counter()
 
     def review(parameter, **kwargs):
-        findings = []
         target = kwargs["purpose"].removeprefix("realization refactor: ")
-        if target in {"README.md", deleted_path}:
-            reviewed[target] += 1
-            path = parameter.agent_call_cwd / target
-            if target == deleted_path:
-                change_kind = "delete"
-                path.unlink()
-            else:
-                change_kind = "revert"
-                path.write_text("changed\n" if reviewed[target] == 1 else "# repo\n")
-            findings = [
-                {
-                    "title": change_kind,
-                    "changed_paths": [target],
-                    "resolution": {"status": "fixed", "summary": "confirmed change"},
-                }
-            ]
+        assert target in {"README.md", deleted_path}
+        reviewed[target] += 1
+        path = parameter.agent_call_cwd / target
+        if target == deleted_path:
+            change_kind = "delete"
+            path.unlink()
+        else:
+            change_kind = "revert"
+            path.write_text("changed\n" if reviewed[target] == 1 else "# repo\n")
+        findings = [
+            {
+                "title": change_kind,
+                "changed_paths": [target],
+                "resolution": {"status": "fixed", "summary": "confirmed change"},
+            }
+        ]
         return SimpleNamespace(
             returncode=0,
             output_json={
@@ -4551,33 +4560,37 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
 ):
     """確定後の差分確認が失敗しても、最新結果で解消した過去の未解決を復活させない。"""
     root, _, state_path = refactor_after_preprocess
+    # 次巡での再調査・最新結果の保持だけを検査し、無関係な file の確定を省く。
+    # 全対象の順序と unresolved の次巡選択は repeats_cycles_with_oldest_timestamp_priority に残す。
+    monkeypatch.setattr(
+        refactor_module, "refactor_cycle_targets", lambda _state: ["README.md"]
+    )
     reviewed = 0
     inspect = refactor_module.tree_changes
 
     def review(parameter, **kwargs):
         nonlocal reviewed
-        findings = []
+        assert kwargs["purpose"] == "realization refactor: README.md"
+        reviewed += 1
         verification = {"status": "not_required", "summary": "no edits"}
-        if kwargs["purpose"] == "realization refactor: README.md":
-            reviewed += 1
-            if reviewed == 1:
-                findings = [
-                    {
-                        "title": "old unresolved finding",
-                        "changed_paths": [],
-                        "resolution": {"status": "unresolved", "summary": "defer"},
-                    }
-                ]
-            else:
-                (parameter.agent_call_cwd / "README.md").write_text("resolved\n")
-                findings = [
-                    {
-                        "title": "resolved finding",
-                        "changed_paths": ["README.md"],
-                        "resolution": {"status": "fixed", "summary": "resolved"},
-                    }
-                ]
-                verification = {"status": "passed", "summary": "full gate passed"}
+        if reviewed == 1:
+            findings = [
+                {
+                    "title": "old unresolved finding",
+                    "changed_paths": [],
+                    "resolution": {"status": "unresolved", "summary": "defer"},
+                }
+            ]
+        else:
+            (parameter.agent_call_cwd / "README.md").write_text("resolved\n")
+            findings = [
+                {
+                    "title": "resolved finding",
+                    "changed_paths": ["README.md"],
+                    "resolution": {"status": "fixed", "summary": "resolved"},
+                }
+            ]
+            verification = {"status": "passed", "summary": "full gate passed"}
         return SimpleNamespace(
             returncode=0,
             call_log_path=parameter.agent_call_cwd / "call.json",
@@ -4596,6 +4609,7 @@ def test_refactor_latest_resolution_survives_commit_inspection_failure(
     monkeypatch.setattr(refactor_module, "tree_changes", failed_unit_inspection)
     result = runner.invoke(app, ["realization", "refactor"], catch_exceptions=False)
     assert result.exit_code == 1, result.output
+    assert reviewed == 2
     run = _state(state_path)["run"]
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     assert (
