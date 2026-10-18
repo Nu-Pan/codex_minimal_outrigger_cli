@@ -196,10 +196,11 @@ def test_simultaneous_deadlines_and_cleanup_failure_preserve_original_reason(
 
 
 def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
-    tmp_path, document_repository, document_search_clock
+    tmp_path, document_repository, document_search_clock, unsynced_search_storage
 ):
     root = document_repository
     # 1 文書の埋め込み保存・確認完了を 400 秒間隔にし、無進捗期限内で 600 秒を超す。
+    # 期限・診断の検査ではディスク同期を省き、途中保存・再開は test_document_search.py に残す。
     observation, events = _observation(root)
 
     class ProgressingWorker(_InferenceDouble):
@@ -233,7 +234,7 @@ def test_progressing_sync_can_outlast_component_timeout_and_600_seconds(
 
 
 def test_doctor_sync_has_no_search_deadlines(
-    tmp_path, document_repository, document_search_clock
+    tmp_path, document_repository, document_search_clock, unsynced_search_storage
 ):
     root = document_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
@@ -296,7 +297,9 @@ def test_unbounded_sync_preserves_wait_counts_and_cancellation(
     assert terminal["counts_complete"] is False
 
 
-def test_saved_deadline_growth_requires_a_new_codex_connection(document_repository):
+def test_saved_deadline_growth_requires_a_new_codex_connection(
+    document_repository, unsynced_search_storage
+):
     # 同じ接続の構築・期限短縮を共有し、両方の増加を独立した設定から試す。
     root = document_repository
     initial = _tuning()
@@ -334,7 +337,9 @@ def test_saved_deadline_growth_requires_a_new_codex_connection(document_reposito
             assert events[-1]["status"] == "failed", setting
 
 
-def test_parallel_requests_log_to_their_own_codex_calls(tmp_path, document_repository):
+def test_parallel_requests_log_to_their_own_codex_calls(
+    tmp_path, document_repository, unsynced_search_storage
+):
     # 開始記録で両要求を揃え、固定待機なしで同時実行を確実にする。
     root = document_repository
     path = tmp_path / "caller.jsonl"
@@ -386,7 +391,7 @@ def test_parallel_requests_log_to_their_own_codex_calls(tmp_path, document_repos
 
 
 def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
-    document_repository, document_search_clock, monkeypatch
+    document_repository, document_search_clock, monkeypatch, unsynced_search_storage
 ):
     root = document_repository
     (root / "oracle/doc/second.md").write_text("# 次の原文\n")
