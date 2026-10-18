@@ -4603,23 +4603,32 @@ def _unverified_refactor_review(parameter, verification_status):
     )
 
 
-def test_refactor_rejects_unverified_changes_before_state_update(
-    ready_join_session, monkeypatch
-):
+def test_refactor_rejects_unverified_changes_before_state_update(tmp_path, monkeypatch):
     """未検証の各 status で成果物と調査 state を確定しない。"""
-    # run の開始・公開は専用 lifecycle test、rollback は次の CLI test に残す。
-    context = _prepare_run(
-        ready_join_session, kind="realization_refactor", run_state="running"
+    # 実 Git の差分分類・HEAD 保持・rollback は次の CLI test に残す。
+    # ここでは検出済みの差分を渡し、status の判定に run worktree を準備しない。
+    context = SimpleNamespace(
+        repo=tmp_path, run_worktree=tmp_path, session_id=SESSION_ID
     )
-    worktree = context.run_worktree
-    before_head = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
-    before_state = load_refactor_state(worktree)
-    target = worktree / "README.md"
-    original = target.read_text()
+    target = tmp_path / "README.md"
+    target.write_text("# repo\n")
+    before_state = {"README.md": {"last_investigated_at": None}}
+    write_refactor_state(tmp_path, before_state)
+    monkeypatch.setattr(
+        refactor_module, "run_git", lambda *_args: SimpleNamespace(stdout="unit-head\n")
+    )
+    monkeypatch.setattr(refactor_module, "load_config", lambda _root: object())
+    monkeypatch.setattr(
+        refactor_module,
+        "worktree_change_paths",
+        lambda *_args, **_kwargs: ["README.md"],
+    )
+    monkeypatch.setattr(refactor_module, "unexpected_agent_paths", lambda *_args: [])
+    commit = Mock()
+    monkeypatch.setattr(refactor_module, "commit_work_unit", commit)
     units = []
     unresolved = {}
 
-    # 同じ品質ゲートで拒否される値は run を共有し、CLI の rollback は次の test に残す。
     for verification_status in ("failed", "incomplete", "not_required"):
 
         def review(parameter, **_kwargs):
@@ -4631,12 +4640,11 @@ def test_refactor_rejects_unverified_changes_before_state_update(
                 context, "README.md", units, unresolved, []
             )
 
-        assert run_git(worktree, "rev-parse", "HEAD").stdout.strip() == before_head
-        assert load_refactor_state(worktree) == before_state
+        assert target.read_text() == "unverified change\n"
+        assert load_refactor_state(tmp_path) == before_state
+        commit.assert_not_called()
         assert not units
         assert not unresolved
-        target.write_text(original)
-        assert not worktree_change_paths(worktree)
 
 
 def test_refactor_rejects_unverified_changes_and_rolls_back(
@@ -4657,6 +4665,7 @@ def test_refactor_rejects_unverified_changes_and_rolls_back(
     assert run["state"] == "error"
     worktree = root / ".cmoc/gu/worktree" / Path(*run["branch"].split("/")[2:])
     assert (worktree / "README.md").read_text() == "# repo\n"
+    assert run_git(worktree, "rev-parse", "HEAD").stdout.strip() == run["fork_commit"]
     assert not worktree_change_paths(worktree)
     assert len(calls) == 1
     assert "品質検証が完了していません" in terminal_primary_report(result).read_text()
