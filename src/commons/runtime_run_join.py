@@ -20,7 +20,7 @@ from .runtime_git import (
     run_git,
 )
 from .runtime_merge_conflict import resolve_merge_conflicts
-from .runtime_paths import repo_root, work_root
+from .runtime_paths import repo_root, reuse_root_queries, work_root
 from .runtime_primary_report import (
     current_primary_report_fields,
     primary_report_finalization_lock,
@@ -62,10 +62,11 @@ from .runtime_state import RunPart, SessionState, load_state_for_branch, write_s
 def doctor_preprocess_for_join(*, rollback_on_interruption: bool = False) -> None:
     """join と feedback 開始前の doctor を、復旧と同期の境界に従って実行する。"""
     # 元の成果の検査範囲は journal が固定し、doctor の path 除外は不要。
-    root = work_root().resolve()
-    _run_join_doctor(
-        root, repo_root(root), rollback_on_interruption=rollback_on_interruption
-    )
+    # 両 root の探索だけを共有し、復旧・修復処理へ metadata を持ち越さない。
+    with reuse_root_queries():
+        root = work_root()
+        main_root = repo_root(root)
+    _run_join_doctor(root, main_root, rollback_on_interruption=rollback_on_interruption)
 
 
 def _run_join_doctor(

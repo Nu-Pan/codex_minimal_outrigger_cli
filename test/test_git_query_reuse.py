@@ -8,6 +8,7 @@ import pytest
 from _git_support import RUN_BRANCH, RUN_ID, SESSION_ID, init_repo, run_git
 
 import commons.runtime_git as git_module
+import commons.runtime_run_join as run_join_module
 from commons.prompt_editor_input import ensure_prompt_editor_roots_ignored
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import repo_root, reuse_root_queries, work_root
@@ -149,6 +150,44 @@ def test_git_query_reuse_keeps_worktrees_and_environment_separate(
             assert work_root(root) == root
             assert git_calls == calls_after_repo_root
         assert git_module.run_git(index_query, root).stdout.strip() == ".git/index"
+
+
+def test_join_doctor_reuses_roots_only_before_preprocessing(
+    committed_repository, tmp_path, monkeypatch
+):
+    """join 前の両 root は探索を共有し、doctor と次回呼び出しは取り直す。"""
+    root = committed_repository
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "join-doctor-query", str(linked), "HEAD")
+    root_queries = 0
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        nonlocal root_queries
+        if argv[0] == "git" and "--show-toplevel" in argv:
+            root_queries += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+
+    # 修復・復旧・同期の判断は test_editing_run_cli.py に残し、探索の境界だけを検査する。
+    def preprocess(work, main, *, rollback_on_interruption):
+        assert work == anchor
+        assert main == root
+        assert rollback_on_interruption is (anchor == linked)
+        assert root_queries == 1
+        # doctor が行う検証へ成功結果を持ち越さない。
+        assert work_root(work) == work
+        assert root_queries == 2
+
+    monkeypatch.setattr(run_join_module, "_run_join_doctor", preprocess)
+    for anchor in (linked, root, linked):
+        monkeypatch.chdir(anchor)
+        root_queries = 0
+        run_join_module.doctor_preprocess_for_join(
+            rollback_on_interruption=anchor == linked
+        )
+        assert root_queries == 2
 
 
 def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
