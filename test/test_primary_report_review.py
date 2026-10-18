@@ -307,12 +307,6 @@ def test_review_failure_preserves_main_outcome_except_required_finalization(
     cli_terminal_directory, monkeypatch, capsys, ending, failure, result_field
 ):
     root = cli_terminal_directory
-    # この fixture は root 解決を省く。builder の対象だけ実際のパラメータに置換する。
-    monkeypatch.setattr(
-        review_module,
-        "build_primary_report_review_parameter",
-        lambda **kwargs: object(),
-    )
 
     def failed_review(*args, **kwargs):
         if failure == "cancel":

@@ -263,6 +263,13 @@ def cli_terminal_directory(
     monkeypatch.setattr(
         runtime_cli, "feedback_completion_counts", lambda _root: (0, [])
     )
+    # 確認用の prompt・schema・起動設定は test_primary_report_review.py で検査する。
+    # 応答を固定する表示・終了処理の検査では、Git 探索と prompt 構築を省く。
+    monkeypatch.setattr(
+        report_review,
+        "build_primary_report_review_parameter",
+        lambda **_kwargs: object(),
+    )
     return root
 
 
