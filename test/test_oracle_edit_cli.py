@@ -136,6 +136,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     root = oracle_edit_repository
     instruction = (
         "oracle spec を更新する\n# 指示中の見出し\n空行を挿入しない\n"
+        "過去の agent の会話と最終回答、実行ログ /example/sender.jsonl を参考にする\n"
         "````text\n```\n## 実行情報\n````\n"
         + "長い指示の続きです。\n" * 180
         + "指示全文の末尾"
@@ -417,7 +418,12 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert main_kwargs["root"] == root
     assert main_kwargs["purpose"] == "oracle edit first"
     complete_prompt = main_parameter.prompt
-    assert "oracle spec を更新する" in complete_prompt
+    assert instruction in complete_prompt
+    # ユーザーのログ参照は保持し、自動生成文面には過去会話への参照を加えない。
+    # 同じ完成 prompt で検査し、文面検査だけの fixture と builder 実行を重ねない。
+    generated = complete_prompt.replace(instruction, "", 1)
+    for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):
+        assert prior_context not in generated
     assert oracle_edit_module.ORIGINAL_PROMPT_PLACEHOLDER not in complete_prompt
     assert "# oracle policy" in complete_prompt
     assert "# routing policy" in complete_prompt
@@ -639,24 +645,3 @@ def test_oracle_edit_launch_preconditions(
             root,
             current_root,
         )
-
-
-def test_oracle_edit_prompt_preserves_user_log_reference(tmp_path, monkeypatch):
-    """ユーザーのログ参照は保持し、自動生成の過去会話参照は含めない。"""
-    # 実 Git の root 解決は test_basic_runtime.py と上の CLI 結合 test に残す。
-    # 文面の検査では探索結果だけを置換し、builder と renderer は実物を使う。
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(
-        path_model_module,
-        "_resolve_git_worktree_roots",
-        lambda _start_path=None: (tmp_path, tmp_path),
-    )
-    instruction = "過去の agent の会話と最終回答、実行ログ /example/sender.jsonl を参考に oracle を編集する"
-    prompt = oracle_edit_module.build_oracle_edit_main_launch_exec_parameter(
-        instruction
-    ).prompt
-    assert instruction in prompt
-    # ユーザー入力を除いた自動生成文面は、同じ完全 prompt から検査する。
-    generated = prompt.replace(instruction, "", 1)
-    for prior_context in ("過去の agent の会話", "最終回答", "実行ログ"):
-        assert prior_context not in generated
