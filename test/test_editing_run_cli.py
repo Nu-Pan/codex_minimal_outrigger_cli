@@ -186,6 +186,10 @@ def apply_after_preprocess(nonpersistent_run_ids, monkeypatch):
     # test_realization_apply_automatically_joins_changes_and_noop に残す。
     preprocess = Mock()
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
+    # 自動 join でも doctor の修復・索引同期を重ねない。
+    # join 時の再検査・復旧判定と、merge 前の state 同期は実処理を通す。
+    join_preprocess = Mock()
+    monkeypatch.setattr(run_join_module, "run_doctor_preprocess", join_preprocess)
     # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を省く。
     # builder の選択値・文面は test_acp_builder_editing_run_parameters.py、
     # 実 builder との結合は上記の fork→join test に残す。
@@ -197,6 +201,10 @@ def apply_after_preprocess(nonpersistent_run_ids, monkeypatch):
     yield
     # CLI が対象 root の前処理を省略する回帰も検出する。
     preprocess.assert_called_with(Path.cwd().resolve())
+    if join_preprocess.called:
+        join_preprocess.assert_called_once_with(
+            Path.cwd().resolve(), sync_refactor_entries=False
+        )
 
 
 @pytest.fixture
