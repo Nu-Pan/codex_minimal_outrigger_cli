@@ -475,3 +475,89 @@ def test_run_path_inspection_batches_each_owning_repository(
     ):
         with pytest.raises(CmocError, match=".gitignore"):
             inspect(context, inputs)
+
+
+def test_run_path_inspection_batches_missing_files_and_tree_fallback(
+    cli_repository, monkeypatch
+):
+    """削除 path の特殊名・種類・参照元を保ち、tree 照会を repository ごとにまとめる。"""
+    root = cli_repository
+    regular = ["deleted.txt", "space tab\tline\n.txt", ":(literal)file.txt"]
+    fallback = ["fallback-only.txt", "became-link.txt"]
+    for name in [*regular, *fallback]:
+        (root / name).write_text("regular file\n")
+    (root / "link-only").symlink_to("deleted.txt")
+    (root / "tree-directory").mkdir()
+    (root / "tree-directory/child.txt").write_text("not the directory itself\n")
+    run_git(root, "add", ".")
+    run_git(root, "commit", "-m", "fallback files")
+    run_git(root, "branch", "outer-base")
+    for name in fallback:
+        (root / name).unlink()
+    (root / "became-link.txt").symlink_to("deleted.txt")
+    run_git(root, "add", "-A")
+    run_git(root, "commit", "-m", "run files")
+    run_git(root, "branch", "outer-run")
+    for name in [*regular, "became-link.txt", "link-only"]:
+        (root / name).unlink()
+    shutil.rmtree(root / "tree-directory")
+
+    nested = root / "nested"
+    nested.mkdir()
+    init_repo(nested)
+    nested_regular = ["first.txt", "second.txt"]
+    for name in nested_regular:
+        (nested / name).write_text("nested file\n")
+    (nested / "link-only").symlink_to("first.txt")
+    run_git(nested, "add", ".")
+    run_git(nested, "commit", "-m", "nested files")
+    for name in [*nested_regular, "link-only"]:
+        (nested / name).unlink()
+
+    context = EditingRunContext(
+        repo=root,
+        session_worktree=root,
+        session_id="session",
+        state_path=root / "state.json",
+        session_branch="session",
+        session_fork_commit="outer-base",
+        kind="realization_apply",
+        run_branch="outer-run",
+        run_fork_commit="outer-base",
+        run_worktree=root,
+    )
+    rejected = ["link-only", "nested/link-only", "never-tracked", "tree-directory"]
+    paths = [
+        *regular,
+        *fallback,
+        *(f"nested/{name}" for name in nested_regular),
+        *rejected,
+    ]
+    queries = Counter()
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[:2] == ["git", "ls-tree"]:
+            queries[(kwargs["cwd"], argv[4])] += 1
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    for inspect, inputs in (
+        (unexpected_agent_paths, [*paths, regular[0]]),
+        (unexpected_run_paths, [GitChange("D", (path,)) for path in paths]),
+    ):
+        queries.clear()
+        assert inspect(context, inputs) == rejected
+        assert queries == {
+            (root, "outer-run"): 1,
+            (root, "outer-base"): 1,
+            (nested, "HEAD"): 1,
+        }
+
+    # 全件を主参照で分類できれば fallback へ進まず、次回の ref 変更は再検査する。
+    run_git(root, "branch", "-D", "outer-base")
+    queries.clear()
+    assert unexpected_agent_paths(context, regular) == []
+    assert queries == {(root, "outer-run"): 1}
+    with pytest.raises(CmocError):
+        unexpected_agent_paths(context, fallback)

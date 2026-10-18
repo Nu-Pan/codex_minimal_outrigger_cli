@@ -1221,6 +1221,7 @@ def realization_file_paths(
     work_root = root.absolute()
     included: set[Path] = set()
     candidates_by_repository: dict[Path, list[Path]] = {}
+    missing_by_repository: dict[Path, list[Path]] = {}
     for path in dict.fromkeys(paths):
         candidate = (path if path.is_absolute() else root / path).absolute()
         if _file_classification(work_root, candidate) != "realization":
@@ -1229,16 +1230,16 @@ def realization_file_paths(
         if repository is None:
             continue
         if branch and not _path_exists_without_following_symlinks(candidate):
-            # rename 元・削除 path は tree から補い、nested repository は自身の HEAD を使う。
-            references = (
-                (branch, fallback_branch) if repository == work_root else ("HEAD",)
-            )
-            if _is_regular_tree_file(repository, candidate, references):
-                included.add(candidate)
+            missing_by_repository.setdefault(repository, []).append(candidate)
         elif _is_regular_file(candidate):
             # 個々の親 directory の特殊 .gitignore も、Git 起動前に拒否する。
             _validate_git_ignore_sources(repository, candidate)
             candidates_by_repository.setdefault(repository, []).append(candidate)
+
+    # rename 元・削除 path も一括判定し、nested は自身の HEAD だけを参照する。
+    for repository, candidates in missing_by_repository.items():
+        references = (branch, fallback_branch) if repository == work_root else ("HEAD",)
+        included.update(_regular_tree_files(repository, candidates, references))
 
     # 列挙と同じ NUL framing の一括判定を使い、tracked な ignored file も保持する。
     for repository, candidates in candidates_by_repository.items():
@@ -1249,28 +1250,43 @@ def realization_file_paths(
     return included
 
 
-def _is_regular_tree_file(
-    repository: Path, candidate: Path, references: Collection[str | None]
-) -> bool:
+def _regular_tree_files(
+    repository: Path,
+    candidates: Collection[Path],
+    references: Collection[str | None],
+) -> set[Path]:
     # 欠落 path だけを補完し、symlink や Gitlink を regular file として許可しない。
-    relative = candidate.relative_to(repository).as_posix()
+    pending = {
+        candidate.relative_to(repository).as_posix(): candidate
+        for candidate in candidates
+    }
+    included: set[Path] = set()
     for reference in dict.fromkeys(references):
+        if not pending:
+            break
         if not reference:
             continue
         entries = run_git(
-            ["ls-tree", "-r", "-z", reference, "--", literal_pathspec(relative)],
+            [
+                "ls-tree",
+                "-r",
+                "-z",
+                reference,
+                "--",
+                *(literal_pathspec(relative) for relative in pending),
+            ],
             repository,
         ).stdout.split("\0")
         for entry in entries:
             metadata, separator, entry_path = entry.partition("\t")
-            if separator and entry_path == relative:
+            if separator and entry_path in pending:
                 try:
                     mode = int(metadata.split()[0], 8)
                 except (IndexError, ValueError):
                     continue
                 if stat.S_ISREG(mode):
-                    return True
-    return False
+                    included.add(pending.pop(entry_path))
+    return included
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:
