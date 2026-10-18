@@ -1187,12 +1187,10 @@ def test_apply_report_fields_include_accepted_feedback_paths(
     assert "新規 feedback observation: 1 件" in report_section(report, "要注意事項")
 
 
-def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """削除失敗後に残った dangling symlink を cleanup 完了と扱わない。"""
-    context = EditingRunContext(
+@pytest.fixture
+def abandon_cleanup_context(tmp_path: Path) -> EditingRunContext:
+    """cleanup helper の検査には、解決済み context だけを用意する。"""
+    return EditingRunContext(
         repo=tmp_path,
         session_worktree=tmp_path / "session",
         session_id=SESSION_ID,
@@ -1204,6 +1202,52 @@ def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
     )
+
+
+def test_run_abandon_branch_cleanup_handles_absence_and_failure(
+    abandon_cleanup_context: EditingRunContext,
+    committed_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """削除後の再試行を許可し、branch が残る失敗では警告を返す。"""
+    context = replace(abandon_cleanup_context, repo=committed_repository)
+    root = context.repo
+    run_git(root, "branch", context.run_branch, "HEAD")
+    warnings: list[str] = []
+
+    assert run_abandon_module._remove_run_branch(context, warnings)
+    assert warnings == []
+    assert run_git(root, "branch", "--list", context.run_branch).stdout == ""
+
+    assert run_abandon_module._remove_run_branch(context, warnings)
+    assert warnings == ["run branch was already absent"]
+
+    # checkout 中の branch は実 Git が削除を拒否する。
+    run_git(root, "switch", "-c", context.run_branch)
+    warnings.clear()
+    assert not run_abandon_module._remove_run_branch(context, warnings)
+    assert len(warnings) == 1
+    assert "run branch was already absent" not in warnings
+    assert current_branch(root) == context.run_branch
+
+    # stderr が空でも削除失敗を report できる。
+    monkeypatch.setattr(
+        run_abandon_module,
+        "delete_branch",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=1, stderr=""),
+    )
+    warnings.clear()
+    assert not run_abandon_module._remove_run_branch(context, warnings)
+    assert warnings == ["run branch removal failed"]
+
+
+def test_run_abandon_rejects_dangling_worktree_link_after_removal_failure(
+    abandon_cleanup_context: EditingRunContext,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """削除失敗後に残った dangling symlink を cleanup 完了と扱わない。"""
+    context = abandon_cleanup_context
     context.run_worktree.symlink_to(tmp_path / "missing", target_is_directory=True)
     monkeypatch.setattr(
         run_abandon_module,
