@@ -2,7 +2,7 @@
 
 対応する正本:
 - {{work-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 """
 
 from dataclasses import replace

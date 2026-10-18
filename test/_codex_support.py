@@ -6,6 +6,7 @@ import pytest
 
 from basic.acp import AgentCallParameter, FileAccessMode
 
+# {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 
 

@@ -320,7 +320,7 @@ def run_codex_exec(
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 補正、実行記録を一括制御する。"""
     # 対話再開の入力不在を、非対話の補正・回復用 prompt と混同しない。
-    # oracle/doc/app_spec/codex_exec_rule.md の「TUI の新規起動と対話 resume」。
+    # oracle/doc/app_spec/codex_tui_rule.md の「TUI の新規起動と対話 resume」。
     initial_prompt = parameter.prompt
     if initial_prompt is None:
         raise CmocError(
@@ -341,7 +341,7 @@ def run_codex_exec(
     root = root or path_context.repo_root
     config = deepcopy(config or load_config(path_context.work_root))
     agent_call_cwd = path_context.agent_call_cwd
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
     # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
     # path を対象にする。
     codex_home = resolve_codex_home(agent_call_cwd)

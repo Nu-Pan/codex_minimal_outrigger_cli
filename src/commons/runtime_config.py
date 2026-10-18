@@ -52,7 +52,7 @@ def _model_name(value: Any) -> str:
     """Codex の専用 argv へ渡せる非空モデル名へ検証する。"""
     if not isinstance(value, str) or not value.strip() or "\x00" in value:
         raise TypeError
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
     # model は TOML string ではなく --model の argv へそのまま渡すため、NUL と
     # Unicode surrogate を設定読み込み時に拒否して subprocess 起動失敗を防ぐ。
     validate_json_toml_value(value)

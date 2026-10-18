@@ -1,6 +1,7 @@
 """Codex argv の model、sandbox、provider 上書き契約を検証する。
 
 根拠:
+- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 - {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
@@ -375,7 +376,7 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
             "empty": {"array": [], "table": {}},
         }
     }
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
     # dotted override path の quoted segment は Codex CLI parser が受理しないため、
     # selected provider を inline TOML table として一度に渡す。
     assert any(

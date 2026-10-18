@@ -4,7 +4,7 @@
 SDHeader 出力を共有する一つの責務であるため、prompt builder 回帰として一箇所に保つ。
 
 対応する正本:
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 - {{work-root}}/oracle/doc/app_spec/feedback_observation.md
 - {{work-root}}/oracle/doc/app_spec/editor_input_handoff.md
 - {{work-root}}/oracle/doc/app_spec/document_search.md
