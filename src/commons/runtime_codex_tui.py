@@ -194,13 +194,14 @@ def _run_codex_tui_process(
                     config,
                     path_context=paths,
                     notification_command=callback.command,
+                    include_document_search=False,
                 )
         except Exception:
             pass
         # 通知付きの構築が成功した場合は、同じ設定を再構築しない。
         if overrides is None:
             overrides = prepare_codex_override_args(
-                parameter, config, path_context=paths
+                parameter, config, path_context=paths, include_document_search=False
             )
         overrides.extend(
             document_search_mcp_override_args(

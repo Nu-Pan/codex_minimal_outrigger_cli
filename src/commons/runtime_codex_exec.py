@@ -359,6 +359,7 @@ def run_codex_exec(
         parameter,
         config,
         path_context=path_context,
+        include_document_search=False,
     )
     schema_path: Path | None = None
     schema_validator: Validator | None = None

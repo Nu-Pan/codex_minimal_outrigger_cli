@@ -238,6 +238,12 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
         assert "conversation_state" not in prepared
         assert prepared["prompt_log_path"] is None
         resume_call = json.loads(Path(prepared["call_log_path"]).read_text())
+        # 検索設定は call 固有の context で一度だけ渡し、汎用設定を重ねない。
+        for argv in (calls[0]["argv"], resume_call["argv"]):
+            assert (
+                sum(arg.startswith("mcp_servers.cmoc_document_search=") for arg in argv)
+                == 1
+            )
         assert resume_call["argv"][-2:] == ["resume", SESSION_ID]
         assert "--json" not in resume_call["argv"]
         assert "--output-last-message" not in resume_call["argv"]
@@ -947,6 +953,13 @@ def test_notification_failure_preserves_tui_execution(directory, monkeypatch, fa
             == 0
         )
     assert len(calls) == 1
+    assert (
+        sum(
+            arg.startswith("mcp_servers.cmoc_document_search=")
+            for arg in calls[0]["argv"]
+        )
+        == 1
+    )
     if failure in {"prepare", "configure", "unavailable"}:
         assert codex_override_config(calls[0]["argv"])["notify"] == []
     else:
