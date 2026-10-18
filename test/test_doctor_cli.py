@@ -80,6 +80,18 @@ def managed_repository(cli_repository: Path) -> Path:
 
 
 @pytest.fixture
+def doctor_without_index_sync(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Git 修復の検査では、参照しない検索索引の生成・永続化を省く。"""
+    # 実同期との結合は初回修復、配置先復元、worktree 分離のケースに残す。
+    # 更新・削除・再利用とログ/report は test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports、
+    # 失敗・取消の進捗は test_doctor_reports_persisted_chunks_when_sync_fails で検査する。
+    # 設定・state の同期、Git index の退避・復元と修復 commit は実処理を通す。
+    monkeypatch.setattr(
+        doctor_module, "_synchronize_document_search_index", lambda *_args: None
+    )
+
+
+@pytest.fixture
 def doctor_repair_events(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """配置先の検査と同じ前処理で、修復順序と毎回の reporter 検査も観測する。"""
     # 順序だけのために repository と doctor の全処理を重ねない。
@@ -965,6 +977,7 @@ def test_doctor_preprocess_waits_for_common_repository_lock(
         )
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_restores_preexisting_index_when_repair_fails(
     committed_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1000,6 +1013,7 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
     ]
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preserves_preexisting_unmerged_index(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1030,6 +1044,7 @@ def test_doctor_preserves_preexisting_unmerged_index(
     assert run_git(root, "ls-files", "--unmerged", "--", "README.md").stdout
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_repairs_missing_index_without_dropping_tracked_files(
     tmp_path: Path,
 ) -> None:
@@ -1045,6 +1060,7 @@ def test_doctor_repairs_missing_index_without_dropping_tracked_files(
     assert run_git(root, "status", "--short").stdout == ""
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preserves_preexisting_index_flags_and_intent_to_add(
     tmp_path: Path,
 ) -> None:
@@ -1243,6 +1259,7 @@ def test_preexisting_runtime_paths_preserves_unmerged_entries(cli_repository, st
         index_path.unlink(missing_ok=True)
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_does_not_commit_preexisting_staged_config_change(
     managed_repository: Path,
 ) -> None:
@@ -1329,6 +1346,7 @@ def test_doctor_preprocess_separates_repo_and_linked_worktree_repairs(
     assert all(not (root / relative).exists() for relative in _WORK_DIRECTORIES)
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_untracks_existing_cmoc_local_files(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1356,6 +1374,7 @@ def test_doctor_preprocess_untracks_existing_cmoc_local_files(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_deletion(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1385,6 +1404,7 @@ def test_doctor_commits_generated_gitkeep_without_committing_staged_agents_delet
     ]
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preserves_existing_untracked_gitkeep_content(
     committed_repository: Path,
 ) -> None:
@@ -1504,6 +1524,7 @@ def test_doctor_rejects_symlinked_agents_paths(
         assert outside.read_text() == outside_content
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_repair_separates_committed_staged_and_unstaged_gitignore(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1527,6 +1548,7 @@ def test_doctor_repair_separates_committed_staged_and_unstaged_gitignore(
     ]
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1614,6 +1636,7 @@ def test_staged_deletion_check_preserves_saved_index_with_one_git_query(
         assert index_path.read_bytes() == before, change
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preserves_preexisting_staged_gitignore_deletion(
     cli_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
