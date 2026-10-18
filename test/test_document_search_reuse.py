@@ -73,8 +73,11 @@ def _worktree(repository, path, branch=None):
     return path
 
 
-def test_cache_lookup_and_listing_discard_corrupt_entries(tmp_path):
+def test_cache_lookup_and_listing_discard_corrupt_entries(
+    tmp_path, unsynced_search_storage
+):
     """単一取得と一覧取得で、破損結果を除外し前後の正常な結果を保持する。"""
+    # transaction と別接続からの確認は残し、電源断時の耐久性は判定しない。
     vector = struct.pack("<f", 1.0) + bytes(
         4 * (SEARCH_MATERIALS.embedding_dimensions - 1)
     )
@@ -333,9 +336,10 @@ def test_identical_inputs_in_different_repositories_are_not_shared(
 
 
 def test_diagnostics_count_actual_duplicate_generation_separately_from_query(
-    document_repository,
+    document_repository, unsynced_search_storage
 ):
     # 診断件数の検査には、確認済みの文書集合を渡して Git 準備を重ねない。
+    # 実保存と件数の検査を保ち、診断に不要な物理ディスク同期だけを省く。
     root = document_repository
     original = (root / "oracle/doc/allowed.md").read_text()
     (root / "oracle/doc/copy.md").write_text(original)
@@ -372,7 +376,7 @@ def test_diagnostics_count_actual_duplicate_generation_separately_from_query(
 
 
 def test_cache_save_failure_keeps_generated_count_without_claiming_a_save(
-    document_repository, monkeypatch
+    document_repository, monkeypatch, unsynced_search_storage
 ):
     from commons import runtime_document_search as module
 
