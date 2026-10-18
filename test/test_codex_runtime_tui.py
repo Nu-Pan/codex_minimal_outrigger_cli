@@ -5,7 +5,7 @@ import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing, contextmanager
+from contextlib import ExitStack, closing, contextmanager
 from contextvars import copy_context
 from dataclasses import replace
 from pathlib import Path
@@ -592,21 +592,10 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
     stub_codex_overrides(monkeypatch)
     calls, source = failed_initial_success(directory, monkeypatch)
     source_text = source.read_text()
-    baseline = [json.loads(line) for line in source_text.splitlines()]
-    record = next(row for row in reversed(baseline) if row["event"] == "tui_startup")
-    prepared = next(row for row in baseline if row["event"] == "tui_process_prepared")
-    saved_files = {
-        path: path.read_bytes()
-        for path in (
-            source,
-            Path(record["initial_output_path"]),
-            Path(prepared["call_log_path"]),
-        )
-    }
     other_home = tmp_path / "other_home"
     other_home.mkdir()
     tui_calls = fake_tui(monkeypatch)
-    # 正常な共通記録は一度検査し、各条件ではその bytes と環境を復元する。
+    # 正常な共通記録は一度検査し、変更した保存物だけ条件ごとに復元する。
     tui_module._validated_resume_record(source.stem, directory)
 
     for condition in (
@@ -624,12 +613,10 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
         "missing_tui_call",
         "different_requested_session",
     ):
-        # 削除・書き換えた通常 file、JSON の入れ子、環境変数を条件ごとに復元する。
-        for path, content in saved_files.items():
-            path.write_bytes(content)
+        # JSON は保存本文から再構築し、通常 file と環境は変更時だけ復元を予約する。
         rows = [json.loads(line) for line in source_text.splitlines()]
         record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
-        with monkeypatch.context() as patch:
+        with monkeypatch.context() as patch, ExitStack() as restore_files:
             if condition == "unfinished":
                 rows.pop()
             elif condition in {"failed", "cancelled"}:
@@ -641,7 +628,9 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
             elif condition == "inconsistent_kind":
                 record["tui_kind"] = "oracle_investigation"
             elif condition == "missing_output":
-                Path(record["initial_output_path"]).unlink()
+                path = Path(record["initial_output_path"])
+                restore_files.callback(path.write_bytes, path.read_bytes())
+                path.unlink()
             elif condition == "bad_uuid":
                 record["initial_session_id"] = "unknown-session"
             elif condition == "home_changed":
@@ -656,6 +645,7 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
                     row for row in rows if row["event"] == "tui_process_prepared"
                 )
                 path = Path(prepared["call_log_path"])
+                restore_files.callback(path.write_bytes, path.read_bytes())
                 if condition == "missing_tui_call":
                     path.unlink()
                 else:
