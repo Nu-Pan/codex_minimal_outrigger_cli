@@ -274,24 +274,12 @@ def test_run_codex_exec_uses_linked_worktree_context(
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-exec", str(linked), "HEAD")
     setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, os, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
-            "    'args': args,",
-            "    'cwd': os.getcwd(),",
-            "}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+    # 実 process の cwd・相対 HOME は上の通常・nested cwd test に残す。
+    # linked 固有の Git 導出・argv・schema 保存は実行し、子起動と記録 file を省く。
+    calls = script_codex_calls(
+        monkeypatch,
+        [(0, '{"type":"turn.completed"}\n', '{"ok": true}')],
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema_source = tmp_path / "schema.json"
     schema_source.write_text(
         json.dumps(
@@ -314,14 +302,17 @@ def test_run_codex_exec_uses_linked_worktree_context(
         config=CmocConfig(),
     )
 
-    record = json.loads(recorder.read_text())
-    schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
-    assert record["cwd"] == str(linked.resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-    assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
-    override_config = codex_override_config(record["args"])
+    (call,) = calls
+    argv = call["argv"]
+    schema_arg = Path(argv[argv.index("--output-schema") + 1])
+    assert call["cwd"] == linked.resolve()
+    assert argv[argv.index("--cd") + 1] == str(linked.resolve())
+    assert argv[argv.index("--sandbox") + 1] == "workspace-write"
+    override_config = codex_override_config(argv)
     assert "permissions" not in override_config
     assert "default_permissions" not in override_config
     assert result.schema_path == schema_arg
     assert schema_arg.parent == root / ".cmoc" / "gu" / "schema"
+    assert schema_arg.read_bytes() == schema_source.read_bytes()
     assert not (linked / ".cmoc" / "gu" / "schema").exists()
+    assert result.output_json == {"ok": True}
