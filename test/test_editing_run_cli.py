@@ -1555,7 +1555,7 @@ def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
     call_log = (tmp_path / "unresolved_call.json").resolve()
     call_log.write_text("{}\n")
     reviewed: list[str] = []
-    # 対象の公平性と追加 file の次巡選択は does_not_reselect_related_edits_or_starve_waiting_targets
+    # 対象の公平性と追加 file の次巡選択は repeats_cycles_with_oldest_timestamp_priority
     # に残し、ここでは既存 unresolved を後続 target が rename する 2 単位だけを実行する。
     monkeypatch.setattr(
         refactor_module,
@@ -4423,8 +4423,7 @@ def test_refactor_summary_distinguishes_net_artifacts_from_unit_history(
     root, _, state_path = refactor_after_preprocess
     # 別 file の削除と差し戻しを同じ run で検査し、session/run 作成を共有する。
     deleted_path = "src/deleted.py"
-    # 全件の巡回・公平性は repeats_cycles_with_oldest_timestamp_priority と
-    # does_not_reselect_related_edits_or_starve_waiting_targets に残す。
+    # 全件の巡回・公平性は repeats_cycles_with_oldest_timestamp_priority に残す。
     # 要約の検査に不要な file の state-only commit は繰り返さない。
     monkeypatch.setattr(
         refactor_module,
@@ -4534,56 +4533,45 @@ def test_refactor_cycle_interruption_respects_state_commit_boundary(
     assert "- cycle confirmed investigations: 0" in report
 
 
-@pytest.mark.parametrize("interrupt_next_cycle_start", [False, True])
-def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
+def test_refactor_keeps_unresolved_findings_when_next_cycle_start_is_interrupted(
     refactor_after_preprocess,
     monkeypatch,
-    interrupt_next_cycle_start,
     refactor_unit_diff_queries,
 ):
-    """旧履歴を調査機会にせず、未解決を次巡で再検討して全対象を公平に処理する。"""
-    root, _, state_path = refactor_after_preprocess
+    """次巡開始の中断で巡内集合をリセットしても、前巡の未解決を失わない。"""
+    _root, _, state_path = refactor_after_preprocess
     reviewed = []
-    if interrupt_next_cycle_start:
-        # 全対象の順序・再調査は False 側で検査する。次巡の集合初期化と
-        # 前巡の unresolved の保持には 1 target で足り、他の確定処理は不要。
-        monkeypatch.setattr(
-            refactor_module, "refactor_cycle_targets", lambda _state: ["README.md"]
-        )
-        initialize = refactor_module._initialize_cycle
+    # 全対象の順序・再調査は下の二巡 test に残す。
+    monkeypatch.setattr(
+        refactor_module, "refactor_cycle_targets", lambda _state: ["README.md"]
+    )
+    initialize = refactor_module._initialize_cycle
 
-        def interrupt_second_cycle(context, **kwargs):
-            pending = initialize(context, **kwargs)
-            if kwargs["progress"].cycle == 2:
-                signal.raise_signal(signal.SIGINT)
-            return pending
+    def interrupt_second_cycle(context, **kwargs):
+        pending = initialize(context, **kwargs)
+        if kwargs["progress"].cycle == 2:
+            signal.raise_signal(signal.SIGINT)
+        return pending
 
-        monkeypatch.setattr(
-            refactor_module, "_initialize_cycle", interrupt_second_cycle
-        )
-    else:
-        _mark_refactor_target_investigated(root, "README.md")
-        _stop_after_cycles(monkeypatch, cycles=2)
+    monkeypatch.setattr(refactor_module, "_initialize_cycle", interrupt_second_cycle)
 
     def review(parameter, **kwargs):
-        purpose = kwargs["purpose"]
-        assert purpose.startswith("realization refactor: ")
-        target = purpose.removeprefix("realization refactor: ")
+        target = kwargs["purpose"].removeprefix("realization refactor: ")
         reviewed.append(target)
-        findings = []
-        if target == "README.md" and reviewed.count(target) == 1:
-            findings = [
-                {
-                    "title": "deferred",
-                    "changed_paths": [],
-                    "resolution": {"status": "unresolved", "summary": "try next cycle"},
-                }
-            ]
         return SimpleNamespace(
             returncode=0,
             call_log_path=parameter.agent_call_cwd / "call.json",
             output_json={
-                "findings": findings,
+                "findings": [
+                    {
+                        "title": "deferred",
+                        "changed_paths": [],
+                        "resolution": {
+                            "status": "unresolved",
+                            "summary": "try next cycle",
+                        },
+                    }
+                ],
                 "verification": {
                     "status": "not_required",
                     "summary": "no net changes",
@@ -4596,34 +4584,25 @@ def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
     assert result.exit_code == 0, result.output
     assert refactor_unit_diff_queries == []
     assert _state(state_path)["run"]["state"] == "ready"
-    worktree = root
-    state = load_refactor_state(worktree)
     report = terminal_primary_report(result).read_text()
-    if interrupt_next_cycle_start:
-        assert reviewed == ["README.md"]
-        assert "- completed cycles: 1" in report
-        assert "- current cycle: 2" in report
-        assert "- cycle confirmed investigations: 0" in report
-        assert "- cycle deferred targets: 0" in report
-        assert "## Unresolved findings\n\n- `README.md`: deferred" in report
-        assert "try next cycle" in report
-        return
-    count = len(state)
-    assert len(reviewed) == count * 2
-    assert set(reviewed[:count]) == set(state) == set(reviewed[count:])
-    assert reviewed[count - 1] == "README.md"
-    assert reviewed[count:] == reviewed[:count]
-    assert all(reviewed.count(target) == 2 for target in state)
-    assert "- completed cycles: 2" in report
-    assert "## Unresolved findings\n\n- none" in report
-    assert "test timing: unavailable" in result.output
+    assert reviewed == ["README.md"]
+    assert "- completed cycles: 1" in report
+    assert "- current cycle: 2" in report
+    assert "- cycle confirmed investigations: 0" in report
+    assert "- cycle deferred targets: 0" in report
+    assert "## Unresolved findings\n\n- `README.md`: deferred" in report
+    assert "try next cycle" in report
 
 
-def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
+def test_refactor_repeats_cycles_with_oldest_timestamp_priority(
     refactor_after_preprocess, monkeypatch, refactor_unit_diff_queries
 ):
-    """関連 file の変更を調査実績へ数えず、追加 file は次巡に公平に処理する。"""
-    _root, _, _state_path = refactor_after_preprocess
+    """旧履歴・関連編集を実績にせず、追加・未解決も日時順で公平に再調査する。"""
+    root, _, state_path = refactor_after_preprocess
+    # 二巡の順序・未解決の再調査と、関連編集・追加を同じ run で検査する。
+    # それぞれのために run 作成・state-only commit・自動 join を繰り返さない。
+    _mark_refactor_target_investigated(root, "README.md")
+    initial_targets = set(load_refactor_state(root))
     reviewed = []
     classified = Counter()
     classify = lifecycle_module.realization_file_paths
@@ -4651,8 +4630,17 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
                     "resolution": {"status": "fixed", "summary": "verified edits"},
                 }
             ]
+        elif target == "README.md" and reviewed.count(target) == 1:
+            findings = [
+                {
+                    "title": "deferred",
+                    "changed_paths": [],
+                    "resolution": {"status": "unresolved", "summary": "try next cycle"},
+                }
+            ]
         return SimpleNamespace(
             returncode=0,
+            call_log_path=parameter.agent_call_cwd / "call.json",
             output_json={
                 "findings": findings,
                 "verification": {"status": "passed", "summary": "full gate passed"},
@@ -4664,20 +4652,31 @@ def test_refactor_does_not_reselect_related_edits_or_starve_waiting_targets(
     result = runner.invoke(app, ["realization", "refactor"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     assert refactor_unit_diff_queries == []
+    assert _state(state_path)["run"]["state"] == "ready"
     # 本命の単位と取り込み時の検査の両方で変更 path が分類される。
     assert set(classified) == {"README.md", "src/new.py"}
     assert reviewed == [
         ".gitignore",
-        "README.md",
         "oracle/spec.md",
+        "README.md",
         "src/new.py",
         ".gitignore",
-        "README.md",
         "oracle/spec.md",
+        "README.md",
     ]
+    state = load_refactor_state(root)
+    assert set(reviewed[: len(initial_targets)]) == initial_targets
+    assert set(reviewed[len(initial_targets) :]) == set(state)
+    assert all(reviewed.count(target) == 2 for target in initial_targets)
+    assert reviewed.count("src/new.py") == 1
+    assert (root / "README.md").read_text() == "related edit\n"
+    assert (root / "src/new.py").read_text() == "VALUE = 1\n"
     report = terminal_primary_report(result).read_text()
+    assert "- completed cycles: 2" in report
     assert "- processed targets: 4" in report
     assert "- committed processing units: 7" in report
+    assert "## Unresolved findings\n\n- none" in report
+    assert "test timing: unavailable" in result.output
 
 
 def test_refactor_latest_resolution_survives_commit_inspection_failure(
