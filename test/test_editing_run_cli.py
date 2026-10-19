@@ -4915,18 +4915,21 @@ def test_join_prepares_and_syncs_run_before_import(
     assert 0 < len(head_queries) <= 5
 
 
-@pytest.mark.parametrize("scenario", ["older_run", "older_session", "conflict"])
+@pytest.mark.parametrize("conflicting", [False, True], ids=["automatic", "conflict"])
 def test_join_merges_committed_timestamps_before_sync(
-    join_after_preprocess, monkeypatch, scenario
+    join_after_preprocess, monkeypatch, conflicting
 ):
     """Git の自動統合・競合解消のどちらでも新しい日時を残して集合を同期する。"""
+    # 新旧が逆になる二つの entry を同じ join で検査し、履歴・worktree を重ねない。
+    # 自動統合では片側だけ、競合では両側の日時を共通祖先から変更する。
     root, _, state_path = join_after_preprocess
     older = "2026-10-18_00-00-00_001"
     newer = "2026-10-18_00-00-00_002"
-    initial = "2026-10-18_00-00-00_000" if scenario == "conflict" else newer
+    initial = "2026-10-18_00-00-00_000" if conflicting else newer
     (root / "retired.txt").write_text("old target\n")
     state = refactor_module.sync_refactor_state(root)
     state["README.md"]["last_investigated_at"] = initial
+    state[".gitignore"]["last_investigated_at"] = initial
     state["retired.txt"]["last_investigated_at"] = newer
     write_refactor_state(root, state)
     commit_work_unit(root, "seed investigated targets")
@@ -4936,18 +4939,16 @@ def test_join_merges_committed_timestamps_before_sync(
     (run_root / "retired.txt").unlink()
     (run_root / "result.txt").write_text("run result\n")
     state = refactor_module.sync_refactor_state(run_root)
-    state["README.md"]["last_investigated_at"] = (
-        initial if scenario == "older_session" else older
-    )
+    state["README.md"]["last_investigated_at"] = older
+    state[".gitignore"]["last_investigated_at"] = newer
     state["result.txt"]["last_investigated_at"] = newer
     write_refactor_state(run_root, state)
     commit_work_unit(run_root, "run investigations and deletion")
 
     (root / "oracle/new.md").write_text("session oracle\n")
     state = refactor_module.sync_refactor_state(root)
-    state["README.md"]["last_investigated_at"] = (
-        older if scenario == "older_session" else newer
-    )
+    state["README.md"]["last_investigated_at"] = newer
+    state[".gitignore"]["last_investigated_at"] = older
     state["oracle/new.md"]["last_investigated_at"] = older
     write_refactor_state(root, state)
     commit_work_unit(root, "session investigations")
@@ -4965,14 +4966,21 @@ def test_join_merges_committed_timestamps_before_sync(
 
     assert joined.exit_code == 0, joined.output
     assert _state(state_path)["run"]["state"] == "ready"
+    resolution = report_metadata(terminal_primary_report(joined).read_text())[
+        "conflict_resolution"
+    ]
+    assert resolution["initial_conflicts"] == (
+        [".cmoc/gt/realization/refactor/state.json"] if conflicting else []
+    )
+    assert resolution["agent_status"] == "not_needed"
     state = load_refactor_state(root)
     assert state["README.md"] == {"last_investigated_at": newer}
+    assert state[".gitignore"] == {"last_investigated_at": newer}
     assert state["result.txt"] == {"last_investigated_at": newer}
     assert state["oracle/new.md"] == {"last_investigated_at": older}
     assert state["oracle/spec.md"] == {"last_investigated_at": None}
     assert "retired.txt" not in state
     assert not worktree_change_paths(root)
-    assert _state(state_path)["run"]["state"] == "ready"
 
 
 def test_join_force_and_sync_commits_roll_back_to_original_result(
