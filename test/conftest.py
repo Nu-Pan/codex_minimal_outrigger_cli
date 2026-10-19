@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from _acp_builder_support import oracle_schema_path
 from _git_support import SESSION_BRANCH, SESSION_ID, current_branch, init_repo, run_git
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
@@ -178,10 +179,26 @@ def ready_join_session(
 
 
 @pytest.fixture
+def feedback_remediation_request_stub(monkeypatch: pytest.MonkeyPatch) -> None:
+    """fake 応答の state 検査には、issue 入力・cwd・正本 schema だけを渡す。"""
+    # prompt と起動設定は test_feedback.py の builder 専用ケース、実 Git と
+    # remediation 呼び出しの結合は後続 wave test に残す。応答は正本 schema で検査する。
+    schema = oracle_schema_path("feedback", "remediate_issue.json")
+    monkeypatch.setattr(
+        remediation_module,
+        "build_feedback_issue_remediation_request",
+        lambda text, root: SimpleNamespace(
+            prompt=text, agent_call_cwd=root, structured_output_schema_path=schema
+        ),
+    )
+
+
+@pytest.fixture
 def feedback_publication_session(
     ready_join_session: tuple[Path, str, Path],
     feedback_without_transport: None,
     nonpersistent_feedback_ids: None,
+    feedback_remediation_request_stub: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
     """案件の publication 検査には、修復不要の session と同期を待たない保存を使う。"""

@@ -60,7 +60,7 @@ from sub_commands.feedback import decision, remediation, report
 
 
 @pytest.fixture
-def feedback_run(tmp_path, monkeypatch):
+def feedback_run(tmp_path, monkeypatch, feedback_remediation_request_stub):
     # 同期順序・同期失敗時の保存状態は test_feedback_store.py、CLI・collector との結合は
     # test_feedback.py に残す。write・rename・読込と破損検査はここでも実行する。
     monkeypatch.setattr("os.fsync", lambda _fd: None)
@@ -196,16 +196,6 @@ def feedback_run(tmp_path, monkeypatch):
         report, "_build_candidates", lambda *_args, **_kwargs: (harness.candidates, {})
     )
     monkeypatch.setattr(report, "run_codex_exec", call)
-    schema = Path(
-        report.build_feedback_issue_remediation_request.__code__.co_filename
-    ).with_suffix(".json")
-    monkeypatch.setattr(
-        remediation,
-        "build_feedback_issue_remediation_request",
-        lambda text, root, **_kwargs: SimpleNamespace(
-            prompt=text, agent_call_cwd=root, structured_output_schema_path=schema
-        ),
-    )
     # 共通 join と実 Git の照合は CLI test に任せ、封印時の準備済み境界を渡す。
     record = JoinRecord(context, harness.head)
     harness.join = record
