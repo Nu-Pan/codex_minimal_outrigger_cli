@@ -82,8 +82,8 @@ def validate_history_record(record: dict[str, Any], path: Path) -> None:
         value = record[name]
         if (
             not isinstance(value, str)
-            or Path(value).is_absolute()
-            or ".." in Path(value).parts
+            or (relative := Path(value)).is_absolute()
+            or ".." in relative.parts
             or not value.startswith(".cmoc/gu/")
         ):
             raise _corruption(f"feedback history {name} が不正です。", path)
@@ -172,8 +172,8 @@ def validate_history_record(record: dict[str, Any], path: Path) -> None:
             or identity in consumed
             or not isinstance(entry["path"], str)
             or not entry["path"].startswith(".cmoc/gu/feedback/observation/v1/")
-            or ".." in Path(entry["path"]).parts
-            or Path(entry["path"]).stem != identity
+            or ".." in (relative := Path(entry["path"])).parts
+            or relative.stem != identity
             or not isinstance(entry["sha256"], str)
             or re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]) is None
             or not isinstance(entry["issue_ids"], list)
