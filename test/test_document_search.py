@@ -578,6 +578,7 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_worker_streams_utf8_chunks_and_reuse_through_small_pipe(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """入力のバイト境界と出力の部分書込みを一度の実 worker 起動で検査する。"""
     _fake_node_model(tmp_path)
@@ -603,6 +604,16 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
         "next.md": "別の本文",
         "reuse.md": text,
     }
+    parsed_bodies = []
+
+    def tracked_heading_ranges(body):
+        parsed_bodies.append(body)
+        return _heading_ranges(body)
+
+    # 重複文書も原文位置を保ちつつ、同じ本文の見出し解析を重ねない。
+    monkeypatch.setattr(
+        "commons.runtime_document_search_worker._heading_ranges", tracked_heading_ranges
+    )
     request = NodeSearchWorker(tmp_path, config)._request(
         "chunk_stream",
         {
@@ -611,6 +622,7 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
             "config": asdict(config),
         },
     )
+    assert sorted(parsed_bodies) == sorted(set(documents.values()))
     dimensions = SEARCH_MATERIALS.embedding_dimensions
     result = subprocess.run(
         ["node", "--import", str(preload), str(tmp_path / "worker.mjs")],
