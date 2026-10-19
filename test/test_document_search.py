@@ -1814,42 +1814,55 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_worker_cancellation_reaps_process_before_releasing_owner(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """推論中の取消で子 process を停止・回収してから失敗を返す。"""
+    """通信のタイムアウト後も取消を検出し、実子 process を回収してから返す。"""
     base = materials_directory(tmp_path)
     base.mkdir(parents=True)
     _test_node_runtime(base)
     (base / "worker.mjs").write_text(
-        'import fs from "node:fs"; '
-        'fs.writeFileSync("started.pid", String(process.pid)); '
-        "setInterval(() => {}, 1000);\n"
+        "console.log(process.pid); setInterval(() => {}, 1000);\n"
     )
     worker = NodeSearchWorker(tmp_path, _tuning())
     cancelled = threading.Event()
+    processes = []
+
+    def cancel_during_communication(process, input, *, timeout):
+        # 起動通知を受けてから取消し、実時間の通信 timeout と監視 thread を省く。
+        # TimeoutExpired 後の再判定は製品の loop を通し、停止・wait も実行する。
+        assert not processes, "worker communicated again after cancellation"
+        processes.append(process)
+        assert json.loads(input)["operation"] == "embed_query"
+        readable, _, _ = select.select([process.stdout], [], [], 5)
+        assert readable, "worker did not announce startup"
+        assert int(process.stdout.readline()) == process.pid
+        assert process.poll() is None
+        cancelled.set()
+        raise subprocess.TimeoutExpired(process.args, timeout)
+
+    monkeypatch.setattr(subprocess.Popen, "communicate", cancel_during_communication)
     descriptor = os.open(tmp_path / "lock", os.O_CREAT | os.O_RDWR, 0o600)
     try:
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                worker.run,
+        with pytest.raises(SearchError) as failure:
+            worker.run(
                 "embed_query",
                 {"text": "test"},
                 deadline=time.monotonic() + 10,
                 residency_fd=descriptor,
                 cancelled=cancelled,
             )
-            marker = base / "started.pid"
-            until = time.monotonic() + 5
-            while (
-                not marker.exists() and not future.done() and time.monotonic() < until
-            ):
-                time.sleep(0.02)
-            assert marker.is_file()
-            process_id = int(marker.read_text())
-            cancelled.set()
-            with pytest.raises(SearchError) as failure:
-                future.result(timeout=5)
-            assert failure.value.code == "CANCELLED"
-            with pytest.raises(ProcessLookupError):
-                os.kill(process_id, 0)
+        assert failure.value.code == "CANCELLED"
+        assert len(processes) == 1
+        assert processes[0].returncode is not None
+        with pytest.raises(ProcessLookupError):
+            os.kill(processes[0].pid, 0)
     finally:
+        # 回収の回帰があっても、test が起動した子 process を残さない。
+        for process in processes:
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=5)
+            for pipe in (process.stdin, process.stdout, process.stderr):
+                if pipe is not None:
+                    pipe.close()
         os.close(descriptor)
