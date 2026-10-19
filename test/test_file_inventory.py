@@ -568,10 +568,11 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     assert validated_sources.count(outer_global.resolve()) == 1
     assert validated_sources.count(nested_global.resolve()) == 1
 
-    # 同じ nested index と ignore source で、単一 path 分類の境界も検証する。
-    assert is_realization_file_path(root, nested / "kept.outer")
-    assert not is_realization_file_path(root, nested / "dropped.nested")
-    assert not is_realization_file_path(root, nested / ".git" / "config")
+    # 配置・設定の問い合わせだけを共有し、単一 path の分類と source 検証は毎回行う。
+    with runtime_git.reuse_git_path_queries():
+        assert is_realization_file_path(root, nested / "kept.outer")
+        assert not is_realization_file_path(root, nested / "dropped.nested")
+        assert not is_realization_file_path(root, nested / ".git" / "config")
 
 
 def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
