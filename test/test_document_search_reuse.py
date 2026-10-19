@@ -1,6 +1,7 @@
 """文書入力片の repository 内再利用と、生成・再利用元の診断を検証する。"""
 
 import json
+import shutil
 import sqlite3
 import struct
 import threading
@@ -24,6 +25,21 @@ from commons.runtime_document_search import (
 from commons.runtime_document_search_observation import SearchObservation
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_git import remove_worktree
+
+
+@pytest.fixture(scope="module")
+def _committed_document_seed(tmp_path_factory):
+    """worktree 再利用の前提となる同じ文書と履歴を一度だけ用意する。"""
+    return _repo_with_docs(
+        tmp_path_factory.mktemp("document-repository-seed"), committed=True
+    )
+
+
+@pytest.fixture
+def committed_document_repository(tmp_path, _committed_document_seed):
+    """文書・index・refs を独立させた実 Git repository を各 test に渡す。"""
+    # 共有するのは準備だけとし、cache・linked worktree・可変な Git metadata は共有しない。
+    return shutil.copytree(_committed_document_seed, tmp_path / "repo")
 
 
 def _event_sink(events):
@@ -135,10 +151,10 @@ def test_cache_lookup_and_listing_discard_corrupt_entries(
 
 
 def test_new_run_uses_stale_repository_cache_and_current_locations(
-    tmp_path, cache_search
+    tmp_path, cache_search, committed_document_repository
 ):
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path, committed=True)
+    root = committed_document_repository
     original = (root / "oracle/doc/allowed.md").read_text()
     events = []
     with closing(create(root)) as search:
@@ -174,12 +190,12 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
 
 
 def test_parallel_worktrees_generate_one_embedding_in_total(
-    tmp_path, cache_search, monkeypatch
+    tmp_path, cache_search, monkeypatch, committed_document_repository
 ):
     """実際に競合する同期でも、待機後に不足分を確認して重複生成を避ける。"""
     # 分割・Node stream は部分編集で検査し、ここでは実 Git・cache・lock を使う。
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path, committed=True)
+    root = committed_document_repository
     # 主 worktree と linked worktree を競合させ、複製は一つだけ作る。
     runs = [root, _worktree(root, tmp_path / "run")]
     contender_waiting = threading.Event()
@@ -212,9 +228,11 @@ def test_parallel_worktrees_generate_one_embedding_in_total(
     assert sum(item["persisted_embeddings"] for item in progress) == 1
 
 
-def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_search):
+def test_run_removal_preserves_embedding_and_original_producer(
+    tmp_path, cache_search, committed_document_repository
+):
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path, committed=True)
+    root = committed_document_repository
     run = _worktree(root, root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID, RUN_BRANCH)
     original = (run / "oracle/doc/allowed.md").read_text()
     with closing(create(run)) as search:
@@ -284,11 +302,11 @@ def test_reuse_compatibility_is_independent_of_partition(
 
 
 def test_failed_sync_saved_results_are_reusable_in_another_worktree(
-    tmp_path, cache_search
+    tmp_path, cache_search, committed_document_repository
 ):
     """失敗の種類ごとに未保存の入力を使い、途中保存結果を別 worktree で再利用する。"""
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path, committed=True)
+    root = committed_document_repository
     run = _worktree(root, tmp_path / "run")
 
     # Git の準備だけを共有し、各失敗では新規生成・保存を必ず通す。
