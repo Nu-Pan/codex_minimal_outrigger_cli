@@ -250,13 +250,14 @@ def test_session_fork_and_abandon_update_branch_state_and_reports(
 @pytest.fixture
 def session_fork_repository(
     committed_repository: Path,
-    session_preprocess: list[Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
     """fork の競合・失敗検査に、場所が既知の単一 worktree を渡す。"""
     root = committed_repository
     # root 探索は正常系と linked fork/join の結合ケースに残す。
     # branch・HEAD・ignore・state は実検査し、lock 待ち中の変更も取り直す。
+    # 競合・破損は本体を直接検査し、CLI の前処理・表示・report は正常系と
+    # state 保存失敗・state 競合のケースに残して、ログ等の重複準備を省く。
     for module in (runtime_cli, session_fork_module):
         monkeypatch.setattr(module, "repo_root", lambda: root)
         monkeypatch.setattr(module, "work_root", lambda: root)
@@ -266,7 +267,6 @@ def session_fork_repository(
 def test_session_fork_uses_captured_head_when_home_advances_before_branch_creation(
     session_fork_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
 ) -> None:
     """HEAD取得後にhome branchが進んでも、その時点のcommitからforkする。
 
@@ -295,14 +295,16 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
 
     monkeypatch.setattr(session_fork_module, "run_git", advance_home_before_switch)
 
-    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+    result = session_fork_module._cmoc_session_fork_body()
 
-    assert session_preprocess == [root]
-    assert result.exit_code == 0
     assert advanced
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
     state = json.loads(session_state_path(root, session_branch).read_text())
+    assert result.details == (
+        ("session_branch", session_branch),
+        ("session_home_branch", state["session"]["session_home_branch"]),
+    )
     assert state["session"]["session_fork_commit"] == captured_head
     assert run_git(root, "rev-parse", session_branch).stdout.strip() == captured_head
 
@@ -310,7 +312,6 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
 def test_session_fork_rechecks_branch_and_ignore_after_lifecycle_lock(
     session_fork_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
 ) -> None:
     """lock 待ち中の branch・ignore の変更を反映して clean な session を作る。
 
@@ -343,12 +344,14 @@ def test_session_fork_rechecks_branch_and_ignore_after_lifecycle_lock(
         session_fork_module, "session_fork_lock", switch_branch_while_locked
     )
 
-    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+    result = session_fork_module._cmoc_session_fork_body()
 
-    assert session_preprocess == [root]
-    assert result.exit_code == 0, result.output
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
+    assert result.details == (
+        ("session_branch", session_branch),
+        ("session_home_branch", alternate),
+    )
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["session_home_branch"] == alternate
     assert state["session"]["session_fork_commit"] == alternate_commit
@@ -402,7 +405,6 @@ def test_session_fork_rolls_back_when_state_save_fails(
 def test_session_fork_rollback_does_not_guess_remote_home_branch(
     session_fork_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
 ) -> None:
     """rollback が消えた local home branch を remote から推測しない。
 
@@ -429,23 +431,20 @@ def test_session_fork_rollback_does_not_guess_remote_home_branch(
 
     monkeypatch.setattr(session_fork_module, "write_state", fail_write_state)
 
-    result = runner.invoke(app, ["session", "fork"])
+    with pytest.raises(CmocError, match="session fork の作成に失敗しました。"):
+        session_fork_module._cmoc_session_fork_body()
 
-    assert session_preprocess == [root]
-    assert result.exit_code != 0
     assert current_branch(root) == session_branch
     refs = _branch_refs(root)
     assert f"refs/heads/{home_branch}" not in refs
     assert f"refs/remotes/origin/{home_branch}" in refs
     assert f"refs/heads/{session_branch}" in refs
     assert not session_state_path(root, session_branch).exists()
-    assert "session fork の作成に失敗しました。" in result.stderr
 
 
 def test_session_fork_does_not_delete_branch_from_id_collision_race(
     session_fork_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
 ) -> None:
     """branch 作成前に同名 branch が現れても既存 branch を削除しない。
 
@@ -467,13 +466,11 @@ def test_session_fork_does_not_delete_branch_from_id_collision_race(
 
     monkeypatch.setattr(session_fork_module, "_new_session_id", reserve_colliding_id)
 
-    result = runner.invoke(app, ["session", "fork"])
+    with pytest.raises(CmocError, match="session fork の作成に失敗しました。"):
+        session_fork_module._cmoc_session_fork_body()
 
-    assert session_preprocess == [root]
-    assert result.exit_code != 0
     assert current_branch(root) == home_branch
     assert run_git(root, "rev-parse", session_branch).stdout.strip() == protected_commit
-    assert "session fork の作成に失敗しました。" in result.stderr
 
 
 def test_session_fork_does_not_overwrite_state_from_id_collision_race(
@@ -514,7 +511,6 @@ def test_session_fork_does_not_overwrite_state_from_id_collision_race(
 def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
     session_fork_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
 ) -> None:
     """session id衝突時に既存abandoned stateを上書きしないことを検証する。"""
     root = session_fork_repository
@@ -527,11 +523,11 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
         session_fork_module, "new_id", lambda _root, _prefix: session_id
     )
 
-    result = runner.invoke(app, ["session", "fork"])
+    with pytest.raises(
+        CmocError, match="発行した session ID の保存先が既に存在します。"
+    ):
+        session_fork_module._cmoc_session_fork_body()
 
-    assert session_preprocess == [root]
-    assert result.exit_code != 0
-    assert "発行した session ID の保存先が既に存在します。" in result.stderr
     assert path.read_text() == original
     assert current_branch(root) == home_branch
     assert (
@@ -546,7 +542,6 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
 def test_session_fork_rejects_corrupt_state_without_active_session_message(
     session_fork_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
-    session_preprocess: list[Path],
 ) -> None:
     """壊れたstateをactive session未存在として誤報しないことを検証する。"""
     root = session_fork_repository
@@ -558,12 +553,10 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
         json.dumps({"session": {"session_home_branch": home_branch}, "run": {}}) + "\n"
     )
 
-    result = runner.invoke(app, ["session", "fork"])
+    with pytest.raises(CmocError, match="session state file が不正です。") as error:
+        session_fork_module._cmoc_session_fork_body()
 
-    assert session_preprocess == [root]
-    assert result.exit_code != 0
-    assert "session state file が不正です。" in result.stderr
-    assert "active session が既に存在します。" not in result.stderr
+    assert "active session が既に存在します。" not in str(error.value)
     assert current_branch(root) == home_branch
 
 
