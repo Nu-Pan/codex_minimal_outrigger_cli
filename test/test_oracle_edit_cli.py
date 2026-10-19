@@ -61,9 +61,26 @@ def _write_session_state(
     return path
 
 
+def _preserved_git_status(root: Path) -> tuple[str, ...]:
+    """HEAD・branch・index の blob/mode と working tree の mode を取得する。"""
+    return tuple(
+        run_git(
+            root,
+            "status",
+            "--porcelain=v2",
+            "--branch",
+            "--",
+            "README.md",
+            "oracle/spec.md",
+        ).stdout.splitlines()
+    )
+
+
 @pytest.fixture(scope="module")
-def oracle_edit_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """各ケースへコピーする初期履歴と既存差分を一度だけ作成する。"""
+def oracle_edit_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> tuple[Path, tuple[str, ...]]:
+    """各ケースへコピーする初期履歴・既存差分と、その比較基準を一度だけ作る。"""
     seed = tmp_path_factory.mktemp("oracle-edit-seed")
     with pytest.MonkeyPatch.context() as patch:
         setup_codex_home(seed, patch)
@@ -74,21 +91,26 @@ def oracle_edit_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Pat
         readme_path.write_text("# staged change\n")
         run_git(root, "add", "README.md")
         readme_path.write_text("# unstaged change\n")
-        return root
+        status = _preserved_git_status(root)
+        assert any(
+            line.startswith("1 MM ") and line.endswith(" README.md") for line in status
+        )
+        return root, status
 
 
 @pytest.fixture
 def oracle_edit_repository(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    oracle_edit_repository_seed: Path,
-) -> Path:
+    oracle_edit_repository_seed: tuple[Path, tuple[str, ...]],
+) -> tuple[Path, tuple[str, ...]]:
     """session branch・履歴・Codex HOME を持つ repository を準備する。"""
     setup_codex_home(tmp_path, monkeypatch)
     # cmoc は各ケースの tmp_path 内でだけ起動し、index・履歴もケース間で共有しない。
-    root = shutil.copytree(oracle_edit_repository_seed, tmp_path / "repo")
+    seed, status = oracle_edit_repository_seed
+    root = shutil.copytree(seed, tmp_path / "repo")
     monkeypatch.chdir(root)
-    return root
+    return root, status
 
 
 def _assert_exec_parameter(
@@ -113,7 +135,7 @@ def _assert_exec_parameter(
     ],
 )
 def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
-    oracle_edit_repository: Path,
+    oracle_edit_repository: tuple[Path, tuple[str, ...]],
     monkeypatch: pytest.MonkeyPatch,
     nonpersistent_execution_ids: None,
     failure_stage: str | None,
@@ -125,7 +147,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     # collector の受理・drain は test_feedback.py に残し、exec 制御と差分保持を検証する。
     # 永続採番と logger の結合は test_runtime_ids.py と test_runtime_cli.py に残す。
     # ここでは実行 ID の受け渡しと editor input・report・log の保存を実検査する。
-    root = oracle_edit_repository
+    root, status_before = oracle_edit_repository
     instruction = (
         "oracle spec を更新する\n# 指示中の見出し\n空行を挿入しない\n"
         "過去の agent の会話と最終回答、実行ログ /example/sender.jsonl を参考にする\n"
@@ -158,21 +180,8 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     session_state_path = _write_session_state(root, run=active_run)
     state_before = json.loads(session_state_path.read_text())
     readme_path = root / "README.md"
-    # HEAD・branch・index の blob/mode と working tree の mode を一度に取得する。
-    # working tree の本文は下で直接比較し、patch 生成と個別の Git 起動を省く。
-    status_args = (
-        "status",
-        "--porcelain=v2",
-        "--branch",
-        "--",
-        "README.md",
-        "oracle/spec.md",
-    )
-    status_before = run_git(root, *status_args).stdout.splitlines()
-    assert any(
-        line.startswith("1 MM ") and line.endswith(" README.md")
-        for line in status_before
-    )
+    # 全ケースで同じ seed の状態を比較基準にし、開始前の Git 起動を重ねない。
+    # 終了後は各 repository の実 Git 状態と本文を検査し、各回の失敗時も差分保持を確かめる。
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_main_parameters: list[AgentCallParameter] = []
@@ -444,11 +453,14 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
     assert (root / "oracle" / "spec.md").read_text() == expected_spec
     assert json.loads(session_state_path.read_text()) == state_before
     assert readme_path.read_text() == "# unstaged change\n"
-    status_after = run_git(root, *status_args).stdout.splitlines()
+    status_after = _preserved_git_status(root)
     oracle_status = [line for line in status_after if line.endswith(" oracle/spec.md")]
     assert len(oracle_status) == 1
     assert oracle_status[0].startswith("1 .M ")
-    assert [line for line in status_after if line not in oracle_status] == status_before
+    assert (
+        tuple(line for line in status_after if line not in oracle_status)
+        == status_before
+    )
     assert not (root / ".cmoc" / "gu" / "report" / "oracle" / "edit" / "fork").exists()
     terminal_output = result.stdout + result.stderr
     if failure_stage is None:
