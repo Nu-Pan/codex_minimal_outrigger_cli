@@ -273,6 +273,9 @@ def test_review_cancellation_prevents_all_subsequent_calls(
     later = add_primary_report_review(root, later_source, logger, state)
     assert len(calls) == (2 if phase in {"correction", "probe"} else 1)
     assert "別の本文" in later and "開始していません" in later
+    later_record = report_section(later, "重要事項確認の実行記録")
+    assert "Codex call: 未開始" in later_record
+    assert "確認入力の固定時刻: 未固定" in later_record
     assert len(list((root / ".cmoc/gu/log/codex").glob("*/*review*.md"))) == 1
 
 

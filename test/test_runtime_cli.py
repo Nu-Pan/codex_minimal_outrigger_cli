@@ -169,7 +169,9 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     logger = SubcommandLogger(tmp_path, "parallel_logging")
     worker_count = 8
     barrier = threading.Barrier(worker_count)
+    assert logger.event_count() == 0
     assert logger.event_records() == ()
+    assert logger.event_records(start=0) == ()
     assert logger.codex_call_records() == ()
 
     def record_worker_event(index: int) -> None:
@@ -191,21 +193,31 @@ def test_subcommand_logger_handles_parallel_worker_events_and_quota_wait(
     assert logger.quota_wait_sec == pytest.approx(worker_count * 0.25)
 
     snapshot = logger.event_records()
+    tail = logger.event_records(start=worker_count // 2)
     calls = logger.codex_call_records()
     expected_calls = tuple(event for event in events if event["event"] == "codex_call")
     assert snapshot == tuple(events)
+    assert tail == tuple(events[worker_count // 2 :])
     assert calls == expected_calls
 
     snapshot[0]["index"] = -1
+    tail[0]["index"] = -1
     calls[0]["index"] = -1
     assert logger.event_records() == tuple(events)
     assert logger.codex_call_records() == expected_calls
 
+    position = logger.event_count()
+    assert position == worker_count
     logger.event("codex_call", index=worker_count)
+    latest = logger.event_records(start=position)
+    assert len(latest) == 1 and latest[0]["index"] == worker_count
+    assert logger.event_count() == worker_count + 1
+    assert logger.event_records(start=logger.event_count()) == ()
+    assert len(tail) == worker_count // 2
     assert len(calls) == worker_count // 2
     assert logger.codex_call_records() == (
         *expected_calls,
-        logger.event_records()[-1],
+        *latest,
     )
 
 
