@@ -2172,47 +2172,56 @@ def test_apply_start_failure_after_run_publish_is_reported(
     assert 'state_before: "ready"' in reports[0].read_text()
 
 
-@pytest.mark.usefixtures("apply_after_preprocess")
-def test_apply_start_failure_does_not_recover_existing_error_run(
-    ready_content_session: tuple[Path, str, Path],
+@pytest.mark.parametrize("workload", ["apply", "refactor"])
+def test_workload_start_failure_does_not_recover_existing_error_run(
+    ready_run_session: tuple[Path, str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    workload: str,
 ) -> None:
-    """新しい apply fork の事前条件失敗で既存 error run を変更しない。"""
-    root, _session_branch, state_path = ready_content_session
-    context = _prepare_run(ready_content_session, run_state="error")
-    (context.run_worktree / "README.md").write_text("existing error run\n")
+    """開始拒否時に既存 error run を回収せず、保存済み state と内容を保つ。"""
+    # 開始拒否は run の Git 資源を解決する前に行うため、linked worktree は不要。
+    # 実 Git を使う開始失敗は start_failure_after_run_publish_is_reported、
+    # 回収時の所有権判定は recover_started_run_rejects_run_owned_by_other_process に残す。
+    root, session_branch, path = ready_run_session
+    state = SessionState.from_dict(_state(path))
+    state.run = RunPart(
+        state="error",
+        kind=f"realization_{workload}",
+        branch=RUN_BRANCH,
+        fork_commit=state.session.session_fork_commit,
+    )
+    write_state(path, state)
+    state_before = path.read_bytes()
+    worktree = root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID
+    worktree.mkdir(parents=True)
+    (worktree / "README.md").write_text("existing error run\n")
+
+    module = apply_module if workload == "apply" else refactor_module
+    preprocess = Mock()
+    monkeypatch.setattr(
+        runtime_cli if workload == "apply" else module,
+        "run_doctor_preprocess",
+        preprocess,
+    )
+    recover = Mock()
+    monkeypatch.setattr(module, "recover_started_run", recover)
 
     result = runner.invoke(
         app,
-        ["realization", "apply"],
+        ["realization", workload],
         catch_exceptions=False,
     )
 
-    assert result.exit_code == 1
-    assert _state(state_path)["run"]["state"] == "error"
-    assert (context.run_worktree / "README.md").read_text() == "existing error run\n"
-    assert current_branch(root) == context.session_branch
-
-
-def test_refactor_start_failure_does_not_recover_existing_error_run(
-    refactor_after_preprocess: tuple[Path, str, Path],
-) -> None:
-    """新しい refactor fork の事前条件失敗で既存 error run を変更しない。"""
-    root, _session_branch, state_path = refactor_after_preprocess
-    context = _prepare_run(
-        refactor_after_preprocess, kind="realization_refactor", run_state="error"
-    )
-    (context.run_worktree / "README.md").write_text("existing error run\n")
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 1
-    assert _state(state_path)["run"]["state"] == "error"
-    assert (context.run_worktree / "README.md").read_text() == "existing error run\n"
-    assert current_branch(root) == context.session_branch
+    assert result.exit_code == 1, result.output
+    assert "editing run を開始できる session state ではありません。" in result.output
+    recover.assert_not_called()
+    assert path.read_bytes() == state_before
+    assert (worktree / "README.md").read_text() == "existing error run\n"
+    assert current_branch(root) == session_branch
+    if workload == "apply":
+        preprocess.assert_called_once_with(root)
+    else:
+        preprocess.assert_called_once_with(root, rollback_on_interruption=True)
 
 
 def test_start_run_rechecks_session_branch_under_lock(
