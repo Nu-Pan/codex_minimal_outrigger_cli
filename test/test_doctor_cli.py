@@ -1234,55 +1234,67 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
     assert check_ignore.returncode == 1
 
 
-@pytest.mark.parametrize(
-    "change",
-    [
-        "clean",
-        "staged",
-        "unstaged",
-        "mixed",
-        "reverted_worktree",
-        "staged_deletion",
-        "unstaged_deletion",
-        "untracked",
-    ],
-)
-def test_preexisting_runtime_paths_use_original_index(repair_paths_repository, change):
+def test_preexisting_runtime_paths_use_original_index(repair_paths_repository):
     """対象の先行差分だけを元 index から選び、未追跡・staged deletion を除く。"""
     root = repair_paths_repository
     readme = root / "README.md"
     config = doctor_module.config_path(root)
     state = doctor_module.refactor_state_path(root)
     paths = [str(path.relative_to(root)) for path in (config, state)]
-    if change == "untracked":
-        # HEAD にも index にも存在しない実ファイルを残し、staged deletion と区別する。
-        run_git(root, "rm", "--cached", *paths)
-        run_git(root, "commit", "-m", "leave runtime files untracked")
-
-    expected = set()
-    if change in {"staged", "mixed", "reverted_worktree"}:
-        config.write_text('{"num_parallel": 99}\n')
-        run_git(root, "add", "-f", paths[0])
-        expected.add(paths[0])
-    if change == "mixed":
-        config.write_text('{"num_parallel": 100}\n')
-    if change == "reverted_worktree":
-        config.write_text("{}\n")
-    if change in {"unstaged", "mixed", "staged_deletion"}:
-        state.write_text('{"prior": {}}\n')
-        expected.add(paths[1])
-    if change == "staged_deletion":
-        run_git(root, "rm", "--cached", paths[0])
-    if change == "unstaged_deletion":
-        state.unlink()
-        expected.add(paths[1])
     readme.write_text("unrelated user change\n")
-
     index_path = doctor_module._copy_current_index(root)
     try:
-        # 現在 index が変わっても、前処理開始時の退避内容を使う。
+        original_index = index_path.read_bytes()
+        # repository と退避を共有し、各ケースでは保存済み index と作業内容だけを戻す。
+        # 現在 index は最初に変え、全ケースで退避 index からの判定を検査する。
         run_git(root, "rm", "--cached", "-f", "--ignore-unmatch", "--", *paths)
-        assert doctor_module._preexisting_repair_paths(root, index_path) == expected
+        for change in (
+            "clean",
+            "staged",
+            "unstaged",
+            "mixed",
+            "reverted_worktree",
+            "staged_deletion",
+            "unstaged_deletion",
+            "untracked",
+        ):
+            index_path.write_bytes(original_index)
+            config.write_text("{}\n")
+            state.write_text("{}\n")
+            if change == "untracked":
+                # HEAD の変更は最後だけ行い、未追跡と staged deletion を区別する。
+                run_git(root, "commit", "-m", "leave runtime files untracked")
+                doctor_module._run_git_with_index(
+                    ["rm", "--cached", *paths], root, index_path
+                )
+
+            expected = set()
+            if change in {"staged", "mixed", "reverted_worktree"}:
+                config.write_text('{"num_parallel": 99}\n')
+                doctor_module._run_git_with_index(
+                    ["add", "-f", paths[0]], root, index_path
+                )
+                expected.add(paths[0])
+            if change == "mixed":
+                config.write_text('{"num_parallel": 100}\n')
+            if change == "reverted_worktree":
+                config.write_text("{}\n")
+            if change in {"unstaged", "mixed", "staged_deletion"}:
+                state.write_text('{"prior": {}}\n')
+                expected.add(paths[1])
+            if change == "staged_deletion":
+                doctor_module._run_git_with_index(
+                    ["rm", "--cached", paths[0]], root, index_path
+                )
+            if change == "unstaged_deletion":
+                state.unlink()
+                expected.add(paths[1])
+
+            before = index_path.read_bytes()
+            assert (
+                doctor_module._preexisting_repair_paths(root, index_path) == expected
+            ), change
+            assert index_path.read_bytes() == before, change
     finally:
         index_path.unlink(missing_ok=True)
 
