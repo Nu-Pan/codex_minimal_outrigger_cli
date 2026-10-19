@@ -28,6 +28,7 @@ from oracle.acp_builder.oracle.investigation.launch_tui import (
 )
 from oracle.acp_builder.tui.launch_tui import build_tui_request
 from oracle.other.cmoc_config import CodexCallConfig
+from oracle.other.struct_doc import SDHeader
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_exec as exec_module
@@ -94,6 +95,20 @@ def directory(tmp_path, monkeypatch, nonpersistent_execution_ids):
     # 保存設定は公開 resume のケースで用意し、制御検査には設定を直接渡す。
     fake_tui(monkeypatch)
     return root
+
+
+@pytest.fixture
+def initial_request(directory, monkeypatch):
+    """失敗制御には実 builder の設定と短い入力本文を渡す。"""
+    # 完全文面は builder 専用 test、保存・stdin との結合は下の complete_prompt で検査する。
+    # 本文を評価しないケースでは規定の構築・描画・保存を重ねない。
+    # 置換は初回構築中だけに限定し、起動管理側の再開 builder は実処理を通す。
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            "oracle.acp_builder.tui.launch_tui.build_complete_prompt",
+            lambda **_kwargs: [SDHeader("task", "request")],
+        )
+        return build_tui_request("request")
 
 
 @contextmanager
@@ -305,7 +320,7 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
     ],
 )
 def test_initial_terminal_failure_never_retries_or_transitions(
-    directory, monkeypatch, stdout, returncode
+    directory, monkeypatch, initial_request, stdout, returncode
 ):
     # argv・MCP 設定の結合は complete_prompt と share_start_time_settings のケースに残す。
     # ここでは終端判定・ログ保存・移行禁止を検査し、起動設定の構築を繰り返さない。
@@ -318,7 +333,7 @@ def test_initial_terminal_failure_never_retries_or_transitions(
     with call_log(directory) as logger:
         with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗"):
             tui_module.run_codex_tui(
-                build_tui_request("request"),
+                initial_request,
                 root=directory,
                 config=CmocConfig(),
             )
@@ -345,7 +360,7 @@ def test_initial_terminal_failure_never_retries_or_transitions(
     ],
 )
 def test_initial_success_requires_saved_output_and_unique_uuid(
-    directory, monkeypatch, stdout, output
+    directory, monkeypatch, initial_request, stdout, output
 ):
     # 起動設定は上の結合ケースに残し、保存出力と UUID の受理条件を検査する。
     stub_codex_overrides(monkeypatch)
@@ -354,7 +369,7 @@ def test_initial_success_requires_saved_output_and_unique_uuid(
     monkeypatch.setattr(tui_module, "_run_codex_tui_process", transition)
     with pytest.raises(CmocError, match="再開に必要な記録"):
         tui_module.run_codex_tui(
-            build_tui_request("request"),
+            initial_request,
             root=directory,
             config=CmocConfig(),
         )
@@ -362,7 +377,7 @@ def test_initial_success_requires_saved_output_and_unique_uuid(
     transition.assert_not_called()
 
 
-def test_prompt_save_failure_starts_no_process(directory, monkeypatch):
+def test_prompt_save_failure_starts_no_process(directory, monkeypatch, initial_request):
     process = Mock()
     monkeypatch.setattr(exec_module, "run_codex_subprocess", process)
     monkeypatch.setattr(
@@ -370,7 +385,7 @@ def test_prompt_save_failure_starts_no_process(directory, monkeypatch):
     )
     with pytest.raises(OSError, match="disk full"):
         tui_module.run_codex_tui(
-            build_tui_request("request"),
+            initial_request,
             root=directory,
             config=CmocConfig(),
         )
@@ -415,7 +430,9 @@ def test_initial_and_transition_share_start_time_settings(directory, monkeypatch
     transition.assert_called_once()
 
 
-def test_accepted_cancellation_wins_over_success(directory, monkeypatch):
+def test_accepted_cancellation_wins_over_success(
+    directory, monkeypatch, initial_request
+):
     def cancel(_call):
         exec_module.current_recovery_cancellation().set()
 
@@ -427,7 +444,7 @@ def test_accepted_cancellation_wins_over_success(directory, monkeypatch):
     with call_log(directory) as logger:
         with pytest.raises(TuiStartupCancelled):
             tui_module.run_codex_tui(
-                build_tui_request("request"),
+                initial_request,
                 root=directory,
                 config=CmocConfig(),
             )
