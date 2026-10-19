@@ -2,7 +2,6 @@
 
 import json
 import os
-import select
 import signal
 import subprocess
 import sys
@@ -33,8 +32,13 @@ def test_refactor_driver_interrupts_after_a_confirmed_unit(tmp_path) -> None:
         "path.write_text(json.dumps({'event':'refactor_progress','confirmed':1})); "
         "print('confirmed', flush=True); time.sleep(30)"
     )
+    # 標準ライブラリだけの Fake は共通 command helper と同様に site 初期化を省く。
+    # 推論を待たない Fake では監視間隔を短くし、実 SIGINT の配送と終了は待つ。
     result = _run_refactor_until_confirmed(
-        [sys.executable, "-c", script], tmp_path, dict(os.environ)
+        [sys.executable, "-S", "-c", script],
+        tmp_path,
+        dict(os.environ),
+        poll_interval=0.001,
     )
     assert result.returncode == 0
     assert result.stdout == "confirmed\n"
@@ -422,36 +426,30 @@ def test_tui_driver_exchanges_input_and_shutdown_over_a_real_pty(
     assert "Shutting down" in transcript
 
 
-def test_trust_confirmation_waits_until_the_poll_after_prompt_detection() -> None:
+def test_trust_confirmation_waits_until_the_poll_after_prompt_detection(
+    monkeypatch,
+) -> None:
     """描画中ではなく次の poll で trust prompt を確定する。"""
-    read_fd, write_fd = os.pipe()
-    try:
-        ready, confirmed = _advance_trust_confirmation(
-            write_fd,
-            bytearray(),
-            False,
-        )
+    # poll の境界と送信先・内容を記録し、実 I/O は上の PTY 結合ケースに残す。
+    master_fd = 123
+    writes = []
+    monkeypatch.setattr(
+        production_cli,
+        "os",
+        SimpleNamespace(write=lambda fd, data: writes.append((fd, data))),
+    )
+    ready, confirmed = _advance_trust_confirmation(master_fd, bytearray(), False)
+    assert (ready, confirmed) == (False, False)
+    assert writes == []
 
-        assert (ready, confirmed) == (False, False)
-        assert not select.select([read_fd], [], [], 0)[0]
+    ready, confirmed = _advance_trust_confirmation(
+        master_fd, bytearray(b"Press enter to continue"), False
+    )
+    assert (ready, confirmed) == (True, False)
+    assert writes == []
 
-        ready, confirmed = _advance_trust_confirmation(
-            write_fd,
-            bytearray(b"Press enter to continue"),
-            False,
-        )
-
-        assert (ready, confirmed) == (True, False)
-        assert not select.select([read_fd], [], [], 0)[0]
-
-        ready, confirmed = _advance_trust_confirmation(
-            write_fd,
-            bytearray(b"Press enter to continue"),
-            ready,
-        )
-
-        assert (ready, confirmed) == (True, True)
-        assert os.read(read_fd, 1) == b"\r"
-    finally:
-        os.close(read_fd)
-        os.close(write_fd)
+    ready, confirmed = _advance_trust_confirmation(
+        master_fd, bytearray(b"Press enter to continue"), ready
+    )
+    assert (ready, confirmed) == (True, True)
+    assert writes == [(master_fd, b"\r")]

@@ -180,17 +180,11 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
 
 # 実採番と log の結合は上の並行 test に残す。以下の cwd・home・schema の検査では
 # nonpersistent_codex_ids を使い、採番のたびの SQLite transaction と同期を省く。
-@pytest.mark.parametrize(
-    "agent_call_cwd_relative",
-    [".", "oracle"],
-    ids=["work_root", "nested_directory"],
-)
 def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     nonpersistent_codex_ids: None,
-    agent_call_cwd_relative: str,
 ) -> None:
     """パラメータの cwd と pure-oracle read の権限境界を検証する。
 
@@ -198,11 +192,14 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
         {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
         {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
-    # oracle の存在による cwd の自動変更を検出し、Git 履歴の準備だけを省く。
     root = cli_repository
     (root / "oracle").mkdir()
     (root / "oracle" / "spec.md").write_text("# spec\n")
-    agent_call_cwd = root / agent_call_cwd_relative
+    # 指定 cwd を親 process の cwd・Git root・oracle のすべてと区別し、
+    # どれかへの誤置換を 1 回の Fake CLI 起動で検出する。
+    monkeypatch.chdir(root)
+    agent_call_cwd = root / "agent-cwd"
+    agent_call_cwd.mkdir()
     # 相対 home の値・子の cwd 基準の解決・log 保存も同じ起動で検査する。
     home = tmp_path / "home"
     home.mkdir()
@@ -245,6 +242,7 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     expected_cwd = agent_call_cwd.resolve()
     assert record["args"][record["args"].index("--cd") + 1] == str(expected_cwd)
     assert record["cwd"] == str(expected_cwd)
+    assert Path.cwd() == root
     assert record["codex_home"] == "relative_codex_home"
     assert Path(record["resolved_home"]) == codex_home
     assert result.codex_home == codex_home

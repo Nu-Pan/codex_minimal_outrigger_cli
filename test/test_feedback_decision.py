@@ -3,10 +3,56 @@
 from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
+from cmoc_runtime import CmocError
+from commons.runtime_feedback_store import canonical_json_bytes, sha256_bytes
 from sub_commands.feedback import decision
+
+
+def test_issue_history_reads_latest_or_full_history_and_rechecks_artifacts(
+    tmp_path, monkeypatch
+):
+    references = []
+    for identity, wave in (("issue", 10), ("other", 11), ("issue", 2)):
+        path = tmp_path / ".cmoc/gu/feedback/work/cut" / f"{identity}.{wave:08d}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        content = canonical_json_bytes({"wave": wave})
+        path.write_bytes(content)
+        references.append(
+            {
+                "candidate_id": identity,
+                "path": path.relative_to(tmp_path).as_posix(),
+                "sha256": sha256_bytes(content),
+            }
+        )
+    manifest = {"processing": {"remediation_checkpoints": references}}
+    read = Mock(wraps=decision.read_run_artifact)
+    monkeypatch.setattr(decision, "read_run_artifact", read)
+
+    for latest_only in (False, True):
+        assert (
+            decision.issue_history(
+                tmp_path, manifest, "missing", latest_only=latest_only
+            )
+            == []
+        )
+    read.assert_not_called()
+    assert decision.issue_history(tmp_path, manifest, "issue", latest_only=True) == [
+        (references[0], {"wave": 10})
+    ]
+    assert read.call_count == 1
+    assert decision.issue_history(tmp_path, manifest, "issue") == [
+        (references[2], {"wave": 2}),
+        (references[0], {"wave": 10}),
+    ]
+
+    # 同じ reference でも読み直し、最新 checkpoint の置換を見逃さない。
+    (tmp_path / references[0]["path"]).write_bytes(canonical_json_bytes({"wave": 99}))
+    with pytest.raises(CmocError, match="SHA256"):
+        decision.issue_history(tmp_path, manifest, "issue", latest_only=True)
 
 
 def test_basis_captures_tracked_configuration_and_nested_inputs(tmp_path, monkeypatch):

@@ -54,17 +54,17 @@ from commons.runtime_feedback_state import (
     recover_report_cut_checkpoint_references,
     remediation_checkpoint_path,
     validate_feedback_state,
-    write_checkpoint,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
     canonical_json_bytes,
     rfc3339_now,
     sha256_bytes,
-    write_immutable_json,
 )
 from commons.runtime_ids import new_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
+from commons.runtime_paths import reuse_root_queries
 from commons.runtime_primary_report import (
     current_primary_report_fields,
     primary_report_finalization_lock,
@@ -92,7 +92,6 @@ from commons.runtime_run_join_state import (
     confirm_import,
     join_record,
     load_join_record,
-    tree_id,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -116,7 +115,9 @@ def run_feedback_report() -> TerminalResult:
     """事前条件を検査し、同一 run の join 後 recovery または新規修復を行う。"""
     from .recovery import finish_feedback_run, recover_finalization
 
-    repository, session_worktree = repo_root(), work_root()
+    # 開始時の両 root だけを共有し、doctor や recovery へ探索結果を持ち越さない。
+    with reuse_root_queries():
+        repository, session_worktree = repo_root(), work_root()
     context: EditingRunContext | None = None
     manifest: dict[str, Any] | None = None
     manifest_path: Path | None = None
@@ -419,12 +420,17 @@ def _wave_loop(
         files = decision.worktree_inputs(context.run_worktree) if candidates else {}
         pending = {}
         for identity, candidate in sorted(candidates.items()):
-            history = decision.issue_history(context.repo, manifest, identity)
+            history = decision.issue_history(
+                context.repo, manifest, identity, latest_only=True
+            )
             current = decision.decision_state(files, candidate)
             if history and decision.basis_is_valid(
                 history[-1][1]["audit"]["decision_basis"], current
             ):
                 continue
+            # 有効性の照合には最新だけで足りる。再確認の循環検出には全履歴を渡す。
+            if history:
+                history = decision.issue_history(context.repo, manifest, identity)
             pending[identity] = {
                 **candidate,
                 "decision_state_sha256": decision.state_hash(current),
@@ -462,8 +468,7 @@ def _wave_loop(
             / str(sequence)
             / "input.json"
         )
-        write_immutable_json(wave_path, wave)
-        wave_reference = artifact_reference(context.repo, wave_path)
+        wave_reference = write_immutable_artifact(context.repo, wave_path, wave)
         manifest["run"]["waves"].append(wave_reference)
         # The wave file is durable before its high-watermark is published in
         # the manifest.  Recovery can therefore never observe a consumed
@@ -724,7 +729,7 @@ def _remediate_issue(
             f"{identity}.{int(Path(wave['path']).parent.name):08d}",
         )
         validate_remediation_checkpoint(checkpoint, path)
-        reference = write_checkpoint(context.repo, path, checkpoint)
+        reference = write_immutable_artifact(context.repo, path, checkpoint)
         checkpoint_saved = True
         logger = current_subcommand_logger()
         if logger is not None:
@@ -887,14 +892,14 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
     record = load_join_record(context.repo, context.session_id)
     if record is None or not confirm_import(record) or record.prepared_run_head is None:
         raise _failure("feedback run の準備・取り込み記録を確認できません。")
+    # 共通の取り込み確認で準備済み run と session commit の tree 全体を照合済み。
+    # 同じ immutable commit の tree ID・path 差分をここで再照会しない。
     if context.run_worktree.exists():
         require_clean_worktree(context.run_worktree)
         if head_commit(context.run_worktree) != record.prepared_run_head:
             raise _failure("feedback run の準備完了成果が変更されています。")
     require_clean_worktree(context.session_worktree)
-    if not _is_ancestor(
-        context, record.prepared_run_head
-    ) or record.session_tree != tree_id(context.repo, record.prepared_run_head):
+    if not _is_ancestor(context, record.prepared_run_head):
         raise _failure("feedback run HEAD が join 後 session tree から到達できません。")
     # 到達可能性はこの join 検証内で commit ごとに共有し、再実行時は取り直す。
     reachable_commits = {record.prepared_run_head}
@@ -966,19 +971,6 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
             )
         reachable_commits.add(audit["after_commit"])
         paths.update(audit["changed_paths"])
-    # 後続 issue が同じ path を編集できるため、最終 run tree と session tree を比較する。
-    different = {
-        path
-        for change in tree_changes(
-            context.repo, record.prepared_run_head, record.session_commit or ""
-        )
-        for path in change.paths
-    }
-    if paths.intersection(different) and not adjusted:
-        raise _failure(
-            "join 後の realization tree が正式な issue commit の最終 tree と一致しません。",
-            detail="\n".join(sorted(paths.intersection(different))),
-        )
     if merged_reference is None:
         raise _failure("feedback run の自動 join を確認できません。")
     completion = {

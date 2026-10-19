@@ -144,6 +144,8 @@ async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete
   }
   const reusable = new Set(reusableHashes);
   await withModel(modelPath, async (model) => {
+    // 同じ節の分割結果は要求内で共有し、各出現位置への変換だけを繰り返す。
+    const sectionRanges = new Map();
     let context;
     try {
       for (const [path, text] of Object.entries(documents)) {
@@ -160,10 +162,13 @@ async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete
               !Number.isInteger(boundary[0]) || !Number.isInteger(boundary[1]) ||
               boundary[0] !== previousEnd || boundary[1] <= boundary[0] ||
               boundary[1] > chars.length) fail("invalid document sections");
-          for (const range of chunkRanges(
-            chars.slice(boundary[0], boundary[1]).join(""), model,
-            config.chunk_tokens, config.chunk_overlap_tokens
-          )) {
+          const section = chars.slice(boundary[0], boundary[1]).join("");
+          let chunks = sectionRanges.get(section);
+          if (chunks === undefined) {
+            chunks = chunkRanges(section, model, config.chunk_tokens, config.chunk_overlap_tokens);
+            sectionRanges.set(section, chunks);
+          }
+          for (const range of chunks) {
             ranges.push({
               start: boundary[0] + range.start,
               end: boundary[0] + range.end,

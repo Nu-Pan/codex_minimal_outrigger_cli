@@ -44,7 +44,7 @@ from commons.runtime_feedback_store import (
 )
 from commons.runtime_ids import is_common_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
-from commons.runtime_paths import sessions_dir
+from commons.runtime_paths import reuse_root_queries, sessions_dir
 from commons.runtime_primary_report import (
     review_primary_report,
     update_primary_report_fields,
@@ -98,7 +98,9 @@ def cmoc_feedback_close_parse_error_impl(arguments: list[str], detail: str) -> N
 
 
 def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
-    repository = repo_root()
+    # 開始時の両 root だけを共有し、doctor の修復・検証へ探索結果を持ち越さない。
+    with reuse_root_queries():
+        repository, current_worktree = repo_root(), work_root()
     update_primary_report_fields(
         case_id=case_id,
         human_reason=reason,
@@ -108,7 +110,7 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
     )
     if isinstance(reason, str) and reason.strip():
         update_primary_report_input(reason)
-    run_doctor_preprocess(work_root())
+    run_doctor_preprocess(current_worktree)
     if (
         not is_common_id(case_id, "fbc")
         or not isinstance(reason, str)

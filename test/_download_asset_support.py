@@ -1,4 +1,4 @@
-"""代替 HTTP 配布元と、CLI・pytest を読み込まない並行取得 worker を用意する。"""
+"""代替 HTTP 配布元と、fork した process の並行取得 worker を用意する。"""
 
 import io
 import ssl
@@ -46,7 +46,7 @@ def process_obtain(cache_root, root, asset, destination, downloading, waiting, r
         assert waiting.wait(10), "no concurrent cache waiter"
         return download_response(request.full_url, b"model bytes")
 
-    urllib.request.build_opener = http_distribution_opener()
+    # HTTP opener は親の fixture を継承し、取得の応答と回数だけを分離する。
     urllib.request.HTTPHandler.http_open = transport
     try:
         action = DownloadAssetCache(root).obtain(asset, destination)

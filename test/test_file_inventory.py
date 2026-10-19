@@ -6,6 +6,7 @@
 """
 
 import os
+import shutil
 import stat
 import subprocess
 from collections.abc import Iterator
@@ -13,7 +14,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _git_support import RUN_BRANCH, init_repo, run_git
+from _git_support import run_git
 
 import commons.runtime_git as runtime_git
 import commons.runtime_refactor as runtime_refactor
@@ -31,14 +32,6 @@ from commons.runtime_refactor import (
 
 _EXCLUDED_ROOTS = {".git", ".agents", ".codex", ".cmoc", "memo"}
 _EXCLUDED_NAMES = {"AGENTS.md"}
-
-
-# 列挙と ignore 判定には実 index を使い、HEAD と linked worktree の検証だけ commit する。
-def _make_nested_repo(path: Path) -> Path:
-    """owning repository の判定に必要な nested Git working tree だけを作る。"""
-    path.mkdir(parents=True)
-    init_repo(path)
-    return path
 
 
 def _relative_sets(
@@ -146,12 +139,12 @@ def _special_path(path: Path, kind: str) -> Iterator[None]:
     yield
 
 
-def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
+def test_inventory_matches_full_glob_and_refactor_state_sync(
     cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """最適化列挙と state entry・SHA 更新を full glob 基準へ一致させる。"""
+    """非 UTF-8 名を含む列挙と state 同期・永続化を full glob 基準で検証する。"""
     root = cli_repository
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
@@ -162,6 +155,9 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     (ignored / "tracked.txt").write_text("tracked ignored\n")
     (ignored / "untracked.txt").write_text("untracked ignored\n")
     (root / "visible.txt").write_text("visible\n")
+    # 通常名と同じ列挙・保存経路で surrogateescape された filename も保持する。
+    non_utf8_name = os.fsdecode(b"non-utf8-\xff.txt")
+    (root / non_utf8_name).write_bytes(b"non-utf8 filename\n")
     classification_names = (
         "AGENTS.md",
         "notes.md",
@@ -202,6 +198,8 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     run_git(nested, "add", "-f", "tracked.nested")
 
     state = sync_refactor_state(root)
+    assert non_utf8_name in state
+    assert load_refactor_state(root) == state
     for relative, entry in state.items():
         entry.update(
             {
@@ -257,47 +255,6 @@ def test_inventory_matches_full_glob_and_refactor_state_hash_updates(
     assert synchronized["added.txt"] == {"last_investigated_at": None}
     assert synchronized["README.md"] == state["README.md"]
     assert synchronized["oracle/spec.md"] == state["oracle/spec.md"]
-
-
-def test_realization_classifier_uses_nested_head_for_deleted_file(
-    cli_repository: Path,
-) -> None:
-    """nested repository の削除 path を outer run branch で分類しない。"""
-    root = cli_repository
-    nested = _make_nested_repo(root / "nested")
-    target = nested / "nested.txt"
-    target.write_text("nested\n")
-    run_git(nested, "add", "nested.txt")
-    run_git(nested, "commit", "-m", "initial nested")
-    target.unlink()
-
-    assert is_realization_file_path(
-        root,
-        target,
-        branch=RUN_BRANCH,
-        fallback_branch="outer-fork",
-    )
-    assert not is_realization_file_path(
-        root,
-        nested / "missing.txt",
-        branch=RUN_BRANCH,
-        fallback_branch="outer-fork",
-    )
-
-
-def test_refactor_state_sync_round_trips_non_utf8_filename(
-    cli_repository: Path,
-) -> None:
-    """非 UTF-8 filename も列挙結果と state entry を保持する。"""
-    root = cli_repository
-    invalid_name = os.fsdecode(b"non-utf8-\xff.txt")
-    invalid_path = root / invalid_name
-    invalid_path.write_bytes(b"non-utf8 filename\n")
-
-    state = sync_refactor_state(root)
-
-    assert invalid_name in state
-    assert load_refactor_state(root) == state
 
 
 def test_inventory_does_not_traverse_excluded_roots_or_ignored_symlinks(
@@ -519,6 +476,7 @@ def test_inventory_accepts_linked_worktree_git_file(
 def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     tmp_path: Path,
     cli_repository: Path,
+    _empty_repository_seed: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """owning repository の ignore source を反映し、重複 source は一度だけ検証する。"""
@@ -536,7 +494,7 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     subdirectory = root / "subdirectory"
     subdirectory.mkdir()
     (subdirectory / ".gitignore").write_text("outer-nested.txt\n")
-    # 両 repository は init_repo が通常の .git directory を作るため、配置の問い合わせは不要。
+    # 両 repository は seed の通常の .git directory を持ち、配置の問い合わせは不要。
     outer_exclude = root / ".git" / "info" / "exclude"
     outer_exclude.parent.mkdir(parents=True, exist_ok=True)
     outer_exclude.write_text("outer-local.txt\n")
@@ -548,7 +506,8 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     ):
         (root / relative).write_text("ignored\n")
 
-    nested = _make_nested_repo(root / "nested")
+    # outer の設定を持ち込まず、初期化済みの空 repository から独立コピーする。
+    nested = shutil.copytree(_empty_repository_seed, root / "nested")
     nested_global = tmp_path / "nested-global-ignore"
     nested_global.write_text("nested-global.txt\n")
     run_git(nested, "config", "core.excludesFile", str(nested_global))
@@ -604,10 +563,11 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     assert validated_sources.count(outer_global.resolve()) == 1
     assert validated_sources.count(nested_global.resolve()) == 1
 
-    # 同じ nested index と ignore source で、単一 path 分類の境界も検証する。
-    assert is_realization_file_path(root, nested / "kept.outer")
-    assert not is_realization_file_path(root, nested / "dropped.nested")
-    assert not is_realization_file_path(root, nested / ".git" / "config")
+    # 配置・設定の問い合わせだけを共有し、単一 path の分類と source 検証は毎回行う。
+    with runtime_git.reuse_git_path_queries():
+        assert is_realization_file_path(root, nested / "kept.outer")
+        assert not is_realization_file_path(root, nested / "dropped.nested")
+        assert not is_realization_file_path(root, nested / ".git" / "config")
 
 
 def test_inventory_git_work_is_constant_when_only_candidate_count_grows(

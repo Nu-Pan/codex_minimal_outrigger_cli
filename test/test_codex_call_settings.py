@@ -250,22 +250,17 @@ def test_invalid_saved_settings_fail_before_codex_launch(
 
 
 def test_shared_structured_output_failures_keep_feedback_kind_and_call_ids(
-    committed_repository,
-    tmp_path,
+    settings_root,
     monkeypatch,
-    nonpersistent_codex_ids,
     unchanged_artifacts,
 ):
     """異なる builder の受理失敗を共通種別で分類し、各実行の ID は分ける。"""
-    # feedback の保存 context に必要な HEAD は、実 Git で用意する。
-    root = committed_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    # root 導出は test_basic_runtime.py、builder の cwd 選択は
-    # test_acp_builder_editing_run_parameters.py に残し、同じ Git 探索を重ねない。
-    # feedback が保存する branch・HEAD の取得は実 Git のまま検査する。
-    monkeypatch.setattr(
-        path_model, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
-    )
+    # 分類と ID の検査には Git 読み取り結果だけを渡し、repository の複製を省く。
+    # 実 HEAD の取得は test_feedback.py の machine_detector_observation_id_is_idempotent、
+    # 後続 event の HEAD 更新は machine_detector_masks_secret_in_event_values_and_keys に残す。
+    root = settings_root
+    monkeypatch.setattr("commons.runtime_feedback.current_branch", lambda _root: "main")
+    monkeypatch.setattr("commons.runtime_feedback.head_commit", lambda _root: "a" * 40)
     logger = SubcommandLogger(root, "settings test")
     invocation = FeedbackInvocation(root, root, "settings test", logger)
     calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "{}")] * 6)
@@ -287,6 +282,10 @@ def test_shared_structured_output_failures_keep_feedback_kind_and_call_ids(
     assert len(diagnostics) == 2
     assert {event["agent_call_kind"] for event in diagnostics} == {"realization_edit"}
     assert len({event["agent_call_id"] for event in diagnostics}) == 2
+    # 分類検査では実ディスクの同期を待たない。同期順序・失敗は
+    # test_feedback_store.py、実同期との結合は test_feedback.py の
+    # repairs_sequential_waves_and_preserves_late_intake に残す。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
     for event in diagnostics:
         invocation.detect_event(event, logger.path)
     observations = [

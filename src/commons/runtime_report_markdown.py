@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from .runtime_errors import safe_text
 from .runtime_primary_report_specs import TerminalClassification
 
+# 実行情報の各値で同じ設定を使い、encoder の再生成を省く。
+_METADATA_JSON_ENCODER = json.JSONEncoder(ensure_ascii=False, sort_keys=True)
+
 
 @dataclass(frozen=True)
 class ReportSummary:
@@ -137,20 +140,24 @@ def markdown_sections(lines: list[str]) -> str:
     rendered: list[str] = []
     fence: str | None = None
     for line in lines:
-        if fence is None and re.fullmatch(r"#{1,6} [^\r\n]+", line):
+        if (
+            fence is None
+            and line.startswith("#")
+            and re.fullmatch(r"#{1,6} [^\r\n]+", line)
+        ):
             if rendered and rendered[-1] != "":
                 rendered.append("")
             rendered.extend([line, ""])
         else:
             rendered.append(line)
-        if "\n" not in line and "\r" not in line:
-            if fence is not None:
-                if line == fence:
-                    fence = None
-            else:
-                match = re.fullmatch(r"(`{3,}|~{3,})[\w-]*", line)
-                if match:
-                    fence = match[1]
+        # 通常の本文・箇条書きは fence にならず、正規表現で検査しない。
+        if fence is not None:
+            if line == fence:
+                fence = None
+        elif line.startswith(("```", "~~~")):
+            match = re.fullmatch(r"(`{3,}|~{3,})[\w-]*", line)
+            if match:
+                fence = match[1]
     return "\n".join(rendered).strip("\n") + "\n"
 
 
@@ -191,8 +198,8 @@ def yaml_scalar(value: object) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     if isinstance(value, (list, dict)):
-        return json.dumps(_safe_json_value(value), ensure_ascii=False, sort_keys=True)
-    return json.dumps(safe_text(value), ensure_ascii=False)
+        return _METADATA_JSON_ENCODER.encode(_safe_json_value(value))
+    return _METADATA_JSON_ENCODER.encode(safe_text(value))
 
 
 def _report_target(command: str, fields: dict[str, object]) -> str:

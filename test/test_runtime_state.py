@@ -115,9 +115,15 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert active_session_for_home(tmp_path, "main") == path
     assert active_session_for_home(tmp_path, "other") is None
 
+    # JSON 用 snapshot と元の state は双方向に変更を持ち越さない。
+    snapshot = state.to_dict()
+    snapshot["run"]["state"] = "error"
+    assert state.run.state == "joinable"
+    state.session.session_home_branch = "開発/作業"
+    assert snapshot["session"]["session_home_branch"] == "main"
+
     # 既存 file の更新でも run payload を消去し、session branch から復元できる。
     state.run = RunPart()
-    state.session.session_home_branch = "開発/作業"
     write_state(path, state)
     assert load_state_for_branch(tmp_path, SESSION_BRANCH) == (SESSION_ID, path, state)
     assert active_session_for_home(tmp_path, "main") is None
@@ -537,26 +543,26 @@ def test_active_run_rejects_noncanonical_branch(branch: str) -> None:
         SessionState.from_dict(data)
 
 
-def test_session_state_rejects_unknown_fields() -> None:
-    """session state の未定義 field を拒否する。"""
+@pytest.mark.parametrize(
+    "part", [None, "session", "run"], ids=["top", "session", "run"]
+)
+@pytest.mark.parametrize("defect", ["missing", "extra", "replaced"])
+def test_session_state_rejects_invalid_field_sets(part, defect) -> None:
+    """各階層の欠落・余分な field と、同数の field の置換を拒否する。"""
     data = _valid_state().to_dict()
-    data["run"]["obsolete"] = None
+    fields = data if part is None else data[part]
+    if defect in ("missing", "replaced"):
+        del fields[next(iter(fields))]
+    if defect in ("extra", "replaced"):
+        fields["obsolete"] = None
 
     with pytest.raises(CmocError) as exc_info:
         SessionState.from_dict(data)
 
-    assert "未定義 field" in exc_info.value.detail
-
-
-def test_session_state_rejects_unknown_top_level_fields() -> None:
-    """session state の top-level 未定義 field を拒否する。"""
-    data = _valid_state().to_dict()
-    data["obsolete"] = None
-
-    with pytest.raises(CmocError) as exc_info:
-        SessionState.from_dict(data)
-
-    assert "top-level に未定義 field" in exc_info.value.detail
+    detail = exc_info.value.detail
+    assert ("top-level" if part is None else f"`{part}` に") in detail
+    assert ("必須 field" in detail) == (defect in ("missing", "replaced"))
+    assert ("未定義 field" in detail) == (defect in ("extra", "replaced"))
 
 
 def test_session_fork_lock_is_shared_across_processes(

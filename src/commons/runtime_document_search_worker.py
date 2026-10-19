@@ -293,11 +293,11 @@ class NodeSearchWorker:
                 for path, body in documents.items()
             ):
                 raise SearchError("MODEL_FAILURE", "invalid document text")
+            # 同じ本文の解析結果は要求内で共有し、path ごとの再解析を避ける。
+            sections = {body: _heading_ranges(body) for body in set(documents.values())}
             payload = {
                 **payload,
-                "sections": {
-                    path: _heading_ranges(body) for path, body in documents.items()
-                },
+                "sections": {path: sections[body] for path, body in documents.items()},
             }
         try:
             parent_start_time = (

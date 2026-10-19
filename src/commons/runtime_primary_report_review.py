@@ -37,7 +37,7 @@ def add_primary_report_review(
     """共通の回復・補正を使って確認し、その記録を機械生成版へ追記する。"""
     # oracle/doc/app_spec/console_and_file_log.md の「重要事項確認用 call」。
     # 入力の固定後は確認自身の記録を戻さず、report を再帰的に確認しない。
-    first_event = len(logger.event_records())
+    first_event = logger.event_count()
     input_path: Path | None = None
     accepted: dict[str, Any] | None = None
     status = "not_started"
@@ -103,7 +103,7 @@ def add_primary_report_review(
         accepted_status=accepted["status"] if accepted is not None else None,
         reason=reason,
     )
-    events = logger.event_records()[first_event:]
+    events = logger.event_records(start=first_event)
     review = _review_markdown(accepted, reason)
     record = _review_record(logger, input_path, status, accepted, events)
     intro, separator, rest = content.partition("\n\n## 元の指示\n\n")

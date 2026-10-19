@@ -293,11 +293,13 @@ def test_search_only_reads_oracle_doc_markdown(
 
 
 def test_search_syncs_edits_and_reuses_unchanged_embeddings(
-    tmp_path: Path, document_repository: Path
+    tmp_path: Path, document_repository: Path, unsynced_search_storage: None
 ) -> None:
     """編集・空白化・削除後の旧本文を返さず、無変更推論を再実行しない。"""
     pytest.importorskip("sqlite_vec")
     # Git 分類・ignore は直前の読取り範囲 test と実 worktree の再利用 test に残す。
+    # 物理同期は途中保存・再開・worktree 間の再利用 test に残し、ここでは
+    # 実 DB の更新・検索結果と推論回数を検査する。
     root = document_repository
     worker = _InferenceDouble()
     with closing(
@@ -499,14 +501,22 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
         assert database.execute("select complete from documents").fetchone()[0] == 0
 
     worker.fail = False
-    resumed = search.synchronize()
+    # 再開と結果公開を一度の自動同期で検査し、明示同期直後の再同期を省く。
+    resumed = search.search("原文")
     assert worker.resumes == [
         {"oracle/doc/allowed.md": 0},
         {"oracle/doc/allowed.md": 1},
     ]
-    assert resumed.chunk_count == 2
-    assert resumed.reused_embeddings == 1
-    assert search.search("原文")["status"] == "ok"
+    assert search.sync_progress["reused_embeddings"] == 1
+    assert search.sync_progress["persisted_chunks"] == 1
+    assert resumed["status"] == "ok"
+    assert [hit["path"] for hit in resumed["hits"]] == ["oracle/doc/allowed.md"]
+    assert sorted(
+        resumed["hits"][0]["ranges"], key=lambda location: location["start_line"]
+    ) == [
+        {"start_line": 1, "end_line": 1, "max_similarity": 1.0},
+        {"start_line": 2, "end_line": 2, "max_similarity": 1.0},
+    ]
 
 
 def test_deadline_after_first_chunk_preserves_it_for_retry(
@@ -576,6 +586,7 @@ def test_deadline_after_first_chunk_preserves_it_for_retry(
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_worker_streams_utf8_chunks_and_reuse_through_small_pipe(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """入力のバイト境界と出力の部分書込みを一度の実 worker 起動で検査する。"""
     _fake_node_model(tmp_path)
@@ -601,6 +612,16 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
         "next.md": "別の本文",
         "reuse.md": text,
     }
+    parsed_bodies = []
+
+    def tracked_heading_ranges(body):
+        parsed_bodies.append(body)
+        return _heading_ranges(body)
+
+    # 重複文書も原文位置を保ちつつ、同じ本文の見出し解析を重ねない。
+    monkeypatch.setattr(
+        "commons.runtime_document_search_worker._heading_ranges", tracked_heading_ranges
+    )
     request = NodeSearchWorker(tmp_path, config)._request(
         "chunk_stream",
         {
@@ -609,6 +630,7 @@ Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
             "config": asdict(config),
         },
     )
+    assert sorted(parsed_bodies) == sorted(set(documents.values()))
     dimensions = SEARCH_MATERIALS.embedding_dimensions
     result = subprocess.run(
         ["node", "--import", str(preload), str(tmp_path / "worker.mjs")],
@@ -852,20 +874,18 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
         assert search.sync_progress["persisted_chunks"] == 1
         assert search.sync_progress["changed_document_count"] == 2
         assert model_inputs() == [a, b, c, edited_a]
+        # 同じ節の再配置・重複では分割を重ねず、新規推論入力の検査だけを加える。
+        tokenized_characters = int((runtime / "tokenized-characters.json").read_text())
+        assert tokenized_characters <= len(edited_a + b + c) + len(edited_a)
 
         revised_heading = "## A revised\nalpha edited\nextra\n"
         copy.unlink()
-        document.write_text(revised_heading + b + c)
-        assert hit_lines() == {path: {1: revised_heading, 4: b, 6: c}}
-        assert search.sync_progress["reused_embeddings"] == 2
-        assert search.sync_progress["persisted_chunks"] == 1
-        assert model_inputs() == [a, b, c, edited_a, revised_heading]
-
+        # 見出し編集と並べ替えを一度の同期で検査し、同じ節の再利用に Node を再起動しない。
+        # 本文を変えない移動と、全参照を失った後の復元は後続の同期で独立に保つ。
         document.write_text(b + c + revised_heading)
         assert hit_lines() == {path: {1: b, 3: c, 5: revised_heading}}
-        assert search.sync_progress["status"] == "updated"
-        assert search.sync_progress["reused_embeddings"] == 3
-        assert search.sync_progress["persisted_chunks"] == 0
+        assert search.sync_progress["reused_embeddings"] == 2
+        assert search.sync_progress["persisted_chunks"] == 1
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
 
         moved_file = document.with_name("moved.md")
@@ -959,7 +979,7 @@ def test_database_symlink_cannot_redirect_index_writes(
 
 
 def test_config_change_reclaims_only_inactive_index(
-    tmp_path: Path, document_repository: Path
+    tmp_path: Path, document_repository: Path, unsynced_search_storage: None
 ) -> None:
     """互換条件の変更後は旧索引を再利用せず、未参照なら回収する。"""
     pytest.importorskip("sqlite_vec")
@@ -997,7 +1017,7 @@ def test_config_change_reclaims_only_inactive_index(
 
 
 def test_config_change_preserves_index_while_request_uses_it(
-    tmp_path: Path, document_repository: Path
+    tmp_path: Path, document_repository: Path, unsynced_search_storage: None
 ) -> None:
     """旧設定の要求が推論中なら、接続を閉じてもその索引を回収しない。"""
     pytest.importorskip("sqlite_vec")
@@ -1050,7 +1070,10 @@ def test_config_change_preserves_index_while_request_uses_it(
 
 
 def test_zero_hit_search_rechecks_source_before_return(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document_repository: Path
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    document_repository: Path,
+    unsynced_search_storage: None,
 ) -> None:
     """空白文書の同期直後に本文が変わったら、ゼロ件を成功として返さない。"""
     pytest.importorskip("sqlite_vec")
@@ -1613,7 +1636,10 @@ def test_output_schema_rejects_malformed_results(value):
 
 
 def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document_repository: Path
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    document_repository: Path,
+    unsynced_search_storage: None,
 ) -> None:
     """分割実装の変更では索引を再構築し、互換な同一入力片を引き継ぐ。"""
     from commons import runtime_document_search as module
@@ -1656,7 +1682,7 @@ def test_worker_change_rebuilds_index_and_reuses_compatible_embeddings(
 
 
 def test_search_rechecks_saved_config_for_each_request(
-    tmp_path: Path, document_repository: Path
+    tmp_path: Path, document_repository: Path, unsynced_search_storage: None
 ) -> None:
     """起動後の有効な変更は新索引を使い、不備は旧設定へ戻さず拒否する。"""
     root = document_repository
@@ -1788,42 +1814,55 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is unavailable")
 def test_worker_cancellation_reaps_process_before_releasing_owner(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """推論中の取消で子 process を停止・回収してから失敗を返す。"""
+    """通信のタイムアウト後も取消を検出し、実子 process を回収してから返す。"""
     base = materials_directory(tmp_path)
     base.mkdir(parents=True)
     _test_node_runtime(base)
     (base / "worker.mjs").write_text(
-        'import fs from "node:fs"; '
-        'fs.writeFileSync("started.pid", String(process.pid)); '
-        "setInterval(() => {}, 1000);\n"
+        "console.log(process.pid); setInterval(() => {}, 1000);\n"
     )
     worker = NodeSearchWorker(tmp_path, _tuning())
     cancelled = threading.Event()
+    processes = []
+
+    def cancel_during_communication(process, input, *, timeout):
+        # 起動通知を受けてから取消し、実時間の通信 timeout と監視 thread を省く。
+        # TimeoutExpired 後の再判定は製品の loop を通し、停止・wait も実行する。
+        assert not processes, "worker communicated again after cancellation"
+        processes.append(process)
+        assert json.loads(input)["operation"] == "embed_query"
+        readable, _, _ = select.select([process.stdout], [], [], 5)
+        assert readable, "worker did not announce startup"
+        assert int(process.stdout.readline()) == process.pid
+        assert process.poll() is None
+        cancelled.set()
+        raise subprocess.TimeoutExpired(process.args, timeout)
+
+    monkeypatch.setattr(subprocess.Popen, "communicate", cancel_during_communication)
     descriptor = os.open(tmp_path / "lock", os.O_CREAT | os.O_RDWR, 0o600)
     try:
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                worker.run,
+        with pytest.raises(SearchError) as failure:
+            worker.run(
                 "embed_query",
                 {"text": "test"},
                 deadline=time.monotonic() + 10,
                 residency_fd=descriptor,
                 cancelled=cancelled,
             )
-            marker = base / "started.pid"
-            until = time.monotonic() + 5
-            while (
-                not marker.exists() and not future.done() and time.monotonic() < until
-            ):
-                time.sleep(0.02)
-            assert marker.is_file()
-            process_id = int(marker.read_text())
-            cancelled.set()
-            with pytest.raises(SearchError) as failure:
-                future.result(timeout=5)
-            assert failure.value.code == "CANCELLED"
-            with pytest.raises(ProcessLookupError):
-                os.kill(process_id, 0)
+        assert failure.value.code == "CANCELLED"
+        assert len(processes) == 1
+        assert processes[0].returncode is not None
+        with pytest.raises(ProcessLookupError):
+            os.kill(processes[0].pid, 0)
     finally:
+        # 回収の回帰があっても、test が起動した子 process を残さない。
+        for process in processes:
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=5)
+            for pipe in (process.stdin, process.stdout, process.stderr):
+                if pipe is not None:
+                    pipe.close()
         os.close(descriptor)

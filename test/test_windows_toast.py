@@ -10,7 +10,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from threading import Event
+from threading import Barrier, Event
 
 import pytest
 
@@ -188,17 +188,18 @@ def test_codex_callback_notifies_only_fixed_session_turn_once(
     assert runtime_windows_toast._run_codex_tui_callback(child_arguments) == 0
     assert calls == []
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = [
-            executor.submit(
-                runtime_windows_toast._run_codex_tui_callback,
-                arguments,
-            )
-            for _ in range(8)
-        ]
+    # 同じ turn を受け取る二者で競合を作り、開始を揃えて重複排除を検証する。
+    ready = Barrier(2)
+
+    def notify_same_turn():
+        ready.wait(timeout=5)
+        return runtime_windows_toast._run_codex_tui_callback(arguments)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(notify_same_turn) for _ in range(2)]
         results = [future.result() for future in futures]
 
-    assert results == [0] * 8
+    assert results == [0, 0]
     assert calls == [("cmoc oracle investigation", "repository — 応答完了")]
     assert "prompt secret" not in repr(calls)
     assert "assistant secret" not in repr(calls)
@@ -283,19 +284,22 @@ def test_tui_callback_close_drains_running_callback(
     ]
     callback_started = Event()
     release_callback = Event()
-    drain_waiting = Event()
-    release_drain = Event()
     started_at = toast_clock.now
+    finished_at = None
     advance = toast_clock.sleep
 
     def sleep_during_callback(seconds):
+        nonlocal finished_at
         advance(seconds)
         # 最初の起動猶予を過ぎても、実行中 lease が cleanup を止めることを確かめる。
-        if toast_clock.now - started_at >= (
+        if finished_at is None and toast_clock.now - started_at >= (
             2 * runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
         ):
-            drain_waiting.set()
-            assert release_drain.wait(timeout=5)
+            assert state_root.is_dir()
+            assert not callback_future.done()
+            release_callback.set()
+            assert callback_future.result(timeout=5) == 0
+            finished_at = toast_clock.now
 
     monkeypatch.setattr(toast_clock, "sleep", sleep_during_callback)
 
@@ -312,32 +316,26 @@ def test_tui_callback_close_drains_running_callback(
         block_notification,
     )
 
-    try:
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            callback_future = executor.submit(
-                runtime_windows_toast._run_codex_tui_callback,
-                arguments,
-            )
+    # drain は呼び出し元で進め、通知だけを別 thread にする。
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        callback_future = executor.submit(
+            runtime_windows_toast._run_codex_tui_callback,
+            arguments,
+        )
+        try:
             assert callback_started.wait(timeout=2)
-            close_future = executor.submit(callback.close)
-            assert drain_waiting.wait(timeout=2)
-            assert state_root.is_dir()
-            assert not close_future.done()
+            callback.close()
+            assert finished_at is not None
+            grace = runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
+            poll = runtime_windows_toast._TUI_CALLBACK_DRAIN_POLL_SEC
+            # 実 marker の削除を認識し、全 timeout ではなく完了後の猶予で戻る。
+            quiet_period = toast_clock.now - finished_at
+            assert grace - poll <= quiet_period <= grace + poll
+            assert not state_root.exists()
+        finally:
+            # assertion failure でも executor の終了待ちより先に callback を解放する。
             release_callback.set()
-            assert callback_future.result(timeout=5) == 0
-            finished_at = toast_clock.now
-            release_drain.set()
-            close_future.result(timeout=5)
-        grace = runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
-        poll = runtime_windows_toast._TUI_CALLBACK_DRAIN_POLL_SEC
-        # 実 marker の削除を認識し、全 timeout ではなく完了後の猶予で戻る。
-        quiet_period = toast_clock.now - finished_at
-        assert grace - poll <= quiet_period <= grace + poll
-        assert not state_root.exists()
-    finally:
-        release_callback.set()
-        release_drain.set()
-        callback.close()
+            callback.close()
 
 
 @pytest.mark.parametrize("callback_finishes", [True, False], ids=["finishes", "stuck"])
@@ -373,14 +371,18 @@ def test_tui_callback_drain_handles_late_start_with_finite_wait(
         assert elapsed == pytest.approx(timeout)
 
 
-@pytest.mark.parametrize("state_kind", ["missing", "file", "unreadable"])
-def test_tui_callback_drain_handles_unavailable_state(
-    tmp_path, monkeypatch, toast_clock, state_kind
+@pytest.mark.parametrize(
+    ("state_kind", "expected_active"),
+    [("missing", False), ("file", False), ("unreadable", True)],
+    ids=["missing", "file", "unreadable"],
+)
+def test_tui_callback_activity_handles_unavailable_state(
+    tmp_path, monkeypatch, state_kind, expected_active
 ):
-    """消失した state は活動なしとし、走査不能な state は有限の期限まで保つ。"""
+    """消失した state は活動なしとし、走査不能な state は活動中と見なす。"""
+    # poll・猶予・期限は late-start/stuck、実 marker と cleanup は並行ケースで検証する。
+    # ここでは state の分類だけを検証し、各 poll で同じ file I/O を繰り返さない。
     state_root = tmp_path / "callback-state"
-    started_at = toast_clock.now
-    expected_wait = runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
     with monkeypatch.context() as patch:
         if state_kind == "file":
             state_root.touch()
@@ -391,9 +393,8 @@ def test_tui_callback_drain_handles_unavailable_state(
                 raise PermissionError("callback state is unreadable")
 
             patch.setattr(runtime_windows_toast.os, "scandir", deny_scan)
-            expected_wait = runtime_windows_toast._TUI_CALLBACK_DRAIN_TIMEOUT_SEC
-        runtime_windows_toast._wait_for_tui_callback_drain(state_root)
-    assert toast_clock.now - started_at == pytest.approx(expected_wait)
+        active = runtime_windows_toast._has_active_tui_callback(state_root)
+    assert active is expected_active
 
 
 def test_tui_callback_commands_run_as_standalone_scripts(

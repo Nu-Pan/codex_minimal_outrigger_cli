@@ -34,40 +34,14 @@ from commons.runtime_refactor import (
 from commons.runtime_results import CommandResult
 
 
-@pytest.fixture
-def refactor_files(tmp_path: Path) -> Path:
-    """state 同期で実際に読み書きする file を、Git 準備から分ける。"""
-    root = tmp_path / "repo"
-    root.mkdir()
-    (root / "README.md").write_text("# repo\n")
-    (root / "oracle").mkdir()
-    (root / "oracle" / "spec.md").write_text("# spec\n")
-    return root
-
-
-def test_refactor_state_sync_tracks_enumerated_files(refactor_files, monkeypatch):
-    root = refactor_files
-    monkeypatch.setattr(
-        refactor_module,
-        "enumerate_refactor_targets",
-        lambda _root: ["README.md", "oracle/spec.md"],
-    )
-    state = sync_refactor_state(root)
-    assert state == {
-        "README.md": {"last_investigated_at": None},
-        "oracle/spec.md": {"last_investigated_at": None},
-    }
-    assert load_refactor_state(root) == state
-
-
 @pytest.mark.parametrize(
     "initial_state", ["empty", "pending", "investigated", "new_entries"]
 )
 def test_refactor_cycle_initialization_avoids_redundant_io(
-    refactor_files: Path, monkeypatch: pytest.MonkeyPatch, initial_state: str
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, initial_state: str
 ) -> None:
     """日時を保持して巡を初期化し、同期が生んだ差分だけを確定する。"""
-    root = refactor_files
+    root = tmp_path
     targets = [] if initial_state == "empty" else ["README.md", "oracle/spec.md"]
     monkeypatch.setattr(
         refactor_module, "enumerate_refactor_targets", lambda _root: targets
@@ -83,7 +57,6 @@ def test_refactor_cycle_initialization_avoids_redundant_io(
     before = state_path.read_bytes()
     save = Mock(wraps=write_refactor_state)
     monkeypatch.setattr(refactor_module, "write_refactor_state", save)
-    monkeypatch.setattr(refactor_workload, "write_refactor_state", save)
 
     # Git 分類・commit/rollback と中断は test_editing_run_cli.py に残す。
     # ここでは保存内容と既存 snapshot の差を Git 境界へ渡し、巡開始の I/O を検査する。
@@ -250,15 +223,25 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     )
 
 
-def test_refactor_state_sync_preserves_timestamps_without_reading_contents(
-    refactor_files, monkeypatch
+def test_refactor_state_sync_initializes_and_preserves_dates_without_reading_contents(
+    tmp_path, monkeypatch
 ):
-    root = refactor_files
+    """初期 entry の保存と、内容変更後の日時保持を同じ同期処理で検査する。"""
+    root = tmp_path
     targets = ["README.md", "oracle/spec.md"]
+    for relative in targets:
+        path = root / relative
+        path.parent.mkdir(exist_ok=True)
+        path.write_text("original\n")
     monkeypatch.setattr(
         refactor_module, "enumerate_refactor_targets", lambda _: targets
     )
     state = sync_refactor_state(root)
+    assert state == {
+        "README.md": {"last_investigated_at": None},
+        "oracle/spec.md": {"last_investigated_at": None},
+    }
+    assert load_refactor_state(root) == state
     state["README.md"]["last_investigated_at"] = "2026-07-19_00-00-00_000"
     write_refactor_state(root, state)
     (root / "README.md").write_text("changed\n")
@@ -276,12 +259,21 @@ def test_refactor_state_sync_preserves_timestamps_without_reading_contents(
 
 
 @pytest.mark.parametrize(
-    "change", ["none", "target_mode", "related_mode", "deleted", "renamed"]
+    "change",
+    [
+        "none",
+        "target_mode",
+        "related_mode",
+        "added",
+        "related_deleted",
+        "deleted",
+        "renamed",
+    ],
 )
 def test_refactor_state_update_only_dates_surviving_origin(
-    refactor_files, monkeypatch, change
+    tmp_path, monkeypatch, change
 ):
-    root = refactor_files
+    root = tmp_path
     paths = {"README.md", "oracle/spec.md"}
     monkeypatch.setattr(
         refactor_module, "enumerate_refactor_targets", lambda _: sorted(paths)
@@ -292,25 +284,37 @@ def test_refactor_state_update_only_dates_surviving_origin(
     write_refactor_state(root, state)
     if change in {"target_mode", "related_mode"}:
         relative = "README.md" if change == "target_mode" else "oracle/spec.md"
-        (root / relative).chmod(0o755)
+        path = root / relative
+        path.parent.mkdir(exist_ok=True)
+        path.write_text("mode probe\n")
+        path.chmod(0o755)
     elif change in {"deleted", "renamed"}:
         paths.remove("README.md")
         if change == "renamed":
             paths.add("renamed.md")
+    elif change == "added":
+        paths.add("added.md")
+    elif change == "related_deleted":
+        paths.remove("oracle/spec.md")
     investigated_at = "2026-10-11_00-00-00_001"
-    monkeypatch.setattr(refactor_workload, "timestamp", lambda: investigated_at)
+    monkeypatch.setattr(refactor_module, "timestamp", lambda: investigated_at)
+    save = Mock(wraps=write_refactor_state)
+    monkeypatch.setattr(refactor_module, "write_refactor_state", save)
 
-    updated = refactor_workload._update_refactor_state(
-        SimpleNamespace(run_worktree=root), "README.md"
-    )
+    updated = sync_refactor_state(root, investigated_target="README.md")
 
+    # 集合が変わる場合も、調査日時を含む最終結果だけを保存する。
+    save.assert_called_once_with(root, updated)
     assert updated == load_refactor_state(root)
     assert set(updated) == paths
     if "README.md" in paths:
         assert updated["README.md"] == {"last_investigated_at": investigated_at}
     if change == "renamed":
         assert updated["renamed.md"] == {"last_investigated_at": None}
-    assert updated["oracle/spec.md"] == state["oracle/spec.md"]
+    if change == "added":
+        assert updated["added.md"] == {"last_investigated_at": None}
+    if "oracle/spec.md" in paths:
+        assert updated["oracle/spec.md"] == state["oracle/spec.md"]
 
 
 def test_refactor_commit_reuses_verified_head_and_synchronized_state(
@@ -501,10 +505,10 @@ def test_refactor_cycle_prioritizes_null_then_milliseconds_then_path():
 @pytest.mark.parametrize("has_committed_state", [False, True])
 @pytest.mark.parametrize("same_ref", [False, True])
 def test_merge_refactor_states_reads_shared_snapshot_once(
-    refactor_files, monkeypatch, has_committed_state, same_ref
+    tmp_path, monkeypatch, has_committed_state, same_ref
 ):
     """同一 ref の照会と同一 snapshot の本文取得を繰り返さず、同期して保存する。"""
-    root = refactor_files
+    root = tmp_path
     committed = {
         "README.md": {"last_investigated_at": "2026-10-18_00-00-00_001"},
         "removed.md": {"last_investigated_at": "2026-10-18_00-00-00_002"},
@@ -550,40 +554,46 @@ def test_merge_refactor_states_reads_shared_snapshot_once(
 
 
 def test_merge_refactor_states_uses_committed_dates_and_current_paths(
-    cli_repository, monkeypatch
+    tmp_path, monkeypatch
 ):
-    root = cli_repository
+    root = tmp_path
     older = "2026-10-18_00-00-00_001"
     newer = "2026-10-18_00-00-00_002"
-    write_refactor_state(
-        root,
-        {
+    left, right = "a" * 40, "b" * 40
+    snapshots = {
+        left: {
             "README.md": {"last_investigated_at": None},
             "oracle/spec.md": {"last_investigated_at": older},
             "removed.md": {"last_investigated_at": newer},
             "left.py": {"last_investigated_at": older},
         },
-    )
-    run_git(root, "add", ".cmoc/gt/realization/refactor/state.json")
-    run_git(root, "commit", "-m", "left state")
-    left = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    write_refactor_state(
-        root,
-        {
+        right: {
             "README.md": {"last_investigated_at": newer},
             "oracle/spec.md": {"last_investigated_at": None},
             "right.py": {"last_investigated_at": None},
         },
-    )
-    run_git(root, "add", ".cmoc/gt/realization/refactor/state.json")
-    run_git(root, "commit", "-m", "right state")
-    right = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    }
+
+    # 実 Git の snapshot 取得・日時統合・同期は managed_state_conflict_merges_without_agent
+    # と test_editing_run_cli.py の join_merges_committed_timestamps_before_sync に残す。
+    # 値の優先順位と入力順序の検査には確定済み snapshot だけを渡し、履歴を作らない。
+    def committed_git(args, queried_root):
+        assert queried_root == root
+        if args[0] == "ls-tree":
+            ref = args[2]
+            return CommandResult(
+                0, f"100644 blob {ref}\t.cmoc/gt/realization/refactor/state.json\0", ""
+            )
+        assert args[0] == "show"
+        ref, _separator, _relative = args[1].partition(":")
+        return CommandResult(0, json.dumps(snapshots[ref]), "")
+
+    monkeypatch.setattr(refactor_module, "run_git", committed_git)
     targets = ["README.md", "oracle/spec.md", "left.py", "right.py", "added.py"]
     monkeypatch.setattr(
         refactor_module, "enumerate_refactor_targets", lambda _: targets
     )
 
-    # 順序だけが異なる検査で同じ commit 履歴を作り直さない。
     for refs in ((left, right), (right, left)):
         # 各順序で作業中の値を戻し、前回の統合結果からの読み込みも検出する。
         write_refactor_state(root, {"README.md": {"last_investigated_at": None}})

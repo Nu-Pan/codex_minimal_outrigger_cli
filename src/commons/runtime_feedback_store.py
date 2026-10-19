@@ -251,17 +251,22 @@ def _atomic_create(path: Path, content: bytes) -> bool:
             if name.startswith(temporary_prefix) and name.endswith(".tmp")
         ]
         for candidate in sibling_temporaries:
-            if (
-                candidate.is_symlink()
-                or not candidate.is_file()
-                or candidate.read_bytes() != content
-            ):
+            try:
+                regular = stat.S_ISREG(candidate.lstat().st_mode)
+            except FileNotFoundError:
+                regular = False
+            if not regular or candidate.read_bytes() != content:
                 raise FeedbackRejected(
                     "context_invalid",
                     f"feedback temporary record differs or is not regular: {candidate}",
                 )
-        if os.path.lexists(path):
-            if path.is_symlink() or not path.is_file():
+        # 排他取得後の一回の lstat で、存在と symlink を含む種類を取り直す。
+        try:
+            mode = path.lstat().st_mode
+        except FileNotFoundError:
+            mode = None
+        if mode is not None:
+            if not stat.S_ISREG(mode):
                 raise FeedbackRejected(
                     "context_invalid",
                     f"feedback record path is not a regular file: {path}",
@@ -540,13 +545,21 @@ def _fingerprint(path: Path) -> dict[str, object]:
     state = "missing"
     digest: str | None = None
     try:
-        if not path.exists():
-            state = "missing"
-        elif not path.is_file():
-            state = "not_file"
+        # 存在と種類は同じ stat で確認し、次の fingerprint では取り直す。
+        try:
+            mode = path.stat().st_mode
+        except OSError as exc:
+            # pathlib の exists/is_file と同じ「存在しない」扱いを保つ。
+            if exc.errno not in {errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP}:
+                raise
+        except ValueError:
+            pass  # pathlib と同じく、表現できない path は存在しないものとする。
         else:
-            digest = sha256_bytes(path.read_bytes())
-            state = "hashed"
+            if not stat.S_ISREG(mode):
+                state = "not_file"
+            else:
+                digest = sha256_bytes(path.read_bytes())
+                state = "hashed"
     except OSError:
         state = "unreadable"
         digest = None

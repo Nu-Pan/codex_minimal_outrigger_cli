@@ -39,7 +39,41 @@ from cmoc_runtime import CmocError, TerminalResult
 from commons.runtime_logging import SubcommandLogger
 from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
-from commons.runtime_report_markdown import ReportSummary, render_report_document
+from commons.runtime_report_markdown import (
+    ReportSummary,
+    markdown_sections,
+    render_report_document,
+)
+
+
+@pytest.mark.parametrize("fence", ["```", "~~~~"])
+def test_report_sections_preserve_quoted_content_and_separate_generated_headings(fence):
+    """生成見出しだけを空行で区切り、複数行の原文と code block は変えない。"""
+    quoted = "# 原文の見出し\n## 原文の内部"
+    quoted_code = "```text\n## 原文のコード\n```"
+    fenced = [fence + "text", "# コード内の見出し", fence[:-1], fence]
+    lines = [
+        "# report",
+        "本文",
+        "## 詳細",
+        quoted,
+        quoted_code,
+        *fenced,
+        "####### 見出しではない本文",
+        "#空白のない本文",
+        "## 終了",
+        "- none",
+    ]
+
+    assert markdown_sections(lines) == (
+        "# report\n\n本文\n\n## 詳細\n\n"
+        + quoted
+        + "\n"
+        + quoted_code
+        + "\n"
+        + "\n".join(fenced)
+        + "\n####### 見出しではない本文\n#空白のない本文\n\n## 終了\n\n- none\n"
+    )
 
 
 @pytest.mark.parametrize(
@@ -81,6 +115,30 @@ def test_report_summary_preserves_symbols_in_source_and_markdown(source):
         assert excerpt in report_text(section)
     assert "/repo/<target>&value" in intro
     assert "/repo/<target>&value" in report_text(intro)
+
+
+def test_report_metadata_preserves_types_and_escaped_values():
+    """実行情報は値の型と境界を保ち、連続した report 間で本文を混ぜない。"""
+    values = ["", None, True, False, 0, 1.25, [], {}, "null", "日本語\n次の行", r"\n"]
+    for execution_id in ("first", "second", "first"):
+        fields = {
+            "command": "cmoc doctor",
+            "execution_id": execution_id,
+            "work_root": Path('/repo/"quoted"\\path'),
+            "values": values,
+            "nested": {"key\n\ud800": ["\udfff", {"value": "日本語"}]},
+        }
+        rendered = render_report_document("report", fields, ReportSummary("完了"), "")
+        rendered.encode("utf-8")
+        metadata = report_metadata(rendered)
+        assert metadata == {
+            **fields,
+            "work_root": str(fields["work_root"]),
+            "nested": {"key\n\\ud800": [r"\udfff", {"value": "日本語"}]},
+        }
+        assert [type(value) for value in metadata["values"]] == [
+            type(value) for value in values
+        ]
 
 
 @pytest.fixture
@@ -712,6 +770,7 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
             "empty": "",
             "nothing": None,
             "items": [True, False, 0, 1.25, [], {}],
+            "groups": [[1], {"key": [2, 3]}, 4],
         }
     }
     output.write_text(json.dumps(source, ensure_ascii=True), encoding="utf-8")
@@ -749,6 +808,11 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
     assert (
         '"items": [\n      true,\n      false,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
         in report
+    )
+    assert (
+        '"groups": [\n      [\n        1\n      ],\n'
+        '      {\n        "key": [\n          2,\n          3\n        ]\n      },\n'
+        "      4\n    ]" in report
     )
     assert '"literal": "\n"' not in report
     assert '"duplicate": "first",\n  "duplicate": "second"' in report

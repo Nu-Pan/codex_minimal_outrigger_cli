@@ -56,7 +56,7 @@ class JoinRecord:
         data = asdict(self)
         data["context"] = {
             key: str(value) if isinstance(value, Path) else value
-            for key, value in asdict(self.context).items()
+            for key, value in data["context"].items()
         }
         temporary: str | None = None
         try:
@@ -146,8 +146,10 @@ def _require_regular_path(path: Path) -> None:
         raise CmocError("join 復旧記録の path が不正です。", [], str(path))
 
 
+@reuse_root_queries()
 def load_join_record(repo: Path, session_id: str) -> JoinRecord | None:
     """通常 file の記録を読み、run identity と保存先の対応を確認する。"""
+    # 配置探索だけを今回の読込内で共有し、保存内容・worktree 登録は毎回検証する。
     # 壊れた復旧情報を未作成として扱わない。
     path = _record_path(repo, session_id)
     _require_regular_path(path)
@@ -220,10 +222,9 @@ def load_join_record(repo: Path, session_id: str) -> JoinRecord | None:
         raise CmocError("join 復旧記録を検証できません。", [], str(path)) from exc
 
 
-@reuse_root_queries()
 def join_record(context: EditingRunContext) -> JoinRecord:
     """同じ run の記録を再利用し、新規 run では元の成果を先に固定する。"""
-    # 配置の探索だけを取得内で共有し、保存内容・worktree 登録は毎回検証する。
+    # 記録の run identity を確認し、未完了の別 run を上書きしない。
     record = load_join_record(context.repo, context.session_id)
     if record is not None and record.context.run_branch == context.run_branch:
         if (
@@ -275,17 +276,6 @@ def confirm_import(record: JoinRecord) -> bool:
             or record.prepared_run_head not in metadata
             or metadata[record.session_commit][0] != record.session_tree
             or metadata[record.prepared_run_head][0] != record.session_tree
-            or run_git(
-                [
-                    "merge-base",
-                    "--is-ancestor",
-                    record.session_commit,
-                    context.session_branch,
-                ],
-                context.repo,
-                check=False,
-            ).returncode
-            != 0
         ):
             raise CmocError("記録した取り込み成果を確認できません。", [], "")
         if record.join_commit is None:
@@ -298,6 +288,21 @@ def confirm_import(record: JoinRecord) -> bool:
             ][1:] == [record.session_head, record.prepared_run_head]
         if not valid:
             raise CmocError("join の取り込み履歴と基準が一致しません。", [], "")
+        # 不整合な記録では ref 照会を省き、正常な記録では毎回到達可能性を検査する。
+        if (
+            run_git(
+                [
+                    "merge-base",
+                    "--is-ancestor",
+                    record.session_commit,
+                    context.session_branch,
+                ],
+                context.repo,
+                check=False,
+            ).returncode
+            != 0
+        ):
+            raise CmocError("記録した取り込み成果を確認できません。", [], "")
         return True
     if record.prepared_run_head is None or record.session_head is None:
         return False

@@ -10,10 +10,12 @@ root 不変条件の検証文脈が複数 file に分散するため、一つの
 - {{work-root}}/oracle/doc/app_spec/run_isolation.md
 """
 
+import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import oracle.other.path_model as oracle_path_model
 import pytest
 from _git_support import (
     RUN_BRANCH,
@@ -191,9 +193,8 @@ def test_agent_call_path_context_ignores_repository_selection_environment(
     """Git の repository 選択環境変数で agent call の cwd 起点を上書きしない。"""
     # 両方を実 repository にする。環境変数による誤選択の検出に履歴は不要。
     target = cli_repository
-    override = tmp_path / "override"
-    override.mkdir()
-    init_repo(override)
+    # 空の main repository は metadata ごと独立コピーし、追加の init を省く。
+    override = shutil.copytree(target, tmp_path / "override")
     monkeypatch.setenv("GIT_DIR", str(override / ".git"))
     monkeypatch.setenv("GIT_WORK_TREE", str(override))
     monkeypatch.setenv("GIT_COMMON_DIR", str(override / ".git"))
@@ -243,6 +244,29 @@ def test_agent_call_path_contexts_are_parallel_and_call_scoped(
     assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
 
+    # 同じ root の再探索を防ぎ、suffix の正規化も検査済みの root から行う。
+    run_root_scans = 0
+    original_resolve_run_root = oracle_path_model.resolve_run_root
+
+    def record_run_root_scan(*args, **kwargs):
+        nonlocal run_root_scans
+        run_root_scans += 1
+        return original_resolve_run_root(*args, **kwargs)
+
+    monkeypatch.setattr(oracle_path_model, "resolve_run_root", record_run_root_scan)
+    monkeypatch.chdir(root)
+    (linked / "alias").symlink_to(root, target_is_directory=True)
+    for source, expected in (
+        (RootPathPlaceHolder.RUN, linked),
+        ("{{run-root}}", linked),
+        (Path("{{run-root}}"), linked),
+        (Path("{{run-root}}/missing/../result.py"), linked / "result.py"),
+        ("{{run-root}}/alias/result.py", root / "result.py"),
+    ):
+        run_root_scans = 0
+        assert resolve_real_path(source, contexts[0]) == expected.resolve()
+        assert run_root_scans <= 1
+
     # 内側の main repository に履歴は不要。外側の linked root を誤採用しない。
     nested_main = linked / "repo"
     nested_main.mkdir()
@@ -262,9 +286,7 @@ def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     """relativeな起点の解決をcwd切替と直列化し、未作成の祖先も受理する。"""
     # cwd の混線を検出するための二つの Git root だけを準備する。
     first = cli_repository
-    second = tmp_path / "second"
-    second.mkdir()
-    init_repo(second)
+    second = shutil.copytree(first, tmp_path / "second")
     original = first.resolve()
     monkeypatch.chdir(original)
     first_ready = threading.Event()

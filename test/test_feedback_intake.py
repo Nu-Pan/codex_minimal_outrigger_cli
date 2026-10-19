@@ -25,6 +25,13 @@ from commons.runtime_feedback_store import (
 )
 
 
+@pytest.fixture(autouse=True)
+def skip_disk_sync(monkeypatch):
+    # 同期の順序・失敗は test_feedback_store.py、実同期との結合は collector・wave test
+    # に残す。ここでは receipt の登録・参照検証・cleanup を実行し、同期待ちだけを省く。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
+
+
 def _raw_input(root, identity, observed_at="2026-10-08T00:00:00Z"):
     # envelope schema は store・wave のテストが検査し、ここでは receipt の内容を扱う。
     path = observation_path(root, identity, observed_at)
@@ -136,8 +143,6 @@ def test_new_receipt_rejects_raw_outside_observation_store(tmp_path):
 def test_store_reuses_verified_hash_for_receipt_and_checks_replays(
     tmp_path, monkeypatch
 ):
-    # flush の順序と失敗は store test、collector と実同期の結合は wave test に残す。
-    monkeypatch.setattr("os.fsync", lambda _fd: None)
     identity = "fbo_" + "1" * 32
     observation = {"observation_id": identity}
     dates = ["2026-10-08T00:00:00Z", "2026-10-09T00:00:00Z"]
@@ -179,10 +184,8 @@ def test_store_reuses_verified_hash_for_receipt_and_checks_replays(
 
 
 @pytest.fixture
-def cleanup_receipts(tmp_path, monkeypatch):
-    # 登録は intake の正常ケース、flush の順序・失敗は test_feedback_store.py で検査する。
-    # cleanup の削除・台帳更新・再開は実行し、ディスク同期待ちだけを省く。
-    monkeypatch.setattr("os.fsync", lambda _fd: None)
+def cleanup_receipts(tmp_path):
+    # 登録は intake の正常ケースで検査し、ここでは cleanup 前の台帳だけを用意する。
     inputs = [_raw_input(tmp_path, "fbo_" + str(index) * 32) for index in (1, 2, 3)]
     _seed_receipts(tmp_path, inputs)
     return (

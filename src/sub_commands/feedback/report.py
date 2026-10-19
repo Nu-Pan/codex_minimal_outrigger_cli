@@ -10,10 +10,12 @@ normalization、全 candidate の verification、正常 publication、および 
 - `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
 """
 
+import errno
 import hashlib
 import html
 import json
 import os
+import stat
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -59,7 +61,7 @@ from commons.runtime_feedback_state import (
     publish_current_pointer,
     publish_generation_artifacts,
     validate_observation_envelope,
-    write_checkpoint,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
@@ -342,7 +344,7 @@ def _capture_report_cut_references(
 ) -> list[_JsonObject]:
     """agent に許可する observation と current repository reference を固定する。"""
     references: dict[str, _JsonObject] = {}
-    path_subjects: dict[Path, set[str]] = {}
+    target_subjects: dict[str, set[str]] = {}
 
     # raw observation 自体は current verdict の根拠ではない別種 reference とする。
     for observation_id_value, observation in sorted(observations.items()):
@@ -358,8 +360,8 @@ def _capture_report_cut_references(
             "summary": summary if isinstance(summary, str) else "",
             "evidence": evidence if isinstance(evidence, list) else [],
         }
-        for path in _observation_reference_paths(repo, observation):
-            path_subjects.setdefault(path, set()).add(observation_id_value)
+        for target_path in _observation_reference_paths(observation):
+            target_subjects.setdefault(target_path, set()).add(observation_id_value)
 
     # active issue が保持する stable target を今回の cut で再取得する。
     for current_issue_id, issue in sorted(active_issues.items()):
@@ -369,9 +371,7 @@ def _capture_report_cut_references(
         for target in targets:
             if not isinstance(target, dict) or not isinstance(target.get("path"), str):
                 continue
-            candidate = _repository_path(repo, target["path"])
-            if candidate is not None:
-                path_subjects.setdefault(candidate, set()).add(current_issue_id)
+            target_subjects.setdefault(target["path"], set()).add(current_issue_id)
         verification = issue.get("verification")
         current_evidence = (
             verification.get("current_evidence")
@@ -384,9 +384,16 @@ def _capture_report_cut_references(
                     evidence.get("path"), str
                 ):
                     continue
-                candidate = _repository_path(repo, evidence["path"])
-                if candidate is not None:
-                    path_subjects.setdefault(candidate, set()).add(current_issue_id)
+                target_subjects.setdefault(evidence["path"], set()).add(
+                    current_issue_id
+                )
+
+    # 同じ保存済み path の解決を subject 間で共有する。次の capture では取り直す。
+    path_subjects: dict[Path, set[str]] = {}
+    for target_path, subjects in target_subjects.items():
+        candidate = _repository_path(repo, target_path)
+        if candidate is not None:
+            path_subjects.setdefault(candidate, set()).update(subjects)
 
     # path ごとに一度だけ current state を取得し、複数 candidate の subject を共有する。
     for path, subjects in sorted(path_subjects.items(), key=lambda item: str(item[0])):
@@ -395,24 +402,20 @@ def _capture_report_cut_references(
     return [references[key] for key in sorted(references)]
 
 
-def _observation_reference_paths(repo: Path, observation: _JsonObject) -> list[Path]:
-    """raw observation が既に拘束した repository 内 current target を返す。"""
-    paths: set[Path] = set()
+def _observation_reference_paths(observation: _JsonObject) -> set[str]:
+    """raw observation が保持する target の path 表記を返す。"""
+    paths: set[str] = set()
     fingerprints = observation.get("evidence_fingerprints")
     if isinstance(fingerprints, list):
         for fingerprint in fingerprints:
             if isinstance(fingerprint, dict) and isinstance(
                 fingerprint.get("normalized_path"), str
             ):
-                candidate = _repository_path(repo, fingerprint["normalized_path"])
-                if candidate is not None:
-                    paths.add(candidate)
+                paths.add(fingerprint["normalized_path"])
     source_event = observation.get("source_event")
     if isinstance(source_event, dict) and isinstance(source_event.get("log_path"), str):
-        candidate = _repository_path(repo, source_event["log_path"])
-        if candidate is not None:
-            paths.add(candidate)
-    return sorted(paths)
+        paths.add(source_event["log_path"])
+    return paths
 
 
 def _repository_path(repo: Path, value: str) -> Path | None:
@@ -447,21 +450,27 @@ def _capture_repository_reference(
         "path": relative,
     }
     try:
-        if path.is_symlink():
-            return {
-                **base,
-                "kind": "current_fingerprint",
-                "state": "unreadable",
-                "sha256": None,
-            }
-        if not path.exists():
+        # 種類と存在は同じ lstat で確認し、次の capture では取り直す。
+        try:
+            mode = path.lstat().st_mode
+        except OSError as exc:
+            # pathlib の exists/is_file と同じ「存在しない」扱いを保つ。
+            if exc.errno not in {errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP}:
+                raise
             return {
                 **base,
                 "kind": "current_fingerprint",
                 "state": "missing",
                 "sha256": None,
             }
-        if not path.is_file():
+        if stat.S_ISLNK(mode):
+            return {
+                **base,
+                "kind": "current_fingerprint",
+                "state": "unreadable",
+                "sha256": None,
+            }
+        if not stat.S_ISREG(mode):
             return {
                 **base,
                 "kind": "current_fingerprint",
@@ -665,6 +674,20 @@ def _build_candidates(
         machine_observations,
     )
 
+    # wave 内の参照を一度だけ逆引きし、同一性照合と candidate の参照付与で共用する。
+    references = inputs.get("references")
+    assert isinstance(references, list)
+    if not candidates and not agent_observations:
+        return candidates, machine_aggregates
+    references_by_subject: dict[str, list[_JsonObject]] = {}
+    for reference in references:
+        if not isinstance(reference, dict) or not isinstance(
+            reference.get("subjects"), list
+        ):
+            continue
+        for subject in {str(value) for value in reference["subjects"]}:
+            references_by_subject.setdefault(subject, []).append(reference)
+
     # agent observation は observed_at と ID の canonical order で一件ずつ処理する。
     for observation in sorted(
         agent_observations,
@@ -680,7 +703,9 @@ def _build_candidates(
                 observation,
                 candidates,
                 current_cut_fingerprint_pairs=_report_cut_fingerprint_pairs(
-                    repo, manifest, observation
+                    repo,
+                    references_by_subject.get(str(observation["observation_id"]), []),
+                    observation,
                 ),
             )
             if selected is None and comparison:
@@ -696,21 +721,7 @@ def _build_candidates(
             _insert_candidate(candidates, selected)
         _merge_observation(repo, selected, observation)
 
-    # subject を逆引きし、candidate ごとの全 reference 再走査を避ける。
-    references = inputs.get("references")
-    assert isinstance(references, list)
-    if not candidates:
-        return candidates, machine_aggregates
-    references_by_subject: dict[str, set[str]] = {}
-    for reference in references:
-        if not isinstance(reference, dict) or not isinstance(
-            reference.get("subjects"), list
-        ):
-            continue
-        for subject in reference["subjects"]:
-            references_by_subject.setdefault(str(subject), set()).add(
-                str(reference["reference_id"])
-            )
+    # observation と既存 candidate の subject を合併し、今回の参照だけへ更新する。
     for candidate in candidates.values():
         subjects = {
             str(candidate["candidate_id"]),
@@ -718,9 +729,9 @@ def _build_candidates(
         }
         candidate["reference_ids"] = sorted(
             {
-                reference_id
+                str(reference["reference_id"])
                 for subject in subjects
-                for reference_id in references_by_subject.get(subject, ())
+                for reference in references_by_subject.get(subject, ())
             }
         )
     return candidates, machine_aggregates
@@ -1003,16 +1014,14 @@ def _agent_comparison_candidates(
 
 
 def _report_cut_fingerprint_pairs(
-    repo: Path, manifest: _JsonObject, observation: _JsonObject
+    repo: Path, references: list[_JsonObject], observation: _JsonObject
 ) -> list[tuple[str, str, str | None]]:
     """observation subject に紐付く report cut current fingerprint を返す。"""
     fingerprints = observation.get("evidence_fingerprints")
     if not isinstance(fingerprints, list) or not fingerprints:
         return []
-    inputs = manifest.get("inputs")
-    references = inputs.get("references") if isinstance(inputs, dict) else None
     observation_id_value = observation.get("observation_id")
-    if not isinstance(references, list) or not isinstance(observation_id_value, str):
+    if not isinstance(observation_id_value, str):
         return []
     current: dict[str, tuple[str, str | None]] = {}
     for reference in references:
@@ -1213,7 +1222,7 @@ def _normalize_issue_identity(
     path = normalization_checkpoint_path(
         repo, str(manifest["report_cut_id"]), observation_id_value
     )
-    reference = write_checkpoint(repo, path, checkpoint)
+    reference = write_immutable_artifact(repo, path, checkpoint)
     _record_checkpoint(
         repo,
         manifest,

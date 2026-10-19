@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from _acp_builder_support import oracle_schema_path
 from _git_support import SESSION_BRANCH, SESSION_ID, current_branch, init_repo, run_git
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
@@ -26,6 +27,7 @@ import commons.runtime_feedback_state as feedback_state
 import commons.runtime_feedback_store as feedback_store
 import commons.runtime_logging as runtime_logging
 import commons.runtime_primary_report_review as report_review
+import commons.runtime_run_lifecycle as run_lifecycle
 import commons.runtime_windows_toast as runtime_windows_toast
 import sub_commands.feedback.remediation as remediation_module
 from commons.runtime_config import write_config
@@ -178,10 +180,26 @@ def ready_join_session(
 
 
 @pytest.fixture
+def feedback_remediation_request_stub(monkeypatch: pytest.MonkeyPatch) -> None:
+    """fake 応答の state 検査には、issue 入力・cwd・正本 schema だけを渡す。"""
+    # prompt と起動設定は test_feedback.py の builder 専用ケース、実 Git と
+    # remediation 呼び出しの結合は後続 wave test に残す。応答は正本 schema で検査する。
+    schema = oracle_schema_path("feedback", "remediate_issue.json")
+    monkeypatch.setattr(
+        remediation_module,
+        "build_feedback_issue_remediation_request",
+        lambda text, root: SimpleNamespace(
+            prompt=text, agent_call_cwd=root, structured_output_schema_path=schema
+        ),
+    )
+
+
+@pytest.fixture
 def feedback_publication_session(
     ready_join_session: tuple[Path, str, Path],
     feedback_without_transport: None,
     nonpersistent_feedback_ids: None,
+    feedback_remediation_request_stub: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
     """案件の publication 検査には、修復不要の session と同期を待たない保存を使う。"""
@@ -215,16 +233,18 @@ def nonpersistent_execution_ids(monkeypatch: pytest.MonkeyPatch) -> None:
 def nonpersistent_feedback_ids(
     nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """publication・close の検査に、保存を伴わない feedback ID を用意する。"""
+    """publication・close の検査に、保存を伴わない feedback・編集 run ID を用意する。"""
     # SQLite の FULL 同期は os.fsync の置換では省けない。永続採番は
     # test_runtime_ids.py と test_codex_runtime_paths.py、feedback との結合は
     # test_feedback.py の後続 wave test と test_feedback_close.py の reported_case に残す。
     # 各検査では ID の対応・再発時の非再利用・recovery での固定 target を保つ。
+    # 編集 run の採番も同じ対象とし、状態遷移ごとの SQLite 同期を重ねない。
     for module in (
         feedback_run_state,
         feedback_state,
         feedback_store,
         remediation_module,
+        run_lifecycle,
     ):
         monkeypatch.setattr(module, "new_id", runtime_logging.new_id)
 
@@ -307,26 +327,23 @@ def _isolate_download_asset_cache(request, monkeypatch):
 
 @pytest.fixture
 def unsynced_search_storage(monkeypatch):
-    """耐久性を判定しない検索 test では、データ更新ごとのディスク同期を省く。"""
+    """耐久性を判定しない検索 test では、初期化・更新時のディスク同期を省く。"""
     # 実 sqlite-vec、ファイルへの保存、commit/rollback は維持する。
     # 途中保存・再開・別 worktree での再利用は、この fixture を使わず検査する。
-    open_database = runtime_document_search._open_database
+    sqlite = runtime_document_search.sqlite3
 
-    def open_unsynced_database(path):
-        connection = open_database(path)
+    def connect_unsynced(*args, **kwargs):
+        connection = sqlite.connect(*args, **kwargs)
+        # 索引・cache のテーブル作成も同期を伴うため、作成前の接続で設定する。
         connection.execute("pragma synchronous = off")
         return connection
 
+    # 他 module の採番 DB や、test が直接開く検証用 connection には適用しない。
     monkeypatch.setattr(
-        runtime_document_search, "_open_database", open_unsynced_database
+        runtime_document_search,
+        "sqlite3",
+        SimpleNamespace(**(vars(sqlite) | {"connect": connect_unsynced})),
     )
-
-    class _UnsyncedCache(runtime_document_search._EmbeddingCache):
-        def __init__(self, path):
-            super().__init__(path)
-            self.connection.execute("pragma synchronous = off")
-
-    monkeypatch.setattr(runtime_document_search, "_EmbeddingCache", _UnsyncedCache)
 
 
 @pytest.fixture
@@ -531,6 +548,19 @@ def _isolate_document_search_materials(
         )
 
     monkeypatch.setattr(runtime_doctor, "DocumentSearch", doctor_search)
+
+
+@pytest.fixture
+def doctor_without_index_sync(monkeypatch: pytest.MonkeyPatch) -> None:
+    """配置先・Git 修復・停止・reporter の検査では、参照しない索引の生成を省く。"""
+    # 実同期との結合は test_doctor_cli.py の初回修復と worktree 分離に残す。
+    # 更新・削除・再利用とログ/report は
+    # test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports、
+    # 失敗・取消の進捗は test_doctor_reports_persisted_chunks_when_sync_fails で検査する。
+    # 設定・state の同期、Git index の退避・復元と修復 commit は実処理を通す。
+    monkeypatch.setattr(
+        runtime_doctor, "_synchronize_document_search_index", lambda *_args: None
+    )
 
 
 @pytest.fixture

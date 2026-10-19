@@ -414,7 +414,11 @@ def _run_cmoc(
 
 
 def _run_refactor_until_confirmed(
-    argv: list[str], root: Path, environment: dict[str, str]
+    argv: list[str],
+    root: Path,
+    environment: dict[str, str],
+    *,
+    poll_interval: float = 0.1,
 ) -> subprocess.CompletedProcess[str]:
     """確定実績を観測して SIGINT を送り、継続 workload の通常終了を検証する。"""
     directory = root / ".cmoc/gu/log/sub_command"
@@ -458,7 +462,7 @@ def _run_refactor_until_confirmed(
                         if interrupted:
                             break
                 try:
-                    stdout, stderr = process.communicate(timeout=0.1)
+                    stdout, stderr = process.communicate(timeout=poll_interval)
                     break
                 except subprocess.TimeoutExpired:
                     continue

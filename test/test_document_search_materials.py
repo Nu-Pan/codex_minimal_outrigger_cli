@@ -145,6 +145,10 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
     assert first["status"] == "built"
     assert len(npm_calls) == 1
     assert probes == [config]
+    # 固定 lock と native 採用情報の検査は初回公開で通す。
+    # 以後は不変なので再解析を省き、repo/release の不一致は専用 test に残す。
+    # 資材全体の hash 照合は続け、モデル・runtime の破損と修復を検査する。
+    monkeypatch.setattr(worker, "_verify_lock", lambda _base: None)
     # 初回公開では実 fsync を通し、以後の状態遷移では重複する同期を省く。
     # write・flush・原子的な置換と、失敗後の保存内容の照合は維持する。
     monkeypatch.setattr(setup.os, "fsync", lambda _fd: None)
@@ -206,6 +210,14 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
     repaired = setup.prepare_document_search_materials(tmp_path, config)
     assert repaired["models"] == "reused"
     assert len(npm_calls) == 2
+
+    # JSON として読めても manifest が object でなければ再構築する。
+    (base / "manifest.json").write_text("[]")
+    repaired = setup.prepare_document_search_materials(tmp_path, config)
+    assert repaired["status"] == "repaired"
+    assert repaired["models"] == "reused"
+    assert len(npm_calls) == 3
+    assert setup.require_document_search_materials(tmp_path, config).is_dir()
 
     # 現在の条件への検証失敗は、別条件で正常な既存 component を壊さない。
     monkeypatch.setattr(

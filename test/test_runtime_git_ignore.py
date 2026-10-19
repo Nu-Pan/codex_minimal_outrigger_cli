@@ -347,14 +347,20 @@ def test_ensure_cmoc_ignored_preserves_existing_pattern_and_runtime_state(
     content = (root / ".gitignore").read_text()
     assert ".cmoc/\n" in content
     assert "/.cmoc/gu/\n" in content
-    for relative in (
-        ".cmoc/gt/config.json",
-        ".cmoc/gt/realization/refactor/state.json",
-    ):
-        not_ignored = subprocess.run(
-            ["git", "check-ignore", "--no-index", "-q", "--", relative],
-            cwd=root,
-            check=False,
-        )
-        assert not_ignored.returncode == 1
+    # 複数 path のどれにも ignore が一致しない場合だけ終了 code 1 になる。
+    not_ignored = subprocess.run(
+        [
+            "git",
+            "check-ignore",
+            "--no-index",
+            "--",
+            ".cmoc/gt/config.json",
+            ".cmoc/gt/realization/refactor/state.json",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert not_ignored.returncode == 1, not_ignored
     assert run_git(root, "status", "--short").stdout.strip() == "AM .gitignore"

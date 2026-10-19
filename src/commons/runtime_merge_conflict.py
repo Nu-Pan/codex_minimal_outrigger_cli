@@ -155,6 +155,8 @@ def _check_staged_merge(root: Path) -> None:
 
 def _has_conflict_marker_block(text: str) -> bool:
     """行頭の Git marker を検出し、Markdown の bare separator を許す。"""
-    return any(
-        line.startswith(("<<<<<<<", "|||||||", ">>>>>>>")) for line in text.splitlines()
-    )
+    # marker のない本文では、全行の分割と行頭の走査を省く。
+    markers = ("<<<<<<<", "|||||||", ">>>>>>>")
+    if not any(marker in text for marker in markers):
+        return False
+    return any(line.startswith(markers) for line in text.splitlines())

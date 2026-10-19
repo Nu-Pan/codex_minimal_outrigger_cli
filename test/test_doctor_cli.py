@@ -61,12 +61,66 @@ pytestmark = pytest.mark.usefixtures(
 _WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
 
 
+@pytest.fixture(scope="module")
+def _initial_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """修復前の追跡 file と初期履歴を一度だけ作る。"""
+    return make_repo(tmp_path_factory.mktemp("doctor-initial-seed"))
+
+
 @pytest.fixture
-def managed_repository(cli_repository: Path) -> Path:
-    """既存管理物を前提にするケースでは、準備用 doctor の修復・検索・report を省く。"""
+def initial_repository(tmp_path: Path, _initial_repository_seed: Path) -> Path:
+    """修復・index 検査に同じ初期履歴を渡し、変更可能な状態は独立させる。"""
+    # init・add・commit は共有し、修復・競合・index の変更は各ケースで実行する。
+    # hardlink や linked worktree を使わず、設定・index・refs も独立して複製する。
+    return shutil.copytree(_initial_repository_seed, tmp_path / "repo")
+
+
+@pytest.fixture(scope="module")
+def _repair_paths_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory, _empty_repository_seed: Path
+) -> Path:
+    """先行差分の判定に使う通常 file と履歴を一度だけ用意する。"""
+    # 設定の意味検証は行わず、Git の差分・競合 entry を調べる前提だけを共有する。
+    root = shutil.copytree(
+        _empty_repository_seed,
+        tmp_path_factory.mktemp("doctor-repair-paths-seed") / "repo",
+    )
+    (root / "README.md").write_text("# repo\n")
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    paths = (doctor_module.config_path(root), doctor_module.refactor_state_path(root))
+    for path in paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n")
+    run_git(
+        root,
+        "add",
+        "-f",
+        "README.md",
+        ".gitignore",
+        *(str(p.relative_to(root)) for p in paths),
+    )
+    run_git(root, "commit", "-m", "track repair targets")
+    return root
+
+
+@pytest.fixture
+def repair_paths_repository(
+    tmp_path: Path, _repair_paths_repository_seed: Path
+) -> Path:
+    """差分のない初期内容を複製し、各ケースの index・refs・設定を独立させる。"""
+    return shutil.copytree(_repair_paths_repository_seed, tmp_path / "repo")
+
+
+@pytest.fixture(scope="module")
+def _managed_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory, _empty_repository_seed: Path
+) -> Path:
+    """既存管理物の列挙・設定保存・初期 commit を一度だけ用意する。"""
     # 初回修復と索引同期は専用ケースに残し、既存ファイルへの操作は各テストで行う。
-    # 履歴内容は検査しないため、必要な管理物だけを最初の commit にまとめる。
-    root = cli_repository
+    root = shutil.copytree(
+        _empty_repository_seed,
+        tmp_path_factory.mktemp("doctor-managed-seed") / "repo",
+    )
     for relative in _WORK_DIRECTORIES:
         (root / relative).mkdir(parents=True, exist_ok=True)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
@@ -80,15 +134,10 @@ def managed_repository(cli_repository: Path) -> Path:
 
 
 @pytest.fixture
-def doctor_without_index_sync(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Git 修復の検査では、参照しない検索索引の生成・永続化を省く。"""
-    # 実同期との結合は初回修復、配置先復元、worktree 分離のケースに残す。
-    # 更新・削除・再利用とログ/report は test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports、
-    # 失敗・取消の進捗は test_doctor_reports_persisted_chunks_when_sync_fails で検査する。
-    # 設定・state の同期、Git index の退避・復元と修復 commit は実処理を通す。
-    monkeypatch.setattr(
-        doctor_module, "_synchronize_document_search_index", lambda *_args: None
-    )
+def managed_repository(tmp_path: Path, _managed_repository_seed: Path) -> Path:
+    """修復済みの管理物と独立した Git index・refs・設定を各テストへ渡す。"""
+    # hardlink や linked worktree を使わず、中断・修復時の変更を他ケースへ持ち越さない。
+    return shutil.copytree(_managed_repository_seed, tmp_path / "repo")
 
 
 @pytest.fixture
@@ -168,6 +217,7 @@ def test_refactor_preprocess_interruption_preserves_user_changes(
     assert "cmoc run join" not in result.output
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_refactor_preprocess_interruption_keeps_committed_repairs(
     cli_repository, monkeypatch
 ):
@@ -204,6 +254,7 @@ def test_refactor_preprocess_interruption_keeps_committed_repairs(
     assert "run not established" in terminal_primary_report(result).read_text()
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_refactor_preprocess_stop_restores_pending_linked_worktree_index(
     managed_repository, tmp_path, monkeypatch
 ):
@@ -272,12 +323,12 @@ def _hold_doctor_lock(lock_path: Path, ready: Connection, release: Connection) -
 
 
 def test_doctor_preprocess_repairs_git_state(
-    tmp_path: Path,
+    initial_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """doctor が共通修復と既定 config の生成・追跡・報告を完了する。"""
 
-    root = make_repo(tmp_path)
+    root = initial_repository
     config_path = root / ".cmoc" / "gt" / "config.json"
 
     # 公開 doctor と実 collector の結合を、この初回修復ケースで一度検証する。
@@ -366,6 +417,7 @@ def test_doctor_preprocess_repairs_git_state(
 
 
 @pytest.mark.parametrize("explicit_doctor", [False, True])
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_restores_empty_work_directories(
     cli_repository, explicit_doctor, doctor_repair_events
 ):
@@ -526,6 +578,7 @@ def test_preprocess_reports_work_directory_permission_failure(
     assert "権限" in exc_info.value.next_actions[0]
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_rechecks_work_directories_after_repair_commit(
     committed_repository, tmp_path, monkeypatch
 ):
@@ -739,8 +792,8 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
             config_relative: "100755",
             state_relative: "100644",
         }
-        # まとめて列挙した欠落 entry を path ごとに再照会して process を増やさない。
-        assert git_calls <= 7
+        # 欠落判定と HEAD mode は一括照会し、両 runtime の登録も一度に行う。
+        assert git_calls <= 5
 
         # 既存の実行可能 entry を再更新するケースでも mode の保持を検査する。
         config.write_text(original)
@@ -782,6 +835,7 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
         index_path.unlink(missing_ok=True)
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(
     committed_repository, tmp_path
 ):
@@ -808,6 +862,9 @@ def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(
     )
 
 
+# reporter の分岐に索引の生成・永続化は不要。実同期から reporter までの結合は
+# test_doctor_preprocess_repairs_git_state と同期結果・report の検査に残す。
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_continues_with_degraded_reporter(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -850,6 +907,7 @@ def test_doctor_preprocess_continues_with_degraded_reporter(
     ).stdout.strip()
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -870,6 +928,7 @@ def test_doctor_preprocess_propagates_interrupt_during_reporter_probe(
         doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_propagates_unexpected_reporter_probe_error(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1015,12 +1074,12 @@ def test_doctor_restores_preexisting_index_when_repair_fails(
 
 @pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preserves_preexisting_unmerged_index(
-    tmp_path: Path,
+    initial_repository: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """doctor が既存の unmerged index を検査・解消せず保持する。"""
 
-    root = make_repo(tmp_path)
+    root = initial_repository
     base_branch = run_git(root, "branch", "--show-current").stdout.strip()
     run_git(root, "checkout", "-b", "doctor-conflict-side")
     (root / "README.md").write_text("# side\n")
@@ -1046,11 +1105,11 @@ def test_doctor_preserves_preexisting_unmerged_index(
 
 @pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_repairs_missing_index_without_dropping_tracked_files(
-    tmp_path: Path,
+    initial_repository: Path,
 ) -> None:
     """欠落した Git index を復元し、既存の tracked file を保持する。"""
 
-    root = make_repo(tmp_path)
+    root = initial_repository
     (root / ".git" / "index").unlink()
 
     doctor_module.run_doctor_preprocess(root, explicit_doctor=True)
@@ -1062,12 +1121,12 @@ def test_doctor_repairs_missing_index_without_dropping_tracked_files(
 
 @pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preserves_preexisting_index_flags_and_intent_to_add(
-    tmp_path: Path,
+    initial_repository: Path,
 ) -> None:
     """doctor が二種類の index flag と intent-to-add をそれぞれ保持する。"""
 
     # 同じ index の退避・復元を検査するため、各状態を別 file に置き修復を一度にする。
-    root = make_repo(tmp_path)
+    root = initial_repository
     flagged_paths = {
         "README.md": "--assume-unchanged",
         "oracle/spec.md": "--skip-worktree",
@@ -1148,6 +1207,7 @@ def test_doctor_reports_unsaved_inconsistent_search_candidate(
     assert path.read_text() == original
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_generates_config_under_broad_cmoc_ignore(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1174,74 +1234,79 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
     assert check_ignore.returncode == 1
 
 
-@pytest.mark.parametrize(
-    "change",
-    [
-        "clean",
-        "staged",
-        "unstaged",
-        "mixed",
-        "reverted_worktree",
-        "staged_deletion",
-        "unstaged_deletion",
-        "untracked",
-    ],
-)
-def test_preexisting_runtime_paths_use_original_index(cli_repository, change):
+def test_preexisting_runtime_paths_use_original_index(repair_paths_repository):
     """対象の先行差分だけを元 index から選び、未追跡・staged deletion を除く。"""
-    # 無関係な tracked file の変更も残し、検査用 file と一度の commit で HEAD を作る。
-    root = cli_repository
+    root = repair_paths_repository
     readme = root / "README.md"
-    readme.write_text("# repo\n")
     config = doctor_module.config_path(root)
     state = doctor_module.refactor_state_path(root)
     paths = [str(path.relative_to(root)) for path in (config, state)]
-    for path in (config, state):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("{}\n")
-    tracked_paths = ["README.md", *paths] if change != "untracked" else ["README.md"]
-    run_git(root, "add", "-f", *tracked_paths)
-    run_git(root, "commit", "-m", "track initial files")
-
-    expected = set()
-    if change in {"staged", "mixed", "reverted_worktree"}:
-        config.write_text('{"num_parallel": 99}\n')
-        run_git(root, "add", "-f", paths[0])
-        expected.add(paths[0])
-    if change == "mixed":
-        config.write_text('{"num_parallel": 100}\n')
-    if change == "reverted_worktree":
-        config.write_text("{}\n")
-    if change in {"unstaged", "mixed", "staged_deletion"}:
-        state.write_text('{"prior": {}}\n')
-        expected.add(paths[1])
-    if change == "staged_deletion":
-        run_git(root, "rm", "--cached", paths[0])
-    if change == "unstaged_deletion":
-        state.unlink()
-        expected.add(paths[1])
     readme.write_text("unrelated user change\n")
-
     index_path = doctor_module._copy_current_index(root)
     try:
-        # 現在 index が変わっても、前処理開始時の退避内容を使う。
+        original_index = index_path.read_bytes()
+        # repository と退避を共有し、各ケースでは保存済み index と作業内容だけを戻す。
+        # 現在 index は最初に変え、全ケースで退避 index からの判定を検査する。
         run_git(root, "rm", "--cached", "-f", "--ignore-unmatch", "--", *paths)
-        assert doctor_module._preexisting_repair_paths(root, index_path) == expected
+        for change in (
+            "clean",
+            "staged",
+            "unstaged",
+            "mixed",
+            "reverted_worktree",
+            "staged_deletion",
+            "unstaged_deletion",
+            "untracked",
+        ):
+            index_path.write_bytes(original_index)
+            config.write_text("{}\n")
+            state.write_text("{}\n")
+            if change == "untracked":
+                # HEAD の変更は最後だけ行い、未追跡と staged deletion を区別する。
+                run_git(root, "commit", "-m", "leave runtime files untracked")
+                doctor_module._run_git_with_index(
+                    ["rm", "--cached", *paths], root, index_path
+                )
+
+            expected = set()
+            if change in {"staged", "mixed", "reverted_worktree"}:
+                config.write_text('{"num_parallel": 99}\n')
+                doctor_module._run_git_with_index(
+                    ["add", "-f", paths[0]], root, index_path
+                )
+                expected.add(paths[0])
+            if change == "mixed":
+                config.write_text('{"num_parallel": 100}\n')
+            if change == "reverted_worktree":
+                config.write_text("{}\n")
+            if change in {"unstaged", "mixed", "staged_deletion"}:
+                state.write_text('{"prior": {}}\n')
+                expected.add(paths[1])
+            if change == "staged_deletion":
+                doctor_module._run_git_with_index(
+                    ["rm", "--cached", paths[0]], root, index_path
+                )
+            if change == "unstaged_deletion":
+                state.unlink()
+                expected.add(paths[1])
+
+            before = index_path.read_bytes()
+            assert (
+                doctor_module._preexisting_repair_paths(root, index_path) == expected
+            ), change
+            assert index_path.read_bytes() == before, change
     finally:
         index_path.unlink(missing_ok=True)
 
 
 @pytest.mark.parametrize("stages", [(1,), (1, 3)])
-def test_preexisting_runtime_paths_preserves_unmerged_entries(cli_repository, stages):
+def test_preexisting_runtime_paths_preserves_unmerged_entries(
+    repair_paths_repository, stages
+):
     """DD/DU の削除 conflict は通常の staged deletion と区別して保存対象にする。"""
-    # conflict entry の基準となる config だけを最初の commit に含める。
-    root = cli_repository
+    root = repair_paths_repository
     config = doctor_module.config_path(root)
-    config.parent.mkdir(parents=True)
-    config.write_text("{}\n")
     relative = str(config.relative_to(root))
-    run_git(root, "add", "-f", relative)
-    run_git(root, "commit", "-m", "track config")
     blob = run_git(root, "rev-parse", f"HEAD:{relative}").stdout.strip()
     index_path = doctor_module._copy_current_index(root)
     try:
@@ -1580,20 +1645,14 @@ def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
 
 
 def test_repair_paths_share_one_query_and_preserve_saved_index(
-    cli_repository, tmp_path, monkeypatch
+    repair_paths_repository, tmp_path, monkeypatch
 ):
     """runtime 差分と ignore 削除を一度に判定し、退避 index 自体は変更しない。"""
     # 全対象を同じ index に置き、別 root の修復では runtime を保存対象に含めない。
-    root = cli_repository
-    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    root = repair_paths_repository
     config = doctor_module.config_path(root)
     state = doctor_module.refactor_state_path(root)
     runtime_paths = {str(path.relative_to(root)) for path in (config, state)}
-    for path in (config, state):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("{}\n")
-    run_git(root, "add", "-f", ".gitignore", *sorted(runtime_paths))
-    run_git(root, "commit", "-m", "track repair targets")
     config.write_text('{"staged": true}\n')
     run_git(root, "add", "-f", str(config.relative_to(root)))
     state.write_text('{"unstaged": true}\n')
@@ -1614,8 +1673,8 @@ def test_repair_paths_share_one_query_and_preserve_saved_index(
                 ["update-index", "--force-remove", ".gitignore"], root, index_path
             )
         if change == "rename":
-            doctor_module._stage_blob(
-                root, index_path, "renamed-ignore", "100644", blob
+            doctor_module._stage_blobs(
+                root, index_path, [("renamed-ignore", "100644", blob)]
             )
         elif change == "intent":
             doctor_module._run_git_with_index(
@@ -1778,6 +1837,7 @@ def test_normal_preprocess_requires_validated_materials(
     assert "validation record is missing" in exc_info.value.detail
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_repairs_shared_cmoc_root_in_its_own_repository(
     committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

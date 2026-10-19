@@ -5,7 +5,7 @@ import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing, contextmanager
+from contextlib import ExitStack, closing, contextmanager
 from contextvars import copy_context
 from dataclasses import replace
 from pathlib import Path
@@ -28,12 +28,14 @@ from oracle.acp_builder.oracle.investigation.launch_tui import (
 )
 from oracle.acp_builder.tui.launch_tui import build_tui_request
 from oracle.other.cmoc_config import CodexCallConfig
+from oracle.other.struct_doc import SDHeader
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_exec as exec_module
 import commons.runtime_codex_tui as tui_module
 import commons.runtime_logging as logging_module
 import commons.runtime_windows_toast as toast_module
+from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex_profile import process_group_has_running_member
 from commons.runtime_codex_recovery import install_recovery_interruption
 from commons.runtime_codex_session import CodexSessionLease
@@ -93,6 +95,20 @@ def directory(tmp_path, monkeypatch, nonpersistent_execution_ids):
     # 保存設定は公開 resume のケースで用意し、制御検査には設定を直接渡す。
     fake_tui(monkeypatch)
     return root
+
+
+@pytest.fixture
+def initial_request(directory, monkeypatch):
+    """制御検査には実 builder の設定と短い入力本文を渡す。"""
+    # 完全文面は builder 専用 test、保存・stdin との結合は下の complete_prompt で検査する。
+    # 本文を評価しないケースでは規定の構築・描画・保存を重ねない。
+    # 置換は初回構築中だけに限定し、起動管理側の再開 builder は実処理を通す。
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            "oracle.acp_builder.tui.launch_tui.build_complete_prompt",
+            lambda **_kwargs: [SDHeader("task", "request")],
+        )
+        return build_tui_request("request")
 
 
 @contextmanager
@@ -304,7 +320,7 @@ def test_complete_prompt_and_initial_handoff_use_saved_stdin_and_actual_call(
     ],
 )
 def test_initial_terminal_failure_never_retries_or_transitions(
-    directory, monkeypatch, stdout, returncode
+    directory, monkeypatch, initial_request, stdout, returncode
 ):
     # argv・MCP 設定の結合は complete_prompt と share_start_time_settings のケースに残す。
     # ここでは終端判定・ログ保存・移行禁止を検査し、起動設定の構築を繰り返さない。
@@ -317,7 +333,7 @@ def test_initial_terminal_failure_never_retries_or_transitions(
     with call_log(directory) as logger:
         with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗"):
             tui_module.run_codex_tui(
-                build_tui_request("request"),
+                initial_request,
                 root=directory,
                 config=CmocConfig(),
             )
@@ -344,7 +360,7 @@ def test_initial_terminal_failure_never_retries_or_transitions(
     ],
 )
 def test_initial_success_requires_saved_output_and_unique_uuid(
-    directory, monkeypatch, stdout, output
+    directory, monkeypatch, initial_request, stdout, output
 ):
     # 起動設定は上の結合ケースに残し、保存出力と UUID の受理条件を検査する。
     stub_codex_overrides(monkeypatch)
@@ -353,7 +369,7 @@ def test_initial_success_requires_saved_output_and_unique_uuid(
     monkeypatch.setattr(tui_module, "_run_codex_tui_process", transition)
     with pytest.raises(CmocError, match="再開に必要な記録"):
         tui_module.run_codex_tui(
-            build_tui_request("request"),
+            initial_request,
             root=directory,
             config=CmocConfig(),
         )
@@ -361,7 +377,7 @@ def test_initial_success_requires_saved_output_and_unique_uuid(
     transition.assert_not_called()
 
 
-def test_prompt_save_failure_starts_no_process(directory, monkeypatch):
+def test_prompt_save_failure_starts_no_process(directory, monkeypatch, initial_request):
     process = Mock()
     monkeypatch.setattr(exec_module, "run_codex_subprocess", process)
     monkeypatch.setattr(
@@ -369,7 +385,7 @@ def test_prompt_save_failure_starts_no_process(directory, monkeypatch):
     )
     with pytest.raises(OSError, match="disk full"):
         tui_module.run_codex_tui(
-            build_tui_request("request"),
+            initial_request,
             root=directory,
             config=CmocConfig(),
         )
@@ -414,7 +430,9 @@ def test_initial_and_transition_share_start_time_settings(directory, monkeypatch
     transition.assert_called_once()
 
 
-def test_accepted_cancellation_wins_over_success(directory, monkeypatch):
+def test_accepted_cancellation_wins_over_success(
+    directory, monkeypatch, initial_request
+):
     def cancel(_call):
         exec_module.current_recovery_cancellation().set()
 
@@ -426,7 +444,7 @@ def test_accepted_cancellation_wins_over_success(directory, monkeypatch):
     with call_log(directory) as logger:
         with pytest.raises(TuiStartupCancelled):
             tui_module.run_codex_tui(
-                build_tui_request("request"),
+                initial_request,
                 root=directory,
                 config=CmocConfig(),
             )
@@ -452,7 +470,7 @@ def test_cancel_stops_fake_process_and_preserves_partial_logs(
         [
             "import json, os, pathlib, subprocess, sys, time",
             "sys.stdin.read()",
-            "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(100)'])",
+            "child = subprocess.Popen([sys.executable, '-S', '-c', 'import time; time.sleep(100)'])",
             f"print(json.dumps({{'type': 'thread.started', 'thread_id': {SESSION_ID!r}}}), flush=True)",
             "print('partial diagnostic', file=sys.stderr, flush=True)",
             f"pathlib.Path({str(pid_file)!r}).write_text(str(os.getpid()) + ' ' + str(child.pid))",
@@ -592,21 +610,10 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
     stub_codex_overrides(monkeypatch)
     calls, source = failed_initial_success(directory, monkeypatch)
     source_text = source.read_text()
-    baseline = [json.loads(line) for line in source_text.splitlines()]
-    record = next(row for row in reversed(baseline) if row["event"] == "tui_startup")
-    prepared = next(row for row in baseline if row["event"] == "tui_process_prepared")
-    saved_files = {
-        path: path.read_bytes()
-        for path in (
-            source,
-            Path(record["initial_output_path"]),
-            Path(prepared["call_log_path"]),
-        )
-    }
     other_home = tmp_path / "other_home"
     other_home.mkdir()
     tui_calls = fake_tui(monkeypatch)
-    # 正常な共通記録は一度検査し、各条件ではその bytes と環境を復元する。
+    # 正常な共通記録は一度検査し、変更した保存物だけ条件ごとに復元する。
     tui_module._validated_resume_record(source.stem, directory)
 
     for condition in (
@@ -624,12 +631,10 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
         "missing_tui_call",
         "different_requested_session",
     ):
-        # 削除・書き換えた通常 file、JSON の入れ子、環境変数を条件ごとに復元する。
-        for path, content in saved_files.items():
-            path.write_bytes(content)
+        # JSON は保存本文から再構築し、通常 file と環境は変更時だけ復元を予約する。
         rows = [json.loads(line) for line in source_text.splitlines()]
         record = next(row for row in reversed(rows) if row["event"] == "tui_startup")
-        with monkeypatch.context() as patch:
+        with monkeypatch.context() as patch, ExitStack() as restore_files:
             if condition == "unfinished":
                 rows.pop()
             elif condition in {"failed", "cancelled"}:
@@ -641,7 +646,9 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
             elif condition == "inconsistent_kind":
                 record["tui_kind"] = "oracle_investigation"
             elif condition == "missing_output":
-                Path(record["initial_output_path"]).unlink()
+                path = Path(record["initial_output_path"])
+                restore_files.callback(path.write_bytes, path.read_bytes())
+                path.unlink()
             elif condition == "bad_uuid":
                 record["initial_session_id"] = "unknown-session"
             elif condition == "home_changed":
@@ -656,6 +663,7 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
                     row for row in rows if row["event"] == "tui_process_prepared"
                 )
                 path = Path(prepared["call_log_path"])
+                restore_files.callback(path.write_bytes, path.read_bytes())
                 if condition == "missing_tui_call":
                     path.unlink()
                 else:
@@ -685,13 +693,34 @@ def test_public_resume_rejects_non_tui_and_invalid_id(directory):
             tui_module.resume_codex_tui(execution_id, directory)
 
 
-def test_completion_probe_prepares_no_calls(directory, monkeypatch):
-    run = Mock()
+def test_completion_probe_prepares_no_calls(tmp_path, monkeypatch, capsys):
+    """補完は通常起動の環境を要求せず、資源・出力・process を作らない。"""
+    # builder の本文は test_acp_builder_tui_parameters.py で検査する。
+    # この早期終了に不要な通常起動 fixture と完全 prompt の構築は行わない。
+    parameter = AgentCallParameter(
+        agent_call_kind=build_tui_request.__name__,
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        prompt="request",
+        structured_output_schema_path=None,
+        agent_call_cwd=tmp_path,
+        enable_editor_input_handoff_mcp=True,
+        enable_document_search_mcp=True,
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex_home"))
+    run = Mock(side_effect=AssertionError("completion must not launch Codex"))
     monkeypatch.setattr(tui_module, "run_codex_exec", run)
+    monkeypatch.setattr(tui_module, "run_codex_subprocess", run)
     monkeypatch.setenv("_CMOC_COMPLETE", "")
-    result = tui_module.run_codex_tui(build_tui_request("request"), root=directory)
-    assert result.returncode == 0
+
+    result = tui_module.run_codex_tui(parameter, root=tmp_path)
+
+    assert result == CommandResult(0, "", "")
     run.assert_not_called()
+    captured = capsys.readouterr()
+    assert (captured.out, captured.err) == ("", "")
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_initial_completion_waits_for_process_exit(directory, tmp_path, monkeypatch):
@@ -1019,8 +1048,11 @@ def test_initial_and_tui_keep_separate_process_resources(directory, monkeypatch)
 
 
 def test_session_lease_covers_initial_transition_and_public_validation(
-    directory, monkeypatch
+    directory, monkeypatch, initial_request
 ):
+    # 完全 prompt と起動設定の結合は complete_prompt・share_start_time_settings に残す。
+    # 排他の検査では構築を重ねず、lease・移行・公開 resume の検査とログは実処理を通す。
+    stub_codex_overrides(monkeypatch)
     write_config(directory / ".cmoc/gt/config.json", CmocConfig())
     home = tui_module.resolve_codex_home(directory)
 
@@ -1032,11 +1064,7 @@ def test_session_lease_covers_initial_transition_and_public_validation(
     fake_initial(monkeypatch, on_call=contested)
     fake_tui(monkeypatch, on_call=contested)
     runtime_cli.run_cli_subcommand(
-        lambda: (
-            tui_module.run_codex_tui(
-                build_tui_request("request"), root=directory
-            ).returncode
-        ),
+        lambda: tui_module.run_codex_tui(initial_request, root=directory).returncode,
         command_name="tui",
         doctor_preprocess=False,
         tui_process=True,
@@ -1055,7 +1083,11 @@ def test_session_lease_covers_initial_transition_and_public_validation(
         next_use.acquire(SESSION_ID)
 
 
-def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
+def test_unknown_process_exit_keeps_session_unavailable(
+    directory, monkeypatch, initial_request
+):
+    # 終了確認不能の記録と lease の保持を検査し、prompt・起動設定は上の専用 test に委ねる。
+    stub_codex_overrides(monkeypatch)
     fake_initial(monkeypatch)
 
     def run(argv, **kwargs):
@@ -1066,7 +1098,7 @@ def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
     with call_log(directory) as logger:
         with pytest.raises(OSError, match="exit cannot be confirmed"):
             tui_module.run_codex_tui(
-                build_tui_request("request"),
+                initial_request,
                 root=directory,
                 config=CmocConfig(),
             )

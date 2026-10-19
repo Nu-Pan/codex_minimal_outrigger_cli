@@ -8,6 +8,7 @@ import time
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import islice
 from pathlib import Path
 from typing import Any
 
@@ -194,11 +195,20 @@ class SubcommandLogger:
             else:
                 self.transient_wait_sec += seconds
 
-    def event_records(self) -> tuple[dict[str, Any], ...]:
-        """primary report が参照する flush 済み event の snapshot を返す。"""
-        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    def event_count(self) -> int:
+        """後続 event を切り出す開始位置を、記録本文のコピーなしで取得する。"""
+        # snapshot と同じ排他区間で flush 済み記録の末尾を取得する。
         with self._lock:
-            return tuple(record.copy() for record in self._event_records)
+            return len(self._event_records)
+
+    def event_records(self, *, start: int = 0) -> tuple[dict[str, Any], ...]:
+        """指定位置以降の flush 済み event を独立した snapshot として返す。"""
+        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        # 確認自身の記録だけが必要な場合は、それ以前の本文をコピーしない。
+        with self._lock:
+            return tuple(
+                record.copy() for record in islice(self._event_records, start, None)
+            )
 
     def codex_call_records(self) -> tuple[dict[str, Any], ...]:
         """実行済み Codex call event だけを保存順で返す。"""

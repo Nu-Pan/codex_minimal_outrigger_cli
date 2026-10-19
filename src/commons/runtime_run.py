@@ -310,7 +310,6 @@ def stop_error_run_process(root: Path, session_id: str) -> tuple[bool, str | Non
     if process is None:
         if _run_process_tracking_present(root, session_id):
             raise _invalid_run_process_tracking_error(root, session_id)
-        delete_run_process_id(root, session_id)
         return False, "run process tracking was absent or stale"
     warning = stop_run_process(
         process,

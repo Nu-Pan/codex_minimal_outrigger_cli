@@ -18,16 +18,17 @@ from jsonschema import Draft202012Validator
 from .runtime_feedback_state import (
     _corruption,
     _read_canonical_object,
+    _read_resolved_canonical_object,
     _require_exact_fields,
     _resolve_artifact_reference,
     _validate_artifact_reference,
     artifact_reference,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from .runtime_feedback_store import (
     canonical_json_bytes,
     sha256_bytes,
-    write_immutable_json,
 )
 from .runtime_ids import is_common_id, new_id
 from .runtime_logging import current_subcommand_logger
@@ -90,8 +91,7 @@ def save_run_artifact(
         "completion": "publication_completion.json",
     }[name]
     path = directory / relative
-    write_immutable_json(path, content)
-    reference = artifact_reference(repo, path)
+    reference = write_immutable_artifact(repo, path, content)
     manifest["run"][name] = reference
     write_report_cut_manifest(repo, manifest)
     return reference
@@ -106,7 +106,9 @@ def read_run_artifact(repo: Path, reference: dict[str, Any]) -> dict[str, Any]:
         expected_root=repo / ".cmoc/gu/feedback/work",
         description="feedback run artifact",
     )
-    return _read_canonical_object(path, "feedback run artifact", expected_sha256=digest)
+    return _read_resolved_canonical_object(
+        path, "feedback run artifact", expected_sha256=digest
+    )
 
 
 def unpublished_join_record(repo: Path, directory: Path) -> dict[str, Any] | None:
@@ -136,7 +138,7 @@ def unpublished_join_record(repo: Path, directory: Path) -> dict[str, Any] | Non
     )
     if manifest_path != directory / "manifest.json":
         raise _corruption("非 publication join の manifest path が不正です。", path)
-    manifest = _read_canonical_object(
+    manifest = _read_resolved_canonical_object(
         manifest_path, "unpublished join manifest", expected_sha256=digest
     )
     if (
@@ -466,7 +468,7 @@ def validate_run_artifacts(
             continue
         if missing_wave_artifact:
             continue
-        wave = _read_canonical_object(
+        wave = _read_resolved_canonical_object(
             target, "feedback intake wave", expected_sha256=digest
         )
         _require_exact_fields(
@@ -501,7 +503,7 @@ def validate_run_artifacts(
             raise _corruption("feedback run artifact の path が不正です。", target)
         if allow_missing and not target.exists():
             continue
-        value = _read_canonical_object(
+        value = _read_resolved_canonical_object(
             target, f"feedback {name}", expected_sha256=digest
         )
         if value.get("report_cut_id") != manifest["report_cut_id"]:

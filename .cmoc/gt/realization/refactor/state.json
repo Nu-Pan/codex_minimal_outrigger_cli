@@ -1,564 +1,564 @@
 {
   ".gitignore": {
-    "last_investigated_at": "2026-10-18_04-59-40_222"
+    "last_investigated_at": "2026-10-19_09-46-24_110"
   },
   ".vscode/python_testing.env": {
-    "last_investigated_at": "2026-10-18_05-07-01_759"
+    "last_investigated_at": "2026-10-19_09-47-37_027"
   },
   "LICENSE": {
-    "last_investigated_at": "2026-10-18_05-08-02_297"
+    "last_investigated_at": "2026-10-19_09-53-38_843"
   },
   "README.md": {
-    "last_investigated_at": "2026-10-18_05-14-54_485"
+    "last_investigated_at": "2026-10-19_09-56-09_281"
   },
   "bin/cmoc": {
-    "last_investigated_at": "2026-10-18_05-16-49_670"
+    "last_investigated_at": "2026-10-19_09-58-24_972"
   },
   "codex_minimal_outrigger_cli.code-workspace": {
-    "last_investigated_at": "2026-10-18_05-19-42_009"
+    "last_investigated_at": "2026-10-19_10-01-04_240"
   },
   "oracle/doc/app_spec/cli_auto_completion.md": {
-    "last_investigated_at": "2026-10-18_05-21-13_692"
+    "last_investigated_at": "2026-10-19_10-06-32_238"
   },
   "oracle/doc/app_spec/codex_common_rule.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_04-44-41_388"
   },
   "oracle/doc/app_spec/codex_exec_rule.md": {
-    "last_investigated_at": "2026-10-18_05-26-57_459"
+    "last_investigated_at": "2026-10-19_10-08-45_187"
   },
   "oracle/doc/app_spec/codex_model_provider.md": {
-    "last_investigated_at": "2026-10-18_05-31-15_799"
+    "last_investigated_at": "2026-10-19_10-18-50_017"
   },
   "oracle/doc/app_spec/codex_tui_rule.md": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_04-46-33_422"
   },
   "oracle/doc/app_spec/console_and_file_log.md": {
-    "last_investigated_at": "2026-10-18_05-36-25_703"
+    "last_investigated_at": "2026-10-19_10-20-43_940"
   },
   "oracle/doc/app_spec/doctor_preprocess.md": {
-    "last_investigated_at": "2026-10-18_05-40-42_408"
+    "last_investigated_at": "2026-10-19_10-26-11_868"
   },
   "oracle/doc/app_spec/document_search.md": {
-    "last_investigated_at": "2026-10-18_05-45-32_201"
+    "last_investigated_at": "2026-10-19_10-31-06_115"
   },
   "oracle/doc/app_spec/download_asset_cache.md": {
-    "last_investigated_at": "2026-10-18_05-47-13_750"
+    "last_investigated_at": "2026-10-19_10-33-00_586"
   },
   "oracle/doc/app_spec/editor_input_handoff.md": {
-    "last_investigated_at": "2026-10-18_05-52-27_868"
+    "last_investigated_at": "2026-10-19_10-35-01_560"
   },
   "oracle/doc/app_spec/error_handling.md": {
-    "last_investigated_at": "2026-10-18_05-59-00_739"
+    "last_investigated_at": "2026-10-19_10-36-55_748"
   },
   "oracle/doc/app_spec/feedback.md": {
-    "last_investigated_at": "2026-10-18_06-05-05_055"
+    "last_investigated_at": "2026-10-19_10-44-40_657"
   },
   "oracle/doc/app_spec/feedback_observation.md": {
-    "last_investigated_at": "2026-10-18_06-10-15_081"
+    "last_investigated_at": "2026-10-19_10-50-41_114"
   },
   "oracle/doc/app_spec/feedback_state.md": {
-    "last_investigated_at": "2026-10-18_06-16-17_468"
+    "last_investigated_at": "2026-10-19_10-58-45_301"
   },
   "oracle/doc/app_spec/id.md": {
-    "last_investigated_at": "2026-10-18_06-22-15_116"
+    "last_investigated_at": "2026-10-19_11-03-51_332"
   },
   "oracle/doc/app_spec/merge_conflict_resolution.md": {
-    "last_investigated_at": "2026-10-18_06-26-38_046"
+    "last_investigated_at": "2026-10-19_11-08-57_430"
   },
   "oracle/doc/app_spec/oracle_and_realization.md": {
-    "last_investigated_at": "2026-10-18_06-31-45_155"
+    "last_investigated_at": "2026-10-19_11-14-16_804"
   },
   "oracle/doc/app_spec/oracle_and_realization_file_enumeration.md": {
-    "last_investigated_at": "2026-10-18_06-33-49_902"
+    "last_investigated_at": "2026-10-19_11-19-58_776"
   },
   "oracle/doc/app_spec/prompt_editor_input.md": {
-    "last_investigated_at": "2026-10-18_06-38-33_282"
+    "last_investigated_at": "2026-10-19_11-21-41_183"
   },
   "oracle/doc/app_spec/run_isolation.md": {
-    "last_investigated_at": "2026-10-18_06-45-55_546"
+    "last_investigated_at": "2026-10-19_11-26-28_298"
   },
   "oracle/doc/app_spec/session_state.md": {
-    "last_investigated_at": "2026-10-18_06-51-31_916"
+    "last_investigated_at": "2026-10-19_11-31-57_990"
   },
   "oracle/doc/app_spec/sub_command/doctor.md": {
-    "last_investigated_at": "2026-10-18_06-56-25_509"
+    "last_investigated_at": "2026-10-19_11-37-16_856"
   },
   "oracle/doc/app_spec/sub_command/editing_run.md": {
-    "last_investigated_at": "2026-10-18_07-03-08_830"
+    "last_investigated_at": "2026-10-19_11-43-29_359"
   },
   "oracle/doc/app_spec/sub_command/feedback_close.md": {
-    "last_investigated_at": "2026-10-18_07-07-43_292"
+    "last_investigated_at": "2026-10-19_11-48-36_986"
   },
   "oracle/doc/app_spec/sub_command/feedback_report.md": {
-    "last_investigated_at": "2026-10-18_07-16-09_003"
+    "last_investigated_at": "2026-10-19_11-57-17_520"
   },
   "oracle/doc/app_spec/sub_command/oracle_edit.md": {
-    "last_investigated_at": "2026-10-18_07-17-48_864"
+    "last_investigated_at": "2026-10-19_12-02-37_778"
   },
   "oracle/doc/app_spec/sub_command/oracle_investigation.md": {
-    "last_investigated_at": "2026-10-18_07-22-45_712"
+    "last_investigated_at": "2026-10-19_12-04-15_706"
   },
   "oracle/doc/app_spec/sub_command/realization_apply.md": {
-    "last_investigated_at": "2026-10-18_07-27-07_973"
+    "last_investigated_at": "2026-10-19_12-10-09_232"
   },
   "oracle/doc/app_spec/sub_command/realization_refactor.md": {
-    "last_investigated_at": "2026-10-18_07-31-38_057"
+    "last_investigated_at": "2026-10-19_12-15-24_120"
   },
   "oracle/doc/app_spec/sub_command/resume.md": {
-    "last_investigated_at": "2026-10-18_07-36-28_588"
+    "last_investigated_at": "2026-10-19_12-17-36_239"
   },
   "oracle/doc/app_spec/sub_command/session_abandon.md": {
-    "last_investigated_at": "2026-10-18_07-41-44_060"
+    "last_investigated_at": "2026-10-19_12-23-10_762"
   },
   "oracle/doc/app_spec/sub_command/session_fork.md": {
-    "last_investigated_at": "2026-10-18_07-48-01_051"
+    "last_investigated_at": "2026-10-19_12-28-16_660"
   },
   "oracle/doc/app_spec/sub_command/session_join.md": {
-    "last_investigated_at": "2026-10-18_07-52-24_278"
+    "last_investigated_at": "2026-10-19_12-32-59_057"
   },
   "oracle/doc/app_spec/sub_command/tui.md": {
-    "last_investigated_at": "2026-10-18_07-57-09_323"
+    "last_investigated_at": "2026-10-19_12-37-36_084"
   },
   "oracle/doc/app_spec/subcommand_interruption.md": {
-    "last_investigated_at": "2026-10-18_08-01-31_872"
+    "last_investigated_at": "2026-10-19_12-43-23_632"
   },
   "oracle/doc/app_spec/timestamp.md": {
-    "last_investigated_at": "2026-10-18_08-04-26_675"
+    "last_investigated_at": "2026-10-19_12-45-45_186"
   },
   "oracle/doc/app_spec/usage.md": {
-    "last_investigated_at": "2026-10-18_08-11-06_529"
+    "last_investigated_at": "2026-10-19_12-47-34_956"
   },
   "oracle/doc/app_spec/windows_toast_notification.md": {
-    "last_investigated_at": "2026-10-18_08-12-47_984"
+    "last_investigated_at": "2026-10-19_12-52-48_205"
   },
   "oracle/doc/branch_model.md": {
-    "last_investigated_at": "2026-10-18_08-18-29_804"
+    "last_investigated_at": "2026-10-19_12-57-38_751"
   },
   "oracle/doc/considered_alternative/apply_behavior.md": {
-    "last_investigated_at": "2026-10-18_08-22-55_090"
+    "last_investigated_at": "2026-10-19_13-02-56_307"
   },
   "oracle/doc/considered_alternative/cmoc_branch_hint.md": {
-    "last_investigated_at": "2026-10-18_08-27-32_751"
+    "last_investigated_at": "2026-10-19_13-07-37_208"
   },
   "oracle/doc/considered_alternative/file_access_policy_violation_post_validation.md": {
-    "last_investigated_at": "2026-10-18_08-33-11_648"
+    "last_investigated_at": "2026-10-19_13-12-58_498"
   },
   "oracle/doc/considered_alternative/gitignore_to_permission_profile.md": {
-    "last_investigated_at": "2026-10-18_08-35-01_035"
+    "last_investigated_at": "2026-10-19_13-18-05_687"
   },
   "oracle/doc/considered_alternative/index_md_routing.md": {
-    "last_investigated_at": "2026-10-18_08-39-53_376"
+    "last_investigated_at": "2026-10-19_13-22-20_617"
   },
   "oracle/doc/considered_alternative/memory_alternative.md": {
-    "last_investigated_at": "2026-10-18_08-42-20_376"
+    "last_investigated_at": "2026-10-19_13-25-08_105"
   },
   "oracle/doc/considered_alternative/oracle_description_language.md": {
-    "last_investigated_at": "2026-10-18_08-43-46_355"
+    "last_investigated_at": "2026-10-19_13-30-43_070"
   },
   "oracle/doc/considered_alternative/oracle_review.md": {
-    "last_investigated_at": "2026-10-18_08-50-00_976"
+    "last_investigated_at": "2026-10-19_13-37-22_111"
   },
   "oracle/doc/considered_alternative/working_plan_review.md": {
-    "last_investigated_at": "2026-10-18_08-51-59_726"
+    "last_investigated_at": "2026-10-19_13-39-47_718"
   },
   "oracle/doc/dev_rule/coding_rule.md": {
-    "last_investigated_at": "2026-10-18_08-53-32_558"
+    "last_investigated_at": "2026-10-19_13-43-16_538"
   },
   "oracle/doc/dev_rule/design_rule.md": {
-    "last_investigated_at": "2026-10-18_09-00-15_477"
+    "last_investigated_at": "2026-10-19_13-49-20_848"
   },
   "oracle/doc/dev_rule/development_environment.md": {
-    "last_investigated_at": "2026-10-18_09-06-26_306"
+    "last_investigated_at": "2026-10-19_13-54-39_472"
   },
   "oracle/doc/dev_rule/test_execution.md": {
-    "last_investigated_at": "2026-10-18_09-12-47_308"
+    "last_investigated_at": "2026-10-19_14-02-38_334"
   },
   "oracle/doc/dev_rule/test_rule.md": {
-    "last_investigated_at": "2026-10-18_09-18-55_526"
+    "last_investigated_at": "2026-10-19_14-09-03_686"
   },
   "oracle/src/oracle/acp_builder/basic.py": {
-    "last_investigated_at": "2026-10-18_09-24-27_855"
+    "last_investigated_at": "2026-10-19_14-10-34_527"
   },
   "oracle/src/oracle/acp_builder/feedback/normalize_issue.json": {
-    "last_investigated_at": "2026-10-18_09-26-35_199"
+    "last_investigated_at": "2026-10-19_14-12-58_636"
   },
   "oracle/src/oracle/acp_builder/feedback/normalize_issue.py": {
-    "last_investigated_at": "2026-10-18_09-32-09_067"
+    "last_investigated_at": "2026-10-19_14-19-20_413"
   },
   "oracle/src/oracle/acp_builder/feedback/remediate_issue.json": {
-    "last_investigated_at": "2026-10-18_09-37-43_034"
+    "last_investigated_at": "2026-10-19_14-21-30_370"
   },
   "oracle/src/oracle/acp_builder/feedback/remediate_issue.py": {
-    "last_investigated_at": "2026-10-18_09-42-55_041"
+    "last_investigated_at": "2026-10-19_14-28-09_861"
   },
   "oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py": {
-    "last_investigated_at": "2026-10-18_09-47-20_506"
+    "last_investigated_at": "2026-10-19_14-30-58_989"
   },
   "oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py": {
-    "last_investigated_at": "2026-10-18_09-49-00_935"
+    "last_investigated_at": "2026-10-19_14-32-39_559"
   },
   "oracle/src/oracle/acp_builder/primary_report_review.json": {
-    "last_investigated_at": "2026-10-18_09-53-50_708"
+    "last_investigated_at": "2026-10-19_14-34-32_746"
   },
   "oracle/src/oracle/acp_builder/primary_report_review.py": {
-    "last_investigated_at": "2026-10-18_09-58-23_202"
+    "last_investigated_at": "2026-10-19_14-36-35_329"
   },
   "oracle/src/oracle/acp_builder/quota_probe.py": {
-    "last_investigated_at": "2026-10-18_10-03-07_682"
+    "last_investigated_at": "2026-10-19_14-38-09_284"
   },
   "oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py": {
-    "last_investigated_at": "2026-10-18_10-08-37_295"
+    "last_investigated_at": "2026-10-19_14-43-23_908"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json": {
-    "last_investigated_at": "2026-10-18_10-14-14_661"
+    "last_investigated_at": "2026-10-19_14-48-53_110"
   },
   "oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py": {
-    "last_investigated_at": "2026-10-18_10-19-09_653"
+    "last_investigated_at": "2026-10-19_14-51-17_420"
   },
   "oracle/src/oracle/acp_builder/run/join/conflict_resolution.py": {
-    "last_investigated_at": "2026-10-18_10-23-23_234"
+    "last_investigated_at": "2026-10-19_14-53-37_742"
   },
   "oracle/src/oracle/acp_builder/session/join/conflict_resolution.py": {
-    "last_investigated_at": "2026-10-18_10-28-01_406"
+    "last_investigated_at": "2026-10-19_14-55-17_771"
   },
   "oracle/src/oracle/acp_builder/tui/launch_tui.py": {
-    "last_investigated_at": "2026-10-18_10-32-39_342"
+    "last_investigated_at": "2026-10-19_15-01-10_939"
   },
   "oracle/src/oracle/editor_input_handoff/body.py": {
-    "last_investigated_at": "2026-10-18_10-34-02_063"
+    "last_investigated_at": "2026-10-19_15-02-50_206"
   },
   "oracle/src/oracle/editor_input_handoff/get_handoff_guide_input.json": {
-    "last_investigated_at": "2026-10-18_10-35-21_549"
+    "last_investigated_at": "2026-10-19_15-04-57_896"
   },
   "oracle/src/oracle/editor_input_handoff/get_handoff_guide_result.json": {
-    "last_investigated_at": "2026-10-18_10-37-04_032"
+    "last_investigated_at": "2026-10-19_15-07-23_211"
   },
   "oracle/src/oracle/editor_input_handoff/guide.py": {
-    "last_investigated_at": "2026-10-18_10-38-25_977"
+    "last_investigated_at": "2026-10-19_15-09-02_079"
   },
   "oracle/src/oracle/editor_input_handoff/overwrite_input.json": {
-    "last_investigated_at": "2026-10-18_10-40-00_575"
+    "last_investigated_at": "2026-10-19_15-10-53_800"
   },
   "oracle/src/oracle/feedback/reporter_input.json": {
-    "last_investigated_at": "2026-10-18_10-42-11_425"
+    "last_investigated_at": "2026-10-19_15-18-30_546"
   },
   "oracle/src/oracle/other/cmoc_config.py": {
-    "last_investigated_at": "2026-10-18_10-48-14_788"
+    "last_investigated_at": "2026-10-19_15-24-13_949"
   },
   "oracle/src/oracle/other/doc_ref_model.py": {
-    "last_investigated_at": "2026-10-18_10-49-45_347"
+    "last_investigated_at": "2026-10-19_15-26-00_121"
   },
   "oracle/src/oracle/other/document_search.py": {
-    "last_investigated_at": "2026-10-18_10-54-08_682"
+    "last_investigated_at": "2026-10-19_15-31-32_235"
   },
   "oracle/src/oracle/other/path_model.py": {
-    "last_investigated_at": "2026-10-18_10-55-46_258"
+    "last_investigated_at": "2026-10-19_15-38-00_407"
   },
   "oracle/src/oracle/other/struct_doc.py": {
-    "last_investigated_at": "2026-10-18_10-57-21_641"
+    "last_investigated_at": "2026-10-19_15-39-45_763"
   },
   "oracle/src/oracle/prompt_builder/basic.py": {
-    "last_investigated_at": "2026-10-18_10-58-52_752"
+    "last_investigated_at": "2026-10-19_15-41-29_710"
   },
   "oracle/src/oracle/prompt_builder/complete_prompt.py": {
-    "last_investigated_at": "2026-10-18_11-03-57_430"
+    "last_investigated_at": "2026-10-19_15-43-15_183"
   },
   "oracle/src/oracle/prompt_builder/editor_input.py": {
-    "last_investigated_at": "2026-10-18_11-05-26_000"
+    "last_investigated_at": "2026-10-19_15-44-54_369"
   },
   "oracle/src/oracle/prompt_builder/merge_conflict_resolution.py": {
-    "last_investigated_at": "2026-10-18_11-11-26_593"
+    "last_investigated_at": "2026-10-19_15-52-19_336"
   },
   "oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py": {
-    "last_investigated_at": "2026-10-18_11-13-41_465"
+    "last_investigated_at": "2026-10-19_15-57-55_557"
   },
   "oracle/src/oracle/prompt_builder/policy/conflict_resolution.py": {
-    "last_investigated_at": "2026-10-18_11-15-30_854"
+    "last_investigated_at": "2026-10-19_15-59-58_319"
   },
   "oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py": {
-    "last_investigated_at": "2026-10-18_11-17-14_365"
+    "last_investigated_at": "2026-10-19_16-02-08_135"
   },
   "oracle/src/oracle/prompt_builder/policy/feedback_reporting.py": {
-    "last_investigated_at": "2026-10-18_11-19-30_667"
+    "last_investigated_at": "2026-10-19_16-07-50_515"
   },
   "oracle/src/oracle/prompt_builder/policy/file_access.py": {
-    "last_investigated_at": "2026-10-18_11-20-54_803"
+    "last_investigated_at": "2026-10-19_16-09-18_616"
   },
   "oracle/src/oracle/prompt_builder/policy/oracle.py": {
-    "last_investigated_at": "2026-10-18_11-26-40_209"
+    "last_investigated_at": "2026-10-19_16-11-04_718"
   },
   "oracle/src/oracle/prompt_builder/policy/realization.py": {
-    "last_investigated_at": "2026-10-18_11-28-09_972"
+    "last_investigated_at": "2026-10-19_16-13-21_146"
   },
   "oracle/src/oracle/prompt_builder/policy/realization_findings.py": {
-    "last_investigated_at": "2026-10-18_11-30-02_438"
+    "last_investigated_at": "2026-10-19_16-15-12_634"
   },
   "oracle/src/oracle/prompt_builder/policy/routing.py": {
-    "last_investigated_at": "2026-10-18_11-31-40_311"
+    "last_investigated_at": "2026-10-19_16-17-22_535"
   },
   "pyproject.toml": {
-    "last_investigated_at": "2026-10-18_11-34-52_819"
+    "last_investigated_at": "2026-10-19_16-20-15_328"
   },
   "src/acp/__init__.py": {
-    "last_investigated_at": "2026-10-18_11-36-18_450"
+    "last_investigated_at": "2026-10-19_16-22-14_205"
   },
   "src/acp/builder/__init__.py": {
-    "last_investigated_at": "2026-10-18_11-38-59_996"
+    "last_investigated_at": "2026-10-19_16-23-49_350"
   },
   "src/acp/builder/feedback/__init__.py": {
-    "last_investigated_at": "2026-10-18_11-41-46_900"
+    "last_investigated_at": "2026-10-19_16-31-16_733"
   },
   "src/acp/builder/feedback/normalize_issue.py": {
-    "last_investigated_at": "2026-10-18_11-48-00_466"
+    "last_investigated_at": "2026-10-19_16-33-52_988"
   },
   "src/acp/builder/feedback/remediate_issue.py": {
-    "last_investigated_at": "2026-10-18_11-50-13_122"
+    "last_investigated_at": "2026-10-19_16-40-07_325"
   },
   "src/acp/builder/oracle/__init__.py": {
-    "last_investigated_at": "2026-10-18_11-55-24_595"
+    "last_investigated_at": "2026-10-19_16-42-41_049"
   },
   "src/acp/builder/oracle/edit/__init__.py": {
-    "last_investigated_at": "2026-10-18_12-00-30_971"
+    "last_investigated_at": "2026-10-19_16-44-34_179"
   },
   "src/acp/builder/oracle/edit/launch_exec.py": {
-    "last_investigated_at": "2026-10-18_12-01-56_896"
+    "last_investigated_at": "2026-10-19_16-49-25_886"
   },
   "src/acp/builder/realization/__init__.py": {
-    "last_investigated_at": "2026-10-18_12-03-34_136"
+    "last_investigated_at": "2026-10-19_16-51-42_975"
   },
   "src/acp/builder/realization/apply/__init__.py": {
-    "last_investigated_at": "2026-10-18_12-09-49_374"
+    "last_investigated_at": "2026-10-19_16-53-54_401"
   },
   "src/acp/builder/realization/apply/fork/__init__.py": {
-    "last_investigated_at": "2026-10-18_12-14-57_013"
+    "last_investigated_at": "2026-10-19_17-00-59_673"
   },
   "src/acp/builder/realization/apply/fork/launch_exec.py": {
-    "last_investigated_at": "2026-10-18_12-19-29_772"
+    "last_investigated_at": "2026-10-19_17-02-59_548"
   },
   "src/acp/builder/realization/refactor/__init__.py": {
-    "last_investigated_at": "2026-10-18_12-20-44_718"
+    "last_investigated_at": "2026-10-19_17-04-43_748"
   },
   "src/acp/builder/realization/refactor/fork/__init__.py": {
-    "last_investigated_at": "2026-10-18_12-26-40_159"
+    "last_investigated_at": "2026-10-19_17-11-38_186"
   },
   "src/acp/builder/realization/refactor/fork/file_review_and_fix.py": {
-    "last_investigated_at": "2026-10-18_12-32-45_897"
+    "last_investigated_at": "2026-10-19_17-13-54_501"
   },
   "src/basic/__init__.py": {
-    "last_investigated_at": "2026-10-18_12-40-34_471"
+    "last_investigated_at": "2026-10-19_17-15-41_245"
   },
   "src/basic/acp.py": {
-    "last_investigated_at": "2026-10-18_12-42-17_128"
+    "last_investigated_at": "2026-10-19_17-17-58_800"
   },
   "src/basic/path_model.py": {
-    "last_investigated_at": "2026-10-18_12-48-40_652"
+    "last_investigated_at": "2026-10-19_17-24-25_285"
   },
   "src/cmoc_runtime.py": {
-    "last_investigated_at": "2026-10-18_12-56-11_224"
+    "last_investigated_at": "2026-10-19_17-31-02_721"
   },
   "src/commons/__init__.py": {
-    "last_investigated_at": "2026-10-18_12-57-40_508"
+    "last_investigated_at": "2026-10-19_17-34-14_453"
   },
   "src/commons/cmoc_runtime.py": {
-    "last_investigated_at": "2026-10-18_13-01-30_279"
+    "last_investigated_at": "2026-10-19_17-39-49_204"
   },
   "src/commons/document_search_worker/__init__.py": {
-    "last_investigated_at": "2026-10-18_13-07-21_373"
+    "last_investigated_at": "2026-10-19_17-46-36_028"
   },
   "src/commons/document_search_worker/package-lock.json": {
-    "last_investigated_at": "2026-10-18_13-13-16_715"
+    "last_investigated_at": "2026-10-19_17-49-10_798"
   },
   "src/commons/document_search_worker/package.json": {
-    "last_investigated_at": "2026-10-18_13-14-54_118"
+    "last_investigated_at": "2026-10-19_17-51-38_441"
   },
   "src/commons/document_search_worker/worker.mjs": {
-    "last_investigated_at": "2026-10-18_13-20-57_096"
+    "last_investigated_at": "2026-10-19_17-57-32_927"
   },
   "src/commons/prompt_editor_input.py": {
-    "last_investigated_at": "2026-10-18_13-22-23_440"
+    "last_investigated_at": "2026-10-19_17-59-10_453"
   },
   "src/commons/runtime_cli.py": {
-    "last_investigated_at": "2026-10-18_13-24-20_797"
+    "last_investigated_at": "2026-10-19_18-02-01_331"
   },
   "src/commons/runtime_codex.py": {
-    "last_investigated_at": "2026-10-18_13-30-52_998"
+    "last_investigated_at": "2026-10-19_18-04-40_367"
   },
   "src/commons/runtime_codex_exec.py": {
-    "last_investigated_at": "2026-10-18_13-35-44_588"
+    "last_investigated_at": "2026-10-19_18-07-41_421"
   },
   "src/commons/runtime_codex_logging.py": {
-    "last_investigated_at": "2026-10-18_13-37-49_775"
+    "last_investigated_at": "2026-10-19_18-09-42_278"
   },
   "src/commons/runtime_codex_profile.py": {
-    "last_investigated_at": "2026-10-18_13-39-45_345"
+    "last_investigated_at": "2026-10-19_18-12-29_275"
   },
   "src/commons/runtime_codex_recovery.py": {
-    "last_investigated_at": "2026-10-18_13-42-00_784"
+    "last_investigated_at": "2026-10-19_18-17-21_414"
   },
   "src/commons/runtime_codex_session.py": {
-    "last_investigated_at": "2026-10-18_13-46-10_001"
+    "last_investigated_at": "2026-10-19_18-22-55_441"
   },
   "src/commons/runtime_codex_tui.py": {
-    "last_investigated_at": "2026-10-18_13-53-35_130"
+    "last_investigated_at": "2026-10-19_18-24-40_859"
   },
   "src/commons/runtime_config.py": {
-    "last_investigated_at": "2026-10-18_13-58-42_981"
+    "last_investigated_at": "2026-10-19_18-30-41_740"
   },
   "src/commons/runtime_content.py": {
-    "last_investigated_at": "2026-10-18_14-00-19_047"
+    "last_investigated_at": "2026-10-19_18-32-36_175"
   },
   "src/commons/runtime_doctor.py": {
-    "last_investigated_at": "2026-10-18_14-05-47_275"
+    "last_investigated_at": "2026-10-19_18-39-35_684"
   },
   "src/commons/runtime_document_search.py": {
-    "last_investigated_at": "2026-10-18_14-12-46_241"
+    "last_investigated_at": "2026-10-19_18-44-16_867"
   },
   "src/commons/runtime_document_search_assets.py": {
-    "last_investigated_at": "2026-10-18_14-17-49_842"
+    "last_investigated_at": "2026-10-19_18-49-35_752"
   },
   "src/commons/runtime_document_search_mcp.py": {
-    "last_investigated_at": "2026-10-18_14-20-23_008"
+    "last_investigated_at": "2026-10-19_18-55-09_161"
   },
   "src/commons/runtime_document_search_observation.py": {
-    "last_investigated_at": "2026-10-18_14-25-09_590"
+    "last_investigated_at": "2026-10-19_18-57-01_954"
   },
   "src/commons/runtime_document_search_setup.py": {
-    "last_investigated_at": "2026-10-18_14-29-58_638"
+    "last_investigated_at": "2026-10-19_19-02-48_591"
   },
   "src/commons/runtime_document_search_types.py": {
-    "last_investigated_at": "2026-10-18_14-36-44_195"
+    "last_investigated_at": "2026-10-19_19-08-12_742"
   },
   "src/commons/runtime_document_search_worker.py": {
-    "last_investigated_at": "2026-10-18_14-41-01_422"
+    "last_investigated_at": "2026-10-19_19-13-46_964"
   },
   "src/commons/runtime_download_asset_cache.py": {
-    "last_investigated_at": "2026-10-18_14-46-16_245"
+    "last_investigated_at": "2026-10-19_19-21-06_166"
   },
   "src/commons/runtime_editor.py": {
-    "last_investigated_at": "2026-10-18_14-47-35_173"
+    "last_investigated_at": "2026-10-19_19-22-20_091"
   },
   "src/commons/runtime_editor_input_handoff.py": {
-    "last_investigated_at": "2026-10-18_14-49-06_920"
+    "last_investigated_at": "2026-10-19_19-24-09_409"
   },
   "src/commons/runtime_editor_input_handoff_mcp.py": {
-    "last_investigated_at": "2026-10-18_14-50-34_680"
+    "last_investigated_at": "2026-10-19_19-26-31_329"
   },
   "src/commons/runtime_editor_input_handoff_protocol.py": {
-    "last_investigated_at": "2026-10-18_14-52-07_008"
+    "last_investigated_at": "2026-10-19_19-28-47_030"
   },
   "src/commons/runtime_errors.py": {
-    "last_investigated_at": "2026-10-18_14-53-34_740"
+    "last_investigated_at": "2026-10-19_19-30-22_273"
   },
   "src/commons/runtime_feedback.py": {
-    "last_investigated_at": "2026-10-18_14-59-46_847"
+    "last_investigated_at": "2026-10-19_19-36-36_606"
   },
   "src/commons/runtime_feedback_close_state.py": {
-    "last_investigated_at": "2026-10-18_15-04-45_669"
+    "last_investigated_at": "2026-10-19_19-42-35_406"
   },
   "src/commons/runtime_feedback_history.py": {
-    "last_investigated_at": "2026-10-18_15-08-45_736"
+    "last_investigated_at": "2026-10-19_19-47-46_294"
   },
   "src/commons/runtime_feedback_intake.py": {
-    "last_investigated_at": "2026-10-18_15-14-56_351"
+    "last_investigated_at": "2026-10-19_19-52-40_262"
   },
   "src/commons/runtime_feedback_protocol.py": {
-    "last_investigated_at": "2026-10-18_15-16-33_494"
+    "last_investigated_at": "2026-10-19_19-54-58_370"
   },
   "src/commons/runtime_feedback_render.py": {
-    "last_investigated_at": "2026-10-18_15-21-49_014"
+    "last_investigated_at": "2026-10-19_19-56-45_237"
   },
   "src/commons/runtime_feedback_reporter.py": {
-    "last_investigated_at": "2026-10-18_15-26-37_386"
+    "last_investigated_at": "2026-10-19_19-58-51_563"
   },
   "src/commons/runtime_feedback_run_state.py": {
-    "last_investigated_at": "2026-10-18_15-34-37_086"
+    "last_investigated_at": "2026-10-19_20-03-57_924"
   },
   "src/commons/runtime_feedback_state.py": {
-    "last_investigated_at": "2026-10-18_15-41-16_144"
+    "last_investigated_at": "2026-10-19_20-10-11_033"
   },
   "src/commons/runtime_feedback_store.py": {
-    "last_investigated_at": "2026-10-18_15-46-19_843"
+    "last_investigated_at": "2026-10-19_20-15-47_833"
   },
   "src/commons/runtime_git.py": {
-    "last_investigated_at": "2026-10-18_15-52-02_348"
+    "last_investigated_at": "2026-10-19_20-22-05_572"
   },
   "src/commons/runtime_ids.py": {
-    "last_investigated_at": "2026-10-18_15-54-11_047"
+    "last_investigated_at": "2026-10-19_20-26-34_823"
   },
   "src/commons/runtime_json_schema.py": {
-    "last_investigated_at": "2026-10-18_15-56-41_755"
+    "last_investigated_at": "2026-10-19_20-29-58_010"
   },
   "src/commons/runtime_logging.py": {
-    "last_investigated_at": "2026-10-18_16-01-18_310"
+    "last_investigated_at": "2026-10-19_20-34-44_896"
   },
   "src/commons/runtime_merge_conflict.py": {
-    "last_investigated_at": "2026-10-18_16-07-53_861"
+    "last_investigated_at": "2026-10-19_20-39-23_507"
   },
   "src/commons/runtime_paths.py": {
-    "last_investigated_at": "2026-10-18_16-13-46_397"
+    "last_investigated_at": "2026-10-19_20-42-05_978"
   },
   "src/commons/runtime_primary_report.py": {
-    "last_investigated_at": "2026-10-18_16-18-03_923"
+    "last_investigated_at": "2026-10-19_20-44-06_279"
   },
   "src/commons/runtime_primary_report_render.py": {
-    "last_investigated_at": "2026-10-18_16-22-35_801"
+    "last_investigated_at": "2026-10-19_20-51-29_654"
   },
   "src/commons/runtime_primary_report_review.py": {
-    "last_investigated_at": "2026-10-18_16-31-20_833"
+    "last_investigated_at": "2026-10-19_20-57-18_696"
   },
   "src/commons/runtime_primary_report_specs.py": {
-    "last_investigated_at": "2026-10-18_16-37-32_053"
+    "last_investigated_at": "2026-10-19_20-59-47_061"
   },
   "src/commons/runtime_refactor.py": {
-    "last_investigated_at": "2026-10-18_16-44-25_959"
+    "last_investigated_at": "2026-10-19_21-05-12_606"
   },
   "src/commons/runtime_report_markdown.py": {
-    "last_investigated_at": "2026-10-18_16-55-26_701"
+    "last_investigated_at": "2026-10-19_21-10-49_594"
   },
   "src/commons/runtime_results.py": {
-    "last_investigated_at": "2026-10-18_16-57-21_539"
+    "last_investigated_at": "2026-10-19_21-12-50_131"
   },
   "src/commons/runtime_run.py": {
-    "last_investigated_at": "2026-10-18_17-04-46_000"
+    "last_investigated_at": "2026-10-19_21-18-09_451"
   },
   "src/commons/runtime_run_join.py": {
-    "last_investigated_at": "2026-10-18_17-10-46_531"
+    "last_investigated_at": "2026-10-19_21-25-45_857"
   },
   "src/commons/runtime_run_join_state.py": {
-    "last_investigated_at": "2026-10-18_17-18-36_187"
+    "last_investigated_at": "2026-10-19_21-31-17_826"
   },
   "src/commons/runtime_run_lifecycle.py": {
-    "last_investigated_at": "2026-10-18_17-29-02_608"
+    "last_investigated_at": "2026-10-19_21-36-28_859"
   },
   "src/commons/runtime_run_report.py": {
-    "last_investigated_at": "2026-10-18_17-34-04_996"
+    "last_investigated_at": "2026-10-19_21-42-13_269"
   },
   "src/commons/runtime_state.py": {
-    "last_investigated_at": "2026-10-18_17-36-27_908"
+    "last_investigated_at": "2026-10-19_21-48-43_025"
   },
   "src/commons/runtime_windows_toast.py": {
-    "last_investigated_at": "2026-10-18_17-42-08_899"
+    "last_investigated_at": "2026-10-19_21-50-31_714"
   },
   "src/config/__init__.py": {
-    "last_investigated_at": "2026-10-18_17-44-14_405"
+    "last_investigated_at": "2026-10-19_21-52-34_904"
   },
   "src/config/cmoc_config.py": {
-    "last_investigated_at": "2026-10-18_17-46-08_814"
+    "last_investigated_at": "2026-10-19_21-54-48_600"
   },
   "src/main.py": {
-    "last_investigated_at": "2026-10-18_17-53-44_411"
+    "last_investigated_at": "2026-10-19_21-57-21_733"
   },
   "src/oracle.py": {
-    "last_investigated_at": "2026-10-18_17-55-26_944"
+    "last_investigated_at": "2026-10-19_21-59-30_838"
   },
   "src/sub_commands/doctor.py": {
-    "last_investigated_at": "2026-10-18_18-02-03_554"
+    "last_investigated_at": "2026-10-19_22-06-33_512"
   },
   "src/sub_commands/feedback/__init__.py": {
-    "last_investigated_at": "2026-10-18_18-07-26_982"
+    "last_investigated_at": "2026-10-19_22-12-27_705"
   },
   "src/sub_commands/feedback/close.py": {
-    "last_investigated_at": "2026-10-18_18-13-44_432"
+    "last_investigated_at": "2026-10-19_22-19-47_776"
   },
   "src/sub_commands/feedback/decision.py": {
     "last_investigated_at": "2026-10-18_18-15-29_514"
@@ -603,234 +603,237 @@
     "last_investigated_at": "2026-10-18_19-38-06_902"
   },
   "src/sub_commands/session/__init__.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_04-52-11_752"
   },
   "src/sub_commands/session/abandon.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_04-58-49_124"
   },
   "src/sub_commands/session/fork.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-04-15_506"
   },
   "src/sub_commands/session/join.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-09-17_109"
   },
   "src/sub_commands/tui.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-11-30_890"
   },
   "test/_acp_builder_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-13-27_732"
   },
   "test/_cli_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-17-51_570"
   },
   "test/_codex_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-20-56_823"
   },
   "test/_command_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-25-31_472"
   },
   "test/_download_asset_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-30-13_131"
   },
   "test/_git_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-35-24_822"
   },
   "test/_handoff_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-37-30_093"
   },
   "test/_report_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-43-37_886"
   },
   "test/conftest.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-49-46_659"
   },
   "test/test_acp_builder_editing_run_parameters.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-51-05_400"
   },
   "test/test_acp_builder_session_join_parameters.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-52-46_670"
   },
   "test/test_acp_builder_tui_parameters.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_05-57-46_396"
   },
   "test/test_basic_runtime.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-02-27_119"
   },
   "test/test_cli_command_tree.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-03-55_928"
   },
   "test/test_cli_tui.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-08-46_934"
   },
   "test/test_codex_call_settings.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-13-15_934"
   },
   "test/test_codex_runtime_errors.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-14-44_420"
   },
   "test/test_codex_runtime_exec.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-19-18_495"
   },
   "test/test_codex_runtime_home.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-20-51_776"
   },
   "test/test_codex_runtime_paths.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-25-56_424"
   },
   "test/test_codex_runtime_quota_retry.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-30-30_503"
   },
   "test/test_codex_runtime_recovery.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-35-22_659"
   },
   "test/test_codex_runtime_retry.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-36-44_408"
   },
   "test/test_codex_runtime_subprocess.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-42-48_685"
   },
   "test/test_codex_runtime_tui.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-49-03_913"
   },
   "test/test_codex_session.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-50-26_015"
   },
   "test/test_doctor_cli.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_06-57-52_524"
   },
   "test/test_document_search.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-01-34_242"
   },
   "test/test_document_search_deadlines.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-05-05_127"
   },
   "test/test_document_search_materials.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-07-09_137"
   },
   "test/test_document_search_reuse.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-11-32_993"
   },
   "test/test_download_asset_cache.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-13-17_915"
   },
   "test/test_editing_run_cli.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-21-02_236"
   },
   "test/test_editor_input_handoff.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-22-28_412"
   },
   "test/test_editor_input_handoff_mcp.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-24-24_403"
   },
   "test/test_feedback.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-30-23_599"
   },
   "test/test_feedback_close.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-36-39_976"
   },
   "test/test_feedback_decision.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-41-41_235"
   },
   "test/test_feedback_history.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-43-14_091"
   },
   "test/test_feedback_intake.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-48-01_398"
   },
   "test/test_feedback_reconfirmation.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-54-17_446"
   },
   "test/test_feedback_render.py": {
+    "last_investigated_at": "2026-10-19_07-55-48_429"
+  },
+  "test/test_feedback_state_inventory.py": {
     "last_investigated_at": null
   },
   "test/test_feedback_store.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_07-59-46_104"
   },
   "test/test_file_inventory.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-04-17_969"
   },
   "test/test_git_query_reuse.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-08-33_596"
   },
   "test/test_oracle_edit_cli.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-12-31_939"
   },
   "test/test_oracle_investigation_cli.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-14-05_649"
   },
   "test/test_packaged_import.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-16-32_751"
   },
   "test/test_primary_report.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-18-17_469"
   },
   "test/test_primary_report_review.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-20-14_814"
   },
   "test/test_production_cli.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-24-07_900"
   },
   "test/test_production_cli_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-28-00_455"
   },
   "test/test_prompt_editor_input.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-29-36_119"
   },
   "test/test_prompt_parts.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-31-18_768"
   },
   "test/test_report_support.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-36-44_218"
   },
   "test/test_runtime_cli.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-38-39_272"
   },
   "test/test_runtime_codex_permissions.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-40-05_792"
   },
   "test/test_runtime_codex_profile.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-41-34_013"
   },
   "test/test_runtime_config.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-43-11_048"
   },
   "test/test_runtime_content.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-44-30_231"
   },
   "test/test_runtime_file_access.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-45-56_751"
   },
   "test/test_runtime_git_ignore.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_08-50-22_704"
   },
   "test/test_runtime_ids.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-09-39_247"
   },
   "test/test_runtime_refactor.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-15-22_018"
   },
   "test/test_runtime_run_join_state.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-20-19_004"
   },
   "test/test_runtime_state.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-22-06_228"
   },
   "test/test_runtime_wrapper.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-23-27_335"
   },
   "test/test_session_cli.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-28-48_959"
   },
   "test/test_skill_metadata.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-32-48_142"
   },
   "test/test_struct_doc_rendering.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-34-15_076"
   },
   "test/test_windows_toast.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-39-19_242"
   },
   "test/test_worktree_snapshot.py": {
-    "last_investigated_at": null
+    "last_investigated_at": "2026-10-19_09-40-56_342"
   }
 }

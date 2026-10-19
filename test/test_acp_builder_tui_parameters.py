@@ -108,7 +108,14 @@ def test_resume_builder_keeps_workload_without_initial_input(
     """現在の cwd や過去の prompt を使わず、保存 cwd と元の workload を保つ。"""
     # 保存 cwd を現在 cwd と区別できるよう、初回構築後に別 directory へ移る。
     root = tui_builder_directory
-    fresh = builder("original instruction")
+    # 完全本文は上の新規起動 test と test_oracle_investigation_cli.py で検査する。
+    # ここでは設定だけを比較するため、参照しない本文の構築を省く。
+    # 再開側は置換を戻し、実 builder が prompt を返さないことを確かめる。
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            f"{builder.__module__}.build_complete_prompt", lambda **_kwargs: []
+        )
+        fresh = builder("original instruction")
     other = tmp_path / "unrelated_directory"
     other.mkdir()
     monkeypatch.chdir(other)

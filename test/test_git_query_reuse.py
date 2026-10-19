@@ -9,6 +9,8 @@ from _git_support import RUN_BRANCH, RUN_ID, SESSION_ID, init_repo, run_git
 
 import commons.runtime_git as git_module
 import commons.runtime_run_join as run_join_module
+import sub_commands.feedback.close as close_module
+import sub_commands.feedback.remediation as remediation_module
 from commons.prompt_editor_input import ensure_prompt_editor_roots_ignored
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import repo_root, reuse_root_queries, work_root
@@ -190,6 +192,57 @@ def test_join_doctor_reuses_roots_only_before_preprocessing(
         assert root_queries == 2
 
 
+def test_feedback_reuses_roots_only_before_preprocessing(
+    committed_repository, tmp_path, monkeypatch
+):
+    """feedback の開始時だけ両 root を共有し、doctor と失敗後は探索し直す。"""
+    root = committed_repository
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "feedback-root-query", str(linked), "HEAD")
+    root_queries = 0
+    original_run = git_module.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        nonlocal root_queries
+        if argv[0] == "git" and "--show-toplevel" in argv:
+            root_queries += 1
+        return original_run(argv, *args, **kwargs)
+
+    class StopBeforeFeedbackProcessing(Exception):
+        pass
+
+    # 修復・事前条件・publication は feedback/close の test に残し、探索区間だけを検査する。
+    def stop_at_doctor():
+        assert root_queries == 1
+        assert work_root() == anchor
+        assert root_queries == 2
+        raise StopBeforeFeedbackProcessing
+
+    def report_preprocess(*, rollback_on_interruption):
+        assert rollback_on_interruption is True
+        stop_at_doctor()
+
+    def close_preprocess(worktree):
+        assert worktree == anchor
+        stop_at_doctor()
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    monkeypatch.setattr(
+        remediation_module, "doctor_preprocess_for_join", report_preprocess
+    )
+    monkeypatch.setattr(close_module, "run_doctor_preprocess", close_preprocess)
+    for anchor in (root, linked, root):
+        monkeypatch.chdir(anchor)
+        for invoke in (
+            remediation_module.run_feedback_report,
+            lambda: close_module._close_body(None, None),
+        ):
+            root_queries = 0
+            with pytest.raises(StopBeforeFeedbackProcessing):
+                invoke()
+            assert root_queries == 2
+
+
 def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
     cli_repository, monkeypatch
 ):
@@ -328,8 +381,11 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
     """検査内の配置問い合わせを重複させず、次の検査で状態と失敗を再確認する。"""
     root = cli_repository
     paths = ["first.txt", "second.txt", "space tab\tline\n.txt", ":(literal)file.txt"]
+    paths += ["source/one.txt", "source/nested/alpha.txt", "source/nested/beta.txt"]
     for path in paths:
-        (root / path).write_text("content\n")
+        candidate = root / path
+        candidate.parent.mkdir(parents=True, exist_ok=True)
+        candidate.write_text("content\n")
     context = EditingRunContext(
         repo=root,
         session_worktree=root,
@@ -342,37 +398,59 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
         run_fork_commit="fork",
         run_worktree=root,
     )
-    # 読み取り専用の両入口へ同じ状態を渡し、Git の準備と状態変更だけを共有する。
-    inspections = (
-        (unexpected_agent_paths, paths),
-        (unexpected_run_paths, [GitChange("M", (path,)) for path in paths]),
-    )
-
     queries = Counter()
+    local_validations = Counter()
+    global_validations = Counter()
     original_run = git_module.subprocess.run
+    original_local_validation = git_module._reject_non_file_path
+    original_global_validation = git_module._validate_global_git_ignore_path
 
     def record_query(argv, *args, **kwargs):
         if argv[0] == "git":
             queries[tuple(argv)] += 1
         return original_run(argv, *args, **kwargs)
 
-    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    def record_local_validation(path, label):
+        local_validations[path] += 1
+        original_local_validation(path, label)
 
+    def record_global_validation(path):
+        global_validations[path] += 1
+        original_global_validation(path)
+
+    monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    monkeypatch.setattr(git_module, "_reject_non_file_path", record_local_validation)
+    monkeypatch.setattr(
+        git_module, "_validate_global_git_ignore_path", record_global_validation
+    )
+
+    # 共通の分類処理で状態変更を検査する。run 側の委譲・差分展開・例外伝播は
+    # 下の owning repository と tree fallback のテストに残す。
     def validate(expected):
-        for inspect, changes in inspections:
-            queries.clear()
-            assert inspect(context, changes) == expected, inspect.__name__
-            placement_queries = [
-                count
-                for argv, count in queries.items()
-                if argv[1] in {"rev-parse", "config"}
-            ]
-            assert max(placement_queries, default=0) <= 1, inspect.__name__
-            # file 数と特殊文字にかかわらず、同じ repository の判定を一括で行う。
-            ignore_queries = sum(
-                count for argv, count in queries.items() if argv[1] == "check-ignore"
-            )
-            assert ignore_queries == 1, inspect.__name__
+        queries.clear()
+        local_validations.clear()
+        global_validations.clear()
+        assert unexpected_agent_paths(context, paths) == expected
+        placement_queries = [
+            count
+            for argv, count in queries.items()
+            if argv[1] in {"rev-parse", "config"}
+        ]
+        assert max(placement_queries, default=0) <= 1
+        # file 数と特殊文字にかかわらず、同じ repository の判定を一括で行う。
+        ignore_queries = sum(
+            count for argv, count in queries.items() if argv[1] == "check-ignore"
+        )
+        assert ignore_queries == 1
+        # 同じ親・ancestor を共有する候補でも、各 ignore source は一度だけ検証する。
+        assert {
+            root / ".gitignore",
+            root / ".git/info/exclude",
+            root / "source/.gitignore",
+            root / "source/nested/.gitignore",
+        } <= local_validations.keys()
+        assert set(local_validations.values()) == {1}
+        assert set(global_validations.values()) == {1}
 
     validate([])
 
@@ -393,29 +471,44 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
     validate(["second.txt"])
     global_ignore.unlink()
     global_ignore.mkdir()
-    for inspect, changes in inspections:
-        with pytest.raises(CmocError, match="global excludes"):
-            inspect(context, changes)
+    with pytest.raises(CmocError, match="global excludes"):
+        unexpected_agent_paths(context, paths)
     run_git(root, "config", "core.excludesFile", "/dev/null")
+    validate([])
+
+    # 共通 ancestor の再利用で、深い親の source や次回の種類変更を見落とさない。
+    nested_ignore = root / "source/nested/.gitignore"
+    nested_ignore.write_text("*.txt\n")
+    validate(["source/nested/alpha.txt", "source/nested/beta.txt"])
+    nested_ignore.unlink()
+    nested_ignore.mkdir()
+    with pytest.raises(CmocError, match="nested .gitignore"):
+        unexpected_agent_paths(context, paths)
+    nested_ignore.rmdir()
     validate([])
 
 
 def test_run_path_inspection_batches_each_owning_repository(
-    cli_repository, monkeypatch
+    cli_repository, _empty_repository_seed, monkeypatch
 ):
     """一括化しても nested の index・ignore と agent/run の許可範囲を区別する。"""
     root = cli_repository
     (root / ".gitignore").write_text("*.outer\n")
     (root / "dropped.outer").write_text("outer ignored\n")
     (root / "visible.txt").write_text("visible\n")
-    nested = root / "nested"
-    nested.mkdir()
-    init_repo(nested)
+    # 初期化済みの空 repository を独立コピーし、nested 固有の index・設定を作る。
+    nested = shutil.copytree(_empty_repository_seed, root / "nested")
     (nested / ".gitignore").write_text("*.nested\n")
     for name in ("kept.outer", "dropped.nested", "tracked.nested"):
         (nested / name).write_text("nested content\n")
     run_git(nested, "add", "-f", "tracked.nested")
     (nested / "alias").symlink_to(nested / "kept.outer")
+    (nested / "directory-alias").symlink_to(nested, target_is_directory=True)
+    # 実 metadata ではない同名 directory の確認結果も候補間で共有する。
+    ordinary = root / "ordinary"
+    (ordinary / ".git").mkdir(parents=True)
+    for name in ("first.txt", "second.txt"):
+        (ordinary / name).write_text("ordinary content\n")
     (root / "oracle").mkdir()
     (root / "oracle/spec.md").write_text("oracle\n")
     managed_state = ".cmoc/gt/realization/refactor/state.json"
@@ -435,30 +528,39 @@ def test_run_path_inspection_batches_each_owning_repository(
         "dropped.outer",
         "nested/.git/config",
         "nested/alias",
+        "nested/directory-alias/kept.outer",
         "nested/dropped.nested",
         "oracle/spec.md",
     ]
     paths = [*rejected, "visible.txt", "nested/kept.outer", "nested/tracked.nested"]
+    paths += ["ordinary/first.txt", "ordinary/second.txt"]
     # 重複と rename の両端も渡し、return 値と実 Git の問い合わせ数を検査する。
     paths += ["visible.txt", managed_state]
     changes = [GitChange("M", (path,)) for path in paths]
     changes.append(GitChange("R100", ("dropped.outer", "nested/kept.outer")))
     queries = Counter()
+    worktree_queries = Counter()
     original_run = git_module.subprocess.run
 
     def record_query(argv, *args, **kwargs):
         if argv[:2] == ["git", "check-ignore"]:
             queries[kwargs["cwd"]] += 1
+        if argv == ["git", "rev-parse", "--path-format=absolute", "--show-toplevel"]:
+            worktree_queries[kwargs["cwd"]] += 1
         return original_run(argv, *args, **kwargs)
 
     monkeypatch.setattr(git_module.subprocess, "run", record_query)
-    for inspect, inputs, expected in (
-        (unexpected_agent_paths, paths, sorted([*rejected, managed_state])),
-        (unexpected_run_paths, changes, rejected),
-    ):
-        queries.clear()
-        assert inspect(context, inputs) == expected
-        assert queries == {root: 1, nested: 1}
+    # 外側の path-query 再利用区間が同じでも、分類ごとに context を確認し直す。
+    with git_module.reuse_git_path_queries():
+        for inspect, inputs, expected in (
+            (unexpected_agent_paths, paths, sorted([*rejected, managed_state])),
+            (unexpected_run_paths, changes, rejected),
+        ):
+            queries.clear()
+            worktree_queries.clear()
+            assert inspect(context, inputs) == expected
+            assert queries == {root: 1, nested: 1}
+            assert worktree_queries == {nested: 1, ordinary: 1}
 
     # 明示対象外は run 検査だけに適用し、他の想定外 path は維持する。
     assert (
@@ -478,7 +580,7 @@ def test_run_path_inspection_batches_each_owning_repository(
 
 
 def test_run_path_inspection_batches_missing_files_and_tree_fallback(
-    cli_repository, monkeypatch
+    cli_repository, _empty_repository_seed, monkeypatch
 ):
     """削除 path の特殊名・種類・参照元を保ち、tree 照会を repository ごとにまとめる。"""
     root = cli_repository
@@ -502,9 +604,8 @@ def test_run_path_inspection_batches_missing_files_and_tree_fallback(
         (root / name).unlink()
     shutil.rmtree(root / "tree-directory")
 
-    nested = root / "nested"
-    nested.mkdir()
-    init_repo(nested)
+    # 履歴はこのケース内で作り、前提だけの Git 初期化は繰り返さない。
+    nested = shutil.copytree(_empty_repository_seed, root / "nested")
     nested_regular = ["first.txt", "second.txt"]
     for name in nested_regular:
         (nested / name).write_text("nested file\n")
@@ -526,7 +627,15 @@ def test_run_path_inspection_batches_missing_files_and_tree_fallback(
         run_fork_commit="outer-base",
         run_worktree=root,
     )
-    rejected = ["link-only", "nested/link-only", "never-tracked", "tree-directory"]
+    # outer の ref は nested に存在しない。削除済み blob は自身の HEAD から受理し、
+    # 同じ nested の欠落 path は拒否する検査を、この履歴で併せて行う。
+    rejected = [
+        "link-only",
+        "nested/link-only",
+        "nested/never-tracked",
+        "never-tracked",
+        "tree-directory",
+    ]
     paths = [
         *regular,
         *fallback,
