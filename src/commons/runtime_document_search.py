@@ -365,10 +365,8 @@ def _checked_cached_vector(value: object) -> bytes:
     dimensions = SEARCH_MATERIALS.embedding_dimensions
     if not isinstance(value, bytes) or len(value) != 4 * dimensions:
         raise SearchError("SYNC_FAILED", "cached embedding is invalid")
-    numbers = struct.unpack("<" + "f" * dimensions, value)
-    if not all(math.isfinite(number) for number in numbers) or not any(
-        number != 0 for number in numbers
-    ):
+    numbers = struct.unpack(f"<{dimensions}f", value)
+    if not all(map(math.isfinite, numbers)) or not any(numbers):
         raise SearchError("SYNC_FAILED", "cached embedding is invalid")
     return value
 
