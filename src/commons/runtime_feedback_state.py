@@ -769,8 +769,10 @@ def _resolve_reference_path(
         raise _corruption(
             f"{description} path が symlink を含みます。", lexical_candidate
         )
-    # symlink を含まない絶対 path は、同じ祖先を再走査せず .. だけ正規化する。
+    # .. の正規化で path が変わる場合は、欠落した親が隠していた symlink も調べる。
     candidate = Path(os.path.normpath(lexical_candidate))
+    if candidate != lexical_candidate and _has_symlink_component(candidate):
+        raise _corruption(f"{description} path が symlink を含みます。", candidate)
     # 字句上の配下なら期待 root の祖先も検査済み。別表記の場合だけ解決する。
     if not candidate.is_relative_to(
         expected_root.absolute()
@@ -824,7 +826,8 @@ def _validate_artifact_reference(
     )
     if allow_missing and not path.exists() and not path.is_symlink():
         return path
-    if _has_symlink_component(path) or not path.is_file():
+    # lexical な祖先の symlink は参照の解決時に検査済み。同じ階層を再走査しない。
+    if not path.is_file():
         raise _corruption(f"{description} が存在する通常 file ではありません。", path)
     if sha256_bytes(path.read_bytes()) != digest:
         raise _corruption(f"{description} の SHA256 が一致しません。", path)

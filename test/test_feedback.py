@@ -2857,7 +2857,8 @@ def test_normalization_schema_supports_editable_namespace_package(
 
 @pytest.mark.parametrize("allow_missing", [False, True])
 @pytest.mark.parametrize(
-    "link_kind", ["file", "parent", "parent_traversal", "dangling"]
+    "link_kind",
+    ["file", "parent", "parent_traversal", "dangling", "missing_parent_traversal"],
 )
 def test_state_reference_rejects_in_repository_symlink_alias(
     feedback_directory: Path,
@@ -2882,7 +2883,14 @@ def test_state_reference_rejects_in_repository_symlink_alias(
         )
     else:
         alias = expected_root / "alias.json"
-        alias.symlink_to(target if link_kind == "file" else expected_root / "missing")
+        alias.symlink_to(
+            target
+            if link_kind in {"file", "missing_parent_traversal"}
+            else expected_root / "missing"
+        )
+        if link_kind == "missing_parent_traversal":
+            # 欠落した親で lstat が失敗しても、正規化先の symlink を見逃さない。
+            alias = expected_root / "missing" / ".." / alias.name
 
     with pytest.raises(CmocError, match="symlink"):
         feedback_state_module._validate_artifact_reference(
