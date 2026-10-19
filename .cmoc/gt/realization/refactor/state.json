@@ -258,7 +258,7 @@
     "last_investigated_at": "2026-10-19_15-39-45_763"
   },
   "oracle/src/oracle/prompt_builder/basic.py": {
-    "last_investigated_at": "2026-10-18_10-58-52_752"
+    "last_investigated_at": "2026-10-19_15-41-29_710"
   },
   "oracle/src/oracle/prompt_builder/complete_prompt.py": {
     "last_investigated_at": "2026-10-18_11-03-57_430"
