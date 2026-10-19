@@ -3144,22 +3144,25 @@ def test_feedback_preconditions_preserve_existing_changes_and_raw(
     doctor = Mock()
     monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", doctor)
     run_git(root, "switch", "-c", "outside-session")
-    session_id = None
+    original_head = run_git(root, "rev-parse", "HEAD").stdout
+    # 観測時点の session 有無と複数 raw の保持を、全拒否条件で同じ入力から検査する。
+    # branch 切替・本文編集・stage は HEAD を変えないため、比較基準も一度だけ取得する。
+    for session_id in (None, SESSION_ID):
+        store_agent_observation(
+            root,
+            _context(root, session_id=session_id, head_commit=original_head.strip()),
+            _payload(),
+        )
+    original_raw = {path: path.read_bytes() for path in iter_observation_paths(root)}
     # 拒否後の保持を確認してから同じ入力を次の境界へ進め、Git/session の準備を共有する。
     # collector の受理・拒否・保存は transport と後続 wave の結合 test で検証する。
     for condition in ("inactive", "dirty_worktree", "dirty_index"):
         if condition == "dirty_worktree":
             run_git(root, "switch", session_branch)
-            session_id = SESSION_ID
             (root / "README.md").write_text("user change\n")
         elif condition == "dirty_index":
             run_git(root, "add", "README.md")
-        store_agent_observation(root, _context(root, session_id=session_id), _payload())
-        original_head = run_git(root, "rev-parse", "HEAD").stdout
         original_status = run_git(root, "status", "--porcelain").stdout
-        original_raw = {
-            path: path.read_bytes() for path in iter_observation_paths(root)
-        }
 
         result = runner.invoke(app, ["feedback", "report"], catch_exceptions=False)
 
