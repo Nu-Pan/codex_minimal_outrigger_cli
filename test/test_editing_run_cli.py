@@ -2656,14 +2656,20 @@ def test_set_run_state_rejects_overwriting_terminal_state(
 def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
     join_after_preprocess: tuple[Path, str, Path],
 ) -> None:
-    """force-resolve が run branch の想定外 path だけを戻すことを確認する。"""
-    # 通常名と glob 文字を含む名前を同じ run で検査し、Git 準備と join を共有する。
-    unexpected_paths = ("oracle/unexpected.md", "oracle/unexpected[1].md")
+    """想定外追加と rename を戻し、rename 元と許可された成果を保持する。"""
+    # 通常名・glob 文字・rename を同じ run に揃え、Git 準備と join を共有する。
+    # realization の変更・rename・削除の受理は accepts_realization_changes_* に残す。
+    unexpected_additions = ("oracle/unexpected.md", "oracle/unexpected[1].md")
+    rename_destination = "oracle/renamed.md"
+    unexpected_paths = (*unexpected_additions, rename_destination)
     root, _session_branch, state_path = join_after_preprocess
     context = _prepare_run(join_after_preprocess)
-    (context.run_worktree / "README.md").write_text("allowed\n")
-    for unexpected_path in unexpected_paths:
+    (context.run_worktree / "result.txt").write_text("allowed\n")
+    for unexpected_path in unexpected_additions:
         (context.run_worktree / unexpected_path).write_text("unexpected\n")
+    (context.run_worktree / "README.md").rename(
+        context.run_worktree / rename_destination
+    )
     commit_work_unit(context.run_worktree, "mixed run changes")
 
     rejected = runner.invoke(app, ["run", "join"], catch_exceptions=False)
@@ -2680,36 +2686,14 @@ def test_run_join_force_resolve_reverts_only_run_unexpected_paths(
         catch_exceptions=False,
     )
 
-    assert joined.exit_code == 0
-    assert (root / "README.md").read_text() == "allowed\n"
+    assert joined.exit_code == 0, joined.output
+    assert (root / "result.txt").read_text() == "allowed\n"
+    assert (root / "README.md").read_text() == "# repo\n"
     assert all(not (root / path).exists() for path in unexpected_paths)
     assert (
         "--force-resolve reverted unexpected run paths"
         in terminal_primary_report(joined).read_text()
     )
-
-
-def test_run_join_force_resolve_restores_realization_source_of_rename(
-    join_after_preprocess: tuple[Path, str, Path],
-) -> None:
-    """force-resolve が想定外 rename の realization 側を失わせないことを確認する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    root, _session_branch, _state_path = join_after_preprocess
-    context = _prepare_run(join_after_preprocess)
-    destination = context.run_worktree / "oracle" / "unexpected.md"
-    destination.parent.mkdir(exist_ok=True)
-    (context.run_worktree / "README.md").rename(destination)
-    commit_work_unit(context.run_worktree, "rename realization into oracle")
-
-    result = runner.invoke(
-        app,
-        ["run", "join", "--force-resolve"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0, result.output
-    assert (root / "README.md").read_text() == "# repo\n"
-    assert not (root / "oracle" / "unexpected.md").exists()
 
 
 @pytest.fixture
