@@ -358,22 +358,44 @@ def test_quota_to_capacity_inherits_only_until_resume(
     ]
 
 
-@pytest.mark.parametrize("reason", [QUOTA, CAPACITY])
-def test_recovery_does_not_stop_at_old_retry_limits(
-    recovery_control_case, monkeypatch, reason
-):
-    calls = script_codex_calls(
-        monkeypatch,
-        [
-            (1, jsonl(SESSION, reason), None),
-            *[(1, jsonl(reason), None)] * 10,
-            (0, jsonl(COMPLETED), "ready"),
-            (0, jsonl(COMPLETED), "done"),
-        ],
+@pytest.mark.parametrize("reason", ["quota", "transient"])
+def test_recovery_does_not_stop_at_old_retry_limits(monkeypatch, reason):
+    """回数・総待機時間による打切りを、実待機や call ごとの I/O なしで検査する。"""
+    # 分類・probe・再開・ログとの結合は reason_changes と quota_retry に残す。
+    # 同じ理由での継続だけを直接検査し、11 probe 分の出力・ログ生成を省く。
+    elapsed = 0.0
+    intervals = []
+    probes = []
+
+    def sleep(seconds):
+        nonlocal elapsed
+        intervals.append(seconds)
+        elapsed += seconds
+
+    monkeypatch.setattr(
+        recovery, "time", SimpleNamespace(perf_counter=lambda: elapsed, sleep=sleep)
     )
-    assert execute(recovery_control_case).output_text == "done"
-    assert len(calls) == 13
-    assert sum(c["prompt"] == "prompt" for c in calls) == 2
+
+    def probe(probe_reason, inherited, _recovery_id):
+        probes.append((probe_reason, inherited))
+        return reason if len(probes) <= 10 else "succeeded"
+
+    waited = recovery.wait_for_recovery(
+        key=(object(),),
+        reason=reason,
+        probe=probe,
+        quota_interval=1800,
+        transient_interval=17,
+        logger=None,
+        agent_call_id="agent",
+        stopped_codex_call_id="call",
+        call_log_path="call.json",
+    )
+
+    interval = 1800 if reason == "quota" else 17
+    assert intervals == [interval] * 11
+    assert probes == [(reason, reason == "transient")] * 11
+    assert waited == {"quota": 0.0, "transient": 0.0} | {reason: interval * 11}
 
 
 @pytest.mark.parametrize(
