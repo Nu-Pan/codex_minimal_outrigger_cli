@@ -547,40 +547,46 @@ def test_merge_refactor_states_reads_shared_snapshot_once(
 
 
 def test_merge_refactor_states_uses_committed_dates_and_current_paths(
-    cli_repository, monkeypatch
+    tmp_path, monkeypatch
 ):
-    root = cli_repository
+    root = tmp_path
     older = "2026-10-18_00-00-00_001"
     newer = "2026-10-18_00-00-00_002"
-    write_refactor_state(
-        root,
-        {
+    left, right = "a" * 40, "b" * 40
+    snapshots = {
+        left: {
             "README.md": {"last_investigated_at": None},
             "oracle/spec.md": {"last_investigated_at": older},
             "removed.md": {"last_investigated_at": newer},
             "left.py": {"last_investigated_at": older},
         },
-    )
-    run_git(root, "add", ".cmoc/gt/realization/refactor/state.json")
-    run_git(root, "commit", "-m", "left state")
-    left = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    write_refactor_state(
-        root,
-        {
+        right: {
             "README.md": {"last_investigated_at": newer},
             "oracle/spec.md": {"last_investigated_at": None},
             "right.py": {"last_investigated_at": None},
         },
-    )
-    run_git(root, "add", ".cmoc/gt/realization/refactor/state.json")
-    run_git(root, "commit", "-m", "right state")
-    right = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    }
+
+    # 実 Git の snapshot 取得・日時統合・同期は managed_state_conflict_merges_without_agent
+    # と test_editing_run_cli.py の join_merges_committed_timestamps_before_sync に残す。
+    # 値の優先順位と入力順序の検査には確定済み snapshot だけを渡し、履歴を作らない。
+    def committed_git(args, queried_root):
+        assert queried_root == root
+        if args[0] == "ls-tree":
+            ref = args[2]
+            return CommandResult(
+                0, f"100644 blob {ref}\t.cmoc/gt/realization/refactor/state.json\0", ""
+            )
+        assert args[0] == "show"
+        ref, _separator, _relative = args[1].partition(":")
+        return CommandResult(0, json.dumps(snapshots[ref]), "")
+
+    monkeypatch.setattr(refactor_module, "run_git", committed_git)
     targets = ["README.md", "oracle/spec.md", "left.py", "right.py", "added.py"]
     monkeypatch.setattr(
         refactor_module, "enumerate_refactor_targets", lambda _: targets
     )
 
-    # 順序だけが異なる検査で同じ commit 履歴を作り直さない。
     for refs in ((left, right), (right, left)):
         # 各順序で作業中の値を戻し、前回の統合結果からの読み込みも検出する。
         write_refactor_state(root, {"README.md": {"last_investigated_at": None}})
