@@ -9,6 +9,7 @@ from _git_support import RUN_BRANCH, RUN_ID, SESSION_ID, init_repo, run_git
 
 import commons.runtime_git as git_module
 import commons.runtime_run_join as run_join_module
+import sub_commands.feedback.close as close_module
 import sub_commands.feedback.remediation as remediation_module
 from commons.prompt_editor_input import ensure_prompt_editor_roots_ignored
 from commons.runtime_errors import CmocError
@@ -191,7 +192,7 @@ def test_join_doctor_reuses_roots_only_before_preprocessing(
         assert root_queries == 2
 
 
-def test_feedback_report_reuses_roots_only_before_preprocessing(
+def test_feedback_reuses_roots_only_before_preprocessing(
     committed_repository, tmp_path, monkeypatch
 ):
     """feedback の開始時だけ両 root を共有し、doctor と失敗後は探索し直す。"""
@@ -210,22 +211,36 @@ def test_feedback_report_reuses_roots_only_before_preprocessing(
     class StopBeforeFeedbackProcessing(Exception):
         pass
 
-    # 修復・事前条件・publication は test_feedback.py に残し、探索区間だけを検査する。
-    def preprocess(*, rollback_on_interruption):
-        assert rollback_on_interruption is True
+    # 修復・事前条件・publication は feedback/close の test に残し、探索区間だけを検査する。
+    def stop_at_doctor():
         assert root_queries == 1
         assert work_root() == anchor
         assert root_queries == 2
         raise StopBeforeFeedbackProcessing
 
+    def report_preprocess(*, rollback_on_interruption):
+        assert rollback_on_interruption is True
+        stop_at_doctor()
+
+    def close_preprocess(worktree):
+        assert worktree == anchor
+        stop_at_doctor()
+
     monkeypatch.setattr(git_module.subprocess, "run", record_query)
-    monkeypatch.setattr(remediation_module, "doctor_preprocess_for_join", preprocess)
+    monkeypatch.setattr(
+        remediation_module, "doctor_preprocess_for_join", report_preprocess
+    )
+    monkeypatch.setattr(close_module, "run_doctor_preprocess", close_preprocess)
     for anchor in (root, linked, root):
         monkeypatch.chdir(anchor)
-        root_queries = 0
-        with pytest.raises(StopBeforeFeedbackProcessing):
-            remediation_module.run_feedback_report()
-        assert root_queries == 2
+        for invoke in (
+            remediation_module.run_feedback_report,
+            lambda: close_module._close_body(None, None),
+        ):
+            root_queries = 0
+            with pytest.raises(StopBeforeFeedbackProcessing):
+                invoke()
+            assert root_queries == 2
 
 
 def test_prompt_editor_ignore_reuses_queries_and_refreshes_after_repair(
