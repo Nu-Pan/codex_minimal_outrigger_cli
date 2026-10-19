@@ -540,13 +540,21 @@ def _fingerprint(path: Path) -> dict[str, object]:
     state = "missing"
     digest: str | None = None
     try:
-        if not path.exists():
-            state = "missing"
-        elif not path.is_file():
-            state = "not_file"
+        # 存在と種類は同じ stat で確認し、次の fingerprint では取り直す。
+        try:
+            mode = path.stat().st_mode
+        except OSError as exc:
+            # pathlib の exists/is_file と同じ「存在しない」扱いを保つ。
+            if exc.errno not in {errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP}:
+                raise
+        except ValueError:
+            pass  # pathlib と同じく、表現できない path は存在しないものとする。
         else:
-            digest = sha256_bytes(path.read_bytes())
-            state = "hashed"
+            if not stat.S_ISREG(mode):
+                state = "not_file"
+            else:
+                digest = sha256_bytes(path.read_bytes())
+                state = "hashed"
     except OSError:
         state = "unreadable"
         digest = None

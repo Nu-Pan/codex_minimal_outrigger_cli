@@ -10,6 +10,7 @@ collector 受理・後続 wave の publication 検査に残す。
 - `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
 """
 
+import errno
 import os
 import stat
 import threading
@@ -20,6 +21,73 @@ import pytest
 
 import commons.runtime_feedback_state as state
 import commons.runtime_feedback_store as store
+
+
+def test_evidence_fingerprint_rechecks_metadata_and_read_failures(
+    tmp_path, monkeypatch
+):
+    """種類の照会を重ねず、次回の内容と取得段階ごとの失敗を取り直す。"""
+    path = tmp_path / "evidence.txt"
+    original_stat, original_read = Path.stat, Path.read_bytes
+    inspections, reads = [], []
+    stat_error = read_error = None
+
+    def inspect(target, *args, **kwargs):
+        if target == path:
+            inspections.append(target)
+            if stat_error:
+                raise stat_error
+        return original_stat(target, *args, **kwargs)
+
+    def read(target):
+        reads.append(target)
+        if read_error:
+            raise read_error
+        return original_read(target)
+
+    monkeypatch.setattr(Path, "stat", inspect)
+    monkeypatch.setattr(Path, "read_bytes", read)
+
+    def capture(expected_state, content=None):
+        inspections.clear()
+        reads.clear()
+        assert store._fingerprint(path) == {
+            "normalized_path": str(path),
+            "state": expected_state,
+            "sha256": store.sha256_bytes(content) if content is not None else None,
+        }
+        assert inspections == [path]
+        assert reads == ([path] if content is not None or read_error else [])
+
+    capture("missing")
+    path.mkdir()
+    capture("not_file")
+    path.rmdir()
+    path.write_bytes(b"original evidence")
+    capture("hashed", b"original evidence")
+    path.write_bytes(b"updated evidence")
+    capture("hashed", b"updated evidence")
+    target = tmp_path / "target.txt"
+    path.rename(target)
+    path.symlink_to(target)
+    capture("hashed", b"updated evidence")
+    target.unlink()
+    capture("missing")
+    path.unlink()
+    path.write_bytes(b"evidence")
+
+    stat_error = PermissionError("injected stat failure")
+    capture("unreadable")
+    for code in (errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP):
+        stat_error = OSError(code, "injected missing path")
+        capture("missing")
+    stat_error = ValueError("unencodable path")
+    capture("missing")
+    stat_error = None
+    for read_error in (PermissionError("unreadable"), FileNotFoundError("removed")):
+        capture("unreadable")
+    read_error = None
+    capture("hashed", b"evidence")
 
 
 def test_symlink_check_keeps_lexical_ancestors_and_rechecks_changes(
