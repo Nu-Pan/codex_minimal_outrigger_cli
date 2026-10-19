@@ -34,7 +34,6 @@ from _git_support import (
     SESSION_BRANCH,
     SESSION_ID,
     current_branch,
-    make_repo,
     run_git,
 )
 from _report_support import (
@@ -524,9 +523,12 @@ def test_new_run_target_preserves_occupied_target(
         assert collision.is_symlink()
 
 
-def test_worktree_change_paths_keep_only_rename_destination(tmp_path: Path) -> None:
+def test_worktree_change_paths_keep_only_rename_destination(
+    ready_content_session: tuple[Path, str, Path],
+) -> None:
     """未commit renameの変更pathはrename後だけを返す。"""
-    root = make_repo(tmp_path)
+    # rename 判定に必要な追跡 file と HEAD は既存 seed から独立して複製する。
+    root, _session_branch, _state_path = ready_content_session
     (root / "README.md").rename(root / "renamed.md")
     run_git(root, "add", "-A")
 
