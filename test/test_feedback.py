@@ -819,49 +819,12 @@ def test_reporter_rejects_invalid_collector_result(
     }
 
 
-def test_feedback_normalize_builder_protects_nested_code_fences(
-    feedback_prompt_directory: Path,
-) -> None:
-    """normalization の動的 JSON 境界と報告無効化を同じ構築結果で検証する。"""
-    root = feedback_prompt_directory
-    nested = "before\n```\ninside\n```\nafter"
-    observation_json = json.dumps({"payload": {"summary": nested}})
-    candidate_json = json.dumps(
-        [{"candidate_id": "fbi_" + "a" * 26, "summary": nested}]
-    )
-
-    parameter = build_feedback_issue_normalization_request(
-        observation_json,
-        candidate_json,
-        root,
-    )
-
-    assert not parameter.enable_feedback_reporting
-    assert "cmoc_feedback.submit_observation" not in parameter.prompt
-
-    observation_start = parameter.prompt.index("# 構造化済み observation")
-    observation_end = parameter.prompt.index(
-        "\n\n# 既存 issue candidate", observation_start
-    )
-    candidate_start = observation_end + 2
-    candidate_end = parameter.prompt.index(
-        "\n\n# place holder definition", candidate_start
-    )
-    observation_section = parameter.prompt[observation_start:observation_end]
-    candidate_section = parameter.prompt[candidate_start:candidate_end]
-    assert observation_section.startswith("# 構造化済み observation\n\n````json\n")
-    assert observation_section.endswith("\n````")
-    assert candidate_section.startswith("# 既存 issue candidate\n\n````json\n")
-    assert candidate_section.endswith("\n````")
-    assert observation_json in observation_section
-    assert candidate_json in candidate_section
-
-
-def test_feedback_normalization_excludes_candidate_search_hint(
+def test_feedback_normalization_preserves_json_and_excludes_search_hint(
     feedback_prompt_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """候補検索専用 hint を normalization agent の入力へ渡さない。"""
+    """同じ正本 builder の結果で、JSON 境界・hint 除外・起動設定を検査する。"""
     root = feedback_prompt_directory
+    nested = "before\n```\ninside\n```\nafter"
     observation_id = "fbo_000001_2026-08-01_00-00"
     candidate_id = "fbi_" + "a" * 26
     observation = {
@@ -869,17 +832,18 @@ def test_feedback_normalization_excludes_candidate_search_hint(
         "payload": {
             "schema_version": 2,
             "category": "tooling",
-            "summary": "同一性判断の入力",
+            "summary": nested,
             "impact": "候補検索用の hint を含む。",
-            "deduplication_hint": "候補検索だけに使う文字列",
             "evidence": [{"kind": "file", "path": "README.md"}],
         },
     }
+    expected_observation = deepcopy(observation)
+    observation["payload"]["deduplication_hint"] = "候補検索だけに使う文字列"
     candidate = {
         "candidate_id": candidate_id,
         "origin": "agent_report",
         "category": "tooling",
-        "summary": "既存候補",
+        "summary": nested,
         "impact": "既存候補の影響",
         "representative_evidence": [],
         "reference_targets": [],
@@ -893,6 +857,8 @@ def test_feedback_normalization_excludes_candidate_search_hint(
         assert parameter.agent_call_cwd == root
         assert parameter.file_access_mode == FileAccessMode.READONLY
         assert parameter.enable_document_search_mcp is True
+        assert not parameter.enable_feedback_reporting
+        assert "cmoc_feedback.submit_observation" not in parameter.prompt
         assert "# routing policy" in parameter.prompt
         assert "# oracle and realization basic" in parameter.prompt
         captured_prompts.append(parameter.prompt)
@@ -924,8 +890,26 @@ def test_feedback_normalization_excludes_candidate_search_hint(
         is None
     )
     assert len(captured_prompts) == 1
-    assert "deduplication_hint" not in captured_prompts[0]
-    assert "候補検索だけに使う文字列" not in captured_prompts[0]
+    prompt = captured_prompts[0]
+    assert "deduplication_hint" not in prompt
+    assert "候補検索だけに使う文字列" not in prompt
+
+    # JSON 境界と入力保存の検査にも同じ構築結果を使い、prompt の再描画を省く。
+    observation_start = prompt.index("# 構造化済み observation")
+    observation_end = prompt.index("\n\n# 既存 issue candidate", observation_start)
+    candidate_start = observation_end + 2
+    candidate_end = prompt.index("\n\n# place holder definition", candidate_start)
+    observation_section = prompt[observation_start:observation_end]
+    candidate_section = prompt[candidate_start:candidate_end]
+    for section, heading, expected in (
+        (observation_section, "構造化済み observation", expected_observation),
+        (candidate_section, "既存 issue candidate", [candidate]),
+    ):
+        prefix = f"# {heading}\n\n````json\n"
+        suffix = "\n````"
+        assert section.startswith(prefix)
+        assert section.endswith(suffix)
+        assert json.loads(section[len(prefix) : -len(suffix)]) == expected
 
 
 def test_feedback_remediate_builder_disables_reporting(
