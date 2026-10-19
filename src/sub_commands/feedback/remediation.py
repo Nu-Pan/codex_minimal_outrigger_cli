@@ -91,7 +91,6 @@ from commons.runtime_run_join_state import (
     confirm_import,
     join_record,
     load_join_record,
-    tree_id,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -885,14 +884,14 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
     record = load_join_record(context.repo, context.session_id)
     if record is None or not confirm_import(record) or record.prepared_run_head is None:
         raise _failure("feedback run の準備・取り込み記録を確認できません。")
+    # 共通の取り込み確認で準備済み run と session commit の tree 全体を照合済み。
+    # 同じ immutable commit の tree ID・path 差分をここで再照会しない。
     if context.run_worktree.exists():
         require_clean_worktree(context.run_worktree)
         if head_commit(context.run_worktree) != record.prepared_run_head:
             raise _failure("feedback run の準備完了成果が変更されています。")
     require_clean_worktree(context.session_worktree)
-    if not _is_ancestor(
-        context, record.prepared_run_head
-    ) or record.session_tree != tree_id(context.repo, record.prepared_run_head):
+    if not _is_ancestor(context, record.prepared_run_head):
         raise _failure("feedback run HEAD が join 後 session tree から到達できません。")
     # 到達可能性はこの join 検証内で commit ごとに共有し、再実行時は取り直す。
     reachable_commits = {record.prepared_run_head}
@@ -964,19 +963,6 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
             )
         reachable_commits.add(audit["after_commit"])
         paths.update(audit["changed_paths"])
-    # 後続 issue が同じ path を編集できるため、最終 run tree と session tree を比較する。
-    different = {
-        path
-        for change in tree_changes(
-            context.repo, record.prepared_run_head, record.session_commit or ""
-        )
-        for path in change.paths
-    }
-    if paths.intersection(different) and not adjusted:
-        raise _failure(
-            "join 後の realization tree が正式な issue commit の最終 tree と一致しません。",
-            detail="\n".join(sorted(paths.intersection(different))),
-        )
     if merged_reference is None:
         raise _failure("feedback run の自動 join を確認できません。")
     completion = {

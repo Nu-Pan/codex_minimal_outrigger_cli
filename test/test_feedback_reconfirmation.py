@@ -220,7 +220,6 @@ def feedback_run(tmp_path, monkeypatch, feedback_remediation_request_stub):
     monkeypatch.setattr(remediation, "join_record", lambda *_args: record)
     monkeypatch.setattr(remediation, "load_join_record", lambda *_args: record)
     monkeypatch.setattr(remediation, "confirm_import", lambda item: item.imported)
-    monkeypatch.setattr(remediation, "tree_id", lambda *_args: "a" * 40)
     return harness
 
 
@@ -804,7 +803,6 @@ def _join_and_publish(harness, monkeypatch):
     for source in h.context.run_worktree.iterdir():
         (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
     monkeypatch.setattr(remediation, "_is_ancestor", Mock(return_value=True))
-    monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
     monkeypatch.setattr(
         report, "current_branch", lambda *_args: h.context.session_branch
     )
@@ -896,12 +894,23 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
         assert audit["diff_sha256"] == sha256_bytes(b"")
     read_checkpoint = Mock(wraps=remediation.read_run_artifact)
     validate_checkpoint = Mock(wraps=remediation.validate_remediation_checkpoint)
+    confirm_import = Mock(wraps=remediation.confirm_import)
+    redundant_tree_diff = Mock(side_effect=AssertionError("trees already confirmed"))
     with monkeypatch.context() as audit_patch:
         audit_patch.setattr(remediation, "read_run_artifact", read_checkpoint)
         audit_patch.setattr(
             remediation, "validate_remediation_checkpoint", validate_checkpoint
         )
+        audit_patch.setattr(remediation, "confirm_import", confirm_import)
+        audit_patch.setattr(remediation, "tree_changes", redundant_tree_diff)
         result = _join_and_publish(h, monkeypatch)
+        confirm_import.assert_called_once_with(h.join)
+        redundant_tree_diff.assert_not_called()
+        # 共通照合が不一致を返す場合は、保存済み結果だけで publication を進めない。
+        # 実 tree・親・到達可能性の拒否条件は test_runtime_run_join_state.py で検査する。
+        confirm_import.return_value = False
+        with pytest.raises(CmocError, match="準備・取り込み記録"):
+            remediation._complete_join(h.context, h.manifest)
     # 採用結果は seal・join・publication で各一回読み、join 内では再読しない。
     # 旧判定も含め、全 checkpoint の schema・audit 検査を join に残す。
     selected = selected_remediation_checkpoints(h.manifest)
