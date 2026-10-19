@@ -3004,6 +3004,9 @@ def test_run_join_conflict_launch_uses_shared_settings(
     # 設定の保存・読込、実 builder、Git 競合と call log は本処理を通す。
     preprocess = Mock()
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
+    # 日時統合・entry 同期は test_join_merges_committed_timestamps_before_sync に残し、
+    # 起動設定の検査で同じ Git snapshot 取得・全件列挙を繰り返さない。
+    monkeypatch.setattr(run_join_module, "merge_refactor_states", lambda *_args: None)
     setup_codex_home(tmp_path, monkeypatch)
     config = load_config(root)
     config.codex.model_providers["shared"] = CodexModelProviderConfig(
