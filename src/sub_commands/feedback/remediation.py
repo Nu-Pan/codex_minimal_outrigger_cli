@@ -64,6 +64,7 @@ from commons.runtime_feedback_store import (
 )
 from commons.runtime_ids import new_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
+from commons.runtime_paths import reuse_root_queries
 from commons.runtime_primary_report import (
     current_primary_report_fields,
     primary_report_finalization_lock,
@@ -114,7 +115,9 @@ def run_feedback_report() -> TerminalResult:
     """事前条件を検査し、同一 run の join 後 recovery または新規修復を行う。"""
     from .recovery import finish_feedback_run, recover_finalization
 
-    repository, session_worktree = repo_root(), work_root()
+    # 開始時の両 root だけを共有し、doctor や recovery へ探索結果を持ち越さない。
+    with reuse_root_queries():
+        repository, session_worktree = repo_root(), work_root()
     context: EditingRunContext | None = None
     manifest: dict[str, Any] | None = None
     manifest_path: Path | None = None
