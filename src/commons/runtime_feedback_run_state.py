@@ -22,12 +22,12 @@ from .runtime_feedback_state import (
     _resolve_artifact_reference,
     _validate_artifact_reference,
     artifact_reference,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from .runtime_feedback_store import (
     canonical_json_bytes,
     sha256_bytes,
-    write_immutable_json,
 )
 from .runtime_ids import is_common_id, new_id
 from .runtime_logging import current_subcommand_logger
@@ -90,8 +90,7 @@ def save_run_artifact(
         "completion": "publication_completion.json",
     }[name]
     path = directory / relative
-    write_immutable_json(path, content)
-    reference = artifact_reference(repo, path)
+    reference = write_immutable_artifact(repo, path, content)
     manifest["run"][name] = reference
     write_report_cut_manifest(repo, manifest)
     return reference

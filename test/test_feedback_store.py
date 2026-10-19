@@ -110,6 +110,40 @@ def test_mutable_write_flushes_before_publication_and_preserves_failure_state(
     assert list(tmp_path.iterdir()) == [path]
 
 
+def test_immutable_artifact_reference_reuses_saved_hash_and_checks_replays(
+    tmp_path, monkeypatch
+):
+    path = tmp_path / "artifacts" / "record.json"
+    value = {"evidence": "確認した内容"}
+    content = store.canonical_json_bytes(value)
+    reference = {
+        "path": "artifacts/record.json",
+        "sha256": store.sha256_bytes(content),
+    }
+    reads = []
+    original_read = Path.read_bytes
+
+    def read(candidate):
+        if candidate == path:
+            reads.append(candidate)
+        return original_read(candidate)
+
+    # 同期の契約は下の durability test に残し、保存・参照作成の I/O を観測する。
+    monkeypatch.setattr(os, "fsync", lambda _fd: None)
+    monkeypatch.setattr(Path, "read_bytes", read)
+    assert state.write_immutable_artifact(tmp_path, path, value) == reference
+    assert reads == []
+    assert original_read(path) == content
+
+    assert state.write_immutable_artifact(tmp_path, path, value) == reference
+    assert reads == [path]
+    path.write_bytes(b"changed\n")
+    with pytest.raises(store.FeedbackRejected):
+        state.write_immutable_artifact(tmp_path, path, value)
+    assert reads == [path, path]
+    assert original_read(path) == b"changed\n"
+
+
 def test_immutable_write_flushes_new_data_and_reuses_published_inode(
     tmp_path, monkeypatch
 ):

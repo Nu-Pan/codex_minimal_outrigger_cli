@@ -54,14 +54,13 @@ from commons.runtime_feedback_state import (
     recover_report_cut_checkpoint_references,
     remediation_checkpoint_path,
     validate_feedback_state,
-    write_checkpoint,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
     canonical_json_bytes,
     rfc3339_now,
     sha256_bytes,
-    write_immutable_json,
 )
 from commons.runtime_ids import new_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
@@ -462,8 +461,7 @@ def _wave_loop(
             / str(sequence)
             / "input.json"
         )
-        write_immutable_json(wave_path, wave)
-        wave_reference = artifact_reference(context.repo, wave_path)
+        wave_reference = write_immutable_artifact(context.repo, wave_path, wave)
         manifest["run"]["waves"].append(wave_reference)
         # The wave file is durable before its high-watermark is published in
         # the manifest.  Recovery can therefore never observe a consumed
@@ -724,7 +722,7 @@ def _remediate_issue(
             f"{identity}.{int(Path(wave['path']).parent.name):08d}",
         )
         validate_remediation_checkpoint(checkpoint, path)
-        reference = write_checkpoint(context.repo, path, checkpoint)
+        reference = write_immutable_artifact(context.repo, path, checkpoint)
         checkpoint_saved = True
         logger = current_subcommand_logger()
         if logger is not None:

@@ -59,7 +59,7 @@ from commons.runtime_feedback_state import (
     publish_current_pointer,
     publish_generation_artifacts,
     validate_observation_envelope,
-    write_checkpoint,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
@@ -1213,7 +1213,7 @@ def _normalize_issue_identity(
     path = normalization_checkpoint_path(
         repo, str(manifest["report_cut_id"]), observation_id_value
     )
-    reference = write_checkpoint(repo, path, checkpoint)
+    reference = write_immutable_artifact(repo, path, checkpoint)
     _record_checkpoint(
         repo,
         manifest,

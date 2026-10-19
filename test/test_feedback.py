@@ -901,7 +901,9 @@ def test_feedback_normalization_excludes_candidate_search_hint(
 
     monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_run_codex_exec)
     # 保存・読戻し・破損検査は test_feedback_reconfirmation.py に残す。
-    monkeypatch.setattr(feedback_report_module, "write_checkpoint", lambda *_args: {})
+    monkeypatch.setattr(
+        feedback_report_module, "write_immutable_artifact", lambda *_args: {}
+    )
     monkeypatch.setattr(
         feedback_report_module,
         "_record_checkpoint",
@@ -3250,7 +3252,17 @@ def test_failed_feedback_unit_rolls_back_and_manual_completion_keeps_raw(
 
     monkeypatch.setattr(feedback_report_module, "run_codex_exec", fake_call)
     if fault == "checkpoint":
-        monkeypatch.setattr(remediation_module, "write_checkpoint", checkpoint_failure)
+        original_write = remediation_module.write_immutable_artifact
+
+        def write_artifact(repo, path, value):
+            # wave 保存は通し、修復後の checkpoint 保存失敗を注入する。
+            if path.parent.name == "remediation":
+                checkpoint_failure()
+            return original_write(repo, path, value)
+
+        monkeypatch.setattr(
+            remediation_module, "write_immutable_artifact", write_artifact
+        )
     elif fault == "checkpoint_reference":
         monkeypatch.setattr(
             feedback_report_module, "_record_checkpoint", checkpoint_failure

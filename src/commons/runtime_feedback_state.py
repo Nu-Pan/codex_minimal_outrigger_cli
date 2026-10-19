@@ -3037,9 +3037,10 @@ def _validate_report_cut_manifest_for_write(manifest: _JsonObject, path: Path) -
     return content
 
 
-def write_checkpoint(repo: Path, path: Path, checkpoint: _JsonObject) -> _JsonObject:
-    """正式な call result checkpoint を immutable に保存して参照を返す。"""
-    digest = write_immutable_json(path, checkpoint)
+def write_immutable_artifact(repo: Path, path: Path, value: _JsonObject) -> _JsonObject:
+    """immutable JSON artifact を保存し、保存時の hash から参照を返す。"""
+    # 保存処理が確定した hash を使い、参照作成だけのために再読込しない。
+    digest = write_immutable_json(path, value)
     return {"path": _relative_path(repo, path), "sha256": digest}
 
 
