@@ -1048,8 +1048,17 @@ def _is_git_worktree_root(directory: Path) -> bool:
     return bool(reported) and Path(reported).resolve() == directory.resolve()
 
 
-def _repository_context_for_path(root: Path, candidate: Path) -> Path | None:
+def _repository_context_for_path(
+    root: Path,
+    candidate: Path,
+    *,
+    worktree_checks: dict[Path, bool] | None = None,
+) -> Path | None:
     """単一 path を所有する最内側の検証済み Git working tree を返す。"""
+    # 一括分類では Git による同じ directory の確認だけを共有する。
+    # 各 path と metadata の種類は引き続き検査し、次の分類へ結果を持ち越さない。
+    if worktree_checks is None:
+        worktree_checks = {}
     work_root = root.absolute()
     absolute_candidate = candidate.absolute()
     try:
@@ -1093,7 +1102,9 @@ def _repository_context_for_path(root: Path, candidate: Path) -> Path | None:
                 metadata_path, f"Git metadata を検証できません: {exc}"
             ) from exc
         _require_inventory_entry_kind(metadata_path, mode)
-        if _is_git_worktree_root(directory):
+        if directory not in worktree_checks:
+            worktree_checks[directory] = _is_git_worktree_root(directory)
+        if worktree_checks[directory]:
             if (
                 absolute_candidate == metadata_path
                 or metadata_path in absolute_candidate.parents
@@ -1228,11 +1239,14 @@ def realization_file_paths(
     included: set[Path] = set()
     candidates_by_repository: dict[Path, list[Path]] = {}
     missing_by_repository: dict[Path, list[Path]] = {}
+    worktree_checks: dict[Path, bool] = {}
     for path in dict.fromkeys(paths):
         candidate = (path if path.is_absolute() else root / path).absolute()
         if _file_classification(work_root, candidate) != "realization":
             continue
-        repository = _repository_context_for_path(work_root, candidate)
+        repository = _repository_context_for_path(
+            work_root, candidate, worktree_checks=worktree_checks
+        )
         if repository is None:
             continue
         if branch and not _path_exists_without_following_symlinks(candidate):

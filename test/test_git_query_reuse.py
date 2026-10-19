@@ -451,6 +451,12 @@ def test_run_path_inspection_batches_each_owning_repository(
         (nested / name).write_text("nested content\n")
     run_git(nested, "add", "-f", "tracked.nested")
     (nested / "alias").symlink_to(nested / "kept.outer")
+    (nested / "directory-alias").symlink_to(nested, target_is_directory=True)
+    # 実 metadata ではない同名 directory の確認結果も候補間で共有する。
+    ordinary = root / "ordinary"
+    (ordinary / ".git").mkdir(parents=True)
+    for name in ("first.txt", "second.txt"):
+        (ordinary / name).write_text("ordinary content\n")
     (root / "oracle").mkdir()
     (root / "oracle/spec.md").write_text("oracle\n")
     managed_state = ".cmoc/gt/realization/refactor/state.json"
@@ -470,30 +476,39 @@ def test_run_path_inspection_batches_each_owning_repository(
         "dropped.outer",
         "nested/.git/config",
         "nested/alias",
+        "nested/directory-alias/kept.outer",
         "nested/dropped.nested",
         "oracle/spec.md",
     ]
     paths = [*rejected, "visible.txt", "nested/kept.outer", "nested/tracked.nested"]
+    paths += ["ordinary/first.txt", "ordinary/second.txt"]
     # 重複と rename の両端も渡し、return 値と実 Git の問い合わせ数を検査する。
     paths += ["visible.txt", managed_state]
     changes = [GitChange("M", (path,)) for path in paths]
     changes.append(GitChange("R100", ("dropped.outer", "nested/kept.outer")))
     queries = Counter()
+    worktree_queries = Counter()
     original_run = git_module.subprocess.run
 
     def record_query(argv, *args, **kwargs):
         if argv[:2] == ["git", "check-ignore"]:
             queries[kwargs["cwd"]] += 1
+        if argv == ["git", "rev-parse", "--path-format=absolute", "--show-toplevel"]:
+            worktree_queries[kwargs["cwd"]] += 1
         return original_run(argv, *args, **kwargs)
 
     monkeypatch.setattr(git_module.subprocess, "run", record_query)
-    for inspect, inputs, expected in (
-        (unexpected_agent_paths, paths, sorted([*rejected, managed_state])),
-        (unexpected_run_paths, changes, rejected),
-    ):
-        queries.clear()
-        assert inspect(context, inputs) == expected
-        assert queries == {root: 1, nested: 1}
+    # 外側の path-query 再利用区間が同じでも、分類ごとに context を確認し直す。
+    with git_module.reuse_git_path_queries():
+        for inspect, inputs, expected in (
+            (unexpected_agent_paths, paths, sorted([*rejected, managed_state])),
+            (unexpected_run_paths, changes, rejected),
+        ):
+            queries.clear()
+            worktree_queries.clear()
+            assert inspect(context, inputs) == expected
+            assert queries == {root: 1, nested: 1}
+            assert worktree_queries == {nested: 1, ordinary: 1}
 
     # 明示対象外は run 検査だけに適用し、他の想定外 path は維持する。
     assert (
