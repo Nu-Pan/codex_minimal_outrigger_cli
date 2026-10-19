@@ -761,7 +761,6 @@ def test_session_abandon_rolls_back_cleanup_failures_and_allows_retry(
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     state_path = session_state_path(root, session_branch)
     state_before = json.loads(state_path.read_text())
-    gitignore = root / ".gitignore"
     original_delete_branch = session_module.delete_branch
 
     # rollback 後に同じ前提へ戻るため、3 ケースの repository・session 準備を共用する。
@@ -795,14 +794,15 @@ def test_session_abandon_rolls_back_cleanup_failures_and_allows_retry(
         assert result.stdout == "", case
         assert "session abandon の cleanup に失敗しました。" in result.stderr, case
         assert "`cmoc session abandon` を再実行してください。" in result.stderr, case
-        assert current_branch(root) == session_branch, case
-        assert (
-            run_git(root, "rev-parse", session_branch).stdout.strip() == session_commit
-        ), case
         assert json.loads(state_path.read_text()) == state_before, case
-        assert "/.cmoc/gu/" in gitignore.read_text().splitlines(), case
-        assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == "", case
-        assert run_git(root, "status", "--short").stdout.strip() == "", case
+        # branch・HEAD・clean を一度に観測する。元の commit と一致して clean なら、
+        # tracked な ignore と .cmoc/gu の非追跡も保持され、個別の再検査は不要。
+        assert run_git(
+            root, "status", "--porcelain=v2", "--branch"
+        ).stdout.splitlines() == [
+            f"# branch.oid {session_commit}",
+            f"# branch.head {session_branch}",
+        ], case
 
 
 def test_session_abandon_rollback_does_not_guess_remote_session_branch_after_race(
