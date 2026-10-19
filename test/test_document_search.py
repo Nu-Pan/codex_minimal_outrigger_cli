@@ -501,14 +501,22 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
         assert database.execute("select complete from documents").fetchone()[0] == 0
 
     worker.fail = False
-    resumed = search.synchronize()
+    # 再開と結果公開を一度の自動同期で検査し、明示同期直後の再同期を省く。
+    resumed = search.search("原文")
     assert worker.resumes == [
         {"oracle/doc/allowed.md": 0},
         {"oracle/doc/allowed.md": 1},
     ]
-    assert resumed.chunk_count == 2
-    assert resumed.reused_embeddings == 1
-    assert search.search("原文")["status"] == "ok"
+    assert search.sync_progress["reused_embeddings"] == 1
+    assert search.sync_progress["persisted_chunks"] == 1
+    assert resumed["status"] == "ok"
+    assert [hit["path"] for hit in resumed["hits"]] == ["oracle/doc/allowed.md"]
+    assert sorted(
+        resumed["hits"][0]["ranges"], key=lambda location: location["start_line"]
+    ) == [
+        {"start_line": 1, "end_line": 1, "max_similarity": 1.0},
+        {"start_line": 2, "end_line": 2, "max_similarity": 1.0},
+    ]
 
 
 def test_deadline_after_first_chunk_preserves_it_for_retry(
