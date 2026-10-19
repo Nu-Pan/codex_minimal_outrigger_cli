@@ -948,6 +948,10 @@ def _stage_tracked_runtime_repair(
             index_path,
         )
 
+    # index にない runtime の mode も HEAD から一括取得し、path ごとの起動を省く。
+    missing = paths.keys() - metadata.keys()
+    head_entries = _head_entries(root, sorted(missing)) if missing else {}
+
     # hash-object --stdin の text input と同じ encoding で比較する。
     # Git 自身が返した object ID の長さから SHA-1 / SHA-256 を区別する。
     encoding = "utf-8" if sys.flags.utf8_mode else locale.getencoding()
@@ -966,7 +970,7 @@ def _stage_tracked_runtime_repair(
         if existing is not None:
             mode = existing[0]
         else:
-            head_entry = _head_entry(root, relative)
+            head_entry = head_entries.get(relative)
             mode = head_entry[0] if head_entry is not None else "100644"
         _stage_text(
             root,
@@ -1043,11 +1047,22 @@ def _run_git_with_index(
 
 def _head_entry(root: Path, path: str) -> tuple[str, str] | None:
     """HEAD treeからpathのmodeとblobを取得する。"""
-    result = run_git(["ls-tree", "HEAD", "--", path], root, check=False)
-    metadata = result.stdout.split("\t", 1)[0].split()
-    if result.returncode != 0 or len(metadata) < 3:
-        return None
-    return metadata[0], metadata[2]
+    return _head_entries(root, (path,)).get(path)
+
+
+def _head_entries(root: Path, paths: Collection[str]) -> dict[str, tuple[str, str]]:
+    """HEAD tree から修復対象の mode と blob をまとめて取得する。"""
+    # NUL 区切りで path を読み、単独照会も同じ decoder を使う。
+    result = run_git(["ls-tree", "-z", "HEAD", "--", *paths], root, check=False)
+    if result.returncode != 0:
+        return {}
+    entries = {}
+    for record in result.stdout.split("\0"):
+        if record:
+            fields, path = record.split("\t", 1)
+            mode, _kind, blob = fields.split()
+            entries[path] = (mode, blob)
+    return entries
 
 
 def _index_mode(root: Path, index_path: Path, path: str) -> str | None:

@@ -753,8 +753,8 @@ def test_runtime_staging_reuses_unchanged_blobs_and_preserves_index_metadata(
             config_relative: "100755",
             state_relative: "100644",
         }
-        # まとめて列挙した欠落 entry を path ごとに再照会して process を増やさない。
-        assert git_calls <= 7
+        # index の欠落判定と HEAD mode は、それぞれ一括で照会する。
+        assert git_calls <= 6
 
         # 既存の実行可能 entry を再更新するケースでも mode の保持を検査する。
         config.write_text(original)
