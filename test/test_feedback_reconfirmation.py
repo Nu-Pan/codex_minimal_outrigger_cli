@@ -25,6 +25,7 @@ from test_feedback import (
 from cmoc_runtime import CmocError
 from commons import runtime_feedback_run_state as run_state
 from commons import runtime_feedback_state as feedback_state
+from commons import runtime_feedback_store as feedback_store
 from commons.runtime_feedback_run_state import (
     selected_remediation_checkpoints,
     validate_decision_basis,
@@ -82,16 +83,17 @@ def feedback_run(tmp_path, monkeypatch):
     )
     # 採番の永続性は test_runtime_ids.py、並行発行は test_codex_runtime_paths.py、
     # feedback との結合は test_feedback.py に残し、ID の対応と artifact の実検査を保つ。
+    # 追加 evidence の観測 ID も同じ採番を使う。os.fsync の置換では SQLite の同期は省けない。
     sequences = Counter()
 
     def allocate_id(root, prefix):
         assert root == repo
-        assert prefix in {"fbr", "fbg", "fbc", "exec"}
+        assert prefix in {"fbr", "fbg", "fbc", "fbo", "exec"}
         sequence = sequences[prefix]
         sequences[prefix] += 1
         return f"{prefix}_{sequence:06d}_2026-09-29_15-04"
 
-    for module in (run_state, feedback_state, remediation):
+    for module in (run_state, feedback_state, feedback_store, remediation):
         monkeypatch.setattr(module, "new_id", allocate_id)
     monkeypatch.setattr(
         remediation, "current_execution_id", lambda root: allocate_id(root, "exec")
