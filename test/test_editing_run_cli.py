@@ -1327,12 +1327,14 @@ def test_run_abandon_preserves_resources_and_reports_stop_on_cleanup_retries(
 @pytest.mark.usefixtures("apply_after_preprocess")
 @pytest.mark.parametrize("late_path", [None, "late-realization.md", "oracle/spec.md"])
 def test_apply_fork_checks_stopped_children_before_commit(
-    ready_content_session: tuple[Path, str, Path],
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     late_path: str | None,
 ) -> None:
     """停止後の差分・warning を検査し、遅延 path があれば全体を戻す。"""
-    root, _session_branch, state_path = ready_content_session
+    # 管理 file の初期同期・commit は停止検査に不要なので、準備済み session を使う。
+    # apply と同期の実結合は automatically_joins_changes_and_noop に残す。
+    root, _session_branch, state_path = ready_join_session
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
     tracked = SimpleNamespace(child_processes=(child,))
     stopped: list[object] = []
@@ -1943,24 +1945,25 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
 
 @pytest.mark.usefixtures("apply_after_preprocess")
 def test_apply_report_failure_after_joinable_publication_sets_error_state(
-    ready_run_session: tuple[Path, str, Path],
+    ready_join_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """成功処理後の fork report failure でも run state と report を一致させる。"""
-    _root, _session_branch, state_path = ready_run_session
+    # 同期の実結合は automatically_joins_changes_and_noop に残し、
+    # ここでは管理 file の初期同期と、その差分の merge commit を重ねない。
+    _root, _session_branch, state_path = ready_join_session
     monkeypatch.setattr(
         apply_module,
         "run_codex_exec",
         lambda *_args, **_kwargs: SimpleNamespace(returncode=0, output_json=None),
     )
     original_write_report = apply_module.write_workload_report
-    calls = 0
+    report_states = []
 
     def fail_completed_report(*args: object, **kwargs: object) -> Path:
         """最初の completed report だけを失敗させる。"""
-        nonlocal calls
-        calls += 1
-        if calls == 1:
+        report_states.append(_state(state_path)["run"]["state"])
+        if len(report_states) == 1:
             raise RuntimeError("completed report failed")
         return original_write_report(*args, **kwargs)
 
@@ -1973,7 +1976,7 @@ def test_apply_report_failure_after_joinable_publication_sets_error_state(
     )
 
     assert result.exit_code == 1
-    assert calls == 2
+    assert report_states == ["joinable", "error"]
     assert _state(state_path)["run"]["state"] == "error"
     report = terminal_primary_report(result)
     assert 'state_after: "error"' in report.read_text()
