@@ -424,8 +424,10 @@ def create_run_worktree(
     expected_worktree = expected_run_worktree(root, branch)
     candidate = _absolute_path(worktree)
     # expected path の祖先には managed base も含まれるため、root を再探索しない。
-    if _first_symlink_component(expected_worktree) or _first_symlink_component(
-        candidate
+    # 同じ lexical path は検査・正規化を共有し、異なる path は両方を検査する。
+    same_path = candidate == expected_worktree
+    if _first_symlink_component(expected_worktree) or (
+        not same_path and _first_symlink_component(candidate)
     ):
         raise CmocError(
             "run worktree path は symlink を含められません。",
@@ -433,7 +435,7 @@ def create_run_worktree(
             f"branch: {branch}\nworktree: {worktree}\nexpected: {expected_worktree}",
         )
     expected_worktree = expected_worktree.resolve()
-    candidate = candidate.resolve()
+    candidate = expected_worktree if same_path else candidate.resolve()
     if candidate != expected_worktree:
         raise CmocError(
             "run worktree path が cmoc 管理領域と一致しません。",
