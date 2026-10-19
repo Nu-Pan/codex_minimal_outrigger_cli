@@ -83,6 +83,30 @@ def test_report_summary_preserves_symbols_in_source_and_markdown(source):
     assert "/repo/<target>&value" in report_text(intro)
 
 
+def test_report_metadata_preserves_types_and_escaped_values():
+    """実行情報は値の型と境界を保ち、連続した report 間で本文を混ぜない。"""
+    values = ["", None, True, False, 0, 1.25, [], {}, "null", "日本語\n次の行", r"\n"]
+    for execution_id in ("first", "second", "first"):
+        fields = {
+            "command": "cmoc doctor",
+            "execution_id": execution_id,
+            "work_root": Path('/repo/"quoted"\\path'),
+            "values": values,
+            "nested": {"key\n\ud800": ["\udfff", {"value": "日本語"}]},
+        }
+        rendered = render_report_document("report", fields, ReportSummary("完了"), "")
+        rendered.encode("utf-8")
+        metadata = report_metadata(rendered)
+        assert metadata == {
+            **fields,
+            "work_root": str(fields["work_root"]),
+            "nested": {"key\n\\ud800": [r"\udfff", {"value": "日本語"}]},
+        }
+        assert [type(value) for value in metadata["values"]] == [
+            type(value) for value in values
+        ]
+
+
 @pytest.fixture
 def primary_report_directory(
     cli_terminal_directory: Path,

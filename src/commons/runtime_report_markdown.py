@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from .runtime_errors import safe_text
 from .runtime_primary_report_specs import TerminalClassification
 
+# 実行情報の各値で同じ設定を使い、encoder の再生成を省く。
+_METADATA_JSON_ENCODER = json.JSONEncoder(ensure_ascii=False, sort_keys=True)
+
 
 @dataclass(frozen=True)
 class ReportSummary:
@@ -191,8 +194,8 @@ def yaml_scalar(value: object) -> str:
     if isinstance(value, (int, float)):
         return str(value)
     if isinstance(value, (list, dict)):
-        return json.dumps(_safe_json_value(value), ensure_ascii=False, sort_keys=True)
-    return json.dumps(safe_text(value), ensure_ascii=False)
+        return _METADATA_JSON_ENCODER.encode(_safe_json_value(value))
+    return _METADATA_JSON_ENCODER.encode(safe_text(value))
 
 
 def _report_target(command: str, fields: dict[str, object]) -> str:
