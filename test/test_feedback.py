@@ -3747,13 +3747,30 @@ def test_feedback_recovers_after_auto_join_without_new_calls(
         assert (root / "README.md").read_text() == "changed after publication\n"
 
 
+@pytest.fixture
+def feedback_fixed_input_session(feedback_publication_session, monkeypatch):
+    """本文を変更しない状態遷移の検査では、判定入力の収集を前後一回ずつにする。"""
+    # 入力変更による再確認・封印後の拒否は test_feedback_reconfirmation.py、
+    # 実 Git との結合は後続 wave と feedback_basis_includes_oracle_changes に残す。
+    # evidence・threshold・checkpoint・publication・履歴は実処理を通す。
+    root = feedback_publication_session
+    collect = decision_module.worktree_inputs
+    before = collect(root)
+    monkeypatch.setattr(
+        decision_module, "worktree_inputs", lambda _worktree: before.copy()
+    )
+    yield root
+    # 想定外の本文・設定・mode の変更を固定入力で隠さない。
+    assert collect(root) == before
+
+
 def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
-    feedback_publication_session: Path,
+    feedback_fixed_input_session: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """両終了判定で active・一覧から除き、履歴を残して手動 close を拒否する。"""
     # 異なる subject の案件を同時に用意し、Git/session と二回の publication を共有する。
-    root = feedback_publication_session
+    root = feedback_fixed_input_session
     cases = {}
     for terminal_verdict, kind, reference_path in (
         ("already_resolved", "file", "README.md"),
@@ -3953,11 +3970,11 @@ def test_machine_threshold_counts_distinct_scopes_within_one_day(
 
 
 def test_machine_issue_lifecycle_keeps_threshold_state_after_window_expires(
-    feedback_publication_session: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_fixed_input_session: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """閾値未満・案件化・全件失効の公開 state と、失効の両分岐を検証する。"""
     # 案件化までの Git/session と publication を、期限切れ検査の準備にも使う。
-    root = feedback_publication_session
+    root = feedback_fixed_input_session
     context = _context(root)
     base = datetime.now(timezone.utc).replace(microsecond=0)
     cut_at = base.isoformat().replace("+00:00", "Z")
