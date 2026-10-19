@@ -543,26 +543,26 @@ def test_active_run_rejects_noncanonical_branch(branch: str) -> None:
         SessionState.from_dict(data)
 
 
-def test_session_state_rejects_unknown_fields() -> None:
-    """session state の未定義 field を拒否する。"""
+@pytest.mark.parametrize(
+    "part", [None, "session", "run"], ids=["top", "session", "run"]
+)
+@pytest.mark.parametrize("defect", ["missing", "extra", "replaced"])
+def test_session_state_rejects_invalid_field_sets(part, defect) -> None:
+    """各階層の欠落・余分な field と、同数の field の置換を拒否する。"""
     data = _valid_state().to_dict()
-    data["run"]["obsolete"] = None
+    fields = data if part is None else data[part]
+    if defect in ("missing", "replaced"):
+        del fields[next(iter(fields))]
+    if defect in ("extra", "replaced"):
+        fields["obsolete"] = None
 
     with pytest.raises(CmocError) as exc_info:
         SessionState.from_dict(data)
 
-    assert "未定義 field" in exc_info.value.detail
-
-
-def test_session_state_rejects_unknown_top_level_fields() -> None:
-    """session state の top-level 未定義 field を拒否する。"""
-    data = _valid_state().to_dict()
-    data["obsolete"] = None
-
-    with pytest.raises(CmocError) as exc_info:
-        SessionState.from_dict(data)
-
-    assert "top-level に未定義 field" in exc_info.value.detail
+    detail = exc_info.value.detail
+    assert ("top-level" if part is None else f"`{part}` に") in detail
+    assert ("必須 field" in detail) == (defect in ("missing", "replaced"))
+    assert ("未定義 field" in detail) == (defect in ("extra", "replaced"))
 
 
 def test_session_fork_lock_is_shared_across_processes(

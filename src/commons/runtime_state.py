@@ -106,7 +106,8 @@ def _inspect_state_path(path: Path, *, directory: bool = False) -> int | None:
     current = leaf
     leaf_mode = None
     invalid_directory = None
-    while current != current.parent:
+    # root は name が空なので、終了判定のためだけに親 Path を生成しない。
+    while current.name:
         try:
             mode = current.lstat().st_mode
         except (OSError, ValueError) as exc:
@@ -333,21 +334,22 @@ def _part_data(
     part_type: type[SessionPart] | type[RunPart],
     source: Path | None,
 ) -> dict[str, Any]:
-    """state part を必須 field だけの dict として検証する。"""
+    """入力を変更せず、state part が必須 field だけの dict であることを検証する。"""
+    # 正常時は field 集合だけを比べ、診断用 list と部分辞書のコピーを作らない。
     part = data.get(key)
     if not isinstance(part, dict):
         raise _invalid_state(source, f"`{key}` は object である必要があります。")
     fields = part_type.__dataclass_fields__
+    if part.keys() == fields.keys():
+        return part
     missing = [name for name in fields if name not in part]
     extra = [name for name in part if name not in fields]
-    if missing or extra:
-        details = []
-        if missing:
-            details.append(f"必須 field がありません: {', '.join(missing)}")
-        if extra:
-            details.append(f"未定義 field があります: {', '.join(extra)}")
-        raise _invalid_state(source, f"`{key}` に" + " / ".join(details))
-    return {name: part[name] for name in fields}
+    details = []
+    if missing:
+        details.append(f"必須 field がありません: {', '.join(missing)}")
+    if extra:
+        details.append(f"未定義 field があります: {', '.join(extra)}")
+    raise _invalid_state(source, f"`{key}` に" + " / ".join(details))
 
 
 def _require_top_level_fields(data: dict[str, Any], source: Path | None) -> None:
@@ -355,11 +357,12 @@ def _require_top_level_fields(data: dict[str, Any], source: Path | None) -> None
 
     根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
     """
+    # 正常時の検証で、異常時だけに必要な診断情報を組み立てない。
     expected = {"session", "run"}
+    if data.keys() == expected:
+        return
     missing = [name for name in expected if name not in data]
     extra = [name for name in data if name not in expected]
-    if not missing and not extra:
-        return
     details = []
     if missing:
         details.append("必須 field がありません: " + ", ".join(sorted(missing)))
