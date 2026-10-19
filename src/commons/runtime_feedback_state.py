@@ -2840,11 +2840,7 @@ def _validate_report_cut_artifact_inventory(
     )
     result_staged = manifest.get("publication") is not None
     report_cut_id_value = str(manifest.get("report_cut_id"))
-    for artifact in manifest_path.parent.rglob("*"):
-        if artifact.is_dir() and not artifact.is_symlink():
-            continue
-        if artifact.is_symlink() or not artifact.is_file():
-            raise _corruption("report cut に未定義 artifact があります。", artifact)
+    for artifact in _regular_artifact_paths(manifest_path.parent, "report cut"):
         resolved = artifact.resolve(strict=False)
         if resolved in expected:
             continue
@@ -3735,20 +3731,42 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
     _prune_empty_directories(manifest_path.parent, report_work_root(repo))
 
 
+def _regular_artifact_paths(root: Path, description: str) -> list[Path]:
+    """directory ごとの分類情報を使い、symlink・特殊 file を含まない一覧を返す。"""
+    # 欠落した初期 state を許し、root 自身の symlink は辿らない。
+    if not root.exists() and not root.is_symlink():
+        return []
+    if root.is_symlink() or not root.is_dir():
+        raise _corruption(f"{description} root が通常 directory ではありません。", root)
+    # Path で種類を再照会せず、走査中だけ DirEntry の分類を共有する。
+    paths: list[Path] = []
+    directories = [root]
+    while directories:
+        directory = directories.pop()
+        try:
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    path = Path(entry.path)
+                    if entry.is_dir(follow_symlinks=False):
+                        directories.append(path)
+                    elif entry.is_file(follow_symlinks=False):
+                        paths.append(path)
+                    else:
+                        raise _corruption(
+                            f"{description} に未定義 artifact があります。", path
+                        )
+        except OSError as exc:
+            raise _corruption(
+                f"{description} の artifact 一覧を読めません。", directory
+            ) from exc
+    return paths
+
+
 def _require_only_expected_files(
     root: Path, expected: set[Path], description: str
 ) -> None:
     """destructive cleanup 前に root 内 file がすべて manifest 由来か検査する。"""
-    if not root.exists() and not root.is_symlink():
-        return
-    if root.is_symlink() or not root.is_dir():
-        raise _corruption(f"{description} root が通常 directory ではありません。", root)
-    for path in root.rglob("*"):
-        if path.is_dir() and not path.is_symlink():
-            continue
-        if (
-            path.is_symlink()
-            or not path.is_file()
-            or path.resolve(strict=False) not in expected
-        ):
+    # state と work の inventory で同じ通常 file 境界を使う。
+    for path in _regular_artifact_paths(root, description):
+        if path.resolve(strict=False) not in expected:
             raise _corruption(f"{description} に未定義 artifact があります。", path)
