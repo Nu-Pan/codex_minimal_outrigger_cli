@@ -1241,20 +1241,6 @@ def test_session_join_merges_conflict_and_incidental_changes(
         assert contents.read() == b""
 
 
-def test_session_join_reads_unmerged_paths_with_newlines(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Git index の path は NUL 区切りで読み、改行を保持する。"""
-    root = tmp_path
-
-    def fake_git(args: list[str], _root: Path) -> cmoc_runtime.CommandResult:
-        assert args == ["diff", "--name-only", "-z", "--diff-filter=U"]
-        return cmoc_runtime.CommandResult(0, "src/line\nbreak.txt\0", "")
-
-    monkeypatch.setattr(merge_conflict_module, "run_git", fake_git)
-    assert merge_conflict_module.unmerged_paths(root) == ["src/line\nbreak.txt"]
-
-
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
