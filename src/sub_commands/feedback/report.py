@@ -10,10 +10,12 @@ normalization、全 candidate の verification、正常 publication、および 
 - `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
 """
 
+import errno
 import hashlib
 import html
 import json
 import os
+import stat
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
@@ -447,21 +449,27 @@ def _capture_repository_reference(
         "path": relative,
     }
     try:
-        if path.is_symlink():
-            return {
-                **base,
-                "kind": "current_fingerprint",
-                "state": "unreadable",
-                "sha256": None,
-            }
-        if not path.exists():
+        # 種類と存在は同じ lstat で確認し、次の capture では取り直す。
+        try:
+            mode = path.lstat().st_mode
+        except OSError as exc:
+            # pathlib の exists/is_file と同じ「存在しない」扱いを保つ。
+            if exc.errno not in {errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP}:
+                raise
             return {
                 **base,
                 "kind": "current_fingerprint",
                 "state": "missing",
                 "sha256": None,
             }
-        if not path.is_file():
+        if stat.S_ISLNK(mode):
+            return {
+                **base,
+                "kind": "current_fingerprint",
+                "state": "unreadable",
+                "sha256": None,
+            }
+        if not stat.S_ISREG(mode):
             return {
                 **base,
                 "kind": "current_fingerprint",

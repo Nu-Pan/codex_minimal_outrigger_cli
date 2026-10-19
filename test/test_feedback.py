@@ -18,6 +18,7 @@ TCP と実 fsync を繰り返さない。
 - `{{work-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.json`
 """
 
+import errno
 import hashlib
 import itertools
 import json
@@ -2344,6 +2345,83 @@ def test_candidate_references_follow_subjects_and_refresh_between_waves(
     build()
     assert first["reference_ids"] == []
     assert second["reference_ids"] == ["ref:next"]
+
+
+def test_report_reference_rechecks_kind_and_content_without_repeated_stat(
+    feedback_directory, monkeypatch
+):
+    """種類照会を重ねず、次回の capture では種類・本文・取得失敗を取り直す。"""
+    root = feedback_directory
+    path = root / "reference"
+    original_stat = Path.stat
+    original_read = Path.read_bytes
+    inspections = []
+    reads = []
+    stat_error = None
+    read_error = None
+
+    def inspect(target, *args, **kwargs):
+        if target == path:
+            inspections.append(target)
+            if stat_error:
+                raise stat_error
+        return original_stat(target, *args, **kwargs)
+
+    def read(target):
+        reads.append(target)
+        assert target == path
+        if read_error:
+            raise read_error
+        return original_read(target)
+
+    monkeypatch.setattr(Path, "stat", inspect)
+    monkeypatch.setattr(Path, "read_bytes", read)
+
+    def capture(state, content=None):
+        inspections.clear()
+        reads.clear()
+        reference = feedback_report_module._capture_repository_reference(
+            root, path, ["subject"]
+        )
+        assert reference["path"] == "reference"
+        assert reference["subjects"] == ["subject"]
+        assert reference["state"] == state
+        assert reference["sha256"] == (
+            sha256_bytes(content) if content is not None else None
+        )
+        assert reference["kind"] == (
+            "repository_content" if content == b"text\n" else "current_fingerprint"
+        )
+        assert reads == ([path] if content is not None or read_error else [])
+        assert len(inspections) <= 1
+        return reference
+
+    capture("missing")
+    path.mkdir()
+    capture("not_file")
+    path.rmdir()
+    path.write_bytes(b"text\n")
+    assert capture("hashed", b"text\n")["content"] == "text\n"
+    path.write_bytes(b"\xff")
+    capture("hashed", b"\xff")
+    # metadata 取得失敗と、種類確認後の読取失敗を区別して注入する。
+    stat_error = PermissionError("injected stat failure")
+    capture("unreadable")
+    for code in (errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP):
+        stat_error = OSError(code, "injected missing path")
+        capture("missing")
+    stat_error = None
+    for read_error in (PermissionError("unreadable"), FileNotFoundError("removed")):
+        capture("unreadable")
+    read_error = None
+    target = root / "target"
+    path.rename(target)
+    path.symlink_to(target)
+    capture("unreadable")
+    target.unlink()
+    capture("unreadable")
+    path.unlink()
+    capture("missing")
 
 
 def test_report_reference_masks_secret_across_content_limit(
