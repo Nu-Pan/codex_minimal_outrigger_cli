@@ -549,8 +549,8 @@ def _isolate_document_search_materials(
 
 @pytest.fixture
 def doctor_without_index_sync(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Git 修復・reporter 分岐の検査では、参照しない検索索引の生成・永続化を省く。"""
-    # 実同期との結合は test_doctor_cli.py の初回修復、配置先復元、worktree 分離に残す。
+    """配置先・Git 修復・停止・reporter の検査では、参照しない索引の生成を省く。"""
+    # 実同期との結合は test_doctor_cli.py の初回修復と worktree 分離に残す。
     # 更新・削除・再利用とログ/report は
     # test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports、
     # 失敗・取消の進捗は test_doctor_reports_persisted_chunks_when_sync_fails で検査する。

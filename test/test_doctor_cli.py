@@ -217,6 +217,7 @@ def test_refactor_preprocess_interruption_preserves_user_changes(
     assert "cmoc run join" not in result.output
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_refactor_preprocess_interruption_keeps_committed_repairs(
     cli_repository, monkeypatch
 ):
@@ -253,6 +254,7 @@ def test_refactor_preprocess_interruption_keeps_committed_repairs(
     assert "run not established" in terminal_primary_report(result).read_text()
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_refactor_preprocess_stop_restores_pending_linked_worktree_index(
     managed_repository, tmp_path, monkeypatch
 ):
@@ -415,6 +417,7 @@ def test_doctor_preprocess_repairs_git_state(
 
 
 @pytest.mark.parametrize("explicit_doctor", [False, True])
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_restores_empty_work_directories(
     cli_repository, explicit_doctor, doctor_repair_events
 ):
@@ -860,7 +863,7 @@ def test_doctor_rechecks_git_ignore_configuration_after_commit_hook(
 
 
 # reporter の分岐に索引の生成・永続化は不要。実同期から reporter までの結合は
-# test_doctor_preprocess_repairs_git_state と配置先復元の検査に残す。
+# test_doctor_preprocess_repairs_git_state と同期結果・report の検査に残す。
 @pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_preprocess_continues_with_degraded_reporter(
     committed_repository: Path, monkeypatch: pytest.MonkeyPatch
@@ -1822,6 +1825,7 @@ def test_normal_preprocess_requires_validated_materials(
     assert "validation record is missing" in exc_info.value.detail
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_doctor_repairs_shared_cmoc_root_in_its_own_repository(
     committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
