@@ -3,7 +3,7 @@
 import json
 import math
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, fields
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -37,9 +37,8 @@ _CONFIG_RECORD_FIELDS = {
     )
 }
 _AGENT_CALL_KINDS = frozenset(CmocConfigCodex().agent_calls)
-_DOCUMENT_SEARCH_FIELD_ORDER = tuple(
-    field.name for field in fields(DocumentSearchConfig)
-)
+_DOCUMENT_SEARCH_FIELDS = fields(DocumentSearchConfig)
+_DOCUMENT_SEARCH_FIELD_ORDER = tuple(field.name for field in _DOCUMENT_SEARCH_FIELDS)
 _DOCUMENT_SEARCH_FIELD_NAMES = frozenset(_DOCUMENT_SEARCH_FIELD_ORDER)
 
 
@@ -120,7 +119,7 @@ def _document_search_data(value: Any) -> dict[str, Any]:
     """正本の tuning 制約を検証し、定義順の数値 object を返す。"""
     # 全項目を数値として検証するため、dataclass の再帰コピーは不要。
     if isinstance(value, DocumentSearchConfig):
-        data = {field.name: getattr(value, field.name) for field in fields(value)}
+        data = {name: getattr(value, name) for name in _DOCUMENT_SEARCH_FIELD_ORDER}
     elif isinstance(value, dict):
         data = value
     else:
@@ -552,7 +551,8 @@ def sync_config(
     path = config_path(root)
     if not repair_missing:
         return ConfigSyncResult(load_config(root), False, {}, False)
-    defaults = asdict(DocumentSearchConfig())
+    # 正本の検索設定は数値 field のみなので、既定値の再帰変換は不要。
+    defaults = {field.name: field.default for field in _DOCUMENT_SEARCH_FIELDS}
     if not path.exists():
         config = CmocConfig()
         if on_candidate is not None:
