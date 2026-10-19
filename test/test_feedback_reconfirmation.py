@@ -278,7 +278,7 @@ def test_empty_wave_collects_basis_only_after_an_issue_arrives(
 
 
 def test_run_artifact_reader_uses_one_snapshot(tmp_path, monkeypatch):
-    """hash を確認した byte 列を返し、次の呼出しでは変更を再検査する。"""
+    """階層と byte 列を一度ずつ検査し、次回の変更・symlink を拒否する。"""
     path = tmp_path / ".cmoc/gu/feedback/work/cut/record.json"
     value = {"report_cut_id": "cut"}
     write_immutable_json(path, value)
@@ -295,12 +295,23 @@ def test_run_artifact_reader_uses_one_snapshot(tmp_path, monkeypatch):
         return content
 
     monkeypatch.setattr(Path, "read_bytes", changing_read)
+    symlink_checks = Mock(wraps=feedback_state._has_symlink_component)
+    monkeypatch.setattr(feedback_state, "_has_symlink_component", symlink_checks)
 
     assert run_state.read_run_artifact(tmp_path, reference) == value
     assert reads == [path]
+    symlink_checks.assert_called_once_with(path)
     with pytest.raises(CmocError, match="SHA256"):
         run_state.read_run_artifact(tmp_path, reference)
     assert reads == [path, path]
+    assert symlink_checks.call_count == 2
+
+    path.unlink()
+    path.symlink_to(path.with_name("missing.json"))
+    with pytest.raises(CmocError, match="symlink"):
+        run_state.read_run_artifact(tmp_path, reference)
+    assert reads == [path, path]
+    assert symlink_checks.call_count == 3
 
 
 def test_run_artifact_validation_reads_once_and_checks_cleanup(
@@ -342,6 +353,8 @@ def test_run_artifact_validation_reads_once_and_checks_cleanup(
         return original_read(path)
 
     monkeypatch.setattr(Path, "read_bytes", counted_read)
+    symlink_checks = Mock(wraps=feedback_state._has_symlink_component)
+    monkeypatch.setattr(feedback_state, "_has_symlink_component", symlink_checks)
 
     def validate(allow_missing):
         validate_run_artifacts(
@@ -350,8 +363,12 @@ def test_run_artifact_validation_reads_once_and_checks_cleanup(
 
     for allow_missing in (False, True):
         reads.clear()
+        symlink_checks.reset_mock()
         validate(allow_missing)
         assert reads == {path: 1 for path in paths}
+        assert Counter(call.args[0] for call in symlink_checks.call_args_list) == {
+            path: 1 for path in paths
+        }
     first, second = (
         h.context.repo / item["path"] for item in h.manifest["run"]["waves"]
     )
@@ -560,11 +577,14 @@ def test_report_cut_manifest_reads_hash_verified_inputs_once(
         return content
 
     monkeypatch.setattr(Path, "read_bytes", replace_after_read)
+    symlink_checks = Mock(wraps=feedback_state._has_symlink_component)
+    monkeypatch.setattr(feedback_state, "_has_symlink_component", symlink_checks)
     # 同じ wave・checkpoint の準備を共有し、各入力は検査後に元へ戻す。
     for target, replaced in paths.items():
         original_content = original_read(replaced)
         for allow_missing in (False, True):
             reads.clear()
+            symlink_checks.reset_mock()
             # hash を確認した同じ byte 列を検証し、後からの置換を混ぜない。
             _validate_report_cut_manifest(
                 h.context.repo,
@@ -576,6 +596,10 @@ def test_report_cut_manifest_reads_hash_verified_inputs_once(
                 target,
                 allow_missing,
             )
+            checks = Counter(call.args[0] for call in symlink_checks.call_args_list)
+            assert {path: checks[path] for path in paths.values()} == {
+                path: 1 for path in paths.values()
+            }
             # 呼出し間の cache は持たず、次の検証では置換による破損を検出する。
             with pytest.raises(CmocError, match="SHA256"):
                 _validate_report_cut_manifest(

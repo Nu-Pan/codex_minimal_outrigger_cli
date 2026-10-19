@@ -688,6 +688,16 @@ def _read_canonical_object(
         raise _corruption(
             f"{description} path が symlink を含むため通常 file ではありません。", path
         )
+    return _read_resolved_canonical_object(
+        path, description, expected_sha256=expected_sha256
+    )
+
+
+def _read_resolved_canonical_object(
+    path: Path, description: str, *, expected_sha256: str | None = None
+) -> _JsonObject:
+    """symlink を検査済みの path から、hash と canonical JSON を一度に検査する。"""
+    # 参照解決直後の読込では、同じ lexical な祖先の走査を重ねない。
     if not path.is_file():
         raise _corruption(f"{description} が通常 file ではありません。", path)
     try:
@@ -1492,7 +1502,7 @@ def _load_generation(
             expected_root=expected_issue_root,
             description="active issue",
         )
-        record = _read_canonical_object(
+        record = _read_resolved_canonical_object(
             path, "active issue record", expected_sha256=digest
         )
         _validate_active_issue(
@@ -1537,7 +1547,7 @@ def _load_generation(
             expected_root=expected_aggregate_root,
             description="machine aggregate",
         )
-        record = _read_canonical_object(
+        record = _read_resolved_canonical_object(
             path, "machine aggregate record", expected_sha256=digest
         )
         _validate_machine_aggregate(record, path)
@@ -1785,7 +1795,7 @@ def _validate_report_cut_manifest(
             or observation_target.exists()
             or observation_target.is_symlink()
         ):
-            observation = _read_canonical_object(
+            observation = _read_resolved_canonical_object(
                 observation_target,
                 "pending observation",
                 expected_sha256=observation_digest,
@@ -1940,7 +1950,7 @@ def _validate_report_cut_manifest(
                 or checkpoint_path.exists()
                 or checkpoint_path.is_symlink()
             ):
-                checkpoint = _read_canonical_object(
+                checkpoint = _read_resolved_canonical_object(
                     checkpoint_path,
                     f"report cut {name} checkpoint",
                     expected_sha256=checkpoint_digest,
