@@ -276,7 +276,9 @@ def _prepare_run(
     root, session_branch, path = session
     state = SessionState.from_dict(_state(path))
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    run_worktree = git_module.expected_run_worktree(root, RUN_BRANCH)
+    # ready_*_session は main repository のコピーなので、既知の配置を再探索しない。
+    # 実 Git の main/linked 境界は test_basic_runtime.py と test_git_query_reuse.py に残す。
+    run_worktree = root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID
     run_git(root, "worktree", "add", "-b", RUN_BRANCH, str(run_worktree), fork_commit)
     state.run = RunPart(
         state=run_state,
