@@ -240,6 +240,8 @@ def _reuse_node_runtime(root: Path, base: Path, staging: Path) -> bool:
     # モデルや worker の修復だけなら、正常 runtime の再インストールを省く。
     try:
         manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict):
+            return False
         if any(
             _sha256(base / name) != _sha256(staging / name)
             for name in ("package.json", "package-lock.json")
