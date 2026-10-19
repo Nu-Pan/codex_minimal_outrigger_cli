@@ -99,7 +99,7 @@ def directory(tmp_path, monkeypatch, nonpersistent_execution_ids):
 
 @pytest.fixture
 def initial_request(directory, monkeypatch):
-    """失敗制御には実 builder の設定と短い入力本文を渡す。"""
+    """制御検査には実 builder の設定と短い入力本文を渡す。"""
     # 完全文面は builder 専用 test、保存・stdin との結合は下の complete_prompt で検査する。
     # 本文を評価しないケースでは規定の構築・描画・保存を重ねない。
     # 置換は初回構築中だけに限定し、起動管理側の再開 builder は実処理を通す。
@@ -1048,8 +1048,11 @@ def test_initial_and_tui_keep_separate_process_resources(directory, monkeypatch)
 
 
 def test_session_lease_covers_initial_transition_and_public_validation(
-    directory, monkeypatch
+    directory, monkeypatch, initial_request
 ):
+    # 完全 prompt と起動設定の結合は complete_prompt・share_start_time_settings に残す。
+    # 排他の検査では構築を重ねず、lease・移行・公開 resume の検査とログは実処理を通す。
+    stub_codex_overrides(monkeypatch)
     write_config(directory / ".cmoc/gt/config.json", CmocConfig())
     home = tui_module.resolve_codex_home(directory)
 
@@ -1061,11 +1064,7 @@ def test_session_lease_covers_initial_transition_and_public_validation(
     fake_initial(monkeypatch, on_call=contested)
     fake_tui(monkeypatch, on_call=contested)
     runtime_cli.run_cli_subcommand(
-        lambda: (
-            tui_module.run_codex_tui(
-                build_tui_request("request"), root=directory
-            ).returncode
-        ),
+        lambda: tui_module.run_codex_tui(initial_request, root=directory).returncode,
         command_name="tui",
         doctor_preprocess=False,
         tui_process=True,
@@ -1084,7 +1083,11 @@ def test_session_lease_covers_initial_transition_and_public_validation(
         next_use.acquire(SESSION_ID)
 
 
-def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
+def test_unknown_process_exit_keeps_session_unavailable(
+    directory, monkeypatch, initial_request
+):
+    # 終了確認不能の記録と lease の保持を検査し、prompt・起動設定は上の専用 test に委ねる。
+    stub_codex_overrides(monkeypatch)
     fake_initial(monkeypatch)
 
     def run(argv, **kwargs):
@@ -1095,7 +1098,7 @@ def test_unknown_process_exit_keeps_session_unavailable(directory, monkeypatch):
     with call_log(directory) as logger:
         with pytest.raises(OSError, match="exit cannot be confirmed"):
             tui_module.run_codex_tui(
-                build_tui_request("request"),
+                initial_request,
                 root=directory,
                 config=CmocConfig(),
             )
