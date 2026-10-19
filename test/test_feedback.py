@@ -1361,11 +1361,12 @@ def test_disabled_feedback_call_does_not_register_capability(
 
 
 def test_collector_stop_wakes_blocked_listener(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """timeout に頼らず接続待ちを解除し、停止を障害として記録しない。"""
-    logger = SubcommandLogger(tmp_path, "feedback test")
-    invocation = FeedbackInvocation(tmp_path, tmp_path, "feedback test", logger)
+    root = feedback_directory
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
     accept_started = threading.Event()
     accepting_sockets: list[socket.socket] = []
     original_accept = socket.socket.accept
