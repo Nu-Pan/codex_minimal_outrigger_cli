@@ -15,6 +15,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import oracle.other.path_model as oracle_path_model
 import pytest
 from _git_support import (
     RUN_BRANCH,
@@ -242,6 +243,29 @@ def test_agent_call_path_contexts_are_parallel_and_call_scoped(
     assert repo_root(linked) == root.resolve()
     assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
+
+    # 同じ root の再探索を防ぎ、suffix の正規化も検査済みの root から行う。
+    run_root_scans = 0
+    original_resolve_run_root = oracle_path_model.resolve_run_root
+
+    def record_run_root_scan(*args, **kwargs):
+        nonlocal run_root_scans
+        run_root_scans += 1
+        return original_resolve_run_root(*args, **kwargs)
+
+    monkeypatch.setattr(oracle_path_model, "resolve_run_root", record_run_root_scan)
+    monkeypatch.chdir(root)
+    (linked / "alias").symlink_to(root, target_is_directory=True)
+    for source, expected in (
+        (RootPathPlaceHolder.RUN, linked),
+        ("{{run-root}}", linked),
+        (Path("{{run-root}}"), linked),
+        (Path("{{run-root}}/missing/../result.py"), linked / "result.py"),
+        ("{{run-root}}/alias/result.py", root / "result.py"),
+    ):
+        run_root_scans = 0
+        assert resolve_real_path(source, contexts[0]) == expected.resolve()
+        assert run_root_scans <= 1
 
     # 内側の main repository に履歴は不要。外側の linked root を誤採用しない。
     nested_main = linked / "repo"

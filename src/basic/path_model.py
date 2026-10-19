@@ -36,7 +36,14 @@ def resolve_real_path(
     ):
         raise ValueError("`{{run-root}}` was not found")
 
-    return _resolve_real_path(source, resolved_context)
+    # 検査済み root を使い、祖先の再探索を省いて正本の path 正規化へ渡す。
+    relative_path = Path(source).relative_to(RootPathPlaceHolder.RUN.value)
+    if not relative_path.parts:
+        return run_root
+    return _resolve_real_path(
+        run_root / relative_path,
+        resolved_context,
+    )
 
 
 def _uses_run_root_placeholder(source: RootPathPlaceHolder | str | Path) -> bool:
