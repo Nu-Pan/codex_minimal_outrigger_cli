@@ -667,28 +667,34 @@ def _global_git_ignore_paths(root: Path) -> list[Path]:
 
 def _validate_git_ignore_sources(
     root: Path,
-    candidate: Path,
+    candidates: Collection[Path],
     *,
     strict_local: bool = False,
 ) -> None:
-    """git check-ignore が読む ignore file を非通常 file でないと確認する。"""
+    """候補の Git ignore source を、共通の親を含め一度ずつ種類検証する。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     root = root.absolute()
-    relative = candidate.absolute().relative_to(root)
     validate_local = _validate_ignore_path if strict_local else _reject_non_file_path
     validate_local(root / ".gitignore", ".gitignore")
     validate_local(_git_info_exclude_path(root), "Git info/exclude")
 
-    directory = root
-    for part in relative.parts[:-1]:
-        directory /= part
-        try:
-            mode = directory.lstat().st_mode
-        except FileNotFoundError:
-            break
-        if not stat.S_ISDIR(mode):
-            break
-        _reject_non_file_path(directory / ".gitignore", "Git nested .gitignore")
+    # 再利用はこの候補集合内に限定し、次の分類では設定と種類を取り直す。
+    validated_directories: set[Path] = {root}
+    for candidate in candidates:
+        relative = candidate.absolute().relative_to(root)
+        directory = root
+        for part in relative.parts[:-1]:
+            directory /= part
+            if directory in validated_directories:
+                continue
+            try:
+                mode = directory.lstat().st_mode
+            except FileNotFoundError:
+                break
+            if not stat.S_ISDIR(mode):
+                break
+            _reject_non_file_path(directory / ".gitignore", "Git nested .gitignore")
+            validated_directories.add(directory)
 
     for path in _global_git_ignore_paths(root):
         _validate_global_git_ignore_path(path)
@@ -736,7 +742,7 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
     # FIFO などの非通常 file を拒否してからコマンドを実行する。
     _validate_git_ignore_sources(
         root,
-        root / CMOC_IGNORE_PROBE,
+        (root / CMOC_IGNORE_PROBE,),
         strict_local=True,
     )
     return _cmoc_tracked_paths(root), _cmoc_ignore_returncode(root)
@@ -809,7 +815,7 @@ def _validate_ignore_path(path: Path, description: str) -> None:
 def ensure_cmoc_ignored(root: Path) -> None:
     """.gitignore と index を更新できる場面で .cmoc/gu を追跡対象外にする。"""
     # 更新・Git 実行の前に全 source を検証し、内容と index の修復を先に済ませる。
-    _validate_git_ignore_sources(root, root / CMOC_IGNORE_PROBE, strict_local=True)
+    _validate_git_ignore_sources(root, (root / CMOC_IGNORE_PROBE,), strict_local=True)
     tracked = _cmoc_tracked_paths(root)
     gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
@@ -875,7 +881,7 @@ def is_git_ignored(root: Path, path: Path) -> bool:
     if repository is None:
         return False
     rel = candidate.absolute().relative_to(repository.absolute())
-    _validate_git_ignore_sources(repository, candidate)
+    _validate_git_ignore_sources(repository, (candidate,))
     return _check_git_ignore(repository, rel, no_index=True)
 
 
@@ -895,7 +901,7 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
 def _is_untracked_git_ignored_in_repository(repository: Path, candidate: Path) -> bool:
     """検証済み owning repository で単一候補の通常 ignore 判定を行う。"""
     rel = candidate.absolute().relative_to(repository.absolute())
-    _validate_git_ignore_sources(repository, candidate)
+    _validate_git_ignore_sources(repository, (candidate,))
     return _check_git_ignore(repository, rel, no_index=False)
 
 
@@ -924,7 +930,7 @@ def enumerate_oracle_and_realization_files(
     for repository, candidates in sorted(
         candidates_by_repository.items(), key=lambda item: item[0].as_posix()
     ):
-        _validate_git_ignore_sources(repository, repository)
+        _validate_git_ignore_sources(repository, (repository,))
         ignored = _batch_untracked_git_ignored(repository, candidates)
         for candidate in candidates:
             if candidate in ignored:
@@ -1232,9 +1238,11 @@ def realization_file_paths(
         if branch and not _path_exists_without_following_symlinks(candidate):
             missing_by_repository.setdefault(repository, []).append(candidate)
         elif _is_regular_file(candidate):
-            # 個々の親 directory の特殊 .gitignore も、Git 起動前に拒否する。
-            _validate_git_ignore_sources(repository, candidate)
             candidates_by_repository.setdefault(repository, []).append(candidate)
+
+    # repository 共通の source と各親の .gitignore を、候補間で重複検証しない。
+    for repository, candidates in candidates_by_repository.items():
+        _validate_git_ignore_sources(repository, candidates)
 
     # rename 元・削除 path も一括判定し、nested は自身の HEAD だけを参照する。
     for repository, candidates in missing_by_repository.items():

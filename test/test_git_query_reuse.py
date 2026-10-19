@@ -328,8 +328,11 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
     """検査内の配置問い合わせを重複させず、次の検査で状態と失敗を再確認する。"""
     root = cli_repository
     paths = ["first.txt", "second.txt", "space tab\tline\n.txt", ":(literal)file.txt"]
+    paths += ["source/one.txt", "source/nested/alpha.txt", "source/nested/beta.txt"]
     for path in paths:
-        (root / path).write_text("content\n")
+        candidate = root / path
+        candidate.parent.mkdir(parents=True, exist_ok=True)
+        candidate.write_text("content\n")
     context = EditingRunContext(
         repo=root,
         session_worktree=root,
@@ -343,19 +346,37 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
         run_worktree=root,
     )
     queries = Counter()
+    local_validations = Counter()
+    global_validations = Counter()
     original_run = git_module.subprocess.run
+    original_local_validation = git_module._reject_non_file_path
+    original_global_validation = git_module._validate_global_git_ignore_path
 
     def record_query(argv, *args, **kwargs):
         if argv[0] == "git":
             queries[tuple(argv)] += 1
         return original_run(argv, *args, **kwargs)
 
+    def record_local_validation(path, label):
+        local_validations[path] += 1
+        original_local_validation(path, label)
+
+    def record_global_validation(path):
+        global_validations[path] += 1
+        original_global_validation(path)
+
     monkeypatch.setattr(git_module.subprocess, "run", record_query)
+    monkeypatch.setattr(git_module, "_reject_non_file_path", record_local_validation)
+    monkeypatch.setattr(
+        git_module, "_validate_global_git_ignore_path", record_global_validation
+    )
 
     # 共通の分類処理で状態変更を検査する。run 側の委譲・差分展開・例外伝播は
     # 下の owning repository と tree fallback のテストに残す。
     def validate(expected):
         queries.clear()
+        local_validations.clear()
+        global_validations.clear()
         assert unexpected_agent_paths(context, paths) == expected
         placement_queries = [
             count
@@ -368,6 +389,15 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
             count for argv, count in queries.items() if argv[1] == "check-ignore"
         )
         assert ignore_queries == 1
+        # 同じ親・ancestor を共有する候補でも、各 ignore source は一度だけ検証する。
+        assert {
+            root / ".gitignore",
+            root / ".git/info/exclude",
+            root / "source/.gitignore",
+            root / "source/nested/.gitignore",
+        } <= local_validations.keys()
+        assert set(local_validations.values()) == {1}
+        assert set(global_validations.values()) == {1}
 
     validate([])
 
@@ -391,6 +421,17 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
     with pytest.raises(CmocError, match="global excludes"):
         unexpected_agent_paths(context, paths)
     run_git(root, "config", "core.excludesFile", "/dev/null")
+    validate([])
+
+    # 共通 ancestor の再利用で、深い親の source や次回の種類変更を見落とさない。
+    nested_ignore = root / "source/nested/.gitignore"
+    nested_ignore.write_text("*.txt\n")
+    validate(["source/nested/alpha.txt", "source/nested/beta.txt"])
+    nested_ignore.unlink()
+    nested_ignore.mkdir()
+    with pytest.raises(CmocError, match="nested .gitignore"):
+        unexpected_agent_paths(context, paths)
+    nested_ignore.rmdir()
     validate([])
 
 
