@@ -567,6 +567,9 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     assert current_branch(root) == home_branch
 
 
+# 索引同期は通常 worktree の fork→abandon と test_doctor_cli.py に残す。
+# linked ケースでは管理物修復と session lifecycle を検査し、未参照の索引は作らない。
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_session_abandon_repairs_linked_worktree_before_failure_and_completion(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1318,6 +1321,7 @@ def test_session_join_checks_staged_merge(
     merge_conflict_module._check_staged_merge(tmp_path)
 
 
+@pytest.mark.usefixtures("doctor_without_index_sync")
 def test_session_fork_and_join_repair_linked_worktree_before_failure_and_completion(
     cli_repository: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

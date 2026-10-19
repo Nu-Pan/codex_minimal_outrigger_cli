@@ -94,18 +94,6 @@ def managed_repository(cli_repository: Path) -> Path:
 
 
 @pytest.fixture
-def doctor_without_index_sync(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Git 修復・reporter 分岐の検査では、参照しない検索索引の生成・永続化を省く。"""
-    # 実同期との結合は初回修復、配置先復元、worktree 分離のケースに残す。
-    # 更新・削除・再利用とログ/report は test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports、
-    # 失敗・取消の進捗は test_doctor_reports_persisted_chunks_when_sync_fails で検査する。
-    # 設定・state の同期、Git index の退避・復元と修復 commit は実処理を通す。
-    monkeypatch.setattr(
-        doctor_module, "_synchronize_document_search_index", lambda *_args: None
-    )
-
-
-@pytest.fixture
 def doctor_repair_events(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """配置先の検査と同じ前処理で、修復順序と毎回の reporter 検査も観測する。"""
     # 順序だけのために repository と doctor の全処理を重ねない。
