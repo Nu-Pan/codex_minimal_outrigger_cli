@@ -233,7 +233,13 @@ class DownloadAssetCache:
                     return "reused"
             return self._obtain_cached(asset, destination, use)
         except BaseException as exc:
-            use.event(status="failed", failure=str(exc))
+            # 下位で記録済みの失敗は重ねず、後処理などで生じた別の失敗は残す。
+            failure = str(exc)
+            if (
+                use.fields.get("status") != "failed"
+                or use.fields.get("failure") != failure
+            ):
+                use.event(status="failed", failure=failure)
             raise
 
     def _obtain_cached(
