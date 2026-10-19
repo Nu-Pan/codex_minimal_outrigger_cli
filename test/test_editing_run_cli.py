@@ -1445,25 +1445,36 @@ def test_refactor_fork_stops_tracked_codex_children_before_joinable(
 
 def test_refactor_fork_moves_unresolved_target_after_rename(
     refactor_after_preprocess: tuple[Path, str, Path],
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """3 種類の rename 後も unresolved と state を揃え、run の準備は共有する。"""
+    """同一・後続単位の rename 後も unresolved と state・report を揃える。"""
     root, _session_branch, state_path = refactor_after_preprocess
     # 内容を保つ rename、Git が delete/add とする置換、別所見の追加 file による
-    # 候補の曖昧さを別々の target で検証し、session・巡回・終了処理を重複させない。
+    # 候補の曖昧さと、後続単位の rename を一つの run で検証する。
     cases = {
         "README.md": ("renamed.md", False, False),
         "rewrite.md": ("rewritten.md", True, False),
         "with-extra.md": ("renamed-extra.md", True, True),
+        "previous.md": ("previous-renamed.md", True, False),
     }
+    targets = [
+        "README.md",
+        "rewrite.md",
+        "with-extra.md",
+        "previous.md",
+        "oracle/spec.md",
+    ]
+    previous_call_log = (tmp_path / "unresolved_call.json").resolve()
+    previous_call_log.write_text("{}\n")
     # 全件の選択・巡回は mixed_results_until_user_interruption と
     # repeats_cycles_with_oldest_timestamp_priority に残し、無関係な state-only commit を省く。
     monkeypatch.setattr(
-        refactor_module, "refactor_cycle_targets", lambda _state: sorted(cases)
+        refactor_module, "refactor_cycle_targets", lambda _state: targets
     )
-    for source in ("rewrite.md", "with-extra.md"):
+    for source in ("rewrite.md", "with-extra.md", "previous.md"):
         (root / source).write_text(f"# {source}\n")
-    run_git(root, "add", "rewrite.md", "with-extra.md")
+    run_git(root, "add", "rewrite.md", "with-extra.md", "previous.md")
     run_git(root, "commit", "-m", "rename inputs")
     reviewed = []
 
@@ -1471,21 +1482,30 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
         parameter: AgentCallParameter,
         **kwargs: object,
     ) -> SimpleNamespace:
-        """各 target の rename と unresolved finding を再現する。"""
+        """同一単位の rename と、未解決所見を残した後の別単位の rename を再現する。"""
         worktree = parameter.agent_call_cwd
         target = str(kwargs["purpose"]).removeprefix("realization refactor: ")
         reviewed.append(target)
-        destination, replace_content, add_unrelated_file = cases[target]
-        (worktree / target).rename(worktree / destination)
-        if replace_content:
-            (worktree / destination).write_text("completely different content\n")
+        source = "previous.md" if target == "oracle/spec.md" else target
+        changed_paths = []
+        add_unrelated_file = False
+        if target != "previous.md":
+            destination, replace_content, add_unrelated_file = cases[source]
+            (worktree / source).rename(worktree / destination)
+            if replace_content:
+                (worktree / destination).write_text("completely different content\n")
+            changed_paths = [source, destination]
+        # 後続単位では fixed の別所見を返し、前の unresolved 所見と log の追従を検査する。
+        later_rename = target == "oracle/spec.md"
         findings = [
             {
-                "title": f"deferred {target}",
-                "changed_paths": [target, destination],
+                "title": "previous rename" if later_rename else f"deferred {source}",
+                "changed_paths": changed_paths,
                 "resolution": {
-                    "status": "unresolved",
-                    "summary": "needs follow-up",
+                    "status": "fixed" if later_rename else "unresolved",
+                    "summary": "rename completed"
+                    if later_rename
+                    else "needs follow-up",
                 },
             }
         ]
@@ -1513,7 +1533,11 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
                     "summary": "fake full quality gate passed",
                 },
             },
-            call_log_path=worktree / f"{target}-call.json",
+            call_log_path=(
+                previous_call_log
+                if target == "previous.md"
+                else worktree / f"{target}-call.json"
+            ),
         )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
@@ -1530,7 +1554,7 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     assert state["run"]["state"] == "ready"
     worktree = root
     refactor_state = load_refactor_state(worktree)
-    assert sorted(reviewed) == sorted(cases)
+    assert reviewed == targets
     for source, (destination, _replace_content, _add_unrelated_file) in cases.items():
         assert source not in refactor_state
         assert refactor_state[destination] == {"last_investigated_at": None}
@@ -1539,111 +1563,19 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
     )
     assert len(reports) == 1
     report = reports[0].read_text()
+    assert_report_layout(report)
+    assert "中断完了" in report_section(report, "実行結果")
+    assert "保留対象: 4 件" in report_section(report, "要注意事項")
     assert "## Completion\n\nuser_interruption" in report
     destinations = sorted(destination for destination, *_flags in cases.values())
     expected_targets = "\n".join(f"  - `{path}`" for path in destinations)
     assert (
-        f"## Unresolved targets\n\n- count: 3\n- paths:\n{expected_targets}" in report
+        f"## Unresolved targets\n\n- count: 4\n- paths:\n{expected_targets}" in report
     )
     for source, (destination, _replace_content, _add_unrelated_file) in cases.items():
         assert f"- `{destination}`: deferred {source}" in report
-
-
-def test_refactor_fork_moves_previous_unresolved_target_after_later_rename(
-    refactor_after_preprocess: tuple[Path, str, Path],
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """後続 target の rename でも既存 unresolved target を追従させる。"""
-    root, _session_branch, state_path = refactor_after_preprocess
-    call_log = (tmp_path / "unresolved_call.json").resolve()
-    call_log.write_text("{}\n")
-    reviewed: list[str] = []
-    # 対象の公平性と追加 file の次巡選択は repeats_cycles_with_oldest_timestamp_priority
-    # に残し、ここでは既存 unresolved を後続 target が rename する 2 単位だけを実行する。
-    monkeypatch.setattr(
-        refactor_module,
-        "refactor_cycle_targets",
-        lambda _state: ["README.md", "oracle/spec.md"],
-    )
-
-    def fake_refactor(
-        parameter: AgentCallParameter,
-        **kwargs: object,
-    ) -> SimpleNamespace:
-        """README の unresolved 後、別 target で README を rename する。"""
-        purpose = str(kwargs["purpose"])
-        target = purpose.removeprefix("realization refactor: ")
-        reviewed.append(target)
-        if target == "README.md":
-            return SimpleNamespace(
-                returncode=0,
-                call_log_path=call_log,
-                output_json={
-                    "findings": [
-                        {
-                            "title": "README unresolved finding",
-                            "changed_paths": [],
-                            "resolution": {
-                                "status": "unresolved",
-                                "summary": "人間の判断が必要",
-                            },
-                        }
-                    ],
-                    "verification": {
-                        "status": "passed",
-                        "summary": "fake full quality gate passed",
-                    },
-                },
-            )
-        assert target == "oracle/spec.md"
-        worktree = parameter.agent_call_cwd
-        (worktree / "README.md").rename(worktree / "renamed.md")
-        (worktree / "renamed.md").write_text("completely different content\n")
-        return SimpleNamespace(
-            returncode=0,
-            output_json={
-                "findings": [
-                    {
-                        "title": "README rename",
-                        "changed_paths": ["README.md", "renamed.md"],
-                        "resolution": {
-                            "status": "fixed",
-                            "summary": "rename completed",
-                        },
-                    }
-                ],
-                "verification": {
-                    "status": "passed",
-                    "summary": "fake full quality gate passed",
-                },
-            },
-        )
-
-    monkeypatch.setattr(refactor_module, "run_codex_exec", fake_refactor)
-    _stop_after_cycles(monkeypatch)
-
-    result = runner.invoke(
-        app,
-        ["realization", "refactor"],
-        catch_exceptions=False,
-    )
-
-    assert result.exit_code == 0, result.output
-    state = _state(state_path)
-    assert state["run"]["state"] == "ready"
-    worktree = root
-    refactor_state = load_refactor_state(worktree)
-    assert "README.md" not in refactor_state
-    assert refactor_state["renamed.md"] == {"last_investigated_at": None}
-    assert reviewed == ["README.md", "oracle/spec.md"]
-    report = terminal_primary_report(result).read_text()
     assert 'completion_reason: "user_interruption"' in report
-    assert_report_layout(report)
-    assert "中断完了" in report_section(report, "実行結果")
-    assert "保留対象: 1 件" in report_section(report, "要注意事項")
-    assert "- count: 1" in report
-    assert "`renamed.md`" in report
+    assert f"Codex call log: `{previous_call_log}`" in report
 
 
 def test_refactor_state_refresh_rejects_unexpected_processing_unit_changes(
