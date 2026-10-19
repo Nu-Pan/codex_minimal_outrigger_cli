@@ -159,13 +159,14 @@ def _publish_prepared_cases(root, statuses):
         feedback_state.load_active_state(root),
     )
     assert set(candidates) == set(statuses)
-    files = decision.worktree_inputs(root)
     issues, events, observations = {}, [], []
     for identity, candidate in candidates.items():
         verdict = _remediation_output(identity, statuses[identity])["result"]
+        # 保存済みの過去判定には固定の入力を使い、close の準備で Git 列挙を重ねない。
+        # 実入力の収集・判定との結合は reported_case と decision/report の test に残す。
         verdict["decision_basis"] = decision.compact_basis(
             decision.decision_basis(
-                decision.decision_state(files, candidate), verdict, None
+                decision.decision_state({}, candidate), verdict, None
             )
         )
         issue = report_module._active_issue_record(
