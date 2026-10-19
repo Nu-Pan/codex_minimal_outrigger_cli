@@ -1190,23 +1190,24 @@ def test_session_join_merges_conflict_and_incidental_changes(
     assert session_preprocess == [root]
     assert result.exit_code == 0, result.output
     assert calls == ["session join conflict resolution"]
-    assert current_branch(root) == home_branch
-    assert run_git(root, "status", "--porcelain").stdout == ""
-    assert run_git(root, "ls-files", "--stage", "oracle/mode.md").stdout.startswith(
-        "100755 "
+    # 同じ最終状態の branch・clean と、mode・削除結果をそれぞれ一度に観測する。
+    assert run_git(root, "status", "--porcelain", "--branch").stdout == (
+        f"## {home_branch}\n"
     )
-    assert (
-        run_git(
-            root,
-            "ls-files",
-            "--",
-            "oracle/deleted.md",
-            "README.md",
-            "src/deleted.py",
-            "src/renamed.py",
-        ).stdout
-        == ""
-    )
+    tracked = run_git(
+        root,
+        "ls-files",
+        "--stage",
+        "--",
+        "oracle/mode.md",
+        "oracle/deleted.md",
+        "README.md",
+        "src/deleted.py",
+        "src/renamed.py",
+    ).stdout.splitlines()
+    assert len(tracked) == 1
+    mode, _object_id, stage, relative = tracked[0].split()
+    assert (mode, stage, relative) == ("100755", "0", "oracle/mode.md")
     assert not deleted_target.exists()
     assert not delete_modify_target.exists()
     assert newline_target.read_text() == "resolved change\n"
