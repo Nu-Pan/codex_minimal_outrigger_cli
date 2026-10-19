@@ -34,6 +34,7 @@ import commons.runtime_codex_exec as exec_module
 import commons.runtime_codex_tui as tui_module
 import commons.runtime_logging as logging_module
 import commons.runtime_windows_toast as toast_module
+from basic.acp import AgentCallParameter, FileAccessMode
 from commons.runtime_codex_profile import process_group_has_running_member
 from commons.runtime_codex_recovery import install_recovery_interruption
 from commons.runtime_codex_session import CodexSessionLease
@@ -675,13 +676,34 @@ def test_public_resume_rejects_non_tui_and_invalid_id(directory):
             tui_module.resume_codex_tui(execution_id, directory)
 
 
-def test_completion_probe_prepares_no_calls(directory, monkeypatch):
-    run = Mock()
+def test_completion_probe_prepares_no_calls(tmp_path, monkeypatch, capsys):
+    """補完は通常起動の環境を要求せず、資源・出力・process を作らない。"""
+    # builder の本文は test_acp_builder_tui_parameters.py で検査する。
+    # この早期終了に不要な通常起動 fixture と完全 prompt の構築は行わない。
+    parameter = AgentCallParameter(
+        agent_call_kind=build_tui_request.__name__,
+        file_access_mode=FileAccessMode.REPO_WRITE,
+        prompt="request",
+        structured_output_schema_path=None,
+        agent_call_cwd=tmp_path,
+        enable_editor_input_handoff_mcp=True,
+        enable_document_search_mcp=True,
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex_home"))
+    run = Mock(side_effect=AssertionError("completion must not launch Codex"))
     monkeypatch.setattr(tui_module, "run_codex_exec", run)
+    monkeypatch.setattr(tui_module, "run_codex_subprocess", run)
     monkeypatch.setenv("_CMOC_COMPLETE", "")
-    result = tui_module.run_codex_tui(build_tui_request("request"), root=directory)
-    assert result.returncode == 0
+
+    result = tui_module.run_codex_tui(parameter, root=tmp_path)
+
+    assert result == CommandResult(0, "", "")
     run.assert_not_called()
+    captured = capsys.readouterr()
+    assert (captured.out, captured.err) == ("", "")
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_initial_completion_waits_for_process_exit(directory, tmp_path, monkeypatch):
