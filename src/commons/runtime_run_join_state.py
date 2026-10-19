@@ -276,17 +276,6 @@ def confirm_import(record: JoinRecord) -> bool:
             or record.prepared_run_head not in metadata
             or metadata[record.session_commit][0] != record.session_tree
             or metadata[record.prepared_run_head][0] != record.session_tree
-            or run_git(
-                [
-                    "merge-base",
-                    "--is-ancestor",
-                    record.session_commit,
-                    context.session_branch,
-                ],
-                context.repo,
-                check=False,
-            ).returncode
-            != 0
         ):
             raise CmocError("記録した取り込み成果を確認できません。", [], "")
         if record.join_commit is None:
@@ -299,6 +288,21 @@ def confirm_import(record: JoinRecord) -> bool:
             ][1:] == [record.session_head, record.prepared_run_head]
         if not valid:
             raise CmocError("join の取り込み履歴と基準が一致しません。", [], "")
+        # 不整合な記録では ref 照会を省き、正常な記録では毎回到達可能性を検査する。
+        if (
+            run_git(
+                [
+                    "merge-base",
+                    "--is-ancestor",
+                    record.session_commit,
+                    context.session_branch,
+                ],
+                context.repo,
+                check=False,
+            ).returncode
+            != 0
+        ):
+            raise CmocError("記録した取り込み成果を確認できません。", [], "")
         return True
     if record.prepared_run_head is None or record.session_head is None:
         return False

@@ -79,7 +79,7 @@ def test_import_confirmation_batches_metadata_and_rechecks_reachability(
             join_state.confirm_import(receipt)
 
 
-def test_import_confirmation_rejects_inconsistent_receipt(imported_record):
+def test_import_confirmation_rejects_inconsistent_receipt(imported_record, monkeypatch):
     record = imported_record
     baseline = record.context.run_fork_commit
     mismatches = [
@@ -92,9 +92,14 @@ def test_import_confirmation_rejects_inconsistent_receipt(imported_record):
         {"session_commit": record.session_tree},
         {"prepared_run_head": record.session_tree},
     ]
+    queries = Mock(wraps=join_state.run_git)
+    monkeypatch.setattr(join_state, "run_git", queries)
     for mismatch in mismatches:
+        queries.reset_mock()
         with pytest.raises(CmocError):
             join_state.confirm_import(replace(record, **mismatch))
+        # 不完全な記録は即座に、履歴・tree の不整合は metadata の照会だけで拒否する。
+        assert queries.call_count <= 1, mismatch
 
 
 def test_missing_receipt_checks_candidate_tree_and_parents(
