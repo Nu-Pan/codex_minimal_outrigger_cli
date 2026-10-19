@@ -1415,22 +1415,13 @@ def test_collector_stop_wakes_blocked_listener(
         invocation.stop()
 
 
-@pytest.mark.parametrize("shutdown_unavailable", [False, True])
 def test_collector_protocol_probe_does_not_report_expected_degradation(
     feedback_directory: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    shutdown_unavailable: bool,
 ) -> None:
-    """transport probe と通常・shutdown 不可の停止で warning を追加しない。"""
+    """実 TCP の transport probe と通常停止で warning を追加しない。"""
     root = feedback_directory
     logger = SubcommandLogger(root, "feedback test")
     invocation = FeedbackInvocation(root, root, "feedback test", logger)
-    if shutdown_unavailable:
-
-        def fail_shutdown(_listener: socket.socket, _how: int) -> None:
-            raise OSError("injected shutdown failure")
-
-        monkeypatch.setattr(socket.socket, "shutdown", fail_shutdown)
     invocation.start()
     try:
         assert invocation.collector_port is not None
@@ -1440,6 +1431,49 @@ def test_collector_protocol_probe_does_not_report_expected_degradation(
     assert invocation._server_thread is not None
     assert not invocation._server_thread.is_alive()
     assert logger.warning_messages == []
+
+
+def test_collector_stop_handles_unavailable_shutdown_without_degradation(
+    feedback_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """shutdown 失敗後の accept timeout と thread 回収を実時間の待機なしで検査する。"""
+    root = feedback_directory
+    logger = SubcommandLogger(root, "feedback test")
+    invocation = FeedbackInvocation(root, root, "feedback test", logger)
+    accept_started = threading.Event()
+    shutdown_attempted = threading.Event()
+
+    # 実 TCP の probe は上のケースに残し、OS の timeout だけを決定論的に発生させる。
+    # collector の start・serve・stop と実 thread の終了は置換しない。
+    def accept_until_timeout(listener: socket.socket) -> NoReturn:
+        assert listener is invocation._listener
+        accept_started.set()
+        assert shutdown_attempted.wait(timeout=2)
+        raise TimeoutError("injected accept timeout")
+
+    def fail_shutdown(listener: socket.socket, _how: int) -> NoReturn:
+        assert listener is invocation._listener
+        shutdown_attempted.set()
+        raise OSError("injected shutdown failure")
+
+    monkeypatch.setattr(socket.socket, "accept", accept_until_timeout)
+    monkeypatch.setattr(socket.socket, "shutdown", fail_shutdown)
+    invocation.start()
+    try:
+        assert accept_started.wait(timeout=2)
+        invocation.stop()
+
+        assert shutdown_attempted.is_set()
+        assert invocation._server_thread is not None
+        assert not invocation._server_thread.is_alive()
+        assert invocation._listener is None
+        assert invocation.collector_port is None
+        assert logger.warning_messages == []
+    finally:
+        # assertion が失敗しても accept を解除し、test の thread を残さない。
+        shutdown_attempted.set()
+        invocation.stop()
 
 
 def test_collector_records_rejected_submission_as_degraded_warning(
