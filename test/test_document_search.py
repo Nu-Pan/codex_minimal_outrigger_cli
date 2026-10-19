@@ -866,6 +866,9 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
         assert search.sync_progress["persisted_chunks"] == 1
         assert search.sync_progress["changed_document_count"] == 2
         assert model_inputs() == [a, b, c, edited_a]
+        # 同じ節の再配置・重複では分割を重ねず、新規推論入力の検査だけを加える。
+        tokenized_characters = int((runtime / "tokenized-characters.json").read_text())
+        assert tokenized_characters <= len(edited_a + b + c) + len(edited_a)
 
         revised_heading = "## A revised\nalpha edited\nextra\n"
         copy.unlink()
