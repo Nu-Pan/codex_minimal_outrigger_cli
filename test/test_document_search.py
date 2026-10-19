@@ -293,11 +293,13 @@ def test_search_only_reads_oracle_doc_markdown(
 
 
 def test_search_syncs_edits_and_reuses_unchanged_embeddings(
-    tmp_path: Path, document_repository: Path
+    tmp_path: Path, document_repository: Path, unsynced_search_storage: None
 ) -> None:
     """編集・空白化・削除後の旧本文を返さず、無変更推論を再実行しない。"""
     pytest.importorskip("sqlite_vec")
     # Git 分類・ignore は直前の読取り範囲 test と実 worktree の再利用 test に残す。
+    # 物理同期は途中保存・再開・worktree 間の再利用 test に残し、ここでは
+    # 実 DB の更新・検索結果と推論回数を検査する。
     root = document_repository
     worker = _InferenceDouble()
     with closing(
@@ -1050,7 +1052,10 @@ def test_config_change_preserves_index_while_request_uses_it(
 
 
 def test_zero_hit_search_rechecks_source_before_return(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, document_repository: Path
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    document_repository: Path,
+    unsynced_search_storage: None,
 ) -> None:
     """空白文書の同期直後に本文が変わったら、ゼロ件を成功として返さない。"""
     pytest.importorskip("sqlite_vec")
