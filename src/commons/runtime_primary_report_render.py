@@ -382,27 +382,33 @@ def _render_structured_value(value: Any) -> str:
         if kind == "text":
             fragments.append(current)
         elif isinstance(current, (_JsonObjectPairs, list)):
-            entries: list[tuple[Any, Any]]
+            entries: list[Any]
             if isinstance(current, _JsonObjectPairs):
                 is_object = True
                 entries = current.entries
                 opening, closing = "{", "}"
             else:
                 is_object = False
-                entries = list(enumerate(current))
+                entries = current
                 opening, closing = "[", "]"
             if not entries:
                 fragments.append("{}" if is_object else "[]")
                 continue
             fragments.append(opening + "\n")
             pending.append(("text", "\n" + "  " * depth + closing, 0))
-            for index in range(len(entries) - 1, -1, -1):
-                key, item = entries[index]
-                pending.append(("text", ",\n" if index < len(entries) - 1 else "", 0))
-                pending.append(("value", item, depth + 1))
-                prefix = "  " * (depth + 1)
+            # 配列を複製せず参照し、兄弟要素のインデントは一度だけ作る。
+            indent = "  " * (depth + 1)
+            last_index = len(entries) - 1
+            for index in range(last_index, -1, -1):
+                prefix = indent
                 if is_object:
+                    key, item = entries[index]
                     prefix += _display_json_string(str(key)) + ": "
+                else:
+                    item = entries[index]
+                if index < last_index:
+                    pending.append(("text", ",\n", 0))
+                pending.append(("value", item, depth + 1))
                 pending.append(("text", prefix, 0))
         elif isinstance(current, str):
             fragments.append(_display_json_string(current))

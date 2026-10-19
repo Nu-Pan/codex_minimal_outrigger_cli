@@ -712,6 +712,7 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
             "empty": "",
             "nothing": None,
             "items": [True, False, 0, 1.25, [], {}],
+            "groups": [[1], {"key": [2, 3]}, 4],
         }
     }
     output.write_text(json.dumps(source, ensure_ascii=True), encoding="utf-8")
@@ -749,6 +750,11 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
     assert (
         '"items": [\n      true,\n      false,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
         in report
+    )
+    assert (
+        '"groups": [\n      [\n        1\n      ],\n'
+        '      {\n        "key": [\n          2,\n          3\n        ]\n      },\n'
+        "      4\n    ]" in report
     )
     assert '"literal": "\n"' not in report
     assert '"duplicate": "first",\n  "duplicate": "second"' in report
