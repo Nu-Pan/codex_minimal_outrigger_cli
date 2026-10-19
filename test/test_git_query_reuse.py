@@ -474,16 +474,15 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
 
 
 def test_run_path_inspection_batches_each_owning_repository(
-    cli_repository, monkeypatch
+    cli_repository, _empty_repository_seed, monkeypatch
 ):
     """一括化しても nested の index・ignore と agent/run の許可範囲を区別する。"""
     root = cli_repository
     (root / ".gitignore").write_text("*.outer\n")
     (root / "dropped.outer").write_text("outer ignored\n")
     (root / "visible.txt").write_text("visible\n")
-    nested = root / "nested"
-    nested.mkdir()
-    init_repo(nested)
+    # 初期化済みの空 repository を独立コピーし、nested 固有の index・設定を作る。
+    nested = shutil.copytree(_empty_repository_seed, root / "nested")
     (nested / ".gitignore").write_text("*.nested\n")
     for name in ("kept.outer", "dropped.nested", "tracked.nested"):
         (nested / name).write_text("nested content\n")
@@ -566,7 +565,7 @@ def test_run_path_inspection_batches_each_owning_repository(
 
 
 def test_run_path_inspection_batches_missing_files_and_tree_fallback(
-    cli_repository, monkeypatch
+    cli_repository, _empty_repository_seed, monkeypatch
 ):
     """削除 path の特殊名・種類・参照元を保ち、tree 照会を repository ごとにまとめる。"""
     root = cli_repository
@@ -590,9 +589,8 @@ def test_run_path_inspection_batches_missing_files_and_tree_fallback(
         (root / name).unlink()
     shutil.rmtree(root / "tree-directory")
 
-    nested = root / "nested"
-    nested.mkdir()
-    init_repo(nested)
+    # 履歴はこのケース内で作り、前提だけの Git 初期化は繰り返さない。
+    nested = shutil.copytree(_empty_repository_seed, root / "nested")
     nested_regular = ["first.txt", "second.txt"]
     for name in nested_regular:
         (nested / name).write_text("nested file\n")

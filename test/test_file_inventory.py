@@ -6,6 +6,7 @@
 """
 
 import os
+import shutil
 import stat
 import subprocess
 from collections.abc import Iterator
@@ -13,7 +14,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _git_support import init_repo, run_git
+from _git_support import run_git
 
 import commons.runtime_git as runtime_git
 import commons.runtime_refactor as runtime_refactor
@@ -31,14 +32,6 @@ from commons.runtime_refactor import (
 
 _EXCLUDED_ROOTS = {".git", ".agents", ".codex", ".cmoc", "memo"}
 _EXCLUDED_NAMES = {"AGENTS.md"}
-
-
-# 列挙と ignore 判定には実 index を使い、HEAD と linked worktree の検証だけ commit する。
-def _make_nested_repo(path: Path) -> Path:
-    """owning repository の判定に必要な nested Git working tree だけを作る。"""
-    path.mkdir(parents=True)
-    init_repo(path)
-    return path
 
 
 def _relative_sets(
@@ -483,6 +476,7 @@ def test_inventory_accepts_linked_worktree_git_file(
 def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     tmp_path: Path,
     cli_repository: Path,
+    _empty_repository_seed: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """owning repository の ignore source を反映し、重複 source は一度だけ検証する。"""
@@ -500,7 +494,7 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     subdirectory = root / "subdirectory"
     subdirectory.mkdir()
     (subdirectory / ".gitignore").write_text("outer-nested.txt\n")
-    # 両 repository は init_repo が通常の .git directory を作るため、配置の問い合わせは不要。
+    # 両 repository は seed の通常の .git directory を持ち、配置の問い合わせは不要。
     outer_exclude = root / ".git" / "info" / "exclude"
     outer_exclude.parent.mkdir(parents=True, exist_ok=True)
     outer_exclude.write_text("outer-local.txt\n")
@@ -512,7 +506,8 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     ):
         (root / relative).write_text("ignored\n")
 
-    nested = _make_nested_repo(root / "nested")
+    # outer の設定を持ち込まず、初期化済みの空 repository から独立コピーする。
+    nested = shutil.copytree(_empty_repository_seed, root / "nested")
     nested_global = tmp_path / "nested-global-ignore"
     nested_global.write_text("nested-global.txt\n")
     run_git(nested, "config", "core.excludesFile", str(nested_global))
