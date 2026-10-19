@@ -22,6 +22,7 @@ from .runtime_feedback_store import (
     iter_observation_paths,
     observation_publication_lock,
     observation_root,
+    sha256_bytes,
 )
 
 
@@ -116,7 +117,13 @@ def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, 
         for path in iter_observation_paths(repo):
             if path.stem in consumed:
                 continue
-            changed = _register(repo, ledger, artifact_reference(repo, path)) or changed
+            # 列挙済み path は repo 配下の通常 file で symlink を含まない。
+            # 同じ排他内では祖先の再検査・再解決をせず、内容の hash を照合する。
+            reference = {
+                "path": path.relative_to(repo).as_posix(),
+                "sha256": sha256_bytes(path.read_bytes()),
+            }
+            changed = _register(repo, ledger, reference) or changed
             validated.add(path.stem)
         if changed:
             _atomic_write_json(feedback_root(repo) / "intake.json", ledger)
