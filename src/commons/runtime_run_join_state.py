@@ -56,7 +56,7 @@ class JoinRecord:
         data = asdict(self)
         data["context"] = {
             key: str(value) if isinstance(value, Path) else value
-            for key, value in asdict(self.context).items()
+            for key, value in data["context"].items()
         }
         temporary: str | None = None
         try:
