@@ -170,7 +170,7 @@ def test_ready_session_is_independent_of_seed(
 
 @pytest.fixture
 def nonpersistent_run_ids(nonpersistent_execution_ids, monkeypatch):
-    """終了・復旧の検査では、run ID の永続保存と同期待ちを繰り返さない。"""
+    """開始順序・失敗・終了・復旧の検査では、run ID の保存と同期待ちを省く。"""
     # 採番の順序・永続性は test_runtime_ids.py と test_codex_runtime_paths.py、
     # run との実結合は test_realization_apply_automatically_joins_changes_and_noop と
     # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
@@ -3407,6 +3407,7 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
     assert notifications == [("realization refactor", "interrupted")]
 
 
+@pytest.mark.usefixtures("nonpersistent_run_ids")
 @pytest.mark.parametrize(
     "kind", ["realization_apply", "realization_refactor", "feedback_report"]
 )
@@ -3459,6 +3460,7 @@ def test_start_run_prepares_work_directories_before_publishing_state(
     assert root_queries <= 2
 
 
+@pytest.mark.usefixtures("nonpersistent_run_ids")
 def test_start_run_directory_conflict_cleans_unpublished_resources(
     ready_run_session, monkeypatch
 ):
@@ -3499,6 +3501,7 @@ def test_start_run_directory_conflict_cleans_unpublished_resources(
         ).exists(), kind
 
 
+@pytest.mark.usefixtures("nonpersistent_run_ids")
 def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(
     ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
@@ -3535,6 +3538,7 @@ def test_start_run_interrupt_during_worktree_creation_cleans_partial_resources(
     assert not lifecycle_module.branch_exists(root, str(created_target["branch"]))
 
 
+@pytest.mark.usefixtures("nonpersistent_run_ids")
 def test_start_run_interrupt_after_state_write_restores_ready_state(
     ready_run_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
