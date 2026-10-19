@@ -237,7 +237,7 @@ def refactor_after_preprocess(
     automatic_join_after_preprocess,
     monkeypatch,
 ):
-    """所見追従・終了・復旧は、修復・同期済みの session から検査する。"""
+    """開始・所見追従・終了・復旧は、修復・同期済みの session から検査する。"""
     # doctor の修復・索引同期・中断は test_doctor_cli.py、fork との結合は
     # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
     # 管理 file は ready_join_session の初期 commit に揃え、前処理を重ねない。
@@ -2238,12 +2238,12 @@ def test_apply_start_failure_does_not_recover_existing_error_run(
 
 
 def test_refactor_start_failure_does_not_recover_existing_error_run(
-    ready_content_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
 ) -> None:
     """新しい refactor fork の事前条件失敗で既存 error run を変更しない。"""
-    root, _session_branch, state_path = ready_content_session
+    root, _session_branch, state_path = refactor_after_preprocess
     context = _prepare_run(
-        ready_content_session, kind="realization_refactor", run_state="error"
+        refactor_after_preprocess, kind="realization_refactor", run_state="error"
     )
     (context.run_worktree / "README.md").write_text("existing error run\n")
 
@@ -2290,12 +2290,12 @@ def test_start_run_rechecks_session_branch_under_lock(
 
 @pytest.mark.parametrize("interrupted_before_tracking", [False, True])
 def test_refactor_start_error_does_not_recover_competing_run(
-    ready_run_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
     interrupted_before_tracking: bool,
 ) -> None:
     """開始失敗や中断で別 invocation の run を回収しない。"""
-    root, session_branch, state_path = ready_run_session
+    root, session_branch, state_path = refactor_after_preprocess
     original_start = refactor_module.start_editing_run
 
     def competing_start(kind: str) -> EditingRunContext:
