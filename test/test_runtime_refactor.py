@@ -34,22 +34,6 @@ from commons.runtime_refactor import (
 from commons.runtime_results import CommandResult
 
 
-def test_refactor_state_sync_tracks_enumerated_files(tmp_path, monkeypatch):
-    root = tmp_path
-    # 実 file の列挙は test_file_inventory.py に残し、state の検査に不要な実体は作らない。
-    monkeypatch.setattr(
-        refactor_module,
-        "enumerate_refactor_targets",
-        lambda _root: ["README.md", "oracle/spec.md"],
-    )
-    state = sync_refactor_state(root)
-    assert state == {
-        "README.md": {"last_investigated_at": None},
-        "oracle/spec.md": {"last_investigated_at": None},
-    }
-    assert load_refactor_state(root) == state
-
-
 @pytest.mark.parametrize(
     "initial_state", ["empty", "pending", "investigated", "new_entries"]
 )
@@ -240,9 +224,10 @@ def test_refactor_target_classifier_rejects_non_file_replacing_branch_file(
     )
 
 
-def test_refactor_state_sync_preserves_timestamps_without_reading_contents(
+def test_refactor_state_sync_initializes_and_preserves_dates_without_reading_contents(
     tmp_path, monkeypatch
 ):
+    """初期 entry の保存と、内容変更後の日時保持を同じ同期処理で検査する。"""
     root = tmp_path
     targets = ["README.md", "oracle/spec.md"]
     for relative in targets:
@@ -253,6 +238,11 @@ def test_refactor_state_sync_preserves_timestamps_without_reading_contents(
         refactor_module, "enumerate_refactor_targets", lambda _: targets
     )
     state = sync_refactor_state(root)
+    assert state == {
+        "README.md": {"last_investigated_at": None},
+        "oracle/spec.md": {"last_investigated_at": None},
+    }
+    assert load_refactor_state(root) == state
     state["README.md"]["last_investigated_at"] = "2026-07-19_00-00-00_000"
     write_refactor_state(root, state)
     (root / "README.md").write_text("changed\n")
