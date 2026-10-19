@@ -2216,6 +2216,104 @@ def test_report_reference_rejects_symlinked_parent_outside(
     assert feedback_report_module._repository_path(root, "link/secret.txt") is None
 
 
+def test_report_cut_references_share_resolution_and_refresh_between_captures(
+    feedback_directory, tmp_path, monkeypatch
+):
+    root = feedback_directory
+    readme = root / "README.md"
+    readme.write_text("before\n")
+    nested = root / "nested"
+    nested.mkdir()
+    (nested / "subject.md").write_text("inside\n")
+    alias = root / "alias"
+    alias.symlink_to(nested, target_is_directory=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "subject.md").write_text("must not be read\n")
+    observations = {
+        "first": {
+            "payload": {"summary": "first", "evidence": []},
+            "evidence_fingerprints": [
+                {"normalized_path": "README.md"},
+                {"normalized_path": "README.md"},
+                {"normalized_path": None},
+            ],
+            "source_event": {"log_path": "README.md"},
+        },
+        "second": {
+            "evidence_fingerprints": [
+                {"normalized_path": "README.md"},
+                {"normalized_path": "./README.md"},
+                {"normalized_path": "alias/subject.md"},
+                {"normalized_path": "../outside/subject.md"},
+            ],
+        },
+    }
+    issues = {
+        "active": {
+            "reference_targets": [{"path": "README.md"}, {"path": None}],
+            "verification": {
+                "current_evidence": [
+                    {"path": "README.md"},
+                    {"path": "alias/subject.md"},
+                ]
+            },
+        }
+    }
+    resolve = Mock(wraps=feedback_report_module._repository_path)
+    monkeypatch.setattr(feedback_report_module, "_repository_path", resolve)
+    read = Mock(wraps=Path.read_bytes)
+    monkeypatch.setattr(Path, "read_bytes", lambda path: read(path))
+
+    def capture():
+        resolve.reset_mock()
+        read.reset_mock()
+        references = feedback_report_module._capture_report_cut_references(
+            root, observations, issues
+        )
+        resolved = [call.args[1] for call in resolve.call_args_list]
+        assert len(resolved) == len(set(resolved)) == 4
+        assert set(resolved) == {
+            "README.md",
+            "./README.md",
+            "alias/subject.md",
+            "../outside/subject.md",
+        }
+        observation_refs = {
+            reference["reference_id"]: reference
+            for reference in references
+            if reference["kind"] == "observation"
+        }
+        assert set(observation_refs) == {"obs:first", "obs:second"}
+        assert observation_refs["obs:first"]["summary"] == "first"
+        return {
+            reference["path"]: reference
+            for reference in references
+            if reference["kind"] != "observation"
+        }
+
+    before = capture()
+    assert set(before) == {"README.md", "alias/subject.md"}
+    assert before["README.md"]["subjects"] == ["active", "first", "second"]
+    assert before["README.md"]["sha256"] == sha256_bytes(b"before\n")
+    assert before["alias/subject.md"]["subjects"] == ["active", "second"]
+    assert before["alias/subject.md"]["sha256"] == sha256_bytes(b"inside\n")
+    assert {call.args[0] for call in read.call_args_list} == {
+        readme,
+        alias / "subject.md",
+    }
+    assert read.call_count == 2
+
+    readme.write_text("after\n")
+    alias.unlink()
+    alias.symlink_to(outside, target_is_directory=True)
+    after = capture()
+    assert set(after) == {"README.md"}
+    assert after["README.md"]["subjects"] == before["README.md"]["subjects"]
+    assert after["README.md"]["sha256"] == sha256_bytes(b"after\n")
+    read.assert_called_once_with(readme)
+
+
 def test_candidate_building_skips_empty_comparison_and_merges_resolved_evidence(
     feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

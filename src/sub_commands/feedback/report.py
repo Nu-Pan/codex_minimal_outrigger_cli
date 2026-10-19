@@ -344,7 +344,7 @@ def _capture_report_cut_references(
 ) -> list[_JsonObject]:
     """agent に許可する observation と current repository reference を固定する。"""
     references: dict[str, _JsonObject] = {}
-    path_subjects: dict[Path, set[str]] = {}
+    target_subjects: dict[str, set[str]] = {}
 
     # raw observation 自体は current verdict の根拠ではない別種 reference とする。
     for observation_id_value, observation in sorted(observations.items()):
@@ -360,8 +360,8 @@ def _capture_report_cut_references(
             "summary": summary if isinstance(summary, str) else "",
             "evidence": evidence if isinstance(evidence, list) else [],
         }
-        for path in _observation_reference_paths(repo, observation):
-            path_subjects.setdefault(path, set()).add(observation_id_value)
+        for target_path in _observation_reference_paths(observation):
+            target_subjects.setdefault(target_path, set()).add(observation_id_value)
 
     # active issue が保持する stable target を今回の cut で再取得する。
     for current_issue_id, issue in sorted(active_issues.items()):
@@ -371,9 +371,7 @@ def _capture_report_cut_references(
         for target in targets:
             if not isinstance(target, dict) or not isinstance(target.get("path"), str):
                 continue
-            candidate = _repository_path(repo, target["path"])
-            if candidate is not None:
-                path_subjects.setdefault(candidate, set()).add(current_issue_id)
+            target_subjects.setdefault(target["path"], set()).add(current_issue_id)
         verification = issue.get("verification")
         current_evidence = (
             verification.get("current_evidence")
@@ -386,9 +384,16 @@ def _capture_report_cut_references(
                     evidence.get("path"), str
                 ):
                     continue
-                candidate = _repository_path(repo, evidence["path"])
-                if candidate is not None:
-                    path_subjects.setdefault(candidate, set()).add(current_issue_id)
+                target_subjects.setdefault(evidence["path"], set()).add(
+                    current_issue_id
+                )
+
+    # 同じ保存済み path の解決を subject 間で共有する。次の capture では取り直す。
+    path_subjects: dict[Path, set[str]] = {}
+    for target_path, subjects in target_subjects.items():
+        candidate = _repository_path(repo, target_path)
+        if candidate is not None:
+            path_subjects.setdefault(candidate, set()).update(subjects)
 
     # path ごとに一度だけ current state を取得し、複数 candidate の subject を共有する。
     for path, subjects in sorted(path_subjects.items(), key=lambda item: str(item[0])):
@@ -397,24 +402,20 @@ def _capture_report_cut_references(
     return [references[key] for key in sorted(references)]
 
 
-def _observation_reference_paths(repo: Path, observation: _JsonObject) -> list[Path]:
-    """raw observation が既に拘束した repository 内 current target を返す。"""
-    paths: set[Path] = set()
+def _observation_reference_paths(observation: _JsonObject) -> set[str]:
+    """raw observation が保持する target の path 表記を返す。"""
+    paths: set[str] = set()
     fingerprints = observation.get("evidence_fingerprints")
     if isinstance(fingerprints, list):
         for fingerprint in fingerprints:
             if isinstance(fingerprint, dict) and isinstance(
                 fingerprint.get("normalized_path"), str
             ):
-                candidate = _repository_path(repo, fingerprint["normalized_path"])
-                if candidate is not None:
-                    paths.add(candidate)
+                paths.add(fingerprint["normalized_path"])
     source_event = observation.get("source_event")
     if isinstance(source_event, dict) and isinstance(source_event.get("log_path"), str):
-        candidate = _repository_path(repo, source_event["log_path"])
-        if candidate is not None:
-            paths.add(candidate)
-    return sorted(paths)
+        paths.add(source_event["log_path"])
+    return paths
 
 
 def _repository_path(repo: Path, value: str) -> Path | None:
