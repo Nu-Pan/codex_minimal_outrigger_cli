@@ -484,8 +484,10 @@ def _open_database(path: Path) -> sqlite3.Connection:
         if version.removeprefix("v") != SEARCH_MATERIALS.sqlite_vec_version:
             raise SearchError("MODEL_IDENTITY_MISMATCH", "sqlite-vec version mismatch")
         connection.execute("pragma foreign_keys = on")
+        # 初期 schema は一括確定し、テーブルごとのディスク同期を避ける。
         connection.executescript(
             """
+            begin;
             create table if not exists documents(
                 path text primary key, sha256 text not null,
                 complete integer not null check(complete in (0, 1))
@@ -507,6 +509,7 @@ def _open_database(path: Path) -> sqlite3.Connection:
             create table if not exists query_cache(
                 query text primary key, embedding blob not null
             );
+            commit;
             """
         )
         return connection
