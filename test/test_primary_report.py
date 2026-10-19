@@ -39,7 +39,41 @@ from cmoc_runtime import CmocError, TerminalResult
 from commons.runtime_logging import SubcommandLogger
 from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
-from commons.runtime_report_markdown import ReportSummary, render_report_document
+from commons.runtime_report_markdown import (
+    ReportSummary,
+    markdown_sections,
+    render_report_document,
+)
+
+
+@pytest.mark.parametrize("fence", ["```", "~~~~"])
+def test_report_sections_preserve_quoted_content_and_separate_generated_headings(fence):
+    """生成見出しだけを空行で区切り、複数行の原文と code block は変えない。"""
+    quoted = "# 原文の見出し\n## 原文の内部"
+    quoted_code = "```text\n## 原文のコード\n```"
+    fenced = [fence + "text", "# コード内の見出し", fence[:-1], fence]
+    lines = [
+        "# report",
+        "本文",
+        "## 詳細",
+        quoted,
+        quoted_code,
+        *fenced,
+        "####### 見出しではない本文",
+        "#空白のない本文",
+        "## 終了",
+        "- none",
+    ]
+
+    assert markdown_sections(lines) == (
+        "# report\n\n本文\n\n## 詳細\n\n"
+        + quoted
+        + "\n"
+        + quoted_code
+        + "\n"
+        + "\n".join(fenced)
+        + "\n####### 見出しではない本文\n#空白のない本文\n\n## 終了\n\n- none\n"
+    )
 
 
 @pytest.mark.parametrize(

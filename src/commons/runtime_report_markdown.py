@@ -140,20 +140,24 @@ def markdown_sections(lines: list[str]) -> str:
     rendered: list[str] = []
     fence: str | None = None
     for line in lines:
-        if fence is None and re.fullmatch(r"#{1,6} [^\r\n]+", line):
+        if (
+            fence is None
+            and line.startswith("#")
+            and re.fullmatch(r"#{1,6} [^\r\n]+", line)
+        ):
             if rendered and rendered[-1] != "":
                 rendered.append("")
             rendered.extend([line, ""])
         else:
             rendered.append(line)
-        if "\n" not in line and "\r" not in line:
-            if fence is not None:
-                if line == fence:
-                    fence = None
-            else:
-                match = re.fullmatch(r"(`{3,}|~{3,})[\w-]*", line)
-                if match:
-                    fence = match[1]
+        # 通常の本文・箇条書きは fence にならず、正規表現で検査しない。
+        if fence is not None:
+            if line == fence:
+                fence = None
+        elif line.startswith(("```", "~~~")):
+            match = re.fullmatch(r"(`{3,}|~{3,})[\w-]*", line)
+            if match:
+                fence = match[1]
     return "\n".join(rendered).strip("\n") + "\n"
 
 
