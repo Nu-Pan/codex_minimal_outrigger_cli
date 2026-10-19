@@ -4293,11 +4293,17 @@ def test_join_cleanup_defers_when_a_required_guard_is_unconfirmed(
         queries.assert_not_called()
 
 
-@pytest.mark.parametrize("kind", ["realization_apply", "realization_refactor"])
-@pytest.mark.parametrize("failure", ["cancel", "call"])
+@pytest.mark.parametrize(
+    ("kind", "failure"),
+    [("realization_apply", "cancel"), ("realization_refactor", "call")],
+)
 def test_review_failure_preserves_completed_join_state_and_artifacts(
     join_after_preprocess, monkeypatch, kind, failure
 ):
+    """確認の取消・失敗後も、両 run 種別の取り込み済み成果と state を保つ。"""
+    # 確認失敗の共通処理は test_primary_report_review.py の
+    # preserves_main_outcome_except_required_finalization で両失敗を検査する。
+    # ここでは両 run 種別との結合を残し、種別に依存しない失敗との直積を作らない。
     root, _, state_path = join_after_preprocess
     context = _prepare_run(join_after_preprocess, kind=kind)
     (context.run_worktree / "README.md").write_text("joined\n")
@@ -4309,6 +4315,7 @@ def test_review_failure_preserves_completed_join_state_and_artifacts(
         assert _state(state_path)["run"]["state"] == "ready"
         frozen = next((root / ".cmoc/gu/log/codex").glob("*/*review*.md"))
         metadata = report_metadata(frozen.read_text())
+        assert metadata["run_kind"] == kind
         assert metadata["state_after"] == "ready" and metadata["cleanup"] == "completed"
         if failure == "cancel":
             raise KeyboardInterrupt
@@ -4317,7 +4324,11 @@ def test_review_failure_preserves_completed_join_state_and_artifacts(
     monkeypatch.setattr(review_module, "run_codex_exec", fail_review)
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
-    assert _state(state_path)["run"] == SessionState().to_dict()["run"]
+    state = _state(state_path)
+    assert state["run"] == SessionState().to_dict()["run"]
+    assert state["session"]["last_joined_apply_fork_commit"] == (
+        context.run_fork_commit if kind == "realization_apply" else None
+    )
     assert (root / "README.md").read_text() == "joined\n"
     assert not context.run_worktree.exists()
     assert not run_git(root, "branch", "--list", context.run_branch).stdout.strip()
