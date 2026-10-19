@@ -251,17 +251,22 @@ def _atomic_create(path: Path, content: bytes) -> bool:
             if name.startswith(temporary_prefix) and name.endswith(".tmp")
         ]
         for candidate in sibling_temporaries:
-            if (
-                candidate.is_symlink()
-                or not candidate.is_file()
-                or candidate.read_bytes() != content
-            ):
+            try:
+                regular = stat.S_ISREG(candidate.lstat().st_mode)
+            except FileNotFoundError:
+                regular = False
+            if not regular or candidate.read_bytes() != content:
                 raise FeedbackRejected(
                     "context_invalid",
                     f"feedback temporary record differs or is not regular: {candidate}",
                 )
-        if os.path.lexists(path):
-            if path.is_symlink() or not path.is_file():
+        # 排他取得後の一回の lstat で、存在と symlink を含む種類を取り直す。
+        try:
+            mode = path.lstat().st_mode
+        except FileNotFoundError:
+            mode = None
+        if mode is not None:
+            if not stat.S_ISREG(mode):
                 raise FeedbackRejected(
                     "context_invalid",
                     f"feedback record path is not a regular file: {path}",

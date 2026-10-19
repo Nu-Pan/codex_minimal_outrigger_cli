@@ -220,7 +220,7 @@ def test_immutable_write_flushes_new_data_and_reuses_published_inode(
     events = []
     temporary_reads = []
     real_rename = os.rename
-    real_read, real_open = Path.read_bytes, Path.open
+    real_read, real_open, real_stat = Path.read_bytes, Path.open, Path.stat
 
     def fsync(fd):
         kind = "directory" if stat.S_ISDIR(os.fstat(fd).st_mode) else "file"
@@ -257,10 +257,19 @@ def test_immutable_write_flushes_new_data_and_reuses_published_inode(
         assert mode != "xb", "replay must reuse the published artifact"
         return real_open(candidate, mode, *args, **kwargs)
 
+    inspections = []
+
+    def inspect(candidate, *args, **kwargs):
+        if candidate == path:
+            inspections.append(kwargs.get("follow_symlinks", True))
+        return real_stat(candidate, *args, **kwargs)
+
     events.clear()
     temporary_reads.clear()
     monkeypatch.setattr(Path, "open", open_without_staging)
+    monkeypatch.setattr(Path, "stat", inspect)
     assert store.write_immutable_bytes(path, content) == store.sha256_bytes(content)
+    assert inspections == [False]
     assert events == ["directory"]
     assert temporary_reads == []
     assert path.stat().st_ino == inode
@@ -343,9 +352,20 @@ def test_immutable_write_checks_leftover_temporaries(
             events.append("file")
 
     monkeypatch.setattr(os, "fsync", fsync)
+    inspections = []
+    real_stat = Path.stat
+
+    def inspect(candidate, *args, **kwargs):
+        if candidate in (matching, temporary):
+            inspections.append((candidate, kwargs.get("follow_symlinks", True)))
+        return real_stat(candidate, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", inspect)
 
     if temporary_kind == "matching":
         assert store.write_immutable_bytes(path, content) == store.sha256_bytes(content)
+        # cleanup と assert 内の照会は除き、内容の照合前には symlink を追わない。
+        assert set(inspections[:2]) == {(matching, False), (temporary, False)}
         assert events == (["directory"] if published else ["file", "directory"])
         assert path.read_bytes() == content
         assert not matching.exists()
