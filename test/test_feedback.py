@@ -2487,42 +2487,30 @@ def test_completion_count_reports_only_pending_raw_observations(
     assert feedback_completion_counts(root) == (1, [])
 
 
-def test_completion_count_threshold_stops_unneeded_reads(
-    feedback_directory, stored_feedback_context, monkeypatch
-):
+def test_completion_count_threshold_stops_unneeded_reads(tmp_path, monkeypatch):
     """同じ pending 集合へ一件追加し、件数境界の通知と読み取り抑制を検証する。"""
-    root = feedback_directory
     now = datetime(2030, 1, 8, tzinfo=timezone.utc)
-    _, first_path = store_agent_observation(
-        root,
-        stored_feedback_context,
-        _payload(),
-        observation_id="fbo_000000_2030-01-08_00-00",
-        observed_at=now.isoformat(),
-    )
-    observation = read_json_object(first_path)
     monkeypatch.setattr(
         feedback_store_module,
         "datetime",
         SimpleNamespace(now=lambda _zone: now, fromisoformat=datetime.fromisoformat),
     )
-    read = Mock(wraps=feedback_store_module.read_json_object)
+    read = Mock(return_value={"observed_at": now.isoformat()})
     monkeypatch.setattr(feedback_store_module, "read_json_object", read)
 
-    # 保存・receipt の検査は専用ケースへ委ね、同じ日付の raw を段階的に追加する。
-    # 99 件を検査した入力を再利用し、100 件目だけを追加する。
-    previous_count = 1
+    # 実 inventory・JSON 読取との結合は reports_only_pending_raw_observations、
+    # 不正 artifact と消費済み raw の除外は専用ケースに残す。通知境界には一覧だけを渡す。
     for count, expected_warning, max_reads in ((99, False, 99), (100, True, 0)):
-        for index in range(previous_count, count):
-            identity = f"fbo_{index:06d}_2030-01-08_00-00"
-            observation["observation_id"] = identity
-            first_path.with_name(f"{identity}.json").write_bytes(
-                canonical_json_bytes(observation)
-            )
-        previous_count = count
+        paths = [
+            tmp_path / f"fbo_{index:06d}_2030-01-08_00-00.json"
+            for index in range(count)
+        ]
+        monkeypatch.setattr(
+            feedback_store_module, "unprocessed_observation_paths", lambda _root: paths
+        )
         read.reset_mock()
 
-        pending, warnings = feedback_completion_counts(root)
+        pending, warnings = feedback_completion_counts(tmp_path)
 
         assert pending == count
         assert bool(warnings) is expected_warning
@@ -2544,39 +2532,33 @@ def test_completion_count_threshold_stops_unneeded_reads(
     ],
 )
 def test_completion_age_threshold_stops_unneeded_reads(
-    feedback_directory,
-    stored_feedback_context,
+    tmp_path,
     monkeypatch,
     oldest_age,
     expected_warning,
     max_reads,
 ):
     """経過日数の境界を守り、通知が確定した後の raw 本文読み取りを省く。"""
-    root = feedback_directory
     now = datetime(2030, 1, 8, tzinfo=timezone.utc)
-    _, first_path = store_agent_observation(
-        root,
-        stored_feedback_context,
-        _payload(),
-        observation_id="fbo_000000_2030-01-08_00-00",
-        observed_at=(now - oldest_age).isoformat(),
+    observations = {
+        tmp_path / "fbo_000000_2030-01-01_00-00.json": (now - oldest_age).isoformat(),
+        tmp_path / "fbo_000001_2030-01-08_00-00.json": now.isoformat(),
+    }
+    # 日時の判定と読取の打ち切りを検査し、保存・inventory の準備を繰り返さない。
+    monkeypatch.setattr(
+        feedback_store_module,
+        "unprocessed_observation_paths",
+        lambda _root: list(observations),
     )
-    observation = read_json_object(first_path)
-    # 保存・receipt の検査は専用ケースへ委ね、件数用の追加 raw だけを作る。
-    identity = "fbo_000001_2030-01-08_00-00"
-    observation.update(observation_id=identity, observed_at=now.isoformat())
-    path = observation_path(root, identity, now.isoformat())
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(canonical_json_bytes(observation))
     monkeypatch.setattr(
         feedback_store_module,
         "datetime",
         SimpleNamespace(now=lambda _zone: now, fromisoformat=datetime.fromisoformat),
     )
-    read = Mock(wraps=feedback_store_module.read_json_object)
+    read = Mock(side_effect=lambda path: {"observed_at": observations[path]})
     monkeypatch.setattr(feedback_store_module, "read_json_object", read)
 
-    pending, warnings = feedback_completion_counts(root)
+    pending, warnings = feedback_completion_counts(tmp_path)
 
     assert pending == 2
     assert bool(warnings) is expected_warning
