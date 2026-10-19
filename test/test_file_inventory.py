@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from _git_support import RUN_BRANCH, init_repo, run_git
+from _git_support import init_repo, run_git
 
 import commons.runtime_git as runtime_git
 import commons.runtime_refactor as runtime_refactor
@@ -262,32 +262,6 @@ def test_inventory_matches_full_glob_and_refactor_state_sync(
     assert synchronized["added.txt"] == {"last_investigated_at": None}
     assert synchronized["README.md"] == state["README.md"]
     assert synchronized["oracle/spec.md"] == state["oracle/spec.md"]
-
-
-def test_realization_classifier_uses_nested_head_for_deleted_file(
-    cli_repository: Path,
-) -> None:
-    """nested repository の削除 path を outer run branch で分類しない。"""
-    root = cli_repository
-    nested = _make_nested_repo(root / "nested")
-    target = nested / "nested.txt"
-    target.write_text("nested\n")
-    run_git(nested, "add", "nested.txt")
-    run_git(nested, "commit", "-m", "initial nested")
-    target.unlink()
-
-    assert is_realization_file_path(
-        root,
-        target,
-        branch=RUN_BRANCH,
-        fallback_branch="outer-fork",
-    )
-    assert not is_realization_file_path(
-        root,
-        nested / "missing.txt",
-        branch=RUN_BRANCH,
-        fallback_branch="outer-fork",
-    )
 
 
 def test_inventory_does_not_traverse_excluded_roots_or_ignored_symlinks(

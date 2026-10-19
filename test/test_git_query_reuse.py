@@ -520,7 +520,15 @@ def test_run_path_inspection_batches_missing_files_and_tree_fallback(
         run_fork_commit="outer-base",
         run_worktree=root,
     )
-    rejected = ["link-only", "nested/link-only", "never-tracked", "tree-directory"]
+    # outer の ref は nested に存在しない。削除済み blob は自身の HEAD から受理し、
+    # 同じ nested の欠落 path は拒否する検査を、この履歴で併せて行う。
+    rejected = [
+        "link-only",
+        "nested/link-only",
+        "nested/never-tracked",
+        "never-tracked",
+        "tree-directory",
+    ]
     paths = [
         *regular,
         *fallback,
