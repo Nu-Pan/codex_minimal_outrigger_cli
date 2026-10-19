@@ -57,7 +57,6 @@ def test_refactor_cycle_initialization_avoids_redundant_io(
     before = state_path.read_bytes()
     save = Mock(wraps=write_refactor_state)
     monkeypatch.setattr(refactor_module, "write_refactor_state", save)
-    monkeypatch.setattr(refactor_workload, "write_refactor_state", save)
 
     # Git 分類・commit/rollback と中断は test_editing_run_cli.py に残す。
     # ここでは保存内容と既存 snapshot の差を Git 境界へ渡し、巡開始の I/O を検査する。
@@ -260,7 +259,16 @@ def test_refactor_state_sync_initializes_and_preserves_dates_without_reading_con
 
 
 @pytest.mark.parametrize(
-    "change", ["none", "target_mode", "related_mode", "deleted", "renamed"]
+    "change",
+    [
+        "none",
+        "target_mode",
+        "related_mode",
+        "added",
+        "related_deleted",
+        "deleted",
+        "renamed",
+    ],
 )
 def test_refactor_state_update_only_dates_surviving_origin(
     tmp_path, monkeypatch, change
@@ -284,20 +292,29 @@ def test_refactor_state_update_only_dates_surviving_origin(
         paths.remove("README.md")
         if change == "renamed":
             paths.add("renamed.md")
+    elif change == "added":
+        paths.add("added.md")
+    elif change == "related_deleted":
+        paths.remove("oracle/spec.md")
     investigated_at = "2026-10-11_00-00-00_001"
-    monkeypatch.setattr(refactor_workload, "timestamp", lambda: investigated_at)
+    monkeypatch.setattr(refactor_module, "timestamp", lambda: investigated_at)
+    save = Mock(wraps=write_refactor_state)
+    monkeypatch.setattr(refactor_module, "write_refactor_state", save)
 
-    updated = refactor_workload._update_refactor_state(
-        SimpleNamespace(run_worktree=root), "README.md"
-    )
+    updated = sync_refactor_state(root, investigated_target="README.md")
 
+    # 集合が変わる場合も、調査日時を含む最終結果だけを保存する。
+    save.assert_called_once_with(root, updated)
     assert updated == load_refactor_state(root)
     assert set(updated) == paths
     if "README.md" in paths:
         assert updated["README.md"] == {"last_investigated_at": investigated_at}
     if change == "renamed":
         assert updated["renamed.md"] == {"last_investigated_at": None}
-    assert updated["oracle/spec.md"] == state["oracle/spec.md"]
+    if change == "added":
+        assert updated["added.md"] == {"last_investigated_at": None}
+    if "oracle/spec.md" in paths:
+        assert updated["oracle/spec.md"] == state["oracle/spec.md"]
 
 
 def test_refactor_commit_reuses_verified_head_and_synchronized_state(

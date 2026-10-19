@@ -1591,8 +1591,8 @@ def test_refactor_state_refresh_rejects_unexpected_processing_unit_changes(
     late_realization = context.run_worktree / "late-realization.md"
     synchronize = refactor_module.sync_refactor_state
 
-    def sync_with_unexpected_changes(root):
-        state = synchronize(root)
+    def sync_with_unexpected_changes(root, **kwargs):
+        state = synchronize(root, **kwargs)
         unexpected_path.parent.mkdir(exist_ok=True)
         unexpected_path.write_text("must not be committed\n")
         late_realization.write_text("not reported by the agent\n")
@@ -4350,7 +4350,7 @@ def test_refactor_with_no_targets_keeps_synchronizing(
 
     def empty_state(root):
         synchronized.append(root)
-        refactor_module.write_refactor_state(root, {})
+        write_refactor_state(root, {})
         return {}
 
     monkeypatch.setattr(refactor_module, "sync_refactor_state", empty_state)

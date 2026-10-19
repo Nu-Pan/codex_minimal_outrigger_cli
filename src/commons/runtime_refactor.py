@@ -12,7 +12,7 @@ from .runtime_git import (
     literal_pathspec,
     run_git,
 )
-from .runtime_paths import refactor_state_path
+from .runtime_paths import refactor_state_path, timestamp
 
 
 class RefactorEntry(TypedDict):
@@ -55,11 +55,26 @@ def write_refactor_state(root: Path, state: RefactorState) -> None:
     )
 
 
-def sync_refactor_state(root: Path, *, sync_entries: bool = True) -> RefactorState:
-    """schema を検証し、必要なら oracle/realization file 集合と同期する。"""
+def sync_refactor_state(
+    root: Path,
+    *,
+    sync_entries: bool = True,
+    investigated_target: str | None = None,
+) -> RefactorState:
+    """entry 集合の同期と、残存する調査起点の日時更新をまとめて保存する。
+
+    Args:
+        root: state と対象 file を所有する worktree。
+        sync_entries: 現在の oracle/realization file 集合と同期するか。
+        investigated_target: 調査日時を更新する起点。省略時は日時を保持する。
+    """
+    # 中間の同期結果を書かず、日時更新を含む最終 state だけを保存する。
     path = refactor_state_path(root)
     original = load_refactor_state(root)
-    state = _synchronized_entries(root, original) if sync_entries else original
+    state = _synchronized_entries(root, original) if sync_entries else original.copy()
+    if investigated_target is not None and investigated_target in state:
+        # 元の entry を変更せず、保存前の比較と起点以外の日時を保つ。
+        state[investigated_target] = {"last_investigated_at": timestamp()}
     if not path.exists() or original != state:
         write_refactor_state(root, state)
     return state

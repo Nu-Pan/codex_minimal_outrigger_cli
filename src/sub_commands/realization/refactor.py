@@ -23,7 +23,6 @@ from cmoc_runtime import (
     run_doctor_preprocess,
     run_git,
     start_subcommand_step,
-    timestamp,
     work_root,
 )
 from commons.runtime_codex_recovery import (
@@ -42,7 +41,6 @@ from commons.runtime_refactor import (
     load_refactor_state,
     refactor_cycle_targets,
     sync_refactor_state,
-    write_refactor_state,
 )
 from commons.runtime_report_markdown import ReportSummary, terminal_outcome
 from commons.runtime_results import StructuredOutputValidationIssue
@@ -645,7 +643,7 @@ def _run_refactor_unit(
     declared_changed_paths = tuple(
         finding["changed_paths"] for finding in normalized_findings
     )
-    state = _update_refactor_state(context, target)
+    state = sync_refactor_state(context.run_worktree, investigated_target=target)
     all_unit_paths = worktree_change_paths(
         context.run_worktree,
         include_rename_sources=True,
@@ -909,19 +907,6 @@ def _unexpected_refresh_paths(
             if path not in agent_paths and Path(path) != refactor_state
         }
     )
-
-
-def _update_refactor_state(
-    context: EditingRunContext,
-    target: str,
-) -> RefactorState:
-    """追加・削除を同期し、引き続き存在する起点だけの調査日時を更新する。"""
-    # rename 先は新規 entry とし、起点以外の編集・参照で日時を進めない。
-    state = sync_refactor_state(context.run_worktree)
-    if target in state:
-        state[target]["last_investigated_at"] = timestamp()
-        write_refactor_state(context.run_worktree, state)
-    return state
 
 
 def _changed_path_postcondition(
