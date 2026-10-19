@@ -300,20 +300,21 @@ def test_saved_config_rejects_unrecognized_call_keys(
         ("codex", "model_providers", "openai"),
     ],
 )
-@pytest.mark.parametrize("operation", ["missing", "unknown"])
+@pytest.mark.parametrize("operation", ["missing", "unknown", "replacement"])
 def test_config_validates_record_fields_without_defaults(
     tmp_path, config_data, location, operation
 ):
-    """各構造の欠落・個別上書きを通常の項目検証で拒否し、保存内容を保つ。"""
+    """項目数が同じ置換も拒否し、欠落の診断と保存内容を保つ。"""
     record = config_data
     for field in location:
         record = record[field]
-    if operation == "missing":
+    if operation in ("missing", "replacement"):
         field = next(iter(record))
         del record[field]
-    else:
+    if operation == "unknown":
         field = "overrides"
-        record[field] = {"model": "per-call-model"}
+    if operation in ("unknown", "replacement"):
+        record["overrides"] = {"model": "per-call-model"}
     path = tmp_path / ".cmoc/gt/config.json"
     path.parent.mkdir(parents=True)
     original = json.dumps(config_data) + "\n"
@@ -322,7 +323,8 @@ def test_config_validates_record_fields_without_defaults(
     for repair_missing in (False, True):
         with pytest.raises(CmocError) as error:
             sync_config(tmp_path, repair_missing=repair_missing)
-        assert field in error.value.detail
+        record_name = ".".join(location) or "config"
+        assert f"reason: {record_name}.{field}:" in error.value.detail
         assert path.read_text() == original
 
 
@@ -388,6 +390,24 @@ def test_saved_search_config_rejects_invalid_explicit_values(
             reason = exc_info.value.detail.split("\nreason:", 1)[1]
             assert str(SEARCH_CANDIDATE_COUNT_MIN) in reason
             assert str(SEARCH_CANDIDATE_COUNT_MAX) in reason
+        assert path.read_text() == original
+
+
+def test_saved_search_config_rejects_same_size_field_replacement(tmp_path, config_data):
+    """欠落と未知項目が同時にあっても未知項目の除去を案内し、保存しない。"""
+    search = config_data["document_search"]
+    del search["chunk_tokens"]
+    search["reranker_context_tokens"] = 512
+    path = tmp_path / ".cmoc/gt/config.json"
+    path.parent.mkdir(parents=True)
+    original = json.dumps(config_data) + "\n"
+    path.write_text(original)
+
+    for repair_missing in (False, True):
+        with pytest.raises(CmocError) as error:
+            sync_config(tmp_path, repair_missing=repair_missing)
+        assert "item: document_search.reranker_context_tokens\n" in error.value.detail
+        assert "手動で修正" in error.value.next_actions[0]
         assert path.read_text() == original
 
 

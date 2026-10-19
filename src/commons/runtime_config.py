@@ -76,13 +76,15 @@ def _model_provider_id(value: Any) -> str:
 
 def _config_object(value: Any, names: frozenset[str], field: str) -> dict[str, Any]:
     """正本で定義した項目集合と一致する object だけを受理する。"""
+    # 正常な設定では差分集合を作らず、不一致のときだけ項目を診断する。
     if not isinstance(value, dict):
         raise TypeError(f"{field}: object が必要です")
-    missing = names - value.keys()
-    if missing:
-        raise TypeError(f"{field}.{sorted(missing)[0]}: 必須項目がありません")
-    unknown = value.keys() - names
-    if unknown:
+    keys = value.keys()
+    if keys != names:
+        missing = names - keys
+        if missing:
+            raise TypeError(f"{field}.{sorted(missing)[0]}: 必須項目がありません")
+        unknown = keys - names
         raise TypeError(
             f"{field}.{sorted(unknown, key=str)[0]}: 未知の項目です。手動で除去してください"
         )
@@ -124,13 +126,15 @@ def _document_search_data(value: Any) -> dict[str, Any]:
         data = value
     else:
         raise SearchConfigIssue("document_search", "object が必要です")
-    unknown = sorted(data.keys() - _DOCUMENT_SEARCH_FIELD_NAMES)
-    if unknown:
-        raise SearchConfigIssue(
-            f"document_search.{unknown[0]}", "未知の項目です。手動で除去してください"
-        )
-    missing = sorted(_DOCUMENT_SEARCH_FIELD_NAMES - data.keys())
-    if missing:
+    keys = data.keys()
+    if keys != _DOCUMENT_SEARCH_FIELD_NAMES:
+        unknown = sorted(keys - _DOCUMENT_SEARCH_FIELD_NAMES)
+        if unknown:
+            raise SearchConfigIssue(
+                f"document_search.{unknown[0]}",
+                "未知の項目です。手動で除去してください",
+            )
+        missing = sorted(_DOCUMENT_SEARCH_FIELD_NAMES - keys)
         raise SearchConfigIssue(
             f"document_search.{missing[0]}",
             f"必要な項目が不足しています: {', '.join(missing)}",
