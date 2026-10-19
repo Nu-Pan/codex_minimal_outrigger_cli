@@ -116,9 +116,11 @@ def merge_refactor_states(
 
 
 def _synchronized_entries(root: Path, state: RefactorState) -> RefactorState:
-    # 内容は読まず、同じ path の日時をそのまま保持する。
+    # 内容は読まず、既存 entry を再利用し、新規 path だけ初期 entry を作る。
     return {
-        relative: state.get(relative, new_refactor_entry())
+        relative: state[relative]
+        if relative in state
+        else {"last_investigated_at": None}
         for relative in enumerate_refactor_targets(root)
     }
 
@@ -143,13 +145,6 @@ def enumerate_refactor_targets(root: Path) -> list[str]:
         path.relative_to(root.absolute()).as_posix()
         for path in [*oracle_files, *realization_files]
     )
-
-
-def new_refactor_entry() -> RefactorEntry:
-    """未調査 file の初期 entry を返す。"""
-    return {
-        "last_investigated_at": None,
-    }
 
 
 def refactor_cycle_targets(state: RefactorState) -> list[str]:
