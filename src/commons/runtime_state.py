@@ -6,7 +6,7 @@ import json
 import stat
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -69,7 +69,11 @@ class SessionState:
 
     def to_dict(self) -> dict[str, Any]:
         """JSON 保存用の正本と同形の object を返す。"""
-        return asdict(self)
+        # payload は string/null だけなので、再帰コピーせず各 part の辞書を独立させる。
+        return {
+            name: {field: getattr(part, field) for field in part.__dataclass_fields__}
+            for name, part in (("session", self.session), ("run", self.run))
+        }
 
 
 def state_path(root: Path, session_id: str) -> Path:

@@ -115,9 +115,15 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert active_session_for_home(tmp_path, "main") == path
     assert active_session_for_home(tmp_path, "other") is None
 
+    # JSON 用 snapshot と元の state は双方向に変更を持ち越さない。
+    snapshot = state.to_dict()
+    snapshot["run"]["state"] = "error"
+    assert state.run.state == "joinable"
+    state.session.session_home_branch = "開発/作業"
+    assert snapshot["session"]["session_home_branch"] == "main"
+
     # 既存 file の更新でも run payload を消去し、session branch から復元できる。
     state.run = RunPart()
-    state.session.session_home_branch = "開発/作業"
     write_state(path, state)
     assert load_state_for_branch(tmp_path, SESSION_BRANCH) == (SESSION_ID, path, state)
     assert active_session_for_home(tmp_path, "main") is None
