@@ -339,13 +339,16 @@ def test_failed_sync_saved_results_are_reusable_in_another_worktree(
 
 
 def test_identical_inputs_in_different_repositories_are_not_shared(
-    tmp_path, cache_search
+    tmp_path, cache_search, committed_document_repository, unsynced_search_storage
 ):
+    # 同じ seed を独立コピーし、別 repository の検査だけのための Git 初期化を省く。
+    # 実 Git・cache 保存は通し、電源断耐久性を判定しないこのケースでは fsync を省く。
     create, inputs = cache_search
-    for name in ("first", "second"):
-        directory = tmp_path / name
-        directory.mkdir()
-        root = _repo_with_docs(directory)
+    roots = (
+        committed_document_repository,
+        shutil.copytree(committed_document_repository, tmp_path / "other-repo"),
+    )
+    for root in roots:
         with closing(create(root)) as search:
             search.synchronize()
             assert search.sync_progress["generated_embeddings"] == 1
