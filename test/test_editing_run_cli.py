@@ -2631,30 +2631,39 @@ def test_join_record_reuses_placement_queries_but_refreshes_saved_record_and_wor
             queries[(kwargs.get("cwd"), tuple(argv[1:]))] += 1
         return original_run(argv, *args, **kwargs)
 
-    def inspect():
+    def inspect(*, load_existing=False):
         queries.clear()
         with monkeypatch.context() as probe:
             probe.setattr(git_module.subprocess, "run", record_query)
-            record = join_state_module.join_record(context)
+            record = (
+                join_state_module.load_join_record(context.repo, context.session_id)
+                if load_existing
+                else join_state_module.join_record(context)
+            )
+        assert record is not None
         assert record.context == context
         assert record.original_run_head == context.run_fork_commit
-        # 初回保存と既存記録の読込の双方で、同じ配置照会の再起動を防ぐ。
+        # 初回保存と直接の読込の双方で、同じ配置照会の再起動を防ぐ。
         assert queries and max(queries.values()) == 1, queries
         return record
 
     record = inspect()
     assert not record.finished
-    assert not inspect().finished
+    for load_existing in (False, True):
+        assert not inspect(load_existing=load_existing).finished
     record.finished = True
     record.save()
-    assert inspect().finished
+    for load_existing in (False, True):
+        assert inspect(load_existing=load_existing).finished
 
     # 記録が正常でも session の登録が変われば拒否し、復旧後は取り直す。
     run_git(context.session_worktree, "switch", "--detach")
-    with pytest.raises(CmocError, match="branch の worktree を特定できません"):
-        inspect()
+    for load_existing in (False, True):
+        with pytest.raises(CmocError, match="branch の worktree を特定できません"):
+            inspect(load_existing=load_existing)
     run_git(context.session_worktree, "switch", context.session_branch)
-    assert inspect().finished
+    for load_existing in (False, True):
+        assert inspect(load_existing=load_existing).finished
 
 
 def test_resolve_active_run_rejects_run_branch_from_another_session(
