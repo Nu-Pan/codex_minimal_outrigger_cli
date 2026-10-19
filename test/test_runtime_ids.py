@@ -71,26 +71,26 @@ def test_ids_keep_issue_order_when_clock_moves_backward(
     )
 
 
-@pytest.mark.parametrize(
-    ("sequence", "before", "after"),
-    [(9, "000009", "00000a"), (35, "00000z", "000010")],
-)
-def test_sequence_crosses_base36_boundaries(
-    tmp_path: Path, sequence: int, before: str, after: str
-) -> None:
+def test_sequence_crosses_base36_boundaries(tmp_path: Path) -> None:
     """数字から英字への遷移と桁上がりでも、固定幅と辞書順を保つ。"""
+    # 両境界で同じ DB を使い、初期化だけの発行と同期保存を重ねない。
     runtime_ids.new_id(tmp_path, "sess")
-    # 途中の通番を発行せず、永続状態を境界直前へ進める。
     database = tmp_path / ".cmoc/gu/state/id_sequences.sqlite3"
-    with closing(sqlite3.connect(database)) as connection:
-        connection.execute(
-            "UPDATE sequence SET next_value = ? WHERE prefix = ?", (sequence, "sess")
-        )
-        connection.commit()
+    for sequence, before, after in (
+        (9, "000009", "00000a"),
+        (35, "00000z", "000010"),
+    ):
+        # 各境界の前提は明示的に保存し、前の検査結果に依存させない。
+        with closing(sqlite3.connect(database)) as connection:
+            connection.execute(
+                "UPDATE sequence SET next_value = ? WHERE prefix = ?",
+                (sequence, "sess"),
+            )
+            connection.commit()
 
-    first = runtime_ids.new_id(tmp_path, "sess")
-    second = runtime_ids.new_id(tmp_path, "sess")
+        first = runtime_ids.new_id(tmp_path, "sess")
+        second = runtime_ids.new_id(tmp_path, "sess")
 
-    assert first.startswith(f"sess_{before}_")
-    assert second.startswith(f"sess_{after}_")
-    assert first < second
+        assert first.startswith(f"sess_{before}_")
+        assert second.startswith(f"sess_{after}_")
+        assert first < second
