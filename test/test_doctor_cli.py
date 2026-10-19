@@ -75,12 +75,16 @@ def initial_repository(tmp_path: Path, _initial_repository_seed: Path) -> Path:
     return shutil.copytree(_initial_repository_seed, tmp_path / "repo")
 
 
-@pytest.fixture
-def managed_repository(cli_repository: Path) -> Path:
-    """既存管理物を前提にするケースでは、準備用 doctor の修復・検索・report を省く。"""
+@pytest.fixture(scope="module")
+def _managed_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory, _empty_repository_seed: Path
+) -> Path:
+    """既存管理物の列挙・設定保存・初期 commit を一度だけ用意する。"""
     # 初回修復と索引同期は専用ケースに残し、既存ファイルへの操作は各テストで行う。
-    # 履歴内容は検査しないため、必要な管理物だけを最初の commit にまとめる。
-    root = cli_repository
+    root = shutil.copytree(
+        _empty_repository_seed,
+        tmp_path_factory.mktemp("doctor-managed-seed") / "repo",
+    )
     for relative in _WORK_DIRECTORIES:
         (root / relative).mkdir(parents=True, exist_ok=True)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
@@ -91,6 +95,13 @@ def managed_repository(cli_repository: Path) -> Path:
     run_git(root, "add", ".gitignore", ".agents", ".cmoc/gt")
     run_git(root, "commit", "-m", "prepare management files")
     return root
+
+
+@pytest.fixture
+def managed_repository(tmp_path: Path, _managed_repository_seed: Path) -> Path:
+    """修復済みの管理物と独立した Git index・refs・設定を各テストへ渡す。"""
+    # hardlink や linked worktree を使わず、中断・修復時の変更を他ケースへ持ち越さない。
+    return shutil.copytree(_managed_repository_seed, tmp_path / "repo")
 
 
 @pytest.fixture
