@@ -665,6 +665,20 @@ def _build_candidates(
         machine_observations,
     )
 
+    # wave 内の参照を一度だけ逆引きし、同一性照合と candidate の参照付与で共用する。
+    references = inputs.get("references")
+    assert isinstance(references, list)
+    if not candidates and not agent_observations:
+        return candidates, machine_aggregates
+    references_by_subject: dict[str, list[_JsonObject]] = {}
+    for reference in references:
+        if not isinstance(reference, dict) or not isinstance(
+            reference.get("subjects"), list
+        ):
+            continue
+        for subject in {str(value) for value in reference["subjects"]}:
+            references_by_subject.setdefault(subject, []).append(reference)
+
     # agent observation は observed_at と ID の canonical order で一件ずつ処理する。
     for observation in sorted(
         agent_observations,
@@ -680,7 +694,9 @@ def _build_candidates(
                 observation,
                 candidates,
                 current_cut_fingerprint_pairs=_report_cut_fingerprint_pairs(
-                    repo, manifest, observation
+                    repo,
+                    references_by_subject.get(str(observation["observation_id"]), []),
+                    observation,
                 ),
             )
             if selected is None and comparison:
@@ -696,21 +712,7 @@ def _build_candidates(
             _insert_candidate(candidates, selected)
         _merge_observation(repo, selected, observation)
 
-    # subject を逆引きし、candidate ごとの全 reference 再走査を避ける。
-    references = inputs.get("references")
-    assert isinstance(references, list)
-    if not candidates:
-        return candidates, machine_aggregates
-    references_by_subject: dict[str, set[str]] = {}
-    for reference in references:
-        if not isinstance(reference, dict) or not isinstance(
-            reference.get("subjects"), list
-        ):
-            continue
-        for subject in reference["subjects"]:
-            references_by_subject.setdefault(str(subject), set()).add(
-                str(reference["reference_id"])
-            )
+    # observation と既存 candidate の subject を合併し、今回の参照だけへ更新する。
     for candidate in candidates.values():
         subjects = {
             str(candidate["candidate_id"]),
@@ -718,9 +720,9 @@ def _build_candidates(
         }
         candidate["reference_ids"] = sorted(
             {
-                reference_id
+                str(reference["reference_id"])
                 for subject in subjects
-                for reference_id in references_by_subject.get(subject, ())
+                for reference in references_by_subject.get(subject, ())
             }
         )
     return candidates, machine_aggregates
@@ -1003,16 +1005,14 @@ def _agent_comparison_candidates(
 
 
 def _report_cut_fingerprint_pairs(
-    repo: Path, manifest: _JsonObject, observation: _JsonObject
+    repo: Path, references: list[_JsonObject], observation: _JsonObject
 ) -> list[tuple[str, str, str | None]]:
     """observation subject に紐付く report cut current fingerprint を返す。"""
     fingerprints = observation.get("evidence_fingerprints")
     if not isinstance(fingerprints, list) or not fingerprints:
         return []
-    inputs = manifest.get("inputs")
-    references = inputs.get("references") if isinstance(inputs, dict) else None
     observation_id_value = observation.get("observation_id")
-    if not isinstance(references, list) or not isinstance(observation_id_value, str):
+    if not isinstance(observation_id_value, str):
         return []
     current: dict[str, tuple[str, str | None]] = {}
     for reference in references:

@@ -1140,23 +1140,19 @@ def test_agent_candidate_exact_match_requires_report_cut_fingerprint() -> None:
         ],
         "deduplication_hints": [],
     }
-    manifest = {
-        "inputs": {
-            "references": [
-                {
-                    "reference_id": "ref:readme",
-                    "kind": "repository_content",
-                    "subjects": [observation["observation_id"]],
-                    "path": "README.md",
-                    "state": "hashed",
-                    "sha256": "b" * 64,
-                }
-            ]
+    references = [
+        {
+            "reference_id": "ref:readme",
+            "kind": "repository_content",
+            "subjects": [observation["observation_id"]],
+            "path": "README.md",
+            "state": "hashed",
+            "sha256": "b" * 64,
         }
-    }
+    ]
 
     current_cut = feedback_report_module._report_cut_fingerprint_pairs(
-        Path("/repo"), manifest, observation
+        Path("/repo"), references, observation
     )
     exact, comparison = feedback_report_module._agent_comparison_candidates(
         observation,
@@ -1181,25 +1177,21 @@ def test_report_cut_without_fingerprints_skips_path_resolution(
         "state": "hashed",
         "sha256": "a" * 64,
     }
-    manifest = {
-        "inputs": {
-            "references": [
-                {
-                    "kind": "repository_content",
-                    "subjects": [observation["observation_id"]],
-                    "path": "README.md",
-                    "state": fingerprint["state"],
-                    "sha256": fingerprint["sha256"],
-                }
-            ]
+    references = [
+        {
+            "kind": "repository_content",
+            "subjects": [observation["observation_id"]],
+            "path": "README.md",
+            "state": fingerprint["state"],
+            "sha256": fingerprint["sha256"],
         }
-    }
+    ]
     resolve_path = Mock(wraps=feedback_report_module._repository_path)
     monkeypatch.setattr(feedback_report_module, "_repository_path", resolve_path)
 
     assert (
         feedback_report_module._report_cut_fingerprint_pairs(
-            tmp_path, manifest, observation
+            tmp_path, references, observation
         )
         == []
     )
@@ -1207,7 +1199,7 @@ def test_report_cut_without_fingerprints_skips_path_resolution(
 
     observation["evidence_fingerprints"].append(fingerprint)
     assert feedback_report_module._report_cut_fingerprint_pairs(
-        tmp_path, manifest, observation
+        tmp_path, references, observation
     ) == [(fingerprint["normalized_path"], "hashed", "a" * 64)]
 
 
@@ -2205,7 +2197,7 @@ def test_report_reference_rejects_symlinked_parent_outside(
 def test_candidate_building_skips_empty_comparison_and_merges_resolved_evidence(
     feedback_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """空集合の照合を省き、同じ wave の alias と実体 path は同じ issue にする。"""
+    """参照の再走査を省き、同じ wave の alias と実体 path は同じ issue にする。"""
     root = feedback_directory
     target_directory = root / "nested"
     target_directory.mkdir()
@@ -2231,20 +2223,43 @@ def test_candidate_building_skips_empty_comparison_and_merges_resolved_evidence(
     second = observation("nested/README.md")
     fingerprint = second["evidence_fingerprints"][0]
     observations = {item["observation_id"]: item for item in (first, second)}
+
+    class References(list):
+        scans = 0
+
+        def __iter__(self):
+            self.scans += 1
+            return super().__iter__()
+
+    current_reference = {
+        "reference_id": "ref:readme",
+        "kind": "repository_content",
+        "subjects": list(observations),
+        "path": "nested/README.md",
+        "state": fingerprint["state"],
+        "sha256": fingerprint["sha256"],
+    }
+    shared_reference = {
+        "reference_id": "ref:shared",
+        "kind": "observation",
+        # 同じ参照が複数 subject と重複 subject に属しても、一度だけ採用する。
+        "subjects": [*observations, first["observation_id"]],
+    }
+    references = References(
+        [
+            current_reference,
+            {
+                **current_reference,
+                "reference_id": "ref:unrelated",
+                "subjects": ["other"],
+                "sha256": "0" * 64,
+            },
+            shared_reference,
+        ]
+    )
     manifest = {
         "cut_at": second["observed_at"],
-        "inputs": {
-            "references": [
-                {
-                    "reference_id": "ref:readme",
-                    "kind": "repository_content",
-                    "subjects": list(observations),
-                    "path": "nested/README.md",
-                    "state": fingerprint["state"],
-                    "sha256": fingerprint["sha256"],
-                }
-            ]
-        },
+        "inputs": {"references": references},
     }
     current_cut = Mock(wraps=feedback_report_module._report_cut_fingerprint_pairs)
     monkeypatch.setattr(
@@ -2266,9 +2281,12 @@ def test_candidate_building_skips_empty_comparison_and_merges_resolved_evidence(
     assert candidate["reference_targets"] == [
         {"path": "nested/README.md", "kind": "file", "location": None}
     ]
-    assert candidate["reference_ids"] == ["ref:readme"]
+    assert candidate["reference_ids"] == ["ref:readme", "ref:shared"]
     assert aggregates == {}
-    current_cut.assert_called_once_with(root, manifest, second)
+    assert references.scans == 1
+    current_cut.assert_called_once_with(
+        root, [current_reference, shared_reference], second
+    )
 
 
 def test_candidate_references_follow_subjects_and_refresh_between_waves(
