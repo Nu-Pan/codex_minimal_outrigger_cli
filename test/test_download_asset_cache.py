@@ -565,9 +565,8 @@ def test_npm_build_reuses_all_dependencies_without_network(
     assert all(event["source"] == "cache" for event in _states(asset_events)[-2:])
 
 
-@pytest.mark.parametrize("nested_version", ["1.0.0", "2.0.0"])
 def test_npm_uses_preexisting_cache_and_platform_pins(
-    tmp_path, distribution, monkeypatch, asset_events, nested_version
+    tmp_path, distribution, monkeypatch, asset_events
 ):
     """同一資材を共有し、同名の別版と異なる OS/CPU の optional 資材を区別する。"""
     # platform の実取得と npm への受け渡しは、通信禁止の実 npm test で通す。
@@ -582,17 +581,17 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
     _npm_fixture(base, distribution)
     lock = json.loads((base / "package-lock.json").read_text())
     nested_name = "node_modules/asset-a/node_modules/asset-b"
-    # 実 lock 同様、同じ tarball を複数の依存階層から参照する。
+    versioned_name = "node_modules/asset-b/node_modules/asset-b"
+    # 同一 tarball の共有と同名別版の区別を、一つの lock で検査する。
     lock["packages"][nested_name] = dict(lock["packages"]["node_modules/asset-b"])
-    if nested_version != "1.0.0":
-        body = _tarball("asset-b", version=nested_version)
-        distribution[1]["/b-2.tgz"] = body
-        lock["packages"][nested_name] = {
-            "version": nested_version,
-            "resolved": distribution[0] + "/b-2.tgz",
-            "integrity": "sha512-"
-            + base64.b64encode(hashlib.sha512(body).digest()).decode(),
-        }
+    body = _tarball("asset-b", version="2.0.0")
+    distribution[1]["/b-2.tgz"] = body
+    lock["packages"][versioned_name] = {
+        "version": "2.0.0",
+        "resolved": distribution[0] + "/b-2.tgz",
+        "integrity": "sha512-"
+        + base64.b64encode(hashlib.sha512(body).digest()).decode(),
+    }
     seeded = set()
     for package in lock["packages"].values():
         if "integrity" in package and package["integrity"] not in seeded:
@@ -625,7 +624,10 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
         )
         direct = local_lock["packages"]["node_modules/asset-b"]["resolved"]
         nested = local_lock["packages"][nested_name]["resolved"]
-        assert (direct == nested) == (nested_version == "1.0.0")
+        versioned = local_lock["packages"][versioned_name]["resolved"]
+        assert direct == nested
+        assert direct != versioned
+        assert Path(unquote(urlsplit(versioned).path)).read_bytes() == body
     # 一度検証・コピーした tarball の準備を、lock の参照数だけ繰り返さない。
     states = _states(asset_events)
     assert len(states) == len(seeded)
