@@ -872,7 +872,6 @@ def join_editing_run(
                 },
             )
             phase = "workload post-join"
-            record = join_record(active)
             if active.kind == "feedback_report" and not record.workload_post_join:
                 from sub_commands.feedback.recovery import finish_manual_feedback_run
 

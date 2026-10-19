@@ -933,6 +933,15 @@ def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
     saved_reports: list[Path] = []
     original_write_report = run_join_module.write_lifecycle_report
     original_cleanup = run_join_module.cleanup_joined_run
+    original_merge = run_join_module.merge_run
+    report_queries = Mock(wraps=git_module.subprocess.run)
+
+    def merge_before_report(*args, **kwargs):
+        result = original_merge(*args, **kwargs)
+        # 取り込み・hook の完了後から初回 report 保存まで、変更のない配置を
+        # 繰り返し照会しない。cleanup 前の再検査はこの区間に含めない。
+        monkeypatch.setattr(git_module.subprocess, "run", report_queries)
+        return result
 
     def record_report(
         report_context: EditingRunContext,
@@ -942,6 +951,12 @@ def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
         """保存完了を記録し、cleanup と最終更新の順序を観測する。"""
         if kwargs.get("report_path") is None:
             assert _state(context.state_path)["run"]["state"] == "joinable"
+            queries = Counter(
+                (call.kwargs.get("cwd"), tuple(call.args[0]))
+                for call in report_queries.call_args_list
+                if call.args[0][0] == "git"
+            )
+            assert max(queries.values(), default=0) <= 1, queries
         report = original_write_report(report_context, operation, **kwargs)
         saved_reports.append(report)
         events.append("report")
@@ -961,6 +976,7 @@ def test_run_join_report_tracks_cleanup_and_child_stop_warnings(
         events.append("cleanup")
         return original_cleanup(run_context, warnings, report_path)
 
+    monkeypatch.setattr(run_join_module, "merge_run", merge_before_report)
     monkeypatch.setattr(run_join_module, "write_lifecycle_report", record_report)
     monkeypatch.setattr(
         run_join_module, "cleanup_joined_run", cleanup_after_saved_report
