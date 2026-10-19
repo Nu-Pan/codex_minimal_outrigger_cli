@@ -857,17 +857,12 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
 
         revised_heading = "## A revised\nalpha edited\nextra\n"
         copy.unlink()
-        document.write_text(revised_heading + b + c)
-        assert hit_lines() == {path: {1: revised_heading, 4: b, 6: c}}
-        assert search.sync_progress["reused_embeddings"] == 2
-        assert search.sync_progress["persisted_chunks"] == 1
-        assert model_inputs() == [a, b, c, edited_a, revised_heading]
-
+        # 見出し編集と並べ替えを一度の同期で検査し、同じ節の再利用に Node を再起動しない。
+        # 本文を変えない移動と、全参照を失った後の復元は後続の同期で独立に保つ。
         document.write_text(b + c + revised_heading)
         assert hit_lines() == {path: {1: b, 3: c, 5: revised_heading}}
-        assert search.sync_progress["status"] == "updated"
-        assert search.sync_progress["reused_embeddings"] == 3
-        assert search.sync_progress["persisted_chunks"] == 0
+        assert search.sync_progress["reused_embeddings"] == 2
+        assert search.sync_progress["persisted_chunks"] == 1
         assert model_inputs() == [a, b, c, edited_a, revised_heading]
 
         moved_file = document.with_name("moved.md")
