@@ -18,6 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import NoReturn
 from unittest.mock import Mock
+from unittest.mock import call as mock_call
 
 import pytest
 from _cli_support import runner, terminal_primary_report
@@ -3679,11 +3680,12 @@ def test_refactor_start_interruption_with_broken_tracking_reports_existing_run(
 
 
 def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
-    ready_content_session: tuple[Path, str, Path],
+    refactor_after_preprocess: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """agent 中断で子の停止後に差分を戻し、joinable と終了記録を公開する。"""
-    root, _session_branch, state_path = ready_content_session
+    # doctor・採番の実結合は fixture の参照先に残し、中断後の順序と保持を検査する。
+    root, _session_branch, state_path = refactor_after_preprocess
     # child 停止と実 rollback は同じ中断で確認し、run の準備と CLI 実行を共有する。
     # 巡の初期化前の停止と、停止・rollback 失敗はそれぞれの専用 test に残す。
     child = SimpleNamespace(process_id=123, start_time=456, process_group_id=123)
@@ -4211,10 +4213,17 @@ def test_join_holds_lifecycle_lock_until_outer_report_is_displayed(
     "command", [["realization", "refactor"], ["feedback", "report"]]
 )
 def test_interruption_while_publishing_run_tracking_automatically_joins(
-    ready_join_session, monkeypatch, command
+    ready_join_session, nonpersistent_run_ids, monkeypatch, command
 ):
     """共通開始処理が context を返す前の中断でも、成立済み run を整合して取り込む。"""
     root, _, state_path = ready_join_session
+    # 修復・索引同期は doctor test、開始から join までの結合は
+    # mixed_results_until_user_interruption と feedback の
+    # repairs_sequential_waves_and_preserves_late_intake に残す。
+    # join の前処理を選ぶ state 検査、SIGINT、tracking・Git・保存・cleanup は通す。
+    preprocess = Mock()
+    monkeypatch.setattr(refactor_module, "run_doctor_preprocess", preprocess)
+    monkeypatch.setattr(run_join_module, "run_doctor_preprocess", preprocess)
     write_tracking = lifecycle_module.write_run_process_id
 
     def track_then_interrupt(*args):
@@ -4224,6 +4233,13 @@ def test_interruption_while_publishing_run_tracking_automatically_joins(
     monkeypatch.setattr(lifecycle_module, "write_run_process_id", track_then_interrupt)
     result = runner.invoke(app, command, catch_exceptions=False)
     assert result.exit_code == 0, result.output
+    start_options = {"rollback_on_interruption": True}
+    if command == ["feedback", "report"]:
+        start_options["sync_refactor_entries"] = True
+    assert preprocess.call_args_list == [
+        mock_call(root, **start_options),
+        mock_call(root, sync_refactor_entries=False),
+    ]
     assert _state(state_path)["run"]["state"] == "ready"
     metadata = report_metadata(terminal_primary_report(result).read_text())
     assert metadata["terminal_classification"] == "user_interruption"
