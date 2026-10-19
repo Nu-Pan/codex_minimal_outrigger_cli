@@ -76,6 +76,42 @@ def initial_repository(tmp_path: Path, _initial_repository_seed: Path) -> Path:
 
 
 @pytest.fixture(scope="module")
+def _repair_paths_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory, _empty_repository_seed: Path
+) -> Path:
+    """先行差分の判定に使う通常 file と履歴を一度だけ用意する。"""
+    # 設定の意味検証は行わず、Git の差分・競合 entry を調べる前提だけを共有する。
+    root = shutil.copytree(
+        _empty_repository_seed,
+        tmp_path_factory.mktemp("doctor-repair-paths-seed") / "repo",
+    )
+    (root / "README.md").write_text("# repo\n")
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    paths = (doctor_module.config_path(root), doctor_module.refactor_state_path(root))
+    for path in paths:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n")
+    run_git(
+        root,
+        "add",
+        "-f",
+        "README.md",
+        ".gitignore",
+        *(str(p.relative_to(root)) for p in paths),
+    )
+    run_git(root, "commit", "-m", "track repair targets")
+    return root
+
+
+@pytest.fixture
+def repair_paths_repository(
+    tmp_path: Path, _repair_paths_repository_seed: Path
+) -> Path:
+    """差分のない初期内容を複製し、各ケースの index・refs・設定を独立させる。"""
+    return shutil.copytree(_repair_paths_repository_seed, tmp_path / "repo")
+
+
+@pytest.fixture(scope="module")
 def _managed_repository_seed(
     tmp_path_factory: pytest.TempPathFactory, _empty_repository_seed: Path
 ) -> Path:
@@ -1208,21 +1244,17 @@ def test_doctor_generates_config_under_broad_cmoc_ignore(
         "untracked",
     ],
 )
-def test_preexisting_runtime_paths_use_original_index(cli_repository, change):
+def test_preexisting_runtime_paths_use_original_index(repair_paths_repository, change):
     """対象の先行差分だけを元 index から選び、未追跡・staged deletion を除く。"""
-    # 無関係な tracked file の変更も残し、検査用 file と一度の commit で HEAD を作る。
-    root = cli_repository
+    root = repair_paths_repository
     readme = root / "README.md"
-    readme.write_text("# repo\n")
     config = doctor_module.config_path(root)
     state = doctor_module.refactor_state_path(root)
     paths = [str(path.relative_to(root)) for path in (config, state)]
-    for path in (config, state):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("{}\n")
-    tracked_paths = ["README.md", *paths] if change != "untracked" else ["README.md"]
-    run_git(root, "add", "-f", *tracked_paths)
-    run_git(root, "commit", "-m", "track initial files")
+    if change == "untracked":
+        # HEAD にも index にも存在しない実ファイルを残し、staged deletion と区別する。
+        run_git(root, "rm", "--cached", *paths)
+        run_git(root, "commit", "-m", "leave runtime files untracked")
 
     expected = set()
     if change in {"staged", "mixed", "reverted_worktree"}:
@@ -1253,16 +1285,13 @@ def test_preexisting_runtime_paths_use_original_index(cli_repository, change):
 
 
 @pytest.mark.parametrize("stages", [(1,), (1, 3)])
-def test_preexisting_runtime_paths_preserves_unmerged_entries(cli_repository, stages):
+def test_preexisting_runtime_paths_preserves_unmerged_entries(
+    repair_paths_repository, stages
+):
     """DD/DU の削除 conflict は通常の staged deletion と区別して保存対象にする。"""
-    # conflict entry の基準となる config だけを最初の commit に含める。
-    root = cli_repository
+    root = repair_paths_repository
     config = doctor_module.config_path(root)
-    config.parent.mkdir(parents=True)
-    config.write_text("{}\n")
     relative = str(config.relative_to(root))
-    run_git(root, "add", "-f", relative)
-    run_git(root, "commit", "-m", "track config")
     blob = run_git(root, "rev-parse", f"HEAD:{relative}").stdout.strip()
     index_path = doctor_module._copy_current_index(root)
     try:
@@ -1601,20 +1630,14 @@ def test_doctor_preprocess_preserves_preexisting_staged_addition_and_rename(
 
 
 def test_repair_paths_share_one_query_and_preserve_saved_index(
-    cli_repository, tmp_path, monkeypatch
+    repair_paths_repository, tmp_path, monkeypatch
 ):
     """runtime 差分と ignore 削除を一度に判定し、退避 index 自体は変更しない。"""
     # 全対象を同じ index に置き、別 root の修復では runtime を保存対象に含めない。
-    root = cli_repository
-    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    root = repair_paths_repository
     config = doctor_module.config_path(root)
     state = doctor_module.refactor_state_path(root)
     runtime_paths = {str(path.relative_to(root)) for path in (config, state)}
-    for path in (config, state):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("{}\n")
-    run_git(root, "add", "-f", ".gitignore", *sorted(runtime_paths))
-    run_git(root, "commit", "-m", "track repair targets")
     config.write_text('{"staged": true}\n')
     run_git(root, "add", "-f", str(config.relative_to(root)))
     state.write_text('{"unstaged": true}\n')
