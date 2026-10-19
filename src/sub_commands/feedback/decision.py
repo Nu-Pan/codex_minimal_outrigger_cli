@@ -135,15 +135,21 @@ def basis_is_valid(basis: dict[str, Any], current: dict[str, Any]) -> bool:
 
 
 def issue_history(
-    repo: Path, manifest: dict[str, Any], identity: str
+    repo: Path,
+    manifest: dict[str, Any],
+    identity: str,
+    *,
+    latest_only: bool = False,
 ) -> list[tuple[dict[str, Any], dict[str, Any]]]:
-    """同じ identity の正式 checkpoint を論理 call 順で読む。"""
+    """同じ identity の正式 checkpoint を、根拠照合では最新だけ読む。"""
     references = [
         item
         for item in manifest["processing"]["remediation_checkpoints"]
         if item["candidate_id"] == identity
     ]
     references.sort(key=lambda item: int(Path(item["path"]).stem.split(".")[1]))
+    if latest_only:
+        references = references[-1:]
     return [
         (
             reference,

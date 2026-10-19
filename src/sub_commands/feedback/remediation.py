@@ -420,12 +420,17 @@ def _wave_loop(
         files = decision.worktree_inputs(context.run_worktree) if candidates else {}
         pending = {}
         for identity, candidate in sorted(candidates.items()):
-            history = decision.issue_history(context.repo, manifest, identity)
+            history = decision.issue_history(
+                context.repo, manifest, identity, latest_only=True
+            )
             current = decision.decision_state(files, candidate)
             if history and decision.basis_is_valid(
                 history[-1][1]["audit"]["decision_basis"], current
             ):
                 continue
+            # 有効性の照合には最新だけで足りる。再確認の循環検出には全履歴を渡す。
+            if history:
+                history = decision.issue_history(context.repo, manifest, identity)
             pending[identity] = {
                 **candidate,
                 "decision_state_sha256": decision.state_hash(current),

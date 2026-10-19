@@ -1067,6 +1067,14 @@ def test_repeated_repair_cycle_stops_or_accepts_a_new_repair(
 ):
     h = feedback_run
     first, second = (_add_candidate(h, letter) for letter in ("a", "b"))
+    history_reads = []
+    read_artifact = decision.read_run_artifact
+
+    def read_history(repo, reference):
+        history_reads.append((len(h.calls), reference["path"]))
+        return read_artifact(repo, reference)
+
+    monkeypatch.setattr(decision, "read_run_artifact", read_history)
 
     def call(issue):
         recheck = issue["reconfirmation"]
@@ -1090,6 +1098,16 @@ def test_repeated_repair_cycle_stops_or_accepts_a_new_repair(
 
     h.handler = call
     _run(h)
+    # 収束後の照合では、準備前後とも最新だけを読む。再確認には全履歴が必要。
+    final_reads = Counter(
+        path for call_count, path in history_reads if call_count == len(h.calls)
+    )
+    assert final_reads == Counter(
+        {
+            reference["path"]: 2
+            for reference in selected_remediation_checkpoints(h.manifest)
+        }
+    )
     history = decision.issue_history(h.context.repo, h.manifest, first)
     checkpoint = history[-1][1]
     diagnostic = resolution == "inconclusive"
