@@ -885,12 +885,10 @@ def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
     )
     current_fields = current.stdout.split()
     if current.returncode == 0 and len(current_fields) >= 3:
-        _stage_blob(
+        _stage_blobs(
             root,
             index_path,
-            ".agents/.gitkeep",
-            current_fields[0],
-            current_fields[1],
+            [(".agents/.gitkeep", current_fields[0], current_fields[1])],
         )
         return
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -901,7 +899,7 @@ def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
         _stage_text(root, index_path, ".agents/.gitkeep", "")
         return
     mode, blob = entry
-    _stage_blob(root, index_path, ".agents/.gitkeep", mode, blob)
+    _stage_blobs(root, index_path, [(".agents/.gitkeep", mode, blob)])
 
 
 def _stage_tracked_runtime_repair(
@@ -955,6 +953,7 @@ def _stage_tracked_runtime_repair(
     # hash-object --stdin の text input と同じ encoding で比較する。
     # Git 自身が返した object ID の長さから SHA-1 / SHA-256 を区別する。
     encoding = "utf-8" if sys.flags.utf8_mode else locale.getencoding()
+    updates: list[tuple[str, str, str]] = []
     for relative, path in paths.items():
         content = path.read_text()
         existing = metadata.get(relative)
@@ -972,13 +971,9 @@ def _stage_tracked_runtime_repair(
         else:
             head_entry = head_entries.get(relative)
             mode = head_entry[0] if head_entry is not None else "100644"
-        _stage_text(
-            root,
-            index_path,
-            relative,
-            content,
-            mode=mode,
-        )
+        updates.append((relative, mode, _write_text_blob(root, index_path, content)))
+    # 同じ一時 index の更新をまとめ、path ごとの Git 起動と index 書き換えを省く。
+    _stage_blobs(root, index_path, updates)
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:
@@ -994,27 +989,37 @@ def _stage_text(
     index_path: Path,
     path: str,
     content: str,
-    *,
-    mode: str | None = None,
 ) -> None:
     """テキスト内容をblob化して一時indexへ登録する。"""
-    blob = _run_git_with_index(
-        ["hash-object", "-w", "--stdin"], root, index_path, input_text=content
-    ).stdout.strip()
-    if mode is None:
-        mode = _index_mode(root, index_path, path)
+    # 単独登録でも runtime の一括更新と同じ blob 生成・登録経路を使う。
+    blob = _write_text_blob(root, index_path, content)
+    mode = _index_mode(root, index_path, path)
     if mode is None:
         entry = _head_entry(root, path)
         mode = entry[0] if entry else "100644"
-    _stage_blob(root, index_path, path, mode, blob)
+    _stage_blobs(root, index_path, [(path, mode, blob)])
 
 
-def _stage_blob(root: Path, index_path: Path, path: str, mode: str, blob: str) -> None:
-    """指定blobとmodeを一時indexのpathへ登録する。"""
+def _write_text_blob(root: Path, index_path: Path, content: str) -> str:
+    """既存の text encoding と改行で blob を保存し、object ID を返す。"""
+    # object の保存と index 更新を分け、呼び出し側で複数登録をまとめられるようにする。
+    return _run_git_with_index(
+        ["hash-object", "-w", "--stdin"], root, index_path, input_text=content
+    ).stdout.strip()
+
+
+def _stage_blobs(
+    root: Path, index_path: Path, entries: Collection[tuple[str, str, str]]
+) -> None:
+    """path・mode・blob の組を一度の一時 index 更新で登録する。"""
+    # NUL 区切りで特殊文字を path の一部として渡し、空の更新では Git を起動しない。
+    if not entries:
+        return
     _run_git_with_index(
-        ["update-index", "--add", "--cacheinfo", mode, blob, path],
+        ["update-index", "-z", "--index-info"],
         root,
         index_path,
+        input_text="".join(f"{mode} {blob}\t{path}\0" for path, mode, blob in entries),
     )
 
 
