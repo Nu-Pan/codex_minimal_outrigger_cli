@@ -27,6 +27,7 @@ import commons.runtime_feedback_state as feedback_state
 import commons.runtime_feedback_store as feedback_store
 import commons.runtime_logging as runtime_logging
 import commons.runtime_primary_report_review as report_review
+import commons.runtime_run_lifecycle as run_lifecycle
 import commons.runtime_windows_toast as runtime_windows_toast
 import sub_commands.feedback.remediation as remediation_module
 from commons.runtime_config import write_config
@@ -232,16 +233,18 @@ def nonpersistent_execution_ids(monkeypatch: pytest.MonkeyPatch) -> None:
 def nonpersistent_feedback_ids(
     nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """publication・close の検査に、保存を伴わない feedback ID を用意する。"""
+    """publication・close の検査に、保存を伴わない feedback・編集 run ID を用意する。"""
     # SQLite の FULL 同期は os.fsync の置換では省けない。永続採番は
     # test_runtime_ids.py と test_codex_runtime_paths.py、feedback との結合は
     # test_feedback.py の後続 wave test と test_feedback_close.py の reported_case に残す。
     # 各検査では ID の対応・再発時の非再利用・recovery での固定 target を保つ。
+    # 編集 run の採番も同じ対象とし、状態遷移ごとの SQLite 同期を重ねない。
     for module in (
         feedback_run_state,
         feedback_state,
         feedback_store,
         remediation_module,
+        run_lifecycle,
     ):
         monkeypatch.setattr(module, "new_id", runtime_logging.new_id)
 
