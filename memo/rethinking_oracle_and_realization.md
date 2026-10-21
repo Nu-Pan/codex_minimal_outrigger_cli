@@ -60,7 +60,7 @@ spec
 realization
 
 - spec を元に生成された実装・テスト・などなど
-- decision, spec どちらでもないもの
+- decision, spec, reference のどれでもないもの
 - 「どのような実装であるべきか？」については口うるさく書かず、エージェントの好きにさせる
 - ここは以前の仕様から据え置き
 
@@ -110,8 +110,8 @@ decision, spec 上の特定の記述を参照する場合、「何を参照す�
     - ある意味「AI が提案するクソ冗長なプラン」を「人間フィルター」を通して「疎な decision リスト」に変換していることになる
 2. 人間が decision を編集して git commit
 3. 人間が `cmoc decision apply` を実行する
-    1. エージェントが decision の git 差分とプランを元に spec を同期させる
-    2. エージェントが decision, spec の git 差分とプランを元に realization を追従させる
+    1. エージェントが decision, reference の git 差分とプランを元に spec を同期させる
+    2. エージェントが decision, spec, reference の git 差分とプランを元に realization を追従させる
     3. エージェントが、作業結果を報告
 4. 作業結果に期待しない物があるか、feedback issue が発生しているかすれば 1. に戻る
 5. 完了
@@ -133,7 +133,7 @@ decision, spec 上の特定の記述を参照する場合、「何を参照す�
 
 | サブコマンド | ステップ | decision | spec | realization |
 | :--: | :--: | :--: | :--: | :--: |
-| `cmoc decision plan` | - | R | R | R |
+| `cmoc decision plan` | - | R | R | - |
 | `cmoc decision apply` | spec | R | RW | - |
 | `cmoc decision apply` | realization | R | R | RW |
 
