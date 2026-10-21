@@ -1,11 +1,20 @@
 
-# oracle, realization システムを考え直す
+## oracle, realization システムを考え直す
 
 - `memo/rethinking_oracle_and_realization.md`
 
-# サンドボックスシステムを考え直す
+## サンドボックスシステムを考え直す
 
 - `memo/rethinking_sandbox.md`
+
+## `cmoc realization refator` はもはや名前と実態が違う
+
+- `cmoc realization test simplification` とかの方が良さそう
+    - テスト時間短縮自体にはとても価値があるので、機能自体は絶対に残すべき
+    - 名前が良くない
+- シンプル化系は decision 方式導入後に根本的に見直したい
+    - テスト以外もシンプル化するべき
+    - `cmoc simplification` とかで良いのかも
 
 ## 未確定事項といっしょに推奨も出してほしい
 

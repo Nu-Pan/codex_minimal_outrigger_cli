@@ -31,9 +31,9 @@ cmoc 開発フロー上の最大のボトルネックは「oracle file 編集作
 - そもそも「well defined にするな」的な事を解釈の余地のない状態で自然言語的に定義すること自体が困難
 - 大量に指示を書くと逆に作業品質が落ちるという話もあるので、できれば長々と書きたくはない
 
-## アプローチ：oracle, realization --> decision, spec, realization
+## アプローチ：oracle, realization --> decision, reference, spec, realization
 
-そこで、リポジトリ全体を oracle, realization に区分したように、oracle を decision, spec に区分することで、人間意図がエージェントによる汚染から隔離・保護される事を狙う。
+そこで、リポジトリ全体を oracle, realization に区分したように、oracle を decision, reference, spec に区分することで、人間意図がエージェントによる汚染から隔離・保護される事を狙う。
 
 decision 
 
@@ -45,10 +45,15 @@ decision
 - ある意味、初期コンセプトである「oracle file は 100% 人間が書く」がここに復活した
 - 本当に最低限の意図・判断だけを短く簡潔に書く想定で、書く量で言えば「プランの提示をプロンプトで指示する時」くらいの温度感
 
+reference
+
+- decision から参照する用の補足資料を配置する
+- 100% 人間が編集する
+- decision と違って reference 内は完全な自由記述
+
 spec
 
 - decision を元に生成された仕様文章
-- こちらは断片ではない仕様書
 - 「どのような仕様書であるべきか？」については口うるさく書かず、エージェントの好きにさせる
 - 100% エージェントが編集する
 
@@ -59,75 +64,93 @@ realization
 - 「どのような実装であるべきか？」については口うるさく書かず、エージェントの好きにさせる
 - ここは以前の仕様から据え置き
 
-## decision の記述方法
+## decision, spec の記述方法
 
-以下のような書式の markdown が記述されたファイルを decision ファイルとする。
+decision spec は基本的に GitHub Flavored Markdown で記述する。
+
+ただし、
+
+- decision, spec 固有のルールとして「見出しの先頭に参照用の ID を付与する」こととする
+- ID は decision なら `[DECI-XXXXXX]`
+- ID は spec なら `[SPEC-XXXXXX]` とする。
+- decision ファイルは `{{work-root}}/decision/**/*.md` として配置される
+- spec ファイルは `{{work-root}}/spec/**/*.md` として配置される
+- decision ファイルは複数存在してよいし、1 つの decision ファイル内に複数の decision が記述されていても良い
+- spec ファイルは複数存在してよいし、1 つの spec ファイル内に複数の spec が記述されていても良い
+
+例えば、decision なら以下のように記述する。
 
 ```markdown
-# [DEC-000000] 決定事項（あ）
+# [DECI-000000] 決定事項（あ）
 
 ほげほげ
 
-# [DEC-000001] 決定事項（い）
+# [DECI-000001] 決定事項（い）
 
 ぴよぴよ
 ```
 
-なお、
+## decision, spec の参照方法
 
-- decision ファイルは `{{work-root}}/decision/**/*.md` として配置される
-- decision ファイルは複数存在してよいし、1 つの decision ファイル内に複数の decision が記述されていても良い
+decision, spec 上の特定の記述を参照する場合、「何を参照するかの短い説明」＋「参照先の ID」の形式で記述する。
+
+例えば以下の通り
+
+```markdown
+このログのフォーマットは [DECI-000154] に従う。
+```
 
 ## 想定ワークフロー
 
-**TODO** plan, apply で内容がズレる可能性があるので plan を導入したけど微妙かも。decision 上での矛盾が無いかのチェックにとどめたほうが良いかも。
-
-1. 人間が decision を仕上げる
-    1. 人間が decision ファイルを直接編集、未コミット差分で残す
-    2. 人間が `cmoc work plan` を実行
-        1. decision の ID が自動的に整形される
-        2. エージェントが「git コミット上 or 未コミット差分上に存在する decision の変更によって、後続の `cmoc work apply` で何が起きるのか」をプランとして提示
-    3. 提示プランが人間の期待に沿うならここでループ終了
-    4. 1-1. へ戻る 
-2. 人間が decision を git commit する
-3. 人間が `cmoc work apply {{plan-exec-id}}` を実行
+1. (option) 人間が  `cmoc decision plan` を実行して decision をどうするべきか揉む
+    - 人間のやりたいことを `cmoc decision plan` に入力する
+    - エージェントに decision 編集プランを提示される
+    - それを人間が読んで、どうするべきかを考える
+    - 初歩的な考慮漏れや、decision 上での矛盾をここで弾く
+    - ある意味「AI が提案するクソ冗長なプラン」を「人間フィルター」を通して「疎な decision リスト」に変換していることになる
+2. 人間が decision を編集して git commit
+3. 人間が `cmoc decision apply` を実行する
     1. エージェントが decision の git 差分とプランを元に spec を同期させる
     2. エージェントが decision, spec の git 差分とプランを元に realization を追従させる
-    2. エージェントが、作業結果を報告
+    3. エージェントが、作業結果を報告
 4. 作業結果に期待しない物があるか、feedback issue が発生しているかすれば 1. に戻る
 5. 完了
 
-補足
-
-- このワークフローは、ある意味「`cmoc work plan` で AI が言っていること」を「人間フィルター」を通して「疎な decision リスト」に変換している
-
-
 ## サブコマンド
 
-**TODO** サブコマンド構成を書く
+- `cmoc decision plan`
+    - `cmoc oracle investigation` を置き換える
+    - 実質的に `/plan` モードみたいな扱いをしてたので、実態に合わせて命名を変更
+    - 書き込みは decision, spec, realizatino 全部不可
+    - 読み込みは realization が不可
+- `cmoc decision apply`
+    - `cmoc oracle edit`, `cmoc realization apply` を置き換える
+    - 人間意図の提示（決断）が終わった後の適用作業を 1 つにまとめることになる
 
 ## 各ステップの読み書き制限
 
 これまでと同様、各ステップでの読み書きを制限することで、情報の流れを一定に保つ。
 
-**TODO**　ステップ（≠サブコマンド）単位の読み書き制限をリストアップ
+| サブコマンド | ステップ | decision | spec | realization |
+| :--: | :--: | :--: | :--: | :--: |
+| `cmoc decision plan` | - | R | R | R |
+| `cmoc decision apply` | spec | R | RW | - |
+| `cmoc decision apply` | realization | R | R | RW |
 
 ## 懸念点
 
-**TODO**　考え方が変わったので、再度リストアップ
-
 ### 人間が矛盾のない decsion を書くのって結構大変では？
 
-decision を十分に疎に保てば、現実的な手間で「矛盾のない仕様断片」に保てるはず。
-逆に言えば、人間が decisino をメンテナンスしきれる能力をもっているかどうかに強く依存していることになる。
-decision を手放す＝人間によるディレクションを手放すということなので、ここは絶対に手放せない。
-よって、この問題は割り切って受け入れるしか無い。
+decision を十分に疎に保てば、現実的な手間で「矛盾のない仕様断片」に保てるはずが、それは人間の能力に完全に依存していて、何の担保もない (`cmoc decision plan` でエージェントが言っている事を人間が丸呑みしたらオシマイ)
+根本的解決方法として decision を手放すという手はあるが、それは人間によるディレクションを手放すということと等価なので選べない。
+そもそも、実際に試す前から人間の能力が～とか言い出したらキリがない。
+よって、この問題は保留にして、このまま突っ走る。
 
 ### 「人間が開発対象リポジトリのことをよく知らないといけない」は何も解決しないのでは？
 
 人間がスジの良い判断を下せるかどうかは、人間のリポジトリに対する理解度に強く依存する。
-`cmoc work plan` の説明ベースで判断することになるので、ある程度はエージェントにカバーしてもらえるが、根本的解決ではない。
-これは元々あった問題であり、decision 方式で悪化しているわけでもないので、このまま受け入れる。
+`cmoc decision plan` の説明ベースで判断することになるので、ある程度はエージェントにカバーしてもらえるが、根本的解決ではない。
+これは元々あった問題であり、decision 方式で悪化しているわけでもないだろうから、このまま受け入れる。
 
 ### oracle file 方式と何が違う？
 
@@ -137,4 +160,11 @@ oracle file には「人間の意図」と「エージェントが埋めた隙�
 それに対して decision, spec では「人間の意図」と「エージェントが埋めた隙間」とが完全に分離している。
 そのため、後から oracle file をシンプル化しようと思ったら「decision に反しない範囲で spec を好きにしていいよ」に出来るので、シンプル化の余地が存在するはず。
 「実は大事なことが decision で宣言されていませんでした」があるとシンプル化によって大事な事が消えてしまうことになるが、これは「失って初めて気づいた大事なことを改めて decision に書く」でカバー可能。
-どのようにカバーすればよいかが分かっている点で oracle file 方式よりも優れるだろう。
+どのようにカバーすればよいかが分かっている点で oracle file 方式よりも優れているだろう。
+
+### oracle src はどこに行く？
+
+以下のどちらか
+
+- decision 内のコードブロックでのスニペット提示
+- reference ツリー内にソースコードを配置する
