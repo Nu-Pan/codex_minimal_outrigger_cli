@@ -27,3 +27,10 @@ cmoc が agent に渡す指示文は以下の要件を満たすこと
 
 - 実経路統合テストを含む Real Codex CLI を使うテストは、ユーザーがその実行を明示的に指示した場合に限り追加する。
 - 一般的な検証依頼や agent 自身の判断では実行しない。
+
+# 仕様変更用の一時的措置
+
+- 現在、oracle, realization --> decision, reference , spec, realization の仕様変更を進めている
+- この仕様変更作業に関係するファイルを `{{work-root}}/transition` ツリー内に配置している
+- `{{work-root}}/transition/README.md` には仕様変更に伴うマイグレーション作業の手順が記述されている
+- 現在存在する oracle, decisino, reference, spec, realization を根拠に　`{{work-root}}/transition` に変更を加えてはいけない

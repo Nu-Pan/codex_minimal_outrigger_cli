@@ -2,6 +2,8 @@
 ## oracle, realization システムを考え直す
 
 - `memo/rethinking_oracle_and_realization.md`
+- 移行開始前の最後の git commit は `36dfd0cfe6c672de2fd770f9e15706205e840ca1`
+- 移行関係の諸々は全て `{{work-root}}/transition` に押し込む
 
 ## サンドボックスシステムを考え直す
 

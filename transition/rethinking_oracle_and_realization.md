@@ -35,7 +35,7 @@ cmoc 開発フロー上の最大のボトルネックは「oracle file 編集作
 
 そこで、リポジトリ全体を oracle, realization に区分したように、oracle を decision, reference, spec に区分することで、人間意図がエージェントによる汚染から隔離・保護される事を狙う。
 
-decision 
+decision
 
 - 明文化された人間の意図（決定事項）を書く
 - 100% 人間が編集する
