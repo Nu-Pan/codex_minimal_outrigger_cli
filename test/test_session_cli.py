@@ -1111,7 +1111,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
         target.write_text("previous implementation\n")
     for target in (mode_target, deleted_target):
         target.write_text("# spec\n")
-    run_git(root, "add", "oracle", "src")
+    run_git(root, "add", "reference", "src")
     run_git(root, "commit", "-m", "add conflict targets")
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_session_in_worktree(repository, root)
@@ -1120,7 +1120,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     deleted_target.write_text("session change\n")
     delete_modify_target.unlink()
     newline_target.write_text("session change\n")
-    run_git(root, "add", "oracle", "src", "README.md")
+    run_git(root, "add", "reference", "src", "README.md")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
     for target in (context_target, mode_target):
@@ -1128,7 +1128,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     deleted_target.write_text("home change\n")
     delete_modify_target.write_text("home change\n")
     newline_target.write_text("home change\n")
-    run_git(root, "add", "oracle", "src", "README.md")
+    run_git(root, "add", "reference", "src", "README.md")
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
     calls: list[str] = []

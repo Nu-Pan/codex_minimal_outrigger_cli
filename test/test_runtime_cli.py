@@ -247,7 +247,7 @@ logger.event("warning", message="\u65e5\u672c\u8a9e warning")
             "PYTHONCOERCECLOCALE": "0",
             "PYTHONUTF8": "0",
             "PYTHONPATH": os.pathsep.join(
-                [str(source_root / "src"), str(source_root / "oracle" / "src")]
+                [str(source_root / "src"), str(source_root / "reference" / "src")]
             ),
         },
         capture_output=True,

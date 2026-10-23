@@ -14,5 +14,5 @@ def oracle_schema_path(*parts: str) -> Path:
     return (
         Path(__file__)
         .parents[1]
-        .joinpath("oracle", "src", "oracle", "acp_builder", *parts)
+        .joinpath("reference", "src", "oracle", "acp_builder", *parts)
     )
