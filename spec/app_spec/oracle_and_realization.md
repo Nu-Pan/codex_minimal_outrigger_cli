@@ -18,7 +18,7 @@ oracle file の下位概念は、正本として所有する事項で区別す�
 
 | 意味仕様 | 委譲先 |
 |---|---|
-| oracle file、realization file、および uncategorised file の役割・分類。本書と `{{cmoc-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」を意味仕様の正本とする | `{{cmoc-root}}/reference/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py` の `build_oracle_and_realization_basic` |
+| oracle file、realization file、および uncategorised file の役割・分類。本書と `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md` の「分類結果」を意味仕様の正本とする | `{{cmoc-root}}/reference/src/oracle/prompt_builder/parts/cmoc_basic_instruction.py` の `build_cmoc_basic_instruction` |
 | 本書の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までと「oracle file を扱う判断基準」 | `{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/oracle.py` の `build_oracle_policy` |
 | realization file を扱う判断基準 | `{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/realization.py` の `build_realization_policy` |
 | oracle file に対する realization file の適合性の共通基準 | `{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/realization_findings.py` の `build_realization_findings_policy` |

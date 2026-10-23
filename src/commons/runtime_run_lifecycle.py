@@ -8,7 +8,7 @@ cleanup 判定は同じ EditingRunContext と lifecycle lock を共有する一�
 責務である。分割すると、run branch の不変条件と差分許可範囲を複数 file で追う必要が
 生じるため、現状は editing run lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/spec/app_spec/oracle_and_realization.md の
+根拠: {{work-root}}/spec/app_spec/cmoc_basic_instruction.md の
 「realization file を扱う判断基準」
 """
 

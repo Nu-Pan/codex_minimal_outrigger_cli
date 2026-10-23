@@ -8,7 +8,7 @@ from typing import TypedDict
 
 from .runtime_errors import CmocError
 from .runtime_git import (
-    enumerate_oracle_and_realization_files,
+    enumerate_cmoc_basic_instruction_files,
     literal_pathspec,
     run_git,
 )
@@ -46,7 +46,7 @@ def write_refactor_state(root: Path, state: RefactorState) -> None:
     validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
+        # {{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md
         # の「回帰検証」
         # JSON の ASCII escape で surrogateescape された filesystem path も UTF-8
         # の state file へ保存し、列挙結果の entry を失わないようにする。
@@ -136,11 +136,11 @@ def _parse_state(path: Path, content: str) -> RefactorState:
 
 def enumerate_refactor_targets(root: Path) -> list[str]:
     """現在存在する全 oracle file と realization file を列挙する。"""
-    # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
+    # {{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md
     # の「分類結果」
     # doctor preprocess と refactor workload は、共通の full-tree 分類結果で
     # state entry を同期する。
-    oracle_files, realization_files = enumerate_oracle_and_realization_files(root)
+    oracle_files, realization_files = enumerate_cmoc_basic_instruction_files(root)
     return sorted(
         path.relative_to(root.absolute()).as_posix()
         for path in [*oracle_files, *realization_files]

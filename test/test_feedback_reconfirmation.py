@@ -100,9 +100,9 @@ def feedback_run(tmp_path, monkeypatch, feedback_remediation_request_stub):
     )
     state = load_active_state(repo)
     manifest = remediation._new_manifest(context, state)
-    manifest["run"]["invocation_log"] = (
-        ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
-    )
+    manifest["run"][
+        "invocation_log"
+    ] = ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
     invocation_log = repo / manifest["run"]["invocation_log"]
     invocation_log.parent.mkdir(parents=True)
     invocation_log.write_text("")
@@ -131,7 +131,7 @@ def feedback_run(tmp_path, monkeypatch, feedback_remediation_request_stub):
     # path を返す境界では本文を読まず、根拠収集と差分検査に必要な読み込みだけ残す。
     monkeypatch.setattr(
         decision,
-        "enumerate_oracle_and_realization_files",
+        "enumerate_cmoc_basic_instruction_files",
         lambda root: ([], [root / path.name for path in input_paths()]),
     )
 

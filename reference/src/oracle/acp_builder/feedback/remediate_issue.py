@@ -76,7 +76,7 @@ def build_feedback_issue_remediation_request(
                 SDCodeBlock("json", issue_json),
             ),
         ],
-        oracle_and_realization_basic=True,
+        cmoc_basic_instruction=True,
         realization_policy=True,
         routing_policy=True,
     )

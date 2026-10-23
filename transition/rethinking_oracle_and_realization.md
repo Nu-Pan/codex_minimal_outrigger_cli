@@ -137,6 +137,13 @@ decision, spec 上の特定の記述を参照する場合、「何を参照す�
 | `cmoc decision apply` | spec | R | RW | - |
 | `cmoc decision apply` | realization | R | R | RW |
 
+## realization の読み書き制限に対する微修正
+
+- realization の仕様は decision 方式とは直接関係無いけど…
+- 元々は「realization は AI エージェントが 100% 編集する」だったが、これだと外で発生した変更をロールバックされちゃいそうなので、余白をもたせたい
+- 実際 git 追跡対象を設定ファイルを人間が手書きしたり、ツールが自動生成したりすることは普通にありえる
+- そこで「realization の主な所有者は AI エージェントだが、それ以外（人間、ツール）が変更を加えることもある」に緩める
+
 ## 懸念点
 
 ### 人間が矛盾のない decsion を書くのって結構大変では？

@@ -65,7 +65,7 @@ def build_oracle_investigation_request(
                     ),
                 )
             ],
-            oracle_and_realization_basic=True,
+            cmoc_basic_instruction=True,
             oracle_policy=True,
             routing_policy=True,
             editor_input_handoff_policy=True,

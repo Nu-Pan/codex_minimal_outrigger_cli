@@ -2,7 +2,7 @@
 
 根拠:
 - {{work-root}}/spec/app_spec/doctor_preprocess.md
-- {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
+- {{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md
 - {{work-root}}/spec/app_spec/sub_command/editing_run.md
 """
 

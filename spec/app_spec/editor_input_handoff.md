@@ -121,7 +121,7 @@ agent は各 tool の結果を正確に報告し、ガイド取得と handoff �
 
 文書参照は、実行時の参照先ファイルと、そのファイル内の参照箇所を表す。入力形式と agent 向けの記入条件は、本書の「正本の分担」で委譲した overwrite input schema に従う。
 
-MCP は入力のパス文字列を `Path` に変換し、参照箇所とともに `DocRef` を構築して本文 builder に渡す。これは実行時の入力形式であり、oracle file 自体に記載する正本間参照の形式は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」に従う。
+MCP は入力のパス文字列を `Path` に変換し、参照箇所とともに `DocRef` を構築して本文 builder に渡す。これは実行時の入力形式であり、oracle file 自体に記載する正本間参照の形式は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle file を扱う判断基準」に従う。
 
 ## 送信元情報
 

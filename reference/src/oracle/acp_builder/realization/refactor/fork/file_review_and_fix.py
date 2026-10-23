@@ -26,7 +26,7 @@ def build_realization_refactor_request(
     NOTE
         意味仕様は `{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md`
         の「1 処理単位」「確定前の検証」と、
-        `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md`
+        `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md`
         の「realization refactor の改善判断」を参照。
     """
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
@@ -89,7 +89,7 @@ def build_realization_refactor_request(
         aux_placeholder_def={
             "target-path": resolve_real_path(target_path, path_context),
         },
-        oracle_and_realization_basic=True,
+        cmoc_basic_instruction=True,
         realization_policy=True,
         realization_findings_policy=True,
         routing_policy=True,

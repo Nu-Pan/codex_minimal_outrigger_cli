@@ -65,7 +65,7 @@ def build_merge_conflict_resolution_prompt(
             ),
             *aux_dynamic_prompt,
         ],
-        oracle_and_realization_basic=True,
+        cmoc_basic_instruction=True,
         oracle_policy=True,
         realization_policy=True,
         conflict_resolution_policy=True,

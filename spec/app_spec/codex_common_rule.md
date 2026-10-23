@@ -206,7 +206,7 @@ cmoc の管理データは `.cmoc/gt` または `.cmoc/gu` 配下に配置する
 
 - cmoc は、入力の種類や伝達経路を問わず、permission profile の生成（動的生成を含む）、更新、選択、Codex CLI への注入、および事前作成された permission profile への依存を行ってはならない
 - oracle file が特定の path に対するアクセス制限を要求する場合も、その制限はプロンプトへ反映し、permission profile や path 単位の sandbox 設定へ変換してはならない
-- agent-facing な分類文面で伝える Git ignore 判定は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」が定める境界だけを表す
+- agent-facing な分類文面で伝える Git ignore 判定は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md` の「分類結果」が定める境界だけを表す
 - `git check-ignore` の判定結果をファイル分類や対象ファイルの選別に使用してよいが、Codex CLI の sandbox または permission profile を組み立てる入力にしてはならない
 
 ## agent call の差分検証
@@ -242,7 +242,7 @@ cmoc の管理データは `.cmoc/gt` または `.cmoc/gu` 配下に配置する
 
 ## prompt の共通原則
 
-prompt の一般規則は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までを正本とする。本節は prompt 固有の規則だけを定義する。
+prompt の一般規則は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までを正本とする。本節は prompt 固有の規則だけを定義する。
 
 ### prompt literal の役割と制限
 

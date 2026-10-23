@@ -6,7 +6,7 @@ realization refactor は、仕様への適合と必要な回帰検出能力を�
 
 長時間の反復と、任意の段階から本命作業を速やかに停止できることを、並ぶ契約とする。停止要求に対して長い調査や検証の完了を待たせず、未確定作業を取り消す。その後、検証済みの確定成果と refactor state を同じ invocation 内で session branch へ自動 join して正常終了する。停止までの処理と、取り込みに必要な競合解消・検証は区別する。
 
-適合性の共通基準と refactor 固有の改善基準は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」「realization refactor の改善判断」を正本とする。installed skill の有無で判断基準を変えない。直近の oracle 変更へ素早く追従する realization apply の目的は拡張しない。
+適合性の共通基準と refactor 固有の改善基準は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle file に対する realization file の適合性」「realization refactor の改善判断」を正本とする。installed skill の有無で判断基準を変えない。直近の oracle 変更へ素早く追従する realization apply の目的は拡張しない。
 
 ## agent call への委譲
 
@@ -36,7 +36,7 @@ JSON のトップレベルは、正規化済みの `{{work-root}}` 相対 path �
 
 ### entry 集合の同期
 
-- entry の対象は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
+- entry の対象は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md` の「分類結果」に従い、同期時点で存在する全 oracle file と全 realization file の和集合とする。
 - 対象 file と entry の過不足のない一致は、cmoc が同期を完了した時点の不変条件とする。同期時点には、通常の doctor preprocess、refactor の各処理単位、および run join の準備完了時点がある。join の同期場所と取り込み成立時の保証、初回 no-op・復旧の扱いは、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。人間の編集直後を含め、常時一致することは要求しない。
 - 新規 file には `last_investigated_at=null` の entry を作成する。
 - 削除 file の entry は削除する。rename は削除と追加として同期する。
@@ -122,7 +122,7 @@ realization file の変更は、対象 repository が定める品質検証を、
 
 cmoc は、realization file の net 差分がある場合、処理単位全体の検証結果が成功であることを commit の必要条件とする。未実行・途中・失敗を成功として扱わず、検証結果が不十分な変更は確定しない。これは出力の構文的な受理と別の条件であり、出力補正で検証不足を解消したことにしてはならない。
 
-差分がなく state だけを更新する単位には、変更のための full test を新たに要求しない。必要な回帰検出能力とテスト削除・統合の判断は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「realization refactor の改善判断」と、cmoc 自身については `{{cmoc-root}}/spec/dev_rule/test_rule.md` の「テストの削除・統合」を参照する。
+差分がなく state だけを更新する単位には、変更のための full test を新たに要求しない。必要な回帰検出能力とテスト削除・統合の判断は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「realization refactor の改善判断」と、cmoc 自身については `{{cmoc-root}}/spec/dev_rule/test_rule.md` の「テストの削除・統合」を参照する。
 
 #### 処理単位の境界
 

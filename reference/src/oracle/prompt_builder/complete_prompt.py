@@ -7,7 +7,7 @@ from oracle.other.struct_doc import SDHeader, SDTagBlock
 from .basic import PlaceholderMap
 
 # local
-from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
+from .parts.cmoc_basic_instruction import build_cmoc_basic_instruction
 from .policy.conflict_resolution import build_conflict_resolution_policy
 from .policy.editor_input_handoff import build_editor_input_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
@@ -48,7 +48,7 @@ def build_complete_prompt(
     aux_static_prompt: list[SDHeader | SDTagBlock] = list(),
     aux_dynamic_prompt: list[SDHeader | SDTagBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
-    oracle_and_realization_basic: bool = False,
+    cmoc_basic_instruction: bool = False,
     oracle_policy: bool = False,
     realization_policy: bool = False,
     realization_findings_policy: bool = False,
@@ -138,10 +138,10 @@ def build_complete_prompt(
                 enable_document_search_mcp=enable_document_search_mcp,
             ),
         )
-    if oracle_and_realization_basic:
+    if cmoc_basic_instruction:
         _append(
             fundamental_policy_prompt,
-            build_oracle_and_realization_basic(path_context),
+            build_cmoc_basic_instruction(path_context),
         )
     full_prompt.append(SDTagBlock("fundamental_policy", *fundamental_policy_prompt))
 

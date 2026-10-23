@@ -8,7 +8,7 @@ agent が必要な正本の原文へ到達するため、cmoc は日本語を含
 
 ## 対象と信頼境界
 
-検索対象は、call の `{{work-root}}/spec` 内の Markdown（拡張子 `.md`）のうち、oracle file と分類される文書に限る。分類・安全な列挙・性能条件は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」「traversal と事前 pruning」「Git ignore 判定の性能不変条件」に従う。
+検索対象は、call の `{{work-root}}/spec` 内の Markdown（拡張子 `.md`）のうち、oracle file と分類される文書に限る。分類・安全な列挙・性能条件は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md` の「分類結果」「traversal と事前 pruning」「Git ignore 判定の性能不変条件」に従う。
 
 work-root は `{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「agent call の path context」に従って接続ごとに固定し、MCP 引数から検索対象を変更させない。文書埋め込みの生成と cache への登録は、生成元 worktree で読取時に検索対象と確認した文書に限る。対象を確認できなければ失敗させる。
 

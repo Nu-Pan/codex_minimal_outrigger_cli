@@ -60,7 +60,7 @@ prompt は両回に共通とし、実行回に依存する役割や前提を設�
 - 未コミット差分は起動前からの変更も含み得る判断材料であり、完成済みの成果や今回の呼び出しだけに由来する成果とはみなさない。
 - 各 agent は、`{{work-root}}` の Git worktree で、staging area、working tree、および Git 未追跡の新規 oracle file の状態を含めて、現在の oracle file と未コミットの変更を取得する。参照入力の渡し方と取得失敗の扱いは、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「Git 差分の参照入力」に従う。
 - 完了条件は、関連する oracle file が目標状態を満たしていることとする。既に満たしていれば不必要に変更せず完了することを目指す。2 回目の追加変更、文字数の削減、または品質の向上は完了条件にしない。
-- oracle file と installed skill の共通判断基準は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」に従う。file access、oracle、routing などの共通 policy は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「caller 固有の objective」が定める責務分担に従って組み込む。
+- oracle file と installed skill の共通判断基準は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle file を扱う判断基準」に従う。file access、oracle、routing などの共通 policy は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「caller 固有の objective」が定める責務分担に従って組み込む。
 
 ## 実行順序
 

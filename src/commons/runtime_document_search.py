@@ -42,7 +42,7 @@ from .runtime_document_search_types import (
     SearchResult,
 )
 from .runtime_errors import CmocError
-from .runtime_git import enumerate_oracle_and_realization_files, require_cmoc_ignored
+from .runtime_git import enumerate_cmoc_basic_instruction_files, require_cmoc_ignored
 from .runtime_logging import current_subcommand_logger
 from .runtime_paths import cmoc_root, repo_root
 
@@ -285,7 +285,7 @@ def scan_documents(
     if deadline is not None:
         _deadline_check(deadline, cancelled)
     try:
-        oracle_files, _ = enumerate_oracle_and_realization_files(root)
+        oracle_files, _ = enumerate_cmoc_basic_instruction_files(root)
     except Exception as exc:
         raise SearchError("ENUMERATION_FAILED", "document enumeration failed") from exc
     documents: dict[str, SourceDocument] = {}

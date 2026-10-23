@@ -1,6 +1,6 @@
 """packaged layout と import 境界を検証する。
 
-分割根拠: {{work-root}}/spec/app_spec/oracle_and_realization.md の
+分割根拠: {{work-root}}/spec/app_spec/cmoc_basic_instruction.md の
 「realization file を扱う判断基準」
 """
 

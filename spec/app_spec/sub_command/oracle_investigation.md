@@ -31,7 +31,7 @@ cmoc は、oracle file に関するユーザーの調査指示をエディタか
 - 初回 exec と TUI の両方で editor input handoff を提供する。共通の意味は、`{{cmoc-root}}/spec/app_spec/editor_input_handoff.md` の「editor input handoff」を正本とする
 - 送信元情報の確定と MCP への供給は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「editor input handoff MCP」に従う
 - `build_oracle_investigation_request` が返したパラメータを変更せずに使う。新規入力は初回 exec 用とし、成功後は同じ builder に検査済み再開入力を渡して、初期 prompt のない TUI 起動パラメータを構築する
-- oracle file を扱う判断基準は `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle file を扱う判断基準」を正本とする。正確な agent 向け文面は前述の builder を参照する
+- oracle file を扱う判断基準は `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle file を扱う判断基準」を正本とする。正確な agent 向け文面は前述の builder を参照する
 - 実行パラメータ決定用の agent call は行わない
 
 ## Codex CLI の起動

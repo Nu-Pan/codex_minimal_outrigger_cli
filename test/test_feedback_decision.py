@@ -81,7 +81,7 @@ def test_basis_captures_tracked_configuration_and_nested_inputs(tmp_path, monkey
     )
     monkeypatch.setattr(
         decision,
-        "enumerate_oracle_and_realization_files",
+        "enumerate_cmoc_basic_instruction_files",
         lambda _root: ([], [tmp_path / paths[-1]]),
     )
     before = decision.worktree_inputs(tmp_path)
@@ -102,7 +102,7 @@ def test_basis_uses_git_modes_across_atomic_write_and_checkout(tmp_path, monkeyp
         decision, "run_git", lambda *_args: SimpleNamespace(stdout="source.py\0")
     )
     monkeypatch.setattr(
-        decision, "enumerate_oracle_and_realization_files", lambda _root: ([], [path])
+        decision, "enumerate_cmoc_basic_instruction_files", lambda _root: ([], [path])
     )
     path.chmod(0o600)
     before = decision.worktree_inputs(tmp_path)
@@ -133,7 +133,7 @@ def test_basis_excludes_only_verified_nested_git_metadata(tmp_path, monkeypatch)
     monkeypatch.setattr(decision, "run_git", fake_run_git)
     monkeypatch.setattr(
         decision,
-        "enumerate_oracle_and_realization_files",
+        "enumerate_cmoc_basic_instruction_files",
         lambda _root: ([], [kept]),
     )
 
@@ -156,7 +156,7 @@ def test_basis_ignores_deleted_tracked_nested_git_named_input(tmp_path, monkeypa
     monkeypatch.setattr(decision, "run_git", fake_run_git)
     monkeypatch.setattr(
         decision,
-        "enumerate_oracle_and_realization_files",
+        "enumerate_cmoc_basic_instruction_files",
         lambda _root: ([], []),
     )
 
@@ -175,7 +175,7 @@ def test_basis_rejects_git_output_path_outside_worktree(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(
         decision,
-        "enumerate_oracle_and_realization_files",
+        "enumerate_cmoc_basic_instruction_files",
         lambda _root: ([], []),
     )
 
@@ -203,7 +203,7 @@ def test_basis_checks_shared_parents_once_without_reusing_file_contents(
         lambda *_args, **_kwargs: SimpleNamespace(stdout="\0".join(paths) + "\0"),
     )
     monkeypatch.setattr(
-        decision, "enumerate_oracle_and_realization_files", lambda _root: ([], [])
+        decision, "enumerate_cmoc_basic_instruction_files", lambda _root: ([], [])
     )
     checks = Counter()
     original = Path.is_symlink
@@ -247,7 +247,7 @@ def test_basis_rejects_symlinked_parent_without_reading_target(
         lambda *_args, **_kwargs: SimpleNamespace(stdout=f"{relative}\0"),
     )
     monkeypatch.setattr(
-        decision, "enumerate_oracle_and_realization_files", lambda _root: ([], [])
+        decision, "enumerate_cmoc_basic_instruction_files", lambda _root: ([], [])
     )
 
     assert set(decision.worktree_inputs(worktree)) == {relative.as_posix()}
@@ -277,7 +277,7 @@ def test_basis_normalizes_relative_worktree_path(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(
         decision,
-        "enumerate_oracle_and_realization_files",
+        "enumerate_cmoc_basic_instruction_files",
         lambda root: ([], [root / "source.py"]),
     )
 

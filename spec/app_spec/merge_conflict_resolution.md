@@ -16,7 +16,7 @@ agent は競合の両側と関連する oracle を調査し、両立する意図
 
 関連する oracle と変更意図からも決められない相反する要求の採否など、新しい人間意図の選択が必要な場合は、推測で一方を破棄せず未解消として報告する。実装都合から oracle の意味を逆算・変更してはならない。
 
-共通の正本責務と判断基準は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」まで、および「oracle file を扱う判断基準」「realization file を扱う判断基準」に従う。編集と検証は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「詳細なファイルアクセス制限」「書き込み主体の責任分界」と各 join の編集範囲内で行う。アクセス禁止の情報を Git 履歴経由で参照したり、禁止対象を付随編集したりする権限は与えない。
+共通の正本責務と判断基準は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」まで、および「oracle file を扱う判断基準」「realization file を扱う判断基準」に従う。編集と検証は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「詳細なファイルアクセス制限」「書き込み主体の責任分界」と各 join の編集範囲内で行う。アクセス禁止の情報を Git 履歴経由で参照したり、禁止対象を付随編集したりする権限は与えない。
 
 ## agent と cmoc の責務
 

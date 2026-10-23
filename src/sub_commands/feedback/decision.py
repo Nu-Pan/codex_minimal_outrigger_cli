@@ -13,7 +13,7 @@ from typing import Any
 from cmoc_runtime import run_git
 from commons.runtime_feedback_run_state import read_run_artifact
 from commons.runtime_feedback_store import canonical_json_bytes, sha256_bytes
-from commons.runtime_git import enumerate_oracle_and_realization_files
+from commons.runtime_git import enumerate_cmoc_basic_instruction_files
 from commons.runtime_paths import refactor_state_path
 
 
@@ -25,7 +25,7 @@ def worktree_inputs(worktree: Path) -> dict[str, str]:
         ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], worktree
     ).stdout.split("\0")
     # nested repository 内の realization も、共通の owning-repository 分類に従う。
-    oracle_files, realization_files = enumerate_oracle_and_realization_files(worktree)
+    oracle_files, realization_files = enumerate_cmoc_basic_instruction_files(worktree)
     names.extend(
         path.relative_to(worktree).as_posix()
         for path in (*oracle_files, *realization_files)

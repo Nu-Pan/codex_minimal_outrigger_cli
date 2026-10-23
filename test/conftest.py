@@ -370,7 +370,7 @@ def document_repository(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(
         runtime_document_search,
-        "enumerate_oracle_and_realization_files",
+        "enumerate_cmoc_basic_instruction_files",
         enumerate_documents,
     )
     return root

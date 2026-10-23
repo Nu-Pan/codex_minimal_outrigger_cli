@@ -43,7 +43,7 @@ cmoc 本体と doctor を起動するための Python 環境・起動用依存�
 
 ## 作業用配置先の存在保証
 
-cmoc が固定の作業用配置先として案内するディレクトリを、空でも利用できるようにする。存在保証の対象集合は次の五つとし、配置先の意味は `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」「realization file の責務」に従う。
+cmoc が固定の作業用配置先として案内するディレクトリを、空でも利用できるようにする。存在保証の対象集合は次の五つとし、配置先の意味は `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle doc と oracle src の正本責務」「realization file の責務」に従う。
 
 - `{{work-root}}/spec`
 - `{{work-root}}/reference/src`

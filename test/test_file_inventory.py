@@ -1,7 +1,7 @@
 """oracle/realization file の full-tree 列挙契約を検証する。
 
 正本仕様:
-- `{{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md`
+- `{{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md`
 - `{{work-root}}/spec/app_spec/sub_command/realization_refactor.md`
 """
 
@@ -20,7 +20,7 @@ import commons.runtime_git as runtime_git
 import commons.runtime_refactor as runtime_refactor
 from cmoc_runtime import CmocError
 from commons.runtime_git import (
-    enumerate_oracle_and_realization_files,
+    enumerate_cmoc_basic_instruction_files,
     is_oracle_file_path,
     is_realization_file_path,
 )
@@ -217,12 +217,12 @@ def test_inventory_matches_full_glob_and_refactor_state_sync(
     inventories: list[tuple[list[Path], list[Path]]] = []
 
     def recording_inventory(work_root: Path) -> tuple[list[Path], list[Path]]:
-        inventory = enumerate_oracle_and_realization_files(work_root)
+        inventory = enumerate_cmoc_basic_instruction_files(work_root)
         inventories.append(inventory)
         return inventory
 
     monkeypatch.setattr(
-        runtime_refactor, "enumerate_oracle_and_realization_files", recording_inventory
+        runtime_refactor, "enumerate_cmoc_basic_instruction_files", recording_inventory
     )
     assert sync_refactor_state(root) == state
 
@@ -305,7 +305,7 @@ def test_inventory_does_not_traverse_excluded_roots_or_ignored_symlinks(
     monkeypatch.setattr(runtime_git.os, "scandir", recording_scandir)
 
     _, realization_files = _relative_sets(
-        root, enumerate_oracle_and_realization_files(root)
+        root, enumerate_cmoc_basic_instruction_files(root)
     )
 
     expected_nested = {
@@ -355,7 +355,7 @@ def test_inventory_rejects_nonregular_paths(
 
     with _special_path(path, kind):
         with pytest.raises(CmocError, match="oracle/realization file"):
-            enumerate_oracle_and_realization_files(root)
+            enumerate_cmoc_basic_instruction_files(root)
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes are unavailable")
@@ -368,7 +368,7 @@ def test_inventory_rejects_ignored_fifo_in_unpruned_area(tmp_path: Path) -> None
 
     with _special_path(path, "fifo"):
         with pytest.raises(CmocError, match="oracle/realization file"):
-            enumerate_oracle_and_realization_files(root)
+            enumerate_cmoc_basic_instruction_files(root)
 
 
 @pytest.mark.parametrize("status", ["tracked", "unignored"])
@@ -418,7 +418,7 @@ def test_inventory_rejects_symlink_when_ignore_status_is_unknown(
     monkeypatch.setattr(runtime_git.subprocess, "run", failing_check_ignore)
 
     with pytest.raises(CmocError, match="Git ignore"):
-        enumerate_oracle_and_realization_files(root)
+        enumerate_cmoc_basic_instruction_files(root)
 
 
 @pytest.mark.parametrize(
@@ -449,7 +449,7 @@ def test_inventory_rejects_simulated_socket_and_device_modes(
     monkeypatch.setattr(runtime_git, "_lstat_directory_entries", simulated_lstat)
 
     with pytest.raises(CmocError, match="oracle/realization file"):
-        enumerate_oracle_and_realization_files(root)
+        enumerate_cmoc_basic_instruction_files(root)
 
 
 def test_inventory_accepts_linked_worktree_git_file(
@@ -466,7 +466,7 @@ def test_inventory_accepts_linked_worktree_git_file(
 
     assert (linked / ".git").is_file()
     oracle_files, realization_files = _relative_sets(
-        linked, enumerate_oracle_and_realization_files(linked)
+        linked, enumerate_cmoc_basic_instruction_files(linked)
     )
 
     assert oracle_files == {"oracle/spec.md"}
@@ -542,7 +542,7 @@ def test_inventory_and_classifier_use_owning_repository_ignore_sources(
     )
 
     _, realization_files = _relative_sets(
-        root, enumerate_oracle_and_realization_files(root)
+        root, enumerate_cmoc_basic_instruction_files(root)
     )
 
     ignored_paths = {
@@ -621,7 +621,7 @@ def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
     # 混在する候補集合を基準に、一度に一方の種別だけ増やして比較する。
     add_candidate("regular-file", "one")
     add_candidate("ignored-symlink", "one")
-    enumerate_oracle_and_realization_files(root)
+    enumerate_cmoc_basic_instruction_files(root)
     first_counts = (git_calls, source_validations, traversals)
     assert source_validations == 1
 
@@ -632,7 +632,7 @@ def test_inventory_git_work_is_constant_when_only_candidate_count_grows(
         source_validations = 0
         traversals = 0
 
-        enumerate_oracle_and_realization_files(root)
+        enumerate_cmoc_basic_instruction_files(root)
 
         assert (git_calls, source_validations, traversals) == first_counts, kind
         assert source_validations == 1, kind

@@ -11,7 +11,7 @@ def build_realization_policy(
     """realization file が満たすべき規定を構築する。
 
     NOTE
-        意味仕様は `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の
+        意味仕様は `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の
         「realization file を扱う判断基準」を参照。
     """
     return (

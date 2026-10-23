@@ -72,7 +72,7 @@ def build_feedback_issue_normalization_request(
                 SDCodeBlock("json", candidate_issues_json),
             ),
         ],
-        oracle_and_realization_basic=True,
+        cmoc_basic_instruction=True,
         routing_policy=True,
     )
     return AgentCallParameter(

@@ -8,7 +8,7 @@ def build_oracle_policy() -> tuple[PlaceholderMap, SDHeader]:
     """oracle file が満たすべき規定を構築する。
 
     NOTE
-        意味仕様は `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の
+        意味仕様は `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の
         「oracle doc と oracle src の正本責務」から
         「正本責務に基づく優先関係」までと「oracle file を扱う判断基準」、
         `{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の

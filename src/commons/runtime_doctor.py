@@ -6,7 +6,7 @@
 commit 対象の対応を複数 file で追う必要が生じるため、現状は doctor preprocess
 の境界として一箇所に保つ。
 
-根拠: {{work-root}}/spec/app_spec/oracle_and_realization.md の
+根拠: {{work-root}}/spec/app_spec/cmoc_basic_instruction.md の
 「realization file を扱う判断基準」
 """
 

@@ -2,7 +2,7 @@
 
 正本仕様:
 - `{{work-root}}/spec/app_spec/sub_command/realization_refactor.md`
-- `{{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md`
+- `{{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md`
 - `{{work-root}}/spec/app_spec/timestamp.md`
 """
 
@@ -103,7 +103,7 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
     tmp_path: Path, relative: str
 ) -> None:
     """oracle/realization file classifier が work-root 外の path を拒否する。"""
-    # 根拠: {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
+    # 根拠: {{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md
     # の「分類結果」
     # 範囲外 path は Git 問い合わせ前に拒否するため、repository は不要。
     root = tmp_path / "repo"

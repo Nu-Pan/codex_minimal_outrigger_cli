@@ -27,7 +27,7 @@
 
 ## テストの削除・統合
 
-検出能力を維持する判断基準は、`{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「realization refactor の改善判断」に従う。cmoc で維持すべき検証範囲は、本書の goal と個別仕様の検証要件から特定する。境界条件、失敗時挙動、外部から観測可能な結果に加え、実経路統合テストについては本書の「検証要件」が定める公開末端サブコマンドとの対応を維持する。
+検出能力を維持する判断基準は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「realization refactor の改善判断」に従う。cmoc で維持すべき検証範囲は、本書の goal と個別仕様の検証要件から特定する。境界条件、失敗時挙動、外部から観測可能な結果に加え、実経路統合テストについては本書の「検証要件」が定める公開末端サブコマンドとの対応を維持する。
 
 通常検証で実経路統合テストを実行しないことは、そのケースを不要とする根拠にはならない。実行の選択は `{{cmoc-root}}/spec/dev_rule/test_execution.md` の「通常検証と追加検証を選択する」に従い、Fake Codex CLI と Real Codex CLI の役割の違いを維持する。
 

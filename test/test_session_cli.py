@@ -6,7 +6,7 @@ dirty worktree 拒否は同じ session 状態遷移の観測点であり、分�
 fixture を追う文脈が分散する。現状は session CLI 回帰として一箇所に保つ方が凝集性が高い。
 
 根拠:
-- {{work-root}}/spec/app_spec/oracle_and_realization.md の
+- {{work-root}}/spec/app_spec/cmoc_basic_instruction.md の
   「realization file を扱う判断基準」
 - {{work-root}}/spec/app_spec/doctor_preprocess.md
 - {{work-root}}/spec/app_spec/feedback_state.md

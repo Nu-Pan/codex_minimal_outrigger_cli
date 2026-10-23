@@ -34,8 +34,8 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
 - 汎用 TUI の意味上の責務と新規起動条件は本書を正本とする。正確な prompt part の選択、文面、および workload 固有の新規起動・再開パラメータの構築は、`{{cmoc-root}}/reference/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_request` へ委譲する
 - cmoc の基本規定は、各規定が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
 - TUI へ注入する基本規定の意味仕様は、次の文書を正本とする
-    - oracle file と realization file の責務: `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle file と realization file の責務」
-    - oracle file に対する realization file の適合性: `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle file に対する realization file の適合性」
+    - oracle file と realization file の責務: `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle file と realization file の責務」
+    - oracle file に対する realization file の適合性: `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle file に対する realization file の適合性」
 - installed skill は任意の追加規定として利用してよいが、cmoc 固有契約と競合する場合は cmoc 固有契約を優先する
 - 共通 feedback instruction、各 process の collector context、および accepted observation の保持は、`{{cmoc-root}}/spec/app_spec/feedback_observation.md` の「feedback observation の収集」に従う
 - このサブコマンドの初回処理完了・応答完了と終了時の Windows toast 通知は、`{{cmoc-root}}/spec/app_spec/windows_toast_notification.md` の「TUI の通知境界」を正本とする

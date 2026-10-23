@@ -68,7 +68,7 @@ def build_realization_apply_request(
                 ),
             )
         ],
-        oracle_and_realization_basic=True,
+        cmoc_basic_instruction=True,
         realization_policy=True,
         realization_findings_policy=True,
         routing_policy=True,

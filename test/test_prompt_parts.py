@@ -8,8 +8,8 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/spec/app_spec/feedback_observation.md
 - {{work-root}}/spec/app_spec/editor_input_handoff.md
 - {{work-root}}/spec/app_spec/document_search.md
-- {{work-root}}/spec/app_spec/oracle_and_realization.md
-- {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
+- {{work-root}}/spec/app_spec/cmoc_basic_instruction.md
+- {{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md
 - {{work-root}}/spec/app_spec/sub_command/session_join.md
 - {{work-root}}/reference/src/oracle/other/struct_doc.py
 - {{work-root}}/reference/src/oracle/prompt_builder/basic.py
@@ -18,7 +18,7 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/editor_input_handoff.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/feedback_reporting.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/file_access.py
-- {{work-root}}/reference/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+- {{work-root}}/reference/src/oracle/prompt_builder/parts/cmoc_basic_instruction.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/oracle.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/realization_findings.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/realization.py
@@ -118,7 +118,7 @@ def customized_prompt_markdown(path_context: AgentCallPathContext) -> str:
         aux_static_prompt=[SDHeader("caller static", "- static")],
         aux_dynamic_prompt=[SDHeader("caller dynamic", "- dynamic")],
         aux_placeholder_def={"work-root": path_context.work_root},
-        oracle_and_realization_basic=True,
+        cmoc_basic_instruction=True,
         oracle_policy=True,
         realization_policy=True,
         realization_findings_policy=True,
@@ -156,7 +156,7 @@ def _render_policy(
 
 
 _POLICY_FLAG_HEADINGS = (
-    ("oracle_and_realization_basic", "# oracle and realization basic"),
+    ("cmoc_basic_instruction", "# oracle and realization basic"),
     ("oracle_policy", "# oracle policy"),
     ("realization_policy", "# realization policy"),
     ("realization_findings_policy", "# realization findings policy"),
@@ -172,7 +172,7 @@ _POLICY_FLAG_HEADINGS = (
     [
         case
         for case in _POLICY_FLAG_HEADINGS
-        if case[0] not in {"oracle_and_realization_basic", "routing_policy"}
+        if case[0] not in {"cmoc_basic_instruction", "routing_policy"}
     ],
 )
 def test_each_policy_flag_adds_only_its_block_once(
@@ -372,14 +372,12 @@ def test_complete_prompt_renders_file_classification_boundaries(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
-        oracle_and_realization_basic=True,
+        cmoc_basic_instruction=True,
     )
 
     rendered = render_sd_node_as_markdown(*prompt)
     for flag, heading in _POLICY_FLAG_HEADINGS:
-        assert rendered.count(heading) == (
-            1 if flag == "oracle_and_realization_basic" else 0
-        )
+        assert rendered.count(heading) == (1 if flag == "cmoc_basic_instruction" else 0)
     for expected in (
         "# uncategorised file",
         "以下の条件をすべて満たすものを oracle file とする",

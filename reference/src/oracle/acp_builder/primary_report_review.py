@@ -53,7 +53,7 @@ def build_primary_report_review_request(
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
-        oracle_and_realization_basic=True,
+        cmoc_basic_instruction=True,
         enable_feedback_reporting=enable_feedback_reporting,
         aux_static_prompt=[
             SDHeader(
