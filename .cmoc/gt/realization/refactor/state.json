@@ -5,6 +5,9 @@
   ".vscode/python_testing.env": {
     "last_investigated_at": "2026-10-19_09-47-37_027"
   },
+  ".vscode/settings.json": {
+    "last_investigated_at": null
+  },
   "LICENSE": {
     "last_investigated_at": "2026-10-19_09-53-38_843"
   },
@@ -835,5 +838,20 @@
   },
   "test/test_worktree_snapshot.py": {
     "last_investigated_at": "2026-10-19_09-40-56_342"
+  },
+  "transition/.gitignore": {
+    "last_investigated_at": null
+  },
+  "transition/README.md": {
+    "last_investigated_at": null
+  },
+  "transition/migrate.py": {
+    "last_investigated_at": null
+  },
+  "transition/rethinking_oracle_and_realization.md": {
+    "last_investigated_at": null
+  },
+  "transition/test_migrate.py": {
+    "last_investigated_at": null
   }
 }
