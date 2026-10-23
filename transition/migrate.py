@@ -16,7 +16,7 @@ from urllib.parse import quote, unquote, urlsplit, urlunsplit
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
-_MOVES = {"oracle/src": "reference/src", "oracle/doc": "spec"}
+_MOVES = {"referenece/src": "reference/src", "spec": "spec"}
 _RECEIPT = "transition/work/move.json"
 _ID = re.compile(r"\[(DECI|SPEC)-([^\]\s]+)\]")
 _HEADING_ID = re.compile(r"^\[(DECI|SPEC)-([^\]\s]+)\](?:\s|$)")
@@ -99,9 +99,11 @@ def _fingerprint(directory: Path) -> str:
         metadata = [
             path.relative_to(directory).as_posix(),
             stat.S_IMODE(path.stat().st_mode),
-            "directory"
-            if path.is_dir()
-            else hashlib.sha256(path.read_bytes()).hexdigest(),
+            (
+                "directory"
+                if path.is_dir()
+                else hashlib.sha256(path.read_bytes()).hexdigest()
+            ),
         ]
         digest.update(json.dumps(metadata, ensure_ascii=True).encode("ascii") + b"\n")
     return digest.hexdigest()

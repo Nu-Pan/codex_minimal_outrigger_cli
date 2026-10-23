@@ -74,7 +74,7 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
         placeholder が示す絶対 root path。
     """
     with _CMOC_PROCESS_CWD_LOCK:
-        # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+        # {{work-root}}/spec/dev_rule/coding_rule.md
         # root 探索の起点は file または directory なので、process の cwd と区別する。
         # relative path の解決から root resolver の完了まで process-global cwd を
         # 固定し、別 thread の pushd と起点 path が混線しないようにする。
@@ -92,7 +92,7 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
         if queries is not None:
             key = (start_dir, tuple(sorted(os.environ.items())))
             context = queries.get(key)
-        # {{work-root}}/oracle/src/oracle/other/path_model.py
+        # {{work-root}}/referenece/src/oracle/other/path_model.py
         # 正本 context が同じ metadata から導出した両 root を再利用する。
         if context is None:
             try:
@@ -121,7 +121,7 @@ def console_timestamp() -> str:
 
 def format_duration(seconds: float) -> str:
     """ログと console の duration 表示を丸めず 0.1 秒単位へそろえる。"""
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md は経過時間の正規化表示を
+    # {{work-root}}/spec/app_spec/console_and_file_log.md は経過時間の正規化表示を
     # 定めるため、負値を剰余計算で別の時刻へ変換せず入力エラーにする。
     if seconds < 0:
         raise ValueError("duration must be non-negative")
@@ -135,7 +135,7 @@ def format_duration(seconds: float) -> str:
     minutes, sec_tenths = divmod(remainder, 600)
     sec, msec = divmod(sec_tenths, 10)
 
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md は各 field を 2 桁に
+    # {{work-root}}/spec/app_spec/console_and_file_log.md は各 field を 2 桁に
     # 限るため、表現できない duration は幅を広げずに失敗させる。
     if months >= 100:
         raise ValueError("duration exceeds the two-digit month display limit")
@@ -172,7 +172,7 @@ def logs_dir(root: Path) -> Path:
 
 def editor_input_log_dir(root: Path) -> Path:
     """編集から確定保存まで使う editor input file の directory を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # {{work-root}}/spec/app_spec/prompt_editor_input.md
     return untracked_data_dir(root) / "log" / "editor_input"
 
 
@@ -198,19 +198,19 @@ def config_path(root: Path) -> Path:
 
 def refactor_state_path(root: Path) -> Path:
     """realization refactor の追跡 state 保存 path を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     return _tracked_data_dir(root) / "realization" / "refactor" / "state.json"
 
 
 def untracked_data_dir(root: Path) -> Path:
     """git 非追跡の cmoc 管理 directory を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # {{work-root}}/spec/app_spec/run_isolation.md
     return root / ".cmoc" / "gu"
 
 
 def _tracked_data_dir(root: Path) -> Path:
     """git 追跡する cmoc 管理 directory を返す。"""
-    # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+    # {{work-root}}/referenece/src/oracle/other/cmoc_config.py
     return root / ".cmoc" / "gt"
 
 
@@ -221,9 +221,9 @@ def ensure_work_directories(root: Path, *, create_missing: bool = True) -> None:
         root: 配置先を使用する worktree の root。
         create_missing: 不足を補完するか。False は修復後の状態の検証に使う。
     """
-    # {{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md の
+    # {{cmoc-root}}/spec/app_spec/doctor_preprocess.md の
     # 「作業用配置先の存在保証」
-    for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
+    for relative in ("spec", "referenece/src", "oracle/test", "src", "test"):
         path = root / relative
         try:
             # 既存 directory は一度の stat で検証し、不足時だけ作成する。

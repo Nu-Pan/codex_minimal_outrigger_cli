@@ -1,6 +1,6 @@
 """現在の local branch から session branch と state を作成する。"""
 
-# {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+# {{work-root}}/spec/app_spec/sub_command/session_fork.md
 from pathlib import Path
 
 from cmoc_runtime import (
@@ -62,7 +62,7 @@ def _cmoc_session_fork_body() -> TerminalResult:
         # lock 待ち中に index・ignore source が変わり得るため、clean 検査の直前で保証する。
         ensure_cmoc_ignored_in_exclude(work)
         require_clean_worktree(work)
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+        # {{work-root}}/spec/app_spec/sub_command/session_fork.md
         # active session と session-id を lock 内で再確認し、同じ home branch に
         # 複数の session branch/state が公開される競合を防ぐ。
         existing = active_session_for_home(root, branch)
@@ -93,13 +93,13 @@ def _cmoc_session_fork_body() -> TerminalResult:
         state_file_created = False
         state_written = False
         try:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+            # {{work-root}}/spec/app_spec/sub_command/session_fork.md
             # HEAD 取得後に home branch が進んでも、state に記録した fork commit
             # と実際の session branch の分岐元を一致させる。
             run_git(["switch", "-c", session_branch, start_commit], work)
             branch_created = True
             start_subcommand_step(6, "session state を保存", "write session state")
-            # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+            # {{work-root}}/spec/app_spec/sub_command/session_fork.md
             # session-id の再確認後に別 process が state file を作った場合も、既存
             # state を上書き・rollback 削除しないよう、先に排他的に path を確保する。
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -110,12 +110,12 @@ def _cmoc_session_fork_body() -> TerminalResult:
             update_primary_report_fields(session_state_after="active")
         except BaseException as error:
             rollback_errors: list[str] = []
-            # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+            # {{work-root}}/spec/app_spec/sub_command/session_fork.md
             # branch_exists は switch -c の前から存在する衝突 branch も返すため、
             # この invocation で作成できた branch だけを削除する。
             if branch_created:
                 try:
-                    # {{work-root}}/oracle/doc/branch_model.md
+                    # {{work-root}}/spec/branch_model.md
                     # home branch は local branch なので、元の ref が競合中に消えても
                     # 同名 remote-tracking branch を rollback 先として推測しない。
                     run_git(["switch", "--no-guess", branch], work)

@@ -1,6 +1,6 @@
 """session branch を home branch へ merge し、conflict 解消を検証する。"""
 
-# {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+# {{work-root}}/spec/app_spec/sub_command/session_join.md
 import json
 from functools import partial
 from pathlib import Path
@@ -53,7 +53,7 @@ def _cmoc_session_join_body(
 ) -> TerminalResult:
     """active session branch を session home branch へ merge する。"""
     root = repo_root()
-    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+    # {{work-root}}/spec/app_spec/sub_command/session_join.md
     # conflict resolution agent call は session branch/worktree を直接編集するため、
     # fork・join・abandon を同じ repository lock で直列化する。
     with session_fork_lock(root):
@@ -93,7 +93,7 @@ def _cmoc_session_join_body(
             branch_switch_status="started",
             merge_status="started",
         )
-        # {{work-root}}/oracle/doc/app_spec/session_state.md:
+        # {{work-root}}/spec/app_spec/session_state.md:
         # session_home_branch は local branch なので、同名 remote-tracking branch を
         # Git に推測させて別の merge target を作らない。
         run_git(["switch", "--no-guess", home], work)
@@ -127,7 +127,7 @@ def _cmoc_session_join_body(
             state_update_status="completed",
             session_branch_cleanup_status="started",
         )
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md:
+        # {{work-root}}/spec/app_spec/sub_command/session_join.md:
         # 削除するのは local session branch 自体が merge target HEAD から到達可能な場合だけ。
         # remote-tracking ref で安全性を証明してはならない。
         reachable = (

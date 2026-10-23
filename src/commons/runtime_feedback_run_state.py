@@ -1,6 +1,6 @@
 """Feedback run の immutable wave、issue checkpoint、seal と join 記録を検証する。
 
-根拠: {{work-root}}/oracle/doc/app_spec/feedback_state.md の
+根拠: {{work-root}}/spec/app_spec/feedback_state.md の
 「checkpoint と report cut」と「run lifecycle との整合」。
 """
 
@@ -48,9 +48,9 @@ def new_run_record(context: EditingRunContext) -> dict[str, Any]:
     logger = current_subcommand_logger()
     return {
         "feedback_run_id": new_id(context.repo, "fbr"),
-        "invocation_log": str(logger.path.relative_to(context.repo))
-        if logger
-        else None,
+        "invocation_log": (
+            str(logger.path.relative_to(context.repo)) if logger else None
+        ),
         "identity": new_run_identity(context),
         "waves": [],
         "high_watermark": 0,

@@ -32,7 +32,7 @@ def codex_call_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pat
     return root
 
 
-# {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+# {{work-root}}/spec/app_spec/codex_common_rule.md
 def _spy_codex_startup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> list[tuple[tuple[object, ...], dict[str, object]]]:

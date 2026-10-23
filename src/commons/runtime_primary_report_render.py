@@ -1,8 +1,8 @@
 """確定済み runtime 情報から fallback primary report を描画する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+- {{work-root}}/spec/app_spec/console_and_file_log.md
+- {{work-root}}/spec/app_spec/sub_command/feedback_report.md
 """
 
 import json
@@ -475,9 +475,9 @@ def feedback_statuses(logger: SubcommandLogger) -> dict[str, object]:
         for event in events
     )
     return {
-        "normal_publication_status": "completed"
-        if published and not incomplete
-        else "not_completed",
+        "normal_publication_status": (
+            "completed" if published and not incomplete else "not_completed"
+        ),
         "incomplete_diagnostic_status": "completed" if incomplete else "not_completed",
         "current_pointer_update_status": "completed" if published else "not_completed",
     }
@@ -652,9 +652,7 @@ def _session_fork_body(
     branch_status = (
         "completed"
         if state_after == "active"
-        else "未確認"
-        if session_branch is not None
-        else "未実行"
+        else "未確認" if session_branch is not None else "未実行"
     )
     state_status = "completed" if state_after is not None else "未実行"
     return [
@@ -772,9 +770,11 @@ def _session_join_body(
         ]
     else:
         conflict_lines = [
-            "- 未実行"
-            if fields.get("merge_status") is None
-            else "- conflict は発生していません。"
+            (
+                "- 未実行"
+                if fields.get("merge_status") is None
+                else "- conflict は発生していません。"
+            )
         ]
     conflict_call_status = fields.get("conflict_resolution_status")
     if conflict_call_status is None:
@@ -1093,7 +1093,7 @@ def _feedback_cleanup_status(
 ) -> str:
     """publication 後の cleanup が未完了かを invocation summary に示す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/feedback_report.md
     """
     events = logger.event_records()
     published = any(

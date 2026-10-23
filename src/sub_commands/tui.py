@@ -46,7 +46,7 @@ def _cmoc_tui_body(
 ) -> None:
     """依頼文を編集し、構築したパラメータで Codex TUI を起動する。"""
     # オリジナル prompt だけ未確定の完全 prompt を handoff ガイドに使う。
-    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+    # {{work-root}}/spec/app_spec/sub_command/tui.md
     start_subcommand_step(
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"
     )
@@ -56,7 +56,7 @@ def _cmoc_tui_body(
     ).prompt
     assert complete_prompt_skeleton is not None
 
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # {{work-root}}/spec/app_spec/prompt_editor_input.md
     start_subcommand_step(3, "オリジナルプロンプトを入力", "edit original prompt")
     edit_prompt_editor_input(
         root,
@@ -69,7 +69,7 @@ def _cmoc_tui_body(
     )
 
     # 抽出した入力から担当固有の完全 prompt と起動パラメータを構築する。
-    # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
+    # {{work-root}}/spec/app_spec/sub_command/tui.md
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
     parameter = build_tui_request(original_prompt)
 

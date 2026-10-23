@@ -1,10 +1,10 @@
 """Codex argv の model、sandbox、provider 上書き契約を検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-- {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
-- {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+- {{work-root}}/spec/app_spec/codex_common_rule.md
+- {{work-root}}/spec/app_spec/codex_exec_rule.md
+- {{work-root}}/spec/app_spec/codex_model_provider.md
+- {{work-root}}/spec/app_spec/windows_toast_notification.md
 """
 
 import hashlib
@@ -182,7 +182,7 @@ def test_search_mcp_rejects_external_transport_collision(
     server = codex_override_config(argv)["mcp_servers"]["cmoc_document_search"]
     assert server["env"]["PYTHONPATH"].split(os.pathsep) == [
         str(Path(__file__).resolve().parents[1] / "src"),
-        str(Path(__file__).resolve().parents[1] / "oracle/src"),
+        str(Path(__file__).resolve().parents[1] / "referenece/src"),
     ]
     calls: list[list[str]] = []
 
@@ -376,7 +376,7 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
             "empty": {"array": [], "table": {}},
         }
     }
-    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+    # {{work-root}}/spec/app_spec/codex_common_rule.md
     # dotted override path の quoted segment は Codex CLI parser が受理しないため、
     # selected provider を inline TOML table として一度に渡す。
     assert any(

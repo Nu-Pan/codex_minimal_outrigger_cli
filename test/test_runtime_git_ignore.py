@@ -1,9 +1,9 @@
 """Git ignore file の安全な更新と判定を検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-- {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+- {{work-root}}/spec/app_spec/doctor_preprocess.md
+- {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
+- {{work-root}}/spec/app_spec/sub_command/editing_run.md
 """
 
 import os

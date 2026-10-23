@@ -12,11 +12,11 @@ lock・CLI/config・Git index はテスト観点としては分かれるが、�
 責務を doctor preprocess の外部契約に限定して一つに保つ。
 
 正本仕様:
-- `{{work-root}}/oracle/doc/app_spec/doctor_preprocess.md`
-- `{{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md`
-- `{{work-root}}/oracle/doc/app_spec/sub_command/doctor.md`
-- `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`
-- `{{work-root}}/oracle/src/oracle/other/cmoc_config.py`
+- `{{work-root}}/spec/app_spec/doctor_preprocess.md`
+- `{{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md`
+- `{{work-root}}/spec/app_spec/sub_command/doctor.md`
+- `{{work-root}}/spec/app_spec/sub_command/realization_refactor.md`
+- `{{work-root}}/referenece/src/oracle/other/cmoc_config.py`
 """
 
 import json
@@ -58,7 +58,7 @@ pytestmark = pytest.mark.usefixtures(
     "feedback_without_transport", "nonpersistent_execution_ids"
 )
 
-_WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
+_WORK_DIRECTORIES = ("spec", "referenece/src", "oracle/test", "src", "test")
 
 
 @pytest.fixture(scope="module")
@@ -504,7 +504,7 @@ def test_work_directory_collisions_preserve_content_and_report_target(
     assert "作業用配置先" in exc_info.value.summary
     assert f"work-root: {root}" in exc_info.value.detail
     assert (
-        f"path: {root / ('oracle/doc' if relative == 'oracle' else relative)}"
+        f"path: {root / ('spec' if relative == 'oracle' else relative)}"
         in exc_info.value.detail
     )
     assert "reason:" in exc_info.value.detail
@@ -627,12 +627,12 @@ def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
     config_path.parent.mkdir(parents=True)
     config_path.write_text(json.dumps(incomplete_config) + "\n")
 
-    document = root / "oracle/doc/source.md"
+    document = root / "spec/source.md"
     document.parent.mkdir(parents=True)
     original = "# original document\n"
     updated = "# updated document\n"
     document.write_text(original)
-    run_git(root, "add", "oracle/doc/source.md")
+    run_git(root, "add", "spec/source.md")
     run_git(root, "commit", "-m", "add search document")
     monkeypatch.chdir(root)
     log_dir = root / ".cmoc/gu/log/sub_command"
@@ -678,19 +678,19 @@ def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(
         report = terminal_primary_report(result).read_text()
         assert f"診断ログ内の同期 ID: `{start['sync_id']}`" in report
         assert f'doctor_sync_status: "{expected[0]}"' in report
-        assert run_git(root, "show", "HEAD:oracle/doc/source.md").stdout == original
+        assert run_git(root, "show", "HEAD:spec/source.md").stdout == original
         state = json.loads(
             (root / ".cmoc/gt/realization/refactor/state.json").read_text()
         )
         if contents is None:
             assert '"deleted": 1' in report
             assert not document.exists()
-            assert "oracle/doc/source.md" not in state
+            assert "spec/source.md" not in state
         else:
             if edit is not None:
                 assert '"changed": 1' in report
             assert document.read_text() == contents
-            assert "oracle/doc/source.md" in state
+            assert "spec/source.md" in state
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
@@ -1749,10 +1749,10 @@ def test_doctor_reports_persisted_chunks_when_sync_fails(
     """doctor の同期失敗は未完了とし、保存済み chunk の進捗を示す。"""
     # 索引対象の文書を初回 commit に置き、参照しない README と仕様 file を準備しない。
     root = cli_repository
-    docs = root / "oracle/doc"
+    docs = root / "spec"
     docs.mkdir(parents=True)
     (docs / "sample.md").write_text("# 検索用の原文\n")
-    run_git(root, "add", "oracle/doc")
+    run_git(root, "add", "spec")
     run_git(root, "commit", "-m", "add document")
     monkeypatch.chdir(root)
     vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)

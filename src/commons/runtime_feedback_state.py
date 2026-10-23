@@ -6,9 +6,9 @@
 
 対応する oracle file:
 
-- `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
-- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
-- `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
+- `{{work-root}}/spec/app_spec/feedback_observation.md`
+- `{{work-root}}/spec/app_spec/feedback_state.md`
+- `{{work-root}}/spec/app_spec/sub_command/feedback_report.md`
 """
 
 import base64
@@ -1508,9 +1508,9 @@ def _load_generation(
         _validate_active_issue(
             record,
             path,
-            expected_report_cut_id=str(manifest["report_cut_id"])
-            if source["kind"] == "report"
-            else None,
+            expected_report_cut_id=(
+                str(manifest["report_cut_id"]) if source["kind"] == "report" else None
+            ),
         )
         if record.get("issue_id") != current_issue_id or current_issue_id in issues:
             raise _corruption("active issue reference identity が一致しません。", path)
@@ -2089,7 +2089,9 @@ def _validate_report_cut_current_input(
             "generation_id"
         ) == generation_id_value or current_pointer.get(
             "report_cut_id"
-        ) == pointer_value.get("report_cut_id"):
+        ) == pointer_value.get(
+            "report_cut_id"
+        ):
             raise _corruption(
                 "report cut current pointer input が切替前 state ではありません。",
                 path,
@@ -2224,8 +2226,9 @@ def _validate_report_cut_current_input(
                 if identity_name == "issue_id"
                 else f"{machine_aggregate_id(identity)}.json"
             )
-            if record_path.parent != expected_generation_directory / directory_name or (
-                record_path.name != expected_name
+            if (
+                record_path.parent != expected_generation_directory / directory_name
+                or (record_path.name != expected_name)
             ):
                 raise _corruption(
                     f"report cut current {name} path が identity と一致しません。",
@@ -3215,9 +3218,9 @@ def generation_artifacts(
         _validate_active_issue(
             record,
             path,
-            expected_report_cut_id=report_cut_id
-            if source["kind"] == "report"
-            else None,
+            expected_report_cut_id=(
+                report_cut_id if source["kind"] == "report" else None
+            ),
         )
         content = canonical_json_bytes(record)
         artifacts.append((path, content))
@@ -3601,7 +3604,7 @@ def _prune_empty_directories(start: Path, stop: Path) -> None:
 
 def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -> None:
     """raw observation を残し、terminal／obsolete cut の work state を破棄する。"""
-    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # {{work-root}}/spec/app_spec/feedback_state.md
     state = load_active_state(repo)
     if state.current is not None and state.current.get("report_cut_id") == manifest.get(
         "report_cut_id"

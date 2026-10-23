@@ -4,7 +4,7 @@
 fork report、および join/abandon は同じ lifecycle fixture を共有する。分割すると、
 同じ branch・state 遷移の準備と検証を複数 file で重複させるため、一続きに保つ。
 
-通知根拠: {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+通知根拠: {{work-root}}/spec/app_spec/windows_toast_notification.md
 """
 
 import fcntl
@@ -102,7 +102,7 @@ pytestmark = pytest.mark.usefixtures(
     "feedback_without_transport", "nonpersistent_execution_ids"
 )
 
-_WORK_DIRECTORIES = ("oracle/doc", "oracle/src", "oracle/test", "src", "test")
+_WORK_DIRECTORIES = ("spec", "referenece/src", "oracle/test", "src", "test")
 
 
 @pytest.mark.parametrize(
@@ -1009,7 +1009,7 @@ def test_run_abandon_accepts_already_removed_run_worktree(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """既に削除された run worktree を warning 扱いで cleanup できる。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     context = ready_abandon_run
     root, state_path = context.repo, context.state_path
     process_stops: list[tuple[Path, str]] = []
@@ -1042,7 +1042,7 @@ def test_run_abandon_prunes_missing_registered_run_worktree(
 ) -> None:
     """実体だけが欠損した run worktree の Git 登録も cleanup する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     context = ready_abandon_run
     root, state_path = context.repo, context.state_path
@@ -1067,7 +1067,7 @@ def test_run_abandon_requires_process_stop_confirmation(
     ready_abandon_run: EditingRunContext,
 ) -> None:
     """tracking の不在・破損で停止を確認できなければ run 資源を保持する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     context = ready_abandon_run
     root, state_path = context.repo, context.state_path
 
@@ -1106,7 +1106,7 @@ def test_run_abandon_stops_tracked_process_for_error_run(
 ) -> None:
     """error run cleanup が残存 process を停止してから資源を破棄する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     context = ready_abandon_run
     root, state_path = context.repo, context.state_path
@@ -1503,14 +1503,14 @@ def test_refactor_fork_moves_unresolved_target_after_rename(
                 "changed_paths": changed_paths,
                 "resolution": {
                     "status": "fixed" if later_rename else "unresolved",
-                    "summary": "rename completed"
-                    if later_rename
-                    else "needs follow-up",
+                    "summary": (
+                        "rename completed" if later_rename else "needs follow-up"
+                    ),
                 },
             }
         ]
         if add_unrelated_file:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+            # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
             # rename 判定の候補を増やしても unresolved の changed_paths から
             # rename 先を特定できることを検証する。
             (worktree / "extra.md").write_text("extra realization\n")
@@ -1829,7 +1829,7 @@ def test_refactor_rejects_agent_commit_and_rolls_back_unit(
 ) -> None:
     """refactor agent の commit が処理単位をすり抜けず、開始 HEAD へ戻る。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     """
     root, _session_branch, state_path = refactor_after_preprocess
 
@@ -2042,7 +2042,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断後に child を停止して遅延 commit を戻し、差分検査失敗も report する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
     # child 停止→rollback と、その後の差分取得失敗は同じ cleanup で検証する。
     # 中断・遅延 commit 除去・report 保存に個別の session/run を準備しない。
     root, _session_branch, state_path = ready_content_session
@@ -2141,7 +2141,7 @@ def test_apply_start_failure_after_run_publish_is_reported(
 ) -> None:
     """run state 公開後の初期化失敗でも apply fork report を残す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
+    根拠: {{work-root}}/spec/app_spec/sub_command/realization_apply.md。
     """
 
     root, _session_branch, state_path = ready_run_session
@@ -2911,7 +2911,7 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
     tmp_path, monkeypatch, incidental, already_modified
 ):
     """応答後の差分は記録し、file access policy だけによる受理拒否を加えない。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md の「agent call の差分検証」
+    # {{work-root}}/spec/app_spec/codex_common_rule.md の「agent call の差分検証」
     # Fake の違反編集で cmoc の検証境界を確認する。agent の編集権限は拡張しない。
     # Git 境界は double にし、snapshot の実際の本文比較と marker 検査を通す。
     # 実 Git との結合と失敗時の rollback は下の CLI test に残す。
@@ -3692,7 +3692,7 @@ def test_refactor_interrupt_rolls_back_current_unit_and_is_joinable(
     assert 'completion_reason: "user_interruption"' in report.read_text()
     assert "- completion_reason: `user_interruption`" in result.output
     assert "- unresolved targets: `0`" in result.output
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     events = [
         json.loads(line)
         for path in (root / ".cmoc" / "gu" / "log" / "sub_command").glob("*.jsonl")
@@ -3716,7 +3716,7 @@ def test_refactor_interrupt_before_run_creation_is_normal_completion(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """run 作成前の fork lifecycle 中断も正常終了として記録する。"""
-    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    # {{work-root}}/spec/app_spec/subcommand_interruption.md
     # Git 配置・run 作成は lifecycle test、doctor の中断・rollback は
     # test_doctor_cli.py に残し、ここでは完了済み前処理からの停止境界を検査する。
     root = cli_terminal_directory

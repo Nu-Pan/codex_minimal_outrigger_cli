@@ -1,9 +1,9 @@
 """editing run workload の canonical builder adapter を検証する。
 
 対応する oracle file:
-- `{{work-root}}/oracle/src/oracle/acp_builder/realization/apply/fork/launch_exec.py`
-- `{{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
-- `{{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json`
+- `{{work-root}}/referenece/src/oracle/acp_builder/realization/apply/fork/launch_exec.py`
+- `{{work-root}}/referenece/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
+- `{{work-root}}/referenece/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json`
 """
 
 import json

@@ -42,7 +42,7 @@ class RunPart:
 
 @dataclass
 class SessionState:
-    """`{{work-root}}/oracle/doc/app_spec/session_state.md` の永続 state。"""
+    """`{{work-root}}/spec/app_spec/session_state.md` の永続 state。"""
 
     session: SessionPart = field(default_factory=SessionPart)
     run: RunPart = field(default_factory=RunPart)
@@ -99,7 +99,7 @@ def _contains_unrepresentable_characters(value: str) -> bool:
 
 def _inspect_state_path(path: Path, *, directory: bool = False) -> int | None:
     """symlink と親の種別を一度に検証し、存在する末端の mode を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # {{work-root}}/spec/app_spec/run_isolation.md
     # session state は repo-root 側の cmoc 管理 data だが、symlink を追跡すると
     # 指定された保存先の外側を読み書きして隔離境界を越えてしまう。
     leaf = path.absolute()
@@ -152,7 +152,7 @@ def _inspect_state_path(path: Path, *, directory: bool = False) -> int | None:
 
 def _validate_session_id(session_id: str) -> None:
     """state の保存先に使用する共通 session ID を検証する。"""
-    # {{work-root}}/oracle/doc/app_spec/id.md
+    # {{work-root}}/spec/app_spec/id.md
     if not is_common_id(session_id, "sess"):
         raise CmocError(
             "session-id が不正です。",
@@ -164,7 +164,7 @@ def _validate_session_id(session_id: str) -> None:
 def _validate_state_file_path(path: Path) -> bool:
     """保存先と親を検証し、通常の state file が存在するか返す。"""
     mode = _inspect_state_path(path)
-    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # {{work-root}}/spec/app_spec/error_handling.md
     # FIFO や device を open すると state 操作が停止するため、書き込み前にも
     # 既存 path の種別を検証する。
     if mode is not None and not stat.S_ISREG(mode):
@@ -182,7 +182,7 @@ def session_fork_lock(root: Path) -> Iterator[None]:
     lock_path = git_common_dir(root) / "cmoc-session-fork.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+        # {{work-root}}/spec/app_spec/sub_command/session_fork.md
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         try:
             yield
@@ -254,7 +254,7 @@ def load_session_part_for_branch(
 ) -> tuple[str, Path, SessionPart]:
     """session branch に対応する session 部分だけを検証して読み込む。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
     """
     session_id = branch_session_id(branch)
     path = _session_state_path(root, session_id)
@@ -276,7 +276,7 @@ def _read_state_data(path: Path) -> dict[str, Any]:
             ["対象 session が正しく作成されているか確認してください。"],
             str(path),
         )
-    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # {{work-root}}/spec/app_spec/error_handling.md
     # 壊れた永続 JSON を raw read exception として漏らさず、CmocError に統一する。
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -355,7 +355,7 @@ def _part_data(
 def _require_top_level_fields(data: dict[str, Any], source: Path | None) -> None:
     """session state の top-level field 集合を検証する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    根拠: {{work-root}}/spec/app_spec/session_state.md
     """
     # 正常時の検証で、異常時だけに必要な診断情報を組み立てない。
     expected = {"session", "run"}
@@ -388,7 +388,7 @@ def _require_nullable_strings(
 ) -> None:
     """state part の payload が null または空でない string であることを検証する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    根拠: {{work-root}}/spec/app_spec/session_state.md
     """
     for name, value in part.items():
         if name == "state" or value is None:
@@ -410,7 +410,7 @@ def _require_nullable_strings(
 def _require_session_identity(session: dict[str, Any], source: Path | None) -> None:
     """永続 state に必要な session の fork 元情報を検証する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    根拠: {{work-root}}/spec/app_spec/session_state.md
     """
     for name in ("session_home_branch", "session_fork_commit"):
         if not isinstance(session[name], str):
@@ -434,7 +434,7 @@ def _validate_run_fields(run: dict[str, Any], source: Path | None) -> None:
             source,
             "active run には有効な kind, branch, fork_commit が必要です。",
         )
-    # {{work-root}}/oracle/doc/branch_model.md
+    # {{work-root}}/spec/branch_model.md
     # state に保存する run branch は、worktree 解決と同じ canonical namespace に限定する。
     if parse_run_branch_ids(run["branch"]) is None:
         raise _invalid_state(

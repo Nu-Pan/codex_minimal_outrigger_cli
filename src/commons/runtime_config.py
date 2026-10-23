@@ -51,7 +51,7 @@ def _model_name(value: Any) -> str:
     """Codex の専用 argv へ渡せる非空モデル名へ検証する。"""
     if not isinstance(value, str) or not value.strip() or "\x00" in value:
         raise TypeError
-    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+    # {{work-root}}/spec/app_spec/codex_common_rule.md
     # model は TOML string ではなく --model の argv へそのまま渡すため、NUL と
     # Unicode surrogate を設定読み込み時に拒否して subprocess 起動失敗を防ぐ。
     validate_json_toml_value(value)
@@ -301,7 +301,7 @@ def validate_json_toml_value(value: Any) -> JsonTomlValue:
     try:
         return _validate_json_toml_value(value, None)
     except RecursionError as exc:
-        # {{work-root}}/oracle/doc/app_spec/error_handling.md
+        # {{work-root}}/spec/app_spec/error_handling.md
         # 深すぎる provider-local container も設定エラーとして上位へ返す。
         raise TypeError("JSON/TOML value is too deeply nested") from exc
 
@@ -393,7 +393,7 @@ def _config_from_dict(
         )
     except (RecursionError, TypeError, ValueError) as exc:
         try:
-            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # {{work-root}}/spec/app_spec/error_handling.md
             # 不正 JSON には surrogate も含まれうるため、error report を UTF-8 で出力
             # できる ASCII escape へ変換する。
             if isinstance(exc, RecursionError) or isinstance(
@@ -415,7 +415,7 @@ def _config_from_dict(
 
 def _reject_symlinked_config_path(path: Path) -> None:
     """config path の symlink 経由アクセスを拒否する。"""
-    # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+    # {{work-root}}/referenece/src/oracle/other/cmoc_config.py
     # config は work-root 内の tracked file なので、link 先の設定を読み書きしない。
     current = path.absolute()
     while (parent := current.parent) != current:
@@ -433,7 +433,7 @@ def _reject_symlinked_config_path(path: Path) -> None:
 def write_config(path: Path, config: CmocConfig) -> None:
     """config JSON を人間が確認しやすい安定した表現で保存する。"""
     _reject_symlinked_config_path(path)
-    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # {{work-root}}/spec/app_spec/error_handling.md
     # FIFO などを open して command が停止しないよう、既存 path は regular file に限る。
     if path.exists() and not path.is_file():
         raise CmocError(
@@ -475,7 +475,7 @@ def _search_config_failure(
 def _read_config_data(path: Path) -> dict[str, Any]:
     """既存 JSON を構造を保ったまま読む。"""
     _reject_symlinked_config_path(path)
-    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # {{work-root}}/spec/app_spec/error_handling.md
     # 特殊 file を read_text する前に拒否し、設定読み込みを即時に失敗させる。
     if not path.is_file():
         if not path.exists():

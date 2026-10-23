@@ -6,8 +6,8 @@ collector 受理・後続 wave の publication 検査に残す。
 
 対応する oracle file:
 
-- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
-- `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
+- `{{work-root}}/spec/app_spec/feedback_state.md`
+- `{{work-root}}/spec/app_spec/feedback_observation.md`
 """
 
 import errno

@@ -1,6 +1,6 @@
 """packaged layout と import 境界を検証する。
 
-分割根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+分割根拠: {{work-root}}/spec/app_spec/oracle_and_realization.md の
 「realization file を扱う判断基準」
 """
 
@@ -23,8 +23,8 @@ def _run_from_packaged_layout(
     影響を除き、
     `PYTHONPATH` でケースごとに選んだ package だけを import 対象にする。cwd と HOME も
     一時ディレクトリ内へ向け、実行者の設定や認証情報を持ち込まない。
-    根拠: {{work-root}}/oracle/doc/dev_rule/coding_rule.md
-    {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    根拠: {{work-root}}/spec/dev_rule/coding_rule.md
+    {{work-root}}/spec/dev_rule/test_rule.md
     """
     home = tmp_path / "home"
     home.mkdir()
@@ -60,7 +60,7 @@ def packaged_sources(tmp_path_factory: pytest.TempPathFactory) -> Path:
         "src/basic",
         "src/commons",
         "src/config",
-        "oracle/src/oracle",
+        "referenece/src/oracle",
     ):
         source = root / relative_path
         shutil.copytree(
@@ -90,16 +90,16 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
 
     acp の型再公開と正本 builder の完全 prompt を、basic・commons を含まない配置で
     確認する。共通の oracle import を一つの独立 process で検証する。
-    根拠: {{work-root}}/oracle/src/oracle/acp_builder/quota_probe.py
-    {{work-root}}/oracle/src/oracle/acp_builder/basic.py
-    {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    根拠: {{work-root}}/referenece/src/oracle/acp_builder/quota_probe.py
+    {{work-root}}/referenece/src/oracle/acp_builder/basic.py
+    {{work-root}}/spec/dev_rule/test_rule.md
     """
     root = Path(__file__).parents[1]
     pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     setuptools_config = pyproject["tool"]["setuptools"]
     assert "oracle" not in setuptools_config["py-modules"]
-    assert setuptools_config["package-dir"]["oracle"] == "oracle/src/oracle"
-    assert "oracle/src" in setuptools_config["packages"]["find"]["where"]
+    assert setuptools_config["package-dir"]["oracle"] == "referenece/src/oracle"
+    assert "referenece/src" in setuptools_config["packages"]["find"]["where"]
 
     target = _packaged_layout(packaged_sources, tmp_path, "acp", "oracle")
 
@@ -143,9 +143,9 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
 ) -> None:
     """oracle の builder と editor 入力境界が packaged layout で正本を参照する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-    {{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
-    {{work-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py
+    根拠: {{work-root}}/spec/app_spec/prompt_editor_input.md
+    {{work-root}}/referenece/src/oracle/acp_builder/oracle/edit/launch_exec.py
+    {{work-root}}/referenece/src/oracle/acp_builder/oracle/investigation/launch_tui.py
     """
     target = _packaged_layout(
         packaged_sources, tmp_path, "acp", "basic", "commons", "oracle"
@@ -236,8 +236,8 @@ def test_cmoc_config_reexports_only_config_definitions(
 
     `__all__` と module namespace の両方を確認し、packaged layout で内部実装が
     意図せず公開されないことを確認する。
-    根拠: {{work-root}}/oracle/src/oracle/other/cmoc_config.py
-    {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    根拠: {{work-root}}/referenece/src/oracle/other/cmoc_config.py
+    {{work-root}}/spec/dev_rule/test_rule.md
     """
     target = _packaged_layout(packaged_sources, tmp_path, "config", "oracle")
 

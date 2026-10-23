@@ -276,7 +276,7 @@ def scan_documents(
     check: Callable[[], None] | None = None,
     only_path: str | None = None,
 ) -> dict[str, SourceDocument]:
-    """全体を分類し、oracle/doc の Markdown を指定時は一文書だけ読む。"""
+    """全体を分類し、spec の Markdown を指定時は一文書だけ読む。"""
     # 本文を絞る場合も、全体の分類・安全性検査と root の実体確認は省略しない。
     root = root.absolute()
     initial_root = _root_identity(root)
@@ -295,7 +295,7 @@ def scan_documents(
         if deadline is not None:
             _deadline_check(deadline, cancelled)
         relative = candidate.relative_to(root).as_posix()
-        if not (relative.startswith("oracle/doc/") and relative.endswith(".md")):
+        if not (relative.startswith("spec/") and relative.endswith(".md")):
             continue
         if only_path is not None and relative != only_path:
             continue
@@ -483,8 +483,7 @@ def _open_database(path: Path) -> sqlite3.Connection:
             raise SearchError("MODEL_IDENTITY_MISMATCH", "sqlite-vec version mismatch")
         connection.execute("pragma foreign_keys = on")
         # 初期 schema は一括確定し、テーブルごとのディスク同期を避ける。
-        connection.executescript(
-            """
+        connection.executescript("""
             begin;
             create table if not exists documents(
                 path text primary key, sha256 text not null,
@@ -508,8 +507,7 @@ def _open_database(path: Path) -> sqlite3.Connection:
                 query text primary key, embedding blob not null
             );
             commit;
-            """
-        )
+            """)
         return connection
     except SearchError:
         if connection is not None:
@@ -1135,13 +1133,15 @@ class DocumentSearch:
         count = connection.execute("select count(*) from chunks").fetchone()[0]
         return SyncResult(
             identity=identity,
-            status="updated"
-            if index_created
-            or changed_paths
-            or deleted_paths
-            or pending_paths
-            or repaired_paths
-            else "unchanged",
+            status=(
+                "updated"
+                if index_created
+                or changed_paths
+                or deleted_paths
+                or pending_paths
+                or repaired_paths
+                else "unchanged"
+            ),
             document_count=len(documents),
             chunk_count=count,
             added=len(changed_paths - set(stored)),

@@ -88,7 +88,7 @@ def _save_interrupted_process_logs(
 
 def _read_optional_output(path: Path) -> tuple[str, Any]:
     """schema なしの出力から本文と JSON を取得し、不正 JSON は None とする。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     try:
         output_bytes = path.read_bytes()
     except FileNotFoundError:
@@ -110,7 +110,7 @@ def _read_optional_output(path: Path) -> tuple[str, Any]:
 
 def _read_required_output(path: Path) -> tuple[str, Any]:
     """Structured Output の本文と必須 JSON を一度の読み取りから返す。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     # 欠落、空、malformed な output は JSON parse 不合格として補正対象にする。
     try:
         text = path.read_text(encoding="utf-8")
@@ -179,7 +179,7 @@ def _validate_structured_output(
     changed_paths: frozenset[str],
 ) -> tuple[str, Any, tuple[StructuredOutputValidationIssue, ...]]:
     """parse、schema、宣言済み事後条件を順番どおり検証する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     try:
         text, output = _read_required_output(path)
     except (UnicodeError, ValueError) as exc:
@@ -222,7 +222,7 @@ def _build_output_correction_prompt(
     issues: tuple[StructuredOutputValidationIssue, ...],
 ) -> str:
     """初回 prompt を加工せず、同じ session の次 turn 用入力を構築する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     return "\n".join(
         [
             "# Structured Output の出力補正",
@@ -241,7 +241,7 @@ def _build_output_correction_prompt(
 
 def _extract_session_id_from_stdout_log(path: Path) -> str | None:
     """Codex call の stdout JSONL log から session ID を取り出す。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     # session ID を取得できない場合の扱いは、quota 再開と出力補正で異なるため、
     # 呼び出し側が判断できるよう None を返す。
     try:
@@ -252,7 +252,7 @@ def _extract_session_id_from_stdout_log(path: Path) -> str | None:
 
 def _base_exec_argv(override_args: list[str], agent_call_cwd: Path) -> list[str]:
     """cmoc 側で検査済みの cwd と設定上書きを Codex exec argv にする。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     # cmoc は linked worktree や生成 root から Codex を実行し得るため、repo の検証は
     # Codex CLI startup ではなく cmoc 自身の preflight が担う。
     # Codex の root parser が受理する共通の設定上書きは `exec` より前へ置く。
@@ -320,7 +320,7 @@ def run_codex_exec(
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 補正、実行記録を一括制御する。"""
     # 対話再開の入力不在を、非対話の補正・回復用 prompt と混同しない。
-    # oracle/doc/app_spec/codex_tui_rule.md の「TUI の新規起動と対話 resume」。
+    # spec/app_spec/codex_tui_rule.md の「TUI の新規起動と対話 resume」。
     initial_prompt = parameter.prompt
     if initial_prompt is None:
         raise CmocError(
@@ -341,7 +341,7 @@ def run_codex_exec(
     root = root or path_context.repo_root
     config = deepcopy(config or load_config(path_context.work_root))
     agent_call_cwd = path_context.agent_call_cwd
-    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+    # {{work-root}}/spec/app_spec/codex_common_rule.md
     # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
     # path を対象にする。
     codex_home = resolve_codex_home(agent_call_cwd)
@@ -365,7 +365,7 @@ def run_codex_exec(
     schema_validator: Validator | None = None
     schema_source_path = parameter.structured_output_schema_path
     if schema_source_path is not None:
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/spec/app_spec/codex_exec_rule.md
         # `--output-schema` は Codex 自身が linked worktree 内で動く場合も repo-root の
         # local schema store を指さなければならない。source の読み取り・UTF-8 decode、
         # JSON parse、schema validation を同じ local failure として扱う。
@@ -518,7 +518,7 @@ def run_codex_exec(
         timeout: float | None = None,
     ) -> subprocess.CompletedProcess[str]:
         """prompt logをstdinとしてCodex subprocessを起動する。"""
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/spec/app_spec/codex_exec_rule.md
         # prompt log file は `codex exec ... -` の stdin source である。
         check_recovery_interruption()
         with run_prompt_path.open(encoding="utf-8", newline="") as prompt_file:
@@ -901,9 +901,11 @@ def run_codex_exec(
                 (probe_stderr, exc.stderr),
             ):
                 path.write_text(
-                    content.decode("utf-8", errors="replace")
-                    if isinstance(content, bytes)
-                    else content or "",
+                    (
+                        content.decode("utf-8", errors="replace")
+                        if isinstance(content, bytes)
+                        else content or ""
+                    ),
                     encoding="utf-8",
                 )
             error = "recovery probe timed out"
@@ -925,9 +927,11 @@ def run_codex_exec(
                 run_schema_path=None,
                 started_at=started_at,
                 returncode=returncode,
-                status=f"{outcome}_waiting"
-                if outcome in {"quota", "transient"}
-                else outcome,
+                status=(
+                    f"{outcome}_waiting"
+                    if outcome in {"quota", "transient"}
+                    else outcome
+                ),
                 error=error,
                 run_codex_home=probe_codex_home,
             )
@@ -1012,15 +1016,17 @@ def run_codex_exec(
                 state = (
                     "exited"
                     if stopped_returncode is not None
-                    else "unknown"
-                    if initial_process_state == "started"
-                    else initial_process_state
+                    else (
+                        "unknown"
+                        if initial_process_state == "started"
+                        else initial_process_state
+                    )
                 )
                 _record_tui_initial(
                     state,
-                    status="cancelled"
-                    if isinstance(exc, KeyboardInterrupt)
-                    else "failed",
+                    status=(
+                        "cancelled" if isinstance(exc, KeyboardInterrupt) else "failed"
+                    ),
                     returncode=stopped_returncode,
                 )
             _ensure_correction_artifacts_unchanged(

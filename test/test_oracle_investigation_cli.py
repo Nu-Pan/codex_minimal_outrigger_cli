@@ -1,10 +1,10 @@
 """`cmoc oracle investigation` の CLI 起動条件を検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
-- {{work-root}}/oracle/doc/app_spec/document_search.md
-- {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-- {{work-root}}/oracle/src/oracle/acp_builder/oracle/investigation/launch_tui.py
+- {{work-root}}/spec/app_spec/sub_command/oracle_investigation.md
+- {{work-root}}/spec/app_spec/document_search.md
+- {{work-root}}/spec/app_spec/prompt_editor_input.md
+- {{work-root}}/referenece/src/oracle/acp_builder/oracle/investigation/launch_tui.py
 """
 
 from pathlib import Path

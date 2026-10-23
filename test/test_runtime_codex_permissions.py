@@ -1,8 +1,8 @@
 """Codex sandbox argv が permission profile に依存しないことを検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-- {{work-root}}/oracle/doc/dev_rule/test_rule.md
+- {{work-root}}/spec/app_spec/codex_common_rule.md
+- {{work-root}}/spec/dev_rule/test_rule.md
 """
 
 from pathlib import Path

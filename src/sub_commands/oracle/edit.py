@@ -50,7 +50,7 @@ def _cmoc_oracle_edit_body() -> None:
         current_root = work_root()
 
     # oracle 編集契約を含む完全 prompt の skeleton を handoff ガイドに使う。
-    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    # {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
     start_subcommand_step(2, "編集 prompt の skeleton を構築", "build edit skeleton")
     complete_prompt_skeleton = build_oracle_edit_request(
         ORIGINAL_PROMPT_PLACEHOLDER,
@@ -107,7 +107,7 @@ def _cmoc_oracle_edit_body() -> None:
     start_subcommand_step(9, "終了状態を確定", "finalize oracle edit")
 
 
-# {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+# {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
 def _require_oracle_edit_launch_preconditions(
     repository: Path,
     current_root: Path,

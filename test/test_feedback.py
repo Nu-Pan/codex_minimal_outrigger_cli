@@ -10,12 +10,12 @@ TCP と実 fsync を繰り返さない。
 
 対応する oracle file:
 
-- `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
-- `{{work-root}}/oracle/doc/app_spec/console_and_file_log.md`
-- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
-- `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
-- `{{work-root}}/oracle/src/oracle/acp_builder/feedback/normalize_issue.json`
-- `{{work-root}}/oracle/src/oracle/acp_builder/feedback/remediate_issue.json`
+- `{{work-root}}/spec/app_spec/feedback_observation.md`
+- `{{work-root}}/spec/app_spec/console_and_file_log.md`
+- `{{work-root}}/spec/app_spec/feedback_state.md`
+- `{{work-root}}/spec/app_spec/sub_command/feedback_report.md`
+- `{{work-root}}/referenece/src/oracle/acp_builder/feedback/normalize_issue.json`
+- `{{work-root}}/referenece/src/oracle/acp_builder/feedback/remediate_issue.json`
 """
 
 import errno
@@ -181,9 +181,11 @@ def _context(
     return {
         "repo_root": str(root.resolve()),
         "work_root": str(root.resolve()),
-        "head_commit": head_commit
-        if head_commit is not None
-        else run_git(root, "rev-parse", "HEAD").stdout.strip(),
+        "head_commit": (
+            head_commit
+            if head_commit is not None
+            else run_git(root, "rev-parse", "HEAD").stdout.strip()
+        ),
         "cmoc_session_id": session_id,
         "run_id": None,
         "run_kind": None,
@@ -300,9 +302,9 @@ def _remediation_output(
                 {"method": "inspection", "status": "passed", "summary": "確認済み"}
             ],
             "current_evidence": evidence,
-            "human_action": "README の設定を修正する。"
-            if verdict == "human_required"
-            else None,
+            "human_action": (
+                "README の設定を修正する。" if verdict == "human_required" else None
+            ),
             "reason": "固定済み README 参照から現在状態を判定した。",
         }
     }
@@ -690,7 +692,7 @@ def test_reporter_availability_probe_checks_stdio_process_and_collector(
     monkeypatch.setenv("HOME", str(root))
     monkeypatch.setenv(
         "PYTHONPATH",
-        os.pathsep.join(str(source_root / path) for path in ("src", "oracle/src")),
+        os.pathsep.join(str(source_root / path) for path in ("src", "referenece/src")),
     )
     probed_roots: list[Path] = []
 
@@ -3301,9 +3303,9 @@ def test_feedback_preconditions_preserve_existing_changes_and_raw(
         )
         assert expected_error in result.output, (condition, result.output)
         assert run_git(root, "rev-parse", "HEAD").stdout == original_head, condition
-        assert run_git(root, "status", "--porcelain").stdout == original_status, (
-            condition
-        )
+        assert (
+            run_git(root, "status", "--porcelain").stdout == original_status
+        ), condition
         assert {
             path: path.read_bytes() for path in iter_observation_paths(root)
         } == original_raw, condition

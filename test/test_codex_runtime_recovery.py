@@ -243,9 +243,9 @@ def test_reason_changes_preserve_settings_session_and_work(
             config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
                 "openai", "changed-model", "low"
             )
-            config.codex.model_providers["custom"].settings["base_url"] = (
-                "https://changed.invalid"
-            )
+            config.codex.model_providers["custom"].settings[
+                "base_url"
+            ] = "https://changed.invalid"
             headers["X-Test"] = "changed"
 
     calls = script_codex_calls(
@@ -590,7 +590,7 @@ except KeyboardInterrupt:
     environment = {
         **os.environ,
         "PYTHONPATH": os.pathsep.join(
-            str(repository / path) for path in ("src", "oracle/src")
+            str(repository / path) for path in ("src", "referenece/src")
         ),
     }
     # 明示した PYTHONPATH と標準ライブラリだけを使い、site の初期化を省く。

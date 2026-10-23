@@ -8,7 +8,7 @@
 
 ### プロンプトの書き方（お作法）
 
-- プロンプトに何を含めるべきか？　これは `<cmoc-root>/oracle/doc/app_spec/sub_command/tui.md` に反映済み
+- プロンプトに何を含めるべきか？　これは `<cmoc-root>/spec/app_spec/sub_command/tui.md` に反映済み
 
 ### 入力キャッシュ
 

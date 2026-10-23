@@ -5,7 +5,7 @@ oracle/realization file の分類は、同じ repository path・Git index・安�
 共有する一つの境界である。分割すると、path の正規化と Git 状態検証を各 module で
 重複して追う必要が生じるため、現状は Git 境界として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+根拠: {{work-root}}/spec/app_spec/oracle_and_realization.md の
 「realization file を扱う判断基準」
 """
 
@@ -27,7 +27,7 @@ from .runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/gu/"
-# {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+# {{work-root}}/referenece/src/oracle/other/cmoc_config.py
 # 他の child には広い user .cmoc/ rule を効かせつつ、追跡対象の repository config を
 # 到達可能にし、その他の `.cmoc` data は ignore されたままにする。
 CMOC_CONFIG_IGNORE_EXCEPTIONS = (
@@ -118,7 +118,7 @@ def capture_worktree_snapshot(
     root: Path, *, paths: Collection[str] | None = None
 ) -> WorktreeSnapshot:
     """追跡済みまたは非 ignore の作業成果物を復元可能な形で取得する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     # Codex call log、schema store、ID 採番を含む管理 state は snapshot へ含めず、
     # agent が扱う非 ignore の作業成果物だけを固定する。
     root = root.absolute()
@@ -189,7 +189,7 @@ def restore_worktree_snapshot(
     snapshot: WorktreeSnapshot, *, current: WorktreeSnapshot | None = None
 ) -> None:
     """取得済みの現在状態があれば再利用し、snapshot と同じ状態へ戻す。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     # Structured Output 補正 turn が変動させた path だけを初回 call 完了時へ戻す。
     frozen = dict(snapshot.entries)
     seen: set[frozenset[str]] = set()
@@ -311,7 +311,7 @@ def literal_pathspec(path: str) -> str:
 
 def run_git(args: list[str], git_cwd: Path, check: bool = True) -> CommandResult:
     """git subprocess の失敗を cmoc の利用者向けエラーへそろえる境界。"""
-    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # {{work-root}}/spec/dev_rule/coding_rule.md
     # Git の実行場所は subprocess API の cwd とは異なる内部役割名で扱う。
     queries = _GIT_PATH_QUERIES.get()
     key = None
@@ -444,7 +444,7 @@ def create_run_worktree(
         )
     candidate.parent.mkdir(parents=True, exist_ok=True)
     if candidate.exists():
-        # {{work-root}}/oracle/doc/branch_model.md
+        # {{work-root}}/spec/branch_model.md
         # path が一致しても cmoc 作成の linked worktree とは限らないため、暗黙に削除しない。
         raise CmocError(
             "run worktree path は既に存在します。",
@@ -478,7 +478,7 @@ def delete_branch(root: Path, branch: str, force: bool = False) -> CommandResult
 
 def parse_run_branch_ids(branch: str) -> tuple[str, str] | None:
     """現行 run branch の session ID と run ID を取り出す。"""
-    # {{work-root}}/oracle/doc/branch_model.md
+    # {{work-root}}/spec/branch_model.md
     if not isinstance(branch, str):
         return None
     parts = branch.split("/")
@@ -517,7 +517,7 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
         relative = resolved.relative_to(base)
     except ValueError as exc:
         raise _unmanaged_worktree_error(worktree, base) from exc
-    # {{work-root}}/oracle/doc/branch_model.md
+    # {{work-root}}/spec/branch_model.md
     # work-root の削除は .cmoc/gu/worktree/{{session-id}}/{{run-id}} に限定する。
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
@@ -525,7 +525,7 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
     if parse_run_branch_ids(expected_branch) is None:
         raise _unmanaged_worktree_error(worktree, base)
-    # {{work-root}}/oracle/doc/branch_model.md
+    # {{work-root}}/spec/branch_model.md
     # 命名規則だけでは不十分であり、削除は対応する Git linked worktree に限定する。
     if _registered_worktree_branches(root).get(resolved) != expected_branch:
         raise _unmanaged_worktree_error(worktree, base)
@@ -541,7 +541,7 @@ def _absolute_path(path: Path) -> Path:
 
 def _first_symlink_component(path: Path) -> Path | None:
     """path を順にたどり、最初に見つかった symlink component を返す。"""
-    # {{work-root}}/oracle/doc/branch_model.md
+    # {{work-root}}/spec/branch_model.md
     # resolve() 前の lexical path を検査し、管理領域外へ向く symlink も検出する。
     absolute = _absolute_path(path)
     current = Path(absolute.anchor)
@@ -572,7 +572,7 @@ def _registered_worktree_branches(root: Path) -> dict[Path, str]:
 
 def _has_linked_worktree_metadata(root: Path, worktree: Path) -> bool:
     """worktree path と Git linked worktree metadata の相互参照を検証する。"""
-    # {{work-root}}/oracle/src/oracle/other/path_model.py
+    # {{work-root}}/referenece/src/oracle/other/path_model.py
     # linked worktree の root は直下に .git file を持つ。Git の登録だけでは、
     # worktree directory が置換された stale entry と区別できないため、metadata の
     # 相互参照まで確認して fallback の再帰削除を許可する。
@@ -653,7 +653,7 @@ def _global_git_ignore_paths(root: Path) -> list[Path]:
             if line:
                 path = Path(line)
                 resolved = path if path.is_absolute() else root / path
-                # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+                # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
                 # の
                 # 「Git ignore 判定の性能不変条件」
                 # 同じ ignore source の検証結果を一度の列挙内で再利用する。
@@ -674,7 +674,7 @@ def _validate_git_ignore_sources(
     strict_local: bool = False,
 ) -> None:
     """候補の Git ignore source を、共通の親を含め一度ずつ種類検証する。"""
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     root = root.absolute()
     validate_local = _validate_ignore_path if strict_local else _reject_non_file_path
     validate_local(root / ".gitignore", ".gitignore")
@@ -711,7 +711,7 @@ def _validate_global_git_ignore_path(path: Path) -> None:
 
 def _git_ignore_error(command: list[str], result: CommandResult) -> CmocError:
     """check-ignore の判定不能を分類エラーへ変換する。"""
-    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
     # の「分類結果」
     # file の分類条件を満たすか不明なまま、ignore されていない扱いにしてはならない。
     return CmocError(
@@ -739,7 +739,7 @@ def _check_git_ignore(root: Path, relative: Path, *, no_index: bool) -> bool:
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
     """.cmoc/gu の追跡有無と ignore 判定を取得する。"""
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # git check-ignore は repository-local、nested、global の ignore file を読むため、
     # FIFO などの非通常 file を拒否してからコマンドを実行する。
     _validate_git_ignore_sources(
@@ -797,7 +797,7 @@ def _reject_symlinked_path(path: Path, description: str) -> None:
 
 def _reject_non_file_path(path: Path, description: str) -> None:
     """ignore file の読み書きを通常 file に限定する。"""
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # FIFO や device を read_text/write_text すると doctor が停止または block するため、
     # symlink 検査後に既存 path の種別を検証する。
     if path.exists() and not path.is_file():
@@ -845,8 +845,8 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
     """clean worktree を保つ必要がある caller 用に git exclude で .cmoc ignore を保証する。
 
     根拠:
-    - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-    - {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    - {{work-root}}/spec/app_spec/sub_command/session_fork.md
+    - {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     # exclude の修復と検査で保存先を共有し、内容や index の判定は毎回実行する。
     exclude_path = _git_info_exclude_path(root)
@@ -889,7 +889,7 @@ def is_git_ignored(root: Path, path: Path) -> bool:
 
 def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     """未追跡 path が owning repository の通常 ignore 判定に一致するか返す。"""
-    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
     # の「分類結果」
     # oracle/realization file の定義は通常の git check-ignore 挙動を使う。
     # ignore pattern に一致しても、追跡済み file は対象に残す。
@@ -912,7 +912,7 @@ def enumerate_oracle_and_realization_files(
 ) -> tuple[list[Path], list[Path]]:
     """work root の oracle file と realization file を一括列挙する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    根拠: {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
     の「分類結果」
     """
     # 常時対象外 root と検証済み Git metadata だけを事前 pruning し、ignored
@@ -1070,7 +1070,7 @@ def _repository_context_for_path(
     if ".." in relative_candidate.parts:
         return None
 
-    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
     # の「traversal と事前 pruning」
     # symlink の親を通る path は参照先を repository context や分類へ混入させるため、
     # 最終 component の symlink path だけを扱う ignore 判定と区別して拒否する。
@@ -1233,7 +1233,7 @@ def realization_file_paths(
 
     apply worktree が無い復旧経路では branch の tree を追跡状態の正本にする。
     欠落 path だけは fallback_branch も確認し、現在の file は index-aware に判定する。
-    根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    根拠: {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
     の「分類結果」
     """
     # path と実体の検査は省略せず、現在の regular file だけを repository 別に集める。
@@ -1315,7 +1315,7 @@ def _regular_tree_files(
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:
     """repository pathと追跡状態からoracle fileに該当するか判定する。"""
-    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
     # の「分類結果」
     # oracle file の定義は Codex access check と apply/session の差分分類の両方から
     # 使うため、一つの runtime helper に集約する。

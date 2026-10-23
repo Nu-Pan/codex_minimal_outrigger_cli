@@ -1,9 +1,9 @@
 """realization refactor 永続 state の同期・選択規則を検証する。
 
 正本仕様:
-- `{{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md`
-- `{{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md`
-- `{{work-root}}/oracle/doc/app_spec/timestamp.md`
+- `{{work-root}}/spec/app_spec/sub_command/realization_refactor.md`
+- `{{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md`
+- `{{work-root}}/spec/app_spec/timestamp.md`
 """
 
 import json
@@ -103,7 +103,7 @@ def test_refactor_target_classifiers_reject_parent_path_escape(
     tmp_path: Path, relative: str
 ) -> None:
     """oracle/realization file classifier が work-root 外の path を拒否する。"""
-    # 根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # 根拠: {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
     # の「分類結果」
     # 範囲外 path は Git 問い合わせ前に拒否するため、repository は不要。
     root = tmp_path / "repo"
@@ -248,9 +248,9 @@ def test_refactor_state_sync_initializes_and_preserves_dates_without_reading_con
     open_file = Path.open
 
     def open_state_only(path, *args, **kwargs):
-        assert path not in [root / target for target in targets], (
-            "content read during sync"
-        )
+        assert path not in [
+            root / target for target in targets
+        ], "content read during sync"
         return open_file(path, *args, **kwargs)
 
     monkeypatch.setattr(Path, "open", open_state_only)
@@ -521,9 +521,11 @@ def test_merge_refactor_states_reads_shared_snapshot_once(
         if args[0] == "ls-tree":
             return CommandResult(
                 0,
-                "100644 blob abc\t.cmoc/gt/realization/refactor/state.json\0"
-                if has_committed_state
-                else "",
+                (
+                    "100644 blob abc\t.cmoc/gt/realization/refactor/state.json\0"
+                    if has_committed_state
+                    else ""
+                ),
                 "",
             )
         assert args[0] == "show"
@@ -543,9 +545,11 @@ def test_merge_refactor_states_reads_shared_snapshot_once(
     state = merge_refactor_states(root, refs)
 
     assert state == {
-        "README.md": committed["README.md"]
-        if has_committed_state
-        else {"last_investigated_at": None},
+        "README.md": (
+            committed["README.md"]
+            if has_committed_state
+            else {"last_investigated_at": None}
+        ),
         "added.md": {"last_investigated_at": None},
     }
     assert load_refactor_state(root) == state

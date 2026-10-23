@@ -4,7 +4,7 @@ from oracle.acp_builder.oracle.edit.launch_exec import (
     build_oracle_edit_request,
 )
 
-# {{work-root}}/oracle/src/oracle/acp_builder/oracle/edit/launch_exec.py
+# {{work-root}}/referenece/src/oracle/acp_builder/oracle/edit/launch_exec.py
 __all__ = [
     "build_oracle_edit_request",
 ]

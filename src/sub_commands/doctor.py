@@ -1,7 +1,7 @@
 """doctor preprocess を明示実行する cmoc doctor の CLI 入口を提供する。"""
 
-# {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
-# {{work-root}}/oracle/doc/dev_rule/design_rule.md
+# {{work-root}}/spec/app_spec/sub_command/doctor.md
+# {{work-root}}/spec/dev_rule/design_rule.md
 
 from cmoc_runtime import (
     TerminalResult,
@@ -31,7 +31,7 @@ def _doctor_body() -> TerminalResult:
     with reuse_root_queries():
         current_work_root = work_root()
         current_repo_root = repo_root()
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
     run_doctor_preprocess(current_work_root, explicit_doctor=True)
     return TerminalResult(details=(("repo_root", current_repo_root),))

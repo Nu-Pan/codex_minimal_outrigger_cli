@@ -118,7 +118,7 @@ def cmoc_realization_refactor_impl() -> None:
         _cmoc_realization_refactor_body,
         command_name="realization refactor",
         command_argv=["cmoc", "realization", "refactor"],
-        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        # {{work-root}}/spec/app_spec/subcommand_interruption.md
         interruptible=True,
         doctor_preprocess=False,
         total_steps=6,
@@ -156,7 +156,7 @@ def _cmoc_realization_refactor_body() -> TerminalResult:
             state_after="running",
             refactor_state_path=refactor_state_path(context.run_worktree),
         )
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # fork 内の Codex call を同じ process tracking scope に置き、
         # interrupt/abandon から停止可能にする。
         with run_process_tracking(context.repo, context.session_id):
@@ -195,14 +195,14 @@ def _cmoc_realization_refactor_body() -> TerminalResult:
                     time.sleep(0.1)
     except KeyboardInterrupt as interruption:
         if context is None:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # fork の共通事前条件失敗では、既存の error run をこの fork の
             # 中断対象として回収してはならない。context 返却前の start failure
             # だけを、公開済み run の回収対象にする。
             if start_attempted and start_was_ready:
                 context = _recover_refactor_start(interruption)
             if context is None:
-                # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                # {{work-root}}/spec/app_spec/subcommand_interruption.md
                 # run 作成前の fork lifecycle であっても Ctrl+C は正常な中断として
                 # 終了し、共通 runner に子 process の失敗として扱わせない。
                 mark_current_subcommand_interrupted()
@@ -305,7 +305,7 @@ def _cmoc_realization_refactor_body() -> TerminalResult:
         )
     except BaseException as exc:
         if context is None:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # 事前条件が ready でなかった場合は既存 run を回収しない。ready を
             # 確認後に別 invocation が先に run を公開しただけの CmocError には
             # 公開済み context が付かないため、その run を回収対象として扱わない。
@@ -605,7 +605,7 @@ def _run_refactor_unit(
     )
     unexpected = unexpected_agent_paths(context, actual_changed_paths)
     if unexpected:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
         # state は cmoc が更新するため、agent call 直後に realization
         # file 以外の差分を拒否し、agent の変更を cmoc の更新として取り込まない。
         raise CmocError(
@@ -631,7 +631,7 @@ def _run_refactor_unit(
             for finding in findings
         )
     ):
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
         # net 差分のない fixed 自己申告は、実行記録を保ったまま処理判定だけを
         # 所見なしへ正規化する。
         normalized_findings = []
@@ -737,7 +737,7 @@ def _commit_refactor_unit(
     その処理単位を確定済みとして記録してから中断処理へ戻し、report の進捗を
     実際の run branch と一致させる。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     """
     # child 停止後に検証済みの HEAD と同期・保存済みの state を使う。
     # この間は state の保存だけで commit せず、HEAD と全 entry の再取得は不要。
@@ -810,7 +810,7 @@ def _commit_refactor_unit(
                         if change.status.startswith("R") and len(change.paths) == 2
                     }
                     if declared_changed_paths:
-                        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+                        # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
                         # Git は内容の変更量が大きい rename を delete/add として記録する。
                         # 後続 target の call が以前の unresolved target を rename した場合
                         # もあるため、current target だけでなく commit 前から unresolved だった
@@ -859,7 +859,7 @@ def _commit_refactor_unit(
                         if unresolved_target in state:
                             unresolved_findings[unresolved_target] = unresolved
                 except BaseException:
-                    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                    # {{work-root}}/spec/app_spec/subcommand_interruption.md
                     # commit 後の差分 inspection 中断でも、確定済み finding を report から
                     # 失わない。rename の確定前は旧 target を保守的に保持する。
                     unresolved_findings.clear()
@@ -878,7 +878,7 @@ def _reconcile_unresolved_findings(
     unresolved_findings: dict[str, list[_UnresolvedFinding]],
 ) -> None:
     """commit 後の state path に current fork の unresolved を揃える。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     # rename は state 上で旧 path の削除と新 path の追加になるため、commit 前の
     # target key をそのまま保持すると report の未解決集合が不一致になる。
     for target in list(unresolved_findings):
@@ -915,7 +915,7 @@ def _changed_path_postcondition(
     artifact_changed_paths: frozenset[str],
 ) -> tuple[StructuredOutputValidationIssue, ...]:
     """refactor prompt が宣言する changed_paths 照合結果を返す。"""
-    # {{work-root}}/oracle/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
+    # {{work-root}}/referenece/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
     assert isinstance(output, dict)
     findings = output["findings"]
     unexpected = set(unexpected_agent_paths(context, artifact_changed_paths))
@@ -969,7 +969,7 @@ def _write_refactor_report(
     except BaseException as change_error:
         if reason not in {"error", "user_interruption"}:
             raise
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
         # error/interruption report は補助的な git inspection の失敗でも保存し、
         # 確認できない変更 path は未確認として warning に残す。
         report_cleanup_errors.append(f"change inspection failed: {change_error!r}")
@@ -1090,10 +1090,12 @@ def _write_refactor_report(
                 f"未解決所見を持つ対象: {len(unresolved_findings)} 件",
                 "テスト時間・短縮率は、比較可能な完了済み計測がありません。",
             ),
-            _refactor_next_actions(report_cleanup_errors)
-            if reason == "error"
-            else (
-                "終了処理の完了後、続ける場合は新しい `cmoc realization refactor` を開始してください。",
+            (
+                _refactor_next_actions(report_cleanup_errors)
+                if reason == "error"
+                else (
+                    "終了処理の完了後、続ける場合は新しい `cmoc realization refactor` を開始してください。",
+                )
             ),
         ),
         state_after=state_after,

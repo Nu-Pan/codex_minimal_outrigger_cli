@@ -6,8 +6,8 @@ normalization、全 candidate の verification、正常 publication、および 
 固定入力の対応を重複管理するため、サブコマンド固有の状態機械としてまとめる。
 
 対応する oracle file:
-- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
-- `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
+- `{{work-root}}/spec/app_spec/feedback_state.md`
+- `{{work-root}}/spec/app_spec/sub_command/feedback_report.md`
 """
 
 import errno
@@ -114,7 +114,7 @@ def cmoc_feedback_report_impl() -> None:
         _cmoc_feedback_report_body,
         command_name="feedback report",
         command_argv=["cmoc", "feedback", "report"],
-        # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+        # {{work-root}}/spec/app_spec/subcommand_interruption.md
         interruptible=True,
         doctor_preprocess=False,
         total_steps=7,
@@ -166,12 +166,16 @@ def save_feedback_invocation_report(
         if fields["current_pointer_update_status"] != "completed":
             # recovery は今回 pointer を切り替えず、元の publication の成立を確認する。
             fields.update(
-                normal_publication_status="previously_completed"
-                if result.result != "incomplete"
-                else "not_completed",
-                incomplete_diagnostic_status="previously_completed"
-                if result.result == "incomplete"
-                else "not_completed",
+                normal_publication_status=(
+                    "previously_completed"
+                    if result.result != "incomplete"
+                    else "not_completed"
+                ),
+                incomplete_diagnostic_status=(
+                    "previously_completed"
+                    if result.result == "incomplete"
+                    else "not_completed"
+                ),
                 current_pointer_update_status="previously_completed",
             )
         body.extend(
@@ -228,7 +232,7 @@ def _pending_observations(
 ) -> tuple[list[_JsonObject], dict[str, _JsonObject]]:
     """raw store の全 pending file を canonical validation して固定入力へ変換する。"""
     root = feedback_root(repo) / "observation" / "v1"
-    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # {{work-root}}/spec/app_spec/feedback_state.md
     # dangling symlink と symlink 化された親 directory も、空の初期 state と
     # 誤認して publication しない。
     if _has_symlink_component(root) or (root.exists() and not root.is_dir()):
@@ -501,7 +505,7 @@ def _capture_repository_reference(
         "kind": "repository_content",
         "state": "hashed",
         "sha256": digest,
-        # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+        # {{work-root}}/spec/app_spec/feedback_state.md
         # private key block が capture 上限をまたいでも、先に全体を mask して
         # report cut の bounded content へ secret の断片を保存しない。
         "content": masked_text[:_REFERENCE_CONTENT_LIMIT],
@@ -668,9 +672,11 @@ def _build_candidates(
         repo,
         {**manifest, "cut_at": observed_at or manifest["cut_at"]},
         candidates,
-        previous_aggregates
-        if previous_aggregates is not None
-        else state.machine_aggregates,
+        (
+            previous_aggregates
+            if previous_aggregates is not None
+            else state.machine_aggregates
+        ),
         machine_observations,
     )
 
@@ -1162,7 +1168,7 @@ def _normalize_issue_identity(
         }
         for candidate in sorted(candidates, key=lambda item: str(item["candidate_id"]))
     ]
-    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # {{work-root}}/spec/app_spec/sub_command/feedback_report.md
     # deduplication hint は候補検索だけで使い、issue identity の根拠として
     # normalization agent へ渡さない。
     normalization_observation = {
@@ -1666,9 +1672,7 @@ def _publish_report(
     result = (
         "incomplete"
         if any(verdict["status"] == "inconclusive" for verdict in verdicts.values())
-        else "attention"
-        if unresolved_ids
-        else "ok"
+        else "attention" if unresolved_ids else "ok"
     )
     publication = manifest.get("publication")
     if publication is None:
@@ -1974,9 +1978,11 @@ def _active_issue_record(
             "status": verdict["status"],
             "reason": mask_feedback_text(str(verdict["reason"])),
             "current_evidence": materialized,
-            "human_action": mask_feedback_text(str(verdict["human_action"]))
-            if verdict["human_action"] is not None
-            else None,
+            "human_action": (
+                mask_feedback_text(str(verdict["human_action"]))
+                if verdict["human_action"] is not None
+                else None
+            ),
             "decision_basis": _masked_json_object(verdict["decision_basis"]),
         },
         "machine_state": (
@@ -2085,13 +2091,11 @@ def _publication_history(
         before, after = state.issues.get(identity), active.get(identity)
         events.append(
             {
-                "kind": "updated"
-                if before and after
-                else "created"
-                if after
-                else "resolved"
-                if before
-                else "result",
+                "kind": (
+                    "updated"
+                    if before and after
+                    else "created" if after else "resolved" if before else "result"
+                ),
                 "case_id": manifest["run"]["targets"]["case_ids"][identity],
                 "issue_id": identity,
                 "before": before,
@@ -2246,7 +2250,7 @@ def _artifact_object(value: object, description: str) -> _JsonObject:
 
 def _full_log_path(repo: Path, value: object) -> str | None:
     """subcommand log に記録する artifact path をフルパスへ変換する。"""
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # {{work-root}}/spec/app_spec/console_and_file_log.md
     if not isinstance(value, str):
         return None
     path = Path(value)
@@ -2326,7 +2330,7 @@ def _record_feedback_interruption(
 
 def _update_feedback_progress_fields(manifest: _JsonObject | None) -> None:
     """invocation summary 用に durable checkpoint の確定件数だけを保持する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # {{work-root}}/spec/app_spec/sub_command/feedback_report.md
     if manifest is None:
         update_primary_report_fields(
             normalization_checkpoint_count=None,
@@ -2369,9 +2373,11 @@ def _published_terminal_result(report_path: Path, result: str) -> TerminalResult
     """確定済み publication を run finalization へ渡す。"""
     return TerminalResult(
         primary_report=report_path,
-        primary_report_role="incomplete feedback diagnostic report"
-        if result == "incomplete"
-        else "feedback report",
+        primary_report_role=(
+            "incomplete feedback diagnostic report"
+            if result == "incomplete"
+            else "feedback report"
+        ),
         result=result,
     )
 

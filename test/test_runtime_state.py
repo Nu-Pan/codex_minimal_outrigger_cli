@@ -55,7 +55,7 @@ def _acquire_session_fork_lock(
 def _valid_state() -> SessionState:
     """永続化 schema を満たす state のテスト値を返す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    根拠: {{work-root}}/spec/app_spec/session_state.md
     """
     return SessionState(SessionPart("active", "main", "abc", None), RunPart())
 

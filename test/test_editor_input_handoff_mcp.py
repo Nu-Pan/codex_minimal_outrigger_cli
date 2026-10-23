@@ -1,8 +1,8 @@
 """editor input handoff の agent-facing MCP interface を検証する。
 
 正本仕様:
-- {{work-root}}/oracle/doc/app_spec/editor_input_handoff.md
-- {{work-root}}/oracle/src/oracle/editor_input_handoff/overwrite_input.json
+- {{work-root}}/spec/app_spec/editor_input_handoff.md
+- {{work-root}}/referenece/src/oracle/editor_input_handoff/overwrite_input.json
 """
 
 import json
@@ -559,7 +559,7 @@ def test_handoff_uses_canonical_body_and_typed_references(
     from oracle.other.doc_ref_model import DocRef
 
     target_id, connection = handoff_transport
-    reference_path = tmp_path / "oracle/doc/spec.md"
+    reference_path = tmp_path / "spec/spec.md"
     fields = handoff_input(target_id, "本文を保持する <!-- コメント -->\n続き")
     fields["oracle_references"] = [
         {"file_path": str(reference_path), "loc_desc": None},

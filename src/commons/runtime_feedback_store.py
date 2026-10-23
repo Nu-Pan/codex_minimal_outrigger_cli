@@ -7,9 +7,9 @@ record の同一性判定が重複するため、raw observation store の境界
 
 対応する oracle file:
 
-- `{{work-root}}/oracle/doc/app_spec/feedback_observation.md`
-- `{{work-root}}/oracle/doc/app_spec/feedback_state.md`
-- `{{work-root}}/oracle/src/oracle/feedback/reporter_input.json`
+- `{{work-root}}/spec/app_spec/feedback_observation.md`
+- `{{work-root}}/spec/app_spec/feedback_state.md`
+- `{{work-root}}/referenece/src/oracle/feedback/reporter_input.json`
 """
 
 import errno
@@ -161,7 +161,7 @@ def observation_root(repo: Path) -> Path:
 @contextmanager
 def observation_publication_lock(repo: Path) -> Iterator[None]:
     """collector publication と report cut inventory の短い境界を直列化する。"""
-    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # {{work-root}}/spec/app_spec/feedback_state.md
     root = feedback_root(repo)
     if _has_symlink_component(root):
         raise FeedbackRejected(
@@ -475,7 +475,7 @@ def _mask_text(value: str) -> tuple[str, int]:
 
 def mask_feedback_text(value: str) -> str:
     """report cut に保存する text へ raw observation と同じ secret masking を適用する。"""
-    # {{work-root}}/oracle/doc/app_spec/feedback_state.md
+    # {{work-root}}/spec/app_spec/feedback_state.md
     return _mask_text(value)[0]
 
 
@@ -861,7 +861,7 @@ def unprocessed_observation_paths(repo: Path) -> list[Path]:
     from .runtime_feedback_state import published_cleanup_observation_ids
 
     root = observation_root(repo)
-    # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+    # {{work-root}}/spec/app_spec/feedback_observation.md
     # 不正な親 component を、存在しない初期 state として扱わない。
     current = os.path.abspath(root)
     while current != os.path.dirname(current):
@@ -913,8 +913,8 @@ def feedback_completion_counts(
     repo: Path,
 ) -> tuple[int | None, list[str]]:
     """通常サブコマンド完了時の pending observation 件数と warning を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+    # {{work-root}}/spec/app_spec/console_and_file_log.md
+    # {{work-root}}/spec/app_spec/feedback_observation.md
     try:
         pending = unprocessed_observation_paths(repo)
     except Exception:

@@ -1,18 +1,18 @@
 """非対話末端サブコマンドの primary report 完了契約を検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-- {{work-root}}/oracle/doc/app_spec/error_handling.md
-- {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+- {{work-root}}/spec/app_spec/console_and_file_log.md
+- {{work-root}}/spec/app_spec/error_handling.md
+- {{work-root}}/spec/app_spec/subcommand_interruption.md
+- {{work-root}}/spec/app_spec/sub_command/doctor.md
+- {{work-root}}/spec/app_spec/sub_command/session_fork.md
+- {{work-root}}/spec/app_spec/sub_command/session_join.md
+- {{work-root}}/spec/app_spec/sub_command/session_abandon.md
+- {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
+- {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+- {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
+- {{work-root}}/spec/app_spec/sub_command/editing_run.md
+- {{work-root}}/spec/app_spec/sub_command/feedback_report.md
 """
 
 import json

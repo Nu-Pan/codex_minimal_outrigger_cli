@@ -155,17 +155,17 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
 ):
     create, inputs = cache_search
     root = committed_document_repository
-    original = (root / "oracle/doc/allowed.md").read_text()
+    original = (root / "spec/allowed.md").read_text()
     events = []
     with closing(create(root)) as search:
         search.synchronize(unbounded=True)
     assert inputs() == [original]
 
     # 元索引を最新化せず、接続先だけの配置と検索対象を再構築する。
-    (root / "oracle/doc/allowed.md").write_text("# 再利用元だけの未同期本文\n")
+    (root / "spec/allowed.md").write_text("# 再利用元だけの未同期本文\n")
     run = _worktree(root, tmp_path / "run")
-    (run / "oracle/doc/allowed.md").rename(run / "oracle/doc/moved.md")
-    (run / "oracle/doc/copy.md").write_text(original)
+    (run / "spec/allowed.md").rename(run / "spec/moved.md")
+    (run / "spec/copy.md").write_text(original)
     with closing(create(run, events=events)) as search:
         # 検索の初回同期で再利用と現在位置を共に検査し、直前の明示同期を重ねない。
         hits = search.search("原文")["hits"]
@@ -176,17 +176,15 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
         assert search.sync_progress["reused_same_worktree"] == 0
         assert inputs() == [original]
         assert {hit["path"] for hit in hits} == {
-            "oracle/doc/moved.md",
-            "oracle/doc/copy.md",
+            "spec/moved.md",
+            "spec/copy.md",
         }
     finished = [
         event for event in events if event["event"] == "document_search_sync_finished"
     ]
     assert all(event["generated_embedding_count"] == 0 for event in finished)
     assert finished[-1]["reuse_count_unit"] == "chunk_occurrence"
-    assert (
-        root / "oracle/doc/allowed.md"
-    ).read_text() == "# 再利用元だけの未同期本文\n"
+    assert (root / "spec/allowed.md").read_text() == "# 再利用元だけの未同期本文\n"
 
 
 def test_parallel_worktrees_generate_one_embedding_in_total(
@@ -222,7 +220,7 @@ def test_parallel_worktrees_generate_one_embedding_in_total(
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         progress = list(executor.map(synchronize, runs))
-    assert inputs() == [(root / "oracle/doc/allowed.md").read_text()]
+    assert inputs() == [(root / "spec/allowed.md").read_text()]
     assert sum(item["generated_embeddings"] for item in progress) == 1
     assert sum(item["reused_other_worktree"] for item in progress) == 1
     assert sum(item["persisted_embeddings"] for item in progress) == 1
@@ -234,7 +232,7 @@ def test_run_removal_preserves_embedding_and_original_producer(
     create, inputs = cache_search
     root = committed_document_repository
     run = _worktree(root, root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID, RUN_BRANCH)
-    original = (run / "oracle/doc/allowed.md").read_text()
+    original = (run / "spec/allowed.md").read_text()
     with closing(create(run)) as search:
         search.synchronize()
         search.synchronize()
@@ -258,7 +256,7 @@ def test_reuse_compatibility_is_independent_of_partition(
     # Git 分類・共有範囲は実 repository の再利用 test に残す。
     create, inputs = cache_search
     root = document_repository
-    original = (root / "oracle/doc/allowed.md").read_text()
+    original = (root / "spec/allowed.md").read_text()
     with closing(create(root)) as search:
         first = search.synchronize()
     assert inputs() == [original]
@@ -314,7 +312,7 @@ def test_failed_sync_saved_results_are_reusable_in_another_worktree(
     for failure_code in ("MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"):
         source = f"# {failure_code}\n途中で保存する本文\n"
         for worktree in (root, run):
-            (worktree / "oracle/doc/allowed.md").write_text(source)
+            (worktree / "spec/allowed.md").write_text(source)
 
         class FailingWorker(_InferenceDouble):
             def stream_chunks(self, documents, resumes, on_event, **kwargs):
@@ -362,8 +360,8 @@ def test_diagnostics_count_actual_duplicate_generation_separately_from_query(
     # 診断件数の検査には、確認済みの文書集合を渡して Git 準備を重ねない。
     # 実保存と件数の検査を保ち、診断に不要な物理ディスク同期だけを省く。
     root = document_repository
-    original = (root / "oracle/doc/allowed.md").read_text()
-    (root / "oracle/doc/copy.md").write_text(original)
+    original = (root / "spec/allowed.md").read_text()
+    (root / "spec/copy.md").write_text(original)
     events = []
 
     class DuplicateWorker(_InferenceDouble):

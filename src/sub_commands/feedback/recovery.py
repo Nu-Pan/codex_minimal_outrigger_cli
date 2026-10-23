@@ -1,6 +1,6 @@
 """Feedback publication 後の cleanup と明示 join/abandon の境界を扱う。
 
-根拠: {{work-root}}/oracle/doc/app_spec/feedback_state.md の
+根拠: {{work-root}}/spec/app_spec/feedback_state.md の
 「最新状態の atomic publication」と「run lifecycle との整合」。
 """
 
@@ -307,22 +307,22 @@ def _finish_from_journal(
                 report_cut_id=journal["report_cut_id"],
                 publication_execution_id=journal["report_execution_id"],
                 join_status="merged",
-                join_preconditions="completed"
-                if state_before == "ready"
-                else "previously_completed",
-                join_diff_validation="completed"
-                if state_before == "ready"
-                else "previously_completed",
-                merge_status="merged"
-                if journal["merged"]["run_join_commit"]
-                else "no_op",
+                join_preconditions=(
+                    "completed" if state_before == "ready" else "previously_completed"
+                ),
+                join_diff_validation=(
+                    "completed" if state_before == "ready" else "previously_completed"
+                ),
+                merge_status=(
+                    "merged" if journal["merged"]["run_join_commit"] else "no_op"
+                ),
                 run_join_commit=journal["merged"]["run_join_commit"],
                 conflict_resolution=journal["merged"].get("resolution"),
                 workload_post_join="completed",
                 post_join_hook="none",
-                refactor_state_sync_status="completed"
-                if state_before == "ready"
-                else "previously_completed",
+                refactor_state_sync_status=(
+                    "completed" if state_before == "ready" else "previously_completed"
+                ),
                 cleanup="pending",
                 state_reset="not_run",
             )

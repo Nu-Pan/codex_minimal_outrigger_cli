@@ -1,6 +1,6 @@
 """配布アセットの共有・部分修復・通信実績と、npm のオフライン構築を検査する。
 
-正本: oracle/doc/app_spec/download_asset_cache.md の「診断と受入条件」。
+正本: spec/app_spec/download_asset_cache.md の「診断と受入条件」。
 """
 
 import base64

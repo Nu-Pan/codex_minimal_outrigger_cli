@@ -1,6 +1,6 @@
 """editing run の人間向け Markdown report。
 
-共通処理の canonical な配置は {{work-root}}/oracle/doc/dev_rule/design_rule.md
+共通処理の canonical な配置は {{work-root}}/spec/dev_rule/design_rule.md
 に従っている。
 """
 
@@ -239,9 +239,11 @@ def write_lifecycle_report(
     if details.get("unexpected_paths"):
         attention.append(f"想定外差分: {details['unexpected_paths']}")
     summary = ReportSummary(
-        "取り込み後の終了処理は未完了です。"
-        if pending
-        else terminal_outcome(terminal_classification),
+        (
+            "取り込み後の終了処理は未完了です。"
+            if pending
+            else terminal_outcome(terminal_classification)
+        ),
         (
             f"run state: {context.state_before} → {state_after}",
             *(
@@ -256,9 +258,13 @@ def write_lifecycle_report(
             ),
         ),
         tuple(attention),
-        ("エラーと残存資源を確認し、run の join または abandon を判断してください。",)
-        if terminal_classification == "error" or state_after != "ready"
-        else (),
+        (
+            (
+                "エラーと残存資源を確認し、run の join または abandon を判断してください。",
+            )
+            if terminal_classification == "error" or state_after != "ready"
+            else ()
+        ),
     )
     content = prepare_primary_report(
         target_path,
@@ -293,7 +299,7 @@ def _render_changed_path(path: str, indent: str = "", label: str = "") -> str:
     """Git path を report の Markdown 箇条書きとして安全に描画する。
 
     Git path には Markdown の code span 境界や行構造を壊す文字を含められる。
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     # 改行を持つ path だけ JSON 文字列で区別し、他の記号はそのまま残す。
     value = (

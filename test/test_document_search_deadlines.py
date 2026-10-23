@@ -237,7 +237,7 @@ def test_doctor_sync_has_no_search_deadlines(
     tmp_path, document_repository, document_search_clock, unsynced_search_storage
 ):
     root = document_repository
-    (root / "oracle/doc/second.md").write_text("# 次の原文\n")
+    (root / "spec/second.md").write_text("# 次の原文\n")
     events = []
 
     class SlowWorker(_InferenceDouble):
@@ -394,7 +394,7 @@ def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
     document_repository, document_search_clock, monkeypatch, unsynced_search_storage
 ):
     root = document_repository
-    (root / "oracle/doc/second.md").write_text("# 次の原文\n")
+    (root / "spec/second.md").write_text("# 次の原文\n")
     events = []
 
     def record(kind, payload):
@@ -433,8 +433,8 @@ def test_timeout_keeps_confirmed_reuse_counts_and_processing_state(
     assert progress["checked_document_count"] == 1
     assert progress["changed_document_count"] == 0
     assert progress["document_states"] == {
-        "oracle/doc/allowed.md": "checked",
-        "oracle/doc/second.md": "processing",
+        "spec/allowed.md": "checked",
+        "spec/second.md": "processing",
     }
     assert events[-2]["reused_chunk_count"] == 1
     assert events[-2]["counts_complete"] is False
@@ -445,8 +445,7 @@ def test_deadline_keeps_locks_until_worker_and_descendant_stop(tmp_path, monkeyp
     base = tmp_path / "worker"
     base.mkdir()
     _test_node_runtime(base)
-    (base / "worker.mjs").write_text(
-        r"""
+    (base / "worker.mjs").write_text(r"""
 import { spawn } from "node:child_process";
 process.on("SIGTERM", () => {});
 const child = spawn(process.execPath, ["-e", String.raw`
@@ -458,8 +457,7 @@ child.stdout.once("data", () => {
     process.stdout.write(JSON.stringify({kind: "ready", pids: [process.pid, child.pid]}) + "\n");
 });
 setInterval(() => {}, 1000);
-"""
-    )
+""")
     # 両 process の SIGTERM handler が準備できたら期限まで進め、回収は実時間で測る。
     clock_offset = 0.0
     monkeypatch.setattr(

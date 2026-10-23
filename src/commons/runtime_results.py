@@ -9,7 +9,7 @@ from typing import Any, Callable, Protocol, Sequence
 class TerminalResult:
     """最外側サブコマンドの terminal result に渡す固有情報。"""
 
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # {{work-root}}/spec/app_spec/console_and_file_log.md
     primary_report: Path | None = None
     primary_report_role: str | None = None
     result: str | None = None
@@ -49,7 +49,7 @@ class CommandResult:
     stderr: str
 
 
-# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+# {{work-root}}/spec/app_spec/codex_exec_rule.md
 @dataclass(frozen=True)
 class StructuredOutputValidationIssue:
     """Structured Output の補正 prompt へ渡す機械的検証エラー。"""

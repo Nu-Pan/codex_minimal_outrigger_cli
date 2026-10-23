@@ -1,6 +1,6 @@
 """Feedback の判定根拠と再確認履歴を扱う。
 
-根拠: oracle/doc/app_spec/feedback.md の「用語と結果分類」。依存 path の申告を
+根拠: spec/app_spec/feedback.md の「用語と結果分類」。依存 path の申告を
 完全とはみなさず、読める repository 入力全体を保守的な検証条件として記録する。
 raw log、Git metadata、cmoc の機械生成物は根拠の変更検知に混ぜない。
 """
@@ -198,11 +198,13 @@ def reconfirmation(
         "history": [reference for reference, _ in history],
         "cycle_states": sorted(cycle_states),
         "cycle_reason": (
-            "A non-converging cycle has returned to the same decision inputs "
-            "after repeated remediation."
-        )
-        if cycle_states
-        else None,
+            (
+                "A non-converging cycle has returned to the same decision inputs "
+                "after repeated remediation."
+            )
+            if cycle_states
+            else None
+        ),
     }
 
 
@@ -215,9 +217,11 @@ def decision_basis(
         "state": state,
         "verification": result["verification"],
         "current_evidence": result["current_evidence"],
-        "cycle_states": recheck["cycle_states"]
-        if recheck and result["status"] == "inconclusive"
-        else [],
+        "cycle_states": (
+            recheck["cycle_states"]
+            if recheck and result["status"] == "inconclusive"
+            else []
+        ),
     }
 
 

@@ -210,7 +210,7 @@ def test_stop_run_process_does_not_treat_live_process_as_stopped(
 ) -> None:
     """pidfd が使えない live run process を停止済みとして cleanup しない。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     process = runtime_run.RunProcessIdentity(123, 456)
     monkeypatch.setattr(runtime_run.os, "getpid", lambda: 999)
@@ -227,7 +227,7 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
 ) -> None:
     """apply cleanup に必要な専用 process group を記録する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
     initial_tracking = "111 222\nchild 987 654 987\n"
@@ -388,7 +388,7 @@ def test_stop_process_group_rejects_snapshot_without_expected_leader(
 ) -> None:
     """生存中 leader と異なる group snapshot を停止対象にしない。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     sent: list[signal.Signals] = []
     monkeypatch.setattr(
@@ -665,7 +665,7 @@ def test_tracked_codex_subprocess_preserves_reused_pid_tracking(
 ) -> None:
     """終了処理が PID 再利用後の新しい child 行を削除しない。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
@@ -712,7 +712,7 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
 ) -> None:
     """communicate が中断されても child tracking を保持する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
@@ -720,7 +720,7 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
     class InterruptedProcess:
         """communicate 中断後も生存する fake process。
 
-        Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
         """
 
         pid = 4321
@@ -772,7 +772,7 @@ def test_tracked_codex_subprocess_rejects_invalid_tracking_before_start(
 ) -> None:
     """壊れた tracking file では child を起動しない。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_bytes(tracking_bytes)
@@ -1009,7 +1009,7 @@ def test_tracked_codex_subprocess_reaps_child_when_group_cleanup_fails(
 ) -> None:
     """group cleanup が失敗しても起動済み child を直接停止して reap する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
@@ -1076,7 +1076,7 @@ def test_tracked_codex_subprocess_kills_child_when_cleanup_identity_is_missing(
 ) -> None:
     """leader identity が読めない cleanup で live child を待ち続けない。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
     tracking_path.write_text("111 222\n")
@@ -1138,7 +1138,7 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
 ) -> None:
     """Codex 起動時に継承した apply tracking を無視する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "external" / "apply.pid"
     monkeypatch.setenv(cmoc_runtime.RUN_PROCESS_TRACKING_ENV, str(tracking_path))
@@ -1175,7 +1175,7 @@ def test_run_codex_subprocess_notifies_after_process_start(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """process 起動 callback を Popen 成功後に一度だけ呼び出す。"""
-    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    # {{work-root}}/spec/app_spec/windows_toast_notification.md
     events: list[str] = []
     process = MagicMock(returncode=0)
     process.__enter__.return_value = process
@@ -1243,7 +1243,7 @@ def test_stop_child_process_group_stops_group_after_leader_is_gone(
 ) -> None:
     """leader 消滅後も残る専用 group を snapshot 検証付きで停止する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     child = runtime_run.ProcessIdentity(123, 456, 789)
     members = ((222, 20),)
@@ -1354,7 +1354,7 @@ def test_stop_child_process_group_keeps_leader_pidfd_until_group_stop(
 ) -> None:
     """leader の pidfd を閉じる前に process group を停止する。
 
-    Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    Oracle: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     child = runtime_run.ProcessIdentity(123, 456, 123)
     events: list[str] = []

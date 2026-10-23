@@ -1,6 +1,6 @@
 """Feedback issue の逐次修復から自動 join、publication までを制御する。
 
-根拠: {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md。
+根拠: {{work-root}}/spec/app_spec/sub_command/feedback_report.md。
 観測の集約と表示は report、永続 artifact の検査は runtime_feedback_run_state に委譲する。
 判定根拠の比較は decision に分離し、commit・rollback・finalization の例外境界は
 同じ run の状態遷移としてここで一続きに確認できるようにする。
@@ -154,17 +154,19 @@ def run_feedback_report() -> TerminalResult:
                         "feedback_recovery_started",
                         feedback_run_id=manifest["run"]["feedback_run_id"],
                         report_cut_id=manifest["report_cut_id"],
-                        report_execution_id=targets["execution_id"]
-                        if targets is not None
-                        else None,
-                        report_path=str(repository / targets["report"])
-                        if targets is not None
-                        else None,
-                        incomplete_report_path=str(
-                            repository / targets["incomplete_report"]
-                        )
-                        if targets is not None
-                        else None,
+                        report_execution_id=(
+                            targets["execution_id"] if targets is not None else None
+                        ),
+                        report_path=(
+                            str(repository / targets["report"])
+                            if targets is not None
+                            else None
+                        ),
+                        incomplete_report_path=(
+                            str(repository / targets["incomplete_report"])
+                            if targets is not None
+                            else None
+                        ),
                         publication_status=manifest["processing"]["status"],
                     )
                 candidate_context, _ = resolve_active_run(
@@ -1368,9 +1370,11 @@ def _set_feedback_error_state(
                 context.repo,
                 manifest,
                 "failed",
-                repr(error)
-                if error is not None
-                else "feedback interruption cleanup failed",
+                (
+                    repr(error)
+                    if error is not None
+                    else "feedback interruption cleanup failed"
+                ),
             )
         except BaseException as manifest_error:
             failures.append(f"error manifest update failed: {manifest_error!r}")
@@ -1396,10 +1400,12 @@ def _set_feedback_error_state(
             joined = record is not None and confirm_import(record)
         update_primary_report_fields(
             recovery_next_actions=(
-                "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+                (
+                    "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+                )
+                if joined
+                else join_recovery_actions(context)
             )
-            if joined
-            else join_recovery_actions(context)
         )
         logger = current_subcommand_logger()
         if logger is not None:

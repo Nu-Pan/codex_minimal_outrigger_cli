@@ -1,7 +1,7 @@
 """構造化文書の Markdown renderer 単体の整形挙動を検証する。
 
 根拠:
-- {{work-root}}/oracle/src/oracle/other/struct_doc.py
+- {{work-root}}/referenece/src/oracle/other/struct_doc.py
 """
 
 from collections.abc import Callable

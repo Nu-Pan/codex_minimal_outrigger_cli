@@ -29,11 +29,11 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-package-dir = {"" = "src", "oracle" = "oracle/src/oracle"}
+package-dir = {"" = "src", "oracle" = "referenece/src/oracle"}
 py-modules = ["main", "cmoc_runtime"]
 
 [tool.setuptools.packages.find]
-where = ["src", "oracle/src"]
+where = ["src", "referenece/src"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json"]
@@ -41,7 +41,7 @@ where = ["src", "oracle/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
-pythonpath = ["src", "oracle/src"]
+pythonpath = ["src", "referenece/src"]
 timeout = 120
 markers = [
     "real_path_integration: exercises the production path with real Codex inference",
@@ -59,7 +59,7 @@ ignore = ["ANN401"]
 
 [tool.mypy]
 python_version = "3.12"
-mypy_path = ["src", "oracle/src"]
+mypy_path = ["src", "referenece/src"]
 explicit_package_bases = true
 disallow_any_generics = true
 warn_return_any = true

@@ -20,7 +20,7 @@ from .runtime_logging import current_subcommand_logger
 
 def asset_cache_directory() -> Path:
     """配置場所と repository に依存しない、数値 UID ごとの保存先を返す。"""
-    # oracle/doc/app_spec/download_asset_cache.md の保存先。
+    # spec/app_spec/download_asset_cache.md の保存先。
     return Path("/tmp/cmoc_asset_cache") / str(os.getuid())
 
 
@@ -325,9 +325,11 @@ class DownloadAssetCache:
                 os.replace(backup, entry)
             use.event(
                 status="failed",
-                publication="failed"
-                if use.fields["publication"] == "started"
-                else use.fields["publication"],
+                publication=(
+                    "failed"
+                    if use.fields["publication"] == "started"
+                    else use.fields["publication"]
+                ),
                 failure=str(exc),
             )
             raise

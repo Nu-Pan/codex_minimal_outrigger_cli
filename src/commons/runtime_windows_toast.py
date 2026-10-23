@@ -1,6 +1,6 @@
 """Windows toast と Codex TUI callback の非致命的な transport 境界。
 
-根拠: {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+根拠: {{work-root}}/spec/app_spec/windows_toast_notification.md
 """
 
 import base64

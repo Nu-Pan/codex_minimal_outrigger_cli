@@ -37,7 +37,7 @@
 
 ## 基本ワークフロー
 
-- 基本ワークフローは [oracle/doc/app_spec/usage.md](oracle/doc/app_spec/usage.md) を参照
+- 基本ワークフローは [spec/app_spec/usage.md](spec/app_spec/usage.md) を参照
 
 ## Tips
 

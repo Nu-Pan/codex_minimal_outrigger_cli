@@ -1,15 +1,15 @@
 """CLI の error、log、preflight、completion 境界を検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-- {{work-root}}/oracle/doc/app_spec/error_handling.md
-- {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
-- {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-- {{work-root}}/oracle/doc/app_spec/codex_tui_rule.md
-- {{work-root}}/oracle/doc/app_spec/timestamp.md
-- {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-- {{work-root}}/oracle/src/oracle/other/path_model.py
+- {{work-root}}/spec/app_spec/console_and_file_log.md
+- {{work-root}}/spec/app_spec/error_handling.md
+- {{work-root}}/spec/app_spec/cli_auto_completion.md
+- {{work-root}}/spec/app_spec/doctor_preprocess.md
+- {{work-root}}/spec/app_spec/codex_common_rule.md
+- {{work-root}}/spec/app_spec/codex_tui_rule.md
+- {{work-root}}/spec/app_spec/timestamp.md
+- {{work-root}}/spec/app_spec/windows_toast_notification.md
+- {{work-root}}/referenece/src/oracle/other/path_model.py
 
 CLI lifecycle の error、log、preflight、completion は同じ runner、work root、
 subcommand event を共有する一つの外部契約として一箇所で検証する。
@@ -56,7 +56,7 @@ def _clear_completion_probe_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """通常の in-process CLI test を外部の completion probe 環境から分離する。"""
-    # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+    # {{work-root}}/spec/app_spec/cli_auto_completion.md
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
 
 
@@ -268,7 +268,7 @@ def test_noninteractive_success_emits_one_terminal_result_after_progress(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """stdout を成功 terminal result だけにし、詳細 step はログへ閉じる。"""
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # {{work-root}}/spec/app_spec/console_and_file_log.md
     root = cli_terminal_directory
     report_path = root / "report.md"
     report_path.write_text(
@@ -365,7 +365,7 @@ def test_internal_failure_traceback_is_logged_but_not_printed(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """surrogate を含む内部障害も、stack を診断ログだけに保存して終了する。"""
-    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # {{work-root}}/spec/app_spec/error_handling.md
     root = cli_terminal_directory
 
     def fail() -> None:
@@ -496,7 +496,7 @@ def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
     def fail_doctor(_root: Path) -> None:
         """doctor preprocess の失敗を再現する fake。
 
-        根拠: {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+        根拠: {{work-root}}/spec/app_spec/doctor_preprocess.md
         """
         raise CmocError("doctor failed", ["fix doctor"], "doctor detail")
 
@@ -774,7 +774,7 @@ def test_interruptible_cli_handles_common_preprocess_interrupt(
     cli_terminal_directory: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """interruptible command の common preprocess 中断を正常完了として扱う。"""
-    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    # {{work-root}}/spec/app_spec/subcommand_interruption.md
     root = cli_terminal_directory
     calls: list[str] = []
     monkeypatch.setattr(
@@ -994,7 +994,7 @@ runpy.run_path(sys.argv[0], run_name="__main__")
     )
 
     completion_output = result.stdout + result.stderr
-    # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+    # {{work-root}}/spec/app_spec/cli_auto_completion.md
     assert result.returncode == 0, completion_output
     assert "doctor" in result.stdout
     assert "# 失敗" not in completion_output
@@ -1114,7 +1114,7 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
     assert pre_log_roots == [root.resolve()]
     # 開始時の work root と通知先 repo root は同じ metadata 問い合わせから導出する。
     assert root_queries == 1
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # {{work-root}}/spec/app_spec/console_and_file_log.md
     log_dir = root / ".cmoc" / "gu" / "log" / "sub_command"
     assert len(list(log_dir.glob("*.jsonl"))) == 1
     assert not (linked / ".cmoc" / "gu" / "log" / "sub_command").exists()

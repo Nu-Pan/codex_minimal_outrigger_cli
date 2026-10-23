@@ -7,7 +7,7 @@ from .runtime_errors import CmocError
 
 def select_editor() -> tuple[str, str]:
     """仕様の優先順で利用可能な editor command と実行ファイルを返す。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # {{work-root}}/spec/app_spec/prompt_editor_input.md
     for command in ("code", "nano", "vim", "vi"):
         executable = shutil.which(command)
         if executable is not None:

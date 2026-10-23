@@ -1,8 +1,8 @@
 """session join conflict resolution builder の契約を検証する。
 
 対応する正本:
-- {{work-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
-- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+- {{work-root}}/referenece/src/oracle/acp_builder/session/join/conflict_resolution.py
+- {{work-root}}/spec/app_spec/codex_common_rule.md
 """
 
 from dataclasses import replace

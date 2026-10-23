@@ -9,7 +9,7 @@
 分割すると同じ実 executable・隔離境界・実推論条件を複数ファイル間で追う必要が
 生じるため、一続きの受け入れ試験として保つ。
 
-根拠: {{work-root}}/oracle/doc/dev_rule/test_rule.md
+根拠: {{work-root}}/spec/dev_rule/test_rule.md
 """
 
 import errno
@@ -73,7 +73,7 @@ from config.cmoc_config import CmocConfig
 _WORK_ROOT = Path(__file__).resolve().parents[1]
 _CMOC_CONSOLE = Path(sys.executable).with_name("cmoc")
 _REAL_CODEX = shutil.which("codex")
-# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# {{work-root}}/spec/dev_rule/test_rule.md
 # 外部 provider の応答待ちを個別 command と test case の両方で局所化する。
 _PRODUCTION_COMMAND_TIMEOUT = 1800
 _PRODUCTION_CASE_TIMEOUT = 3600
@@ -250,7 +250,7 @@ def _write_close_fixture(root: Path, decision_basis: dict[str, Any]) -> str:
 
 def _real_path_config() -> CmocConfig:
     """全 agent call 種別を直接テスト用設定へ対応付ける。"""
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # {{work-root}}/spec/dev_rule/test_rule.md
     # 具体的な provider/Model 名を fixture に固定せず、短い推論に使う既定 entry
     # の直接設定を全 agent call 種別へ適用する。
     config = CmocConfig(num_parallel=1)
@@ -277,10 +277,9 @@ def _write_real_path_config(root: Path) -> None:
 
 def _write_noninteractive_fixture_instructions(root: Path) -> None:
     """LLM の意味判断を試験対象から外す fixture instruction を追加する。"""
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # {{work-root}}/spec/dev_rule/test_rule.md
     # 本番経路との差として許される決定論的入力で、cmoc の制御だけを検証する。
-    (root / "AGENTS.md").write_text(
-        """# Production-path test fixture
+    (root / "AGENTS.md").write_text("""# Production-path test fixture
 
 This is an intentionally minimal and internally consistent test repository.
 For a realization-refactor file review, report `findings` as an empty array,
@@ -289,8 +288,7 @@ For feedback remediation of an observation about the
 existence of `README.md`, inspect the file, return `already_resolved` with no
 changes, and do not report another issue. For every other call, follow its
 explicit prompt exactly.
-"""
-    )
+""")
     run_git(root, "add", "AGENTS.md")
     run_git(root, "commit", "-m", "add deterministic agent instructions")
 
@@ -338,7 +336,7 @@ def _production_environment(
     real_codex = _REAL_CODEX
 
     # Codex の利用者 session/config と test session を混ぜない。
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # {{work-root}}/spec/dev_rule/test_rule.md
     home = tmp_path / "home"
     home.mkdir()
     codex_home = tmp_path / "codex-home"
@@ -369,7 +367,7 @@ def _production_environment(
         "PATH": f"{editor_dir}:{os.environ.get('PATH', '')}",
         # 共有 development venv の console script は、この設定がないと親 session
         # worktree を import するため、現在の realization worktree を指定する。
-        # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+        # {{work-root}}/spec/dev_rule/test_rule.md
         "PYTHONPATH": os.pathsep.join(
             [
                 str(installation / "src"),
@@ -856,7 +854,7 @@ def _run_cmoc_tui(
     return message, transcript.decode(errors="replace")
 
 
-# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# {{work-root}}/spec/dev_rule/test_rule.md
 # 複数の実推論と外部 provider の応答時間を case timeout に含める。
 @pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_doctor_prepares_real_search_materials_in_isolated_installation(
@@ -891,7 +889,7 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
     assert "実行状態: `unchanged`" in repeated_report
 
 
-# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# {{work-root}}/spec/dev_rule/test_rule.md
 # 複数の実推論と外部 provider の応答時間を case timeout に含める。
 @pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_all_noninteractive_leaf_commands_use_production_process_paths(
@@ -918,7 +916,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         executed_commands.add(args)
         return _run_with_report_review(cmoc, root, environment, *args)
 
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # doctor は本番 preprocess を完了してから report を確認する。
     run_with_report_review("doctor")
     assert run_git(root, "status", "--short").stdout.strip() == ""
@@ -933,7 +931,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
 
-    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    # {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
     # oracle edit は同じ入力の編集を独立した exec agent call で直列実行する。
     _state_path, oracle_edit_state_before = _load_session_state(root, session_branch)
     oracle_edit_calls_before = _codex_call_logs(root)
@@ -1094,7 +1092,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert state.history[-1]["events"][0]["kind"] == "manual_close"
     assert case in terminal_primary_report(closed.stdout).read_text()
     assert "- result: `closed`" in closed.stdout
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # workload の正常終了は、同じ invocation での取り込みと回収まで含む。
     for command, kind in [
         (("realization", "apply"), "realization_apply"),
@@ -1152,7 +1150,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 
 
 @pytest.mark.parametrize(("command", "tui_purpose"), TUI_SCENARIOS)
-# {{work-root}}/oracle/doc/dev_rule/test_rule.md
+# {{work-root}}/spec/dev_rule/test_rule.md
 # TUI の実推論と外部 provider の応答時間を含める。
 @pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
 def test_tui_leaf_commands_and_resume_use_real_codex_response_over_production_pty(

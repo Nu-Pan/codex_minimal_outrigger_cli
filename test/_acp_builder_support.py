@@ -10,7 +10,7 @@ def oracle_schema_path(*parts: str) -> Path:
     Returns:
         指定した oracle schema の path。
     """
-    # 正本 schema をテストへ複製せず、{{work-root}}/oracle/src/oracle/acp_builder/ を参照する。
+    # 正本 schema をテストへ複製せず、{{work-root}}/referenece/src/oracle/acp_builder/ を参照する。
     return (
         Path(__file__)
         .parents[1]

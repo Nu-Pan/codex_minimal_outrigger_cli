@@ -1,6 +1,6 @@
 """Collector の durable な受理順序と feedback intake 境界を管理する。
 
-根拠: {{work-root}}/oracle/doc/app_spec/feedback_state.md の
+根拠: {{work-root}}/spec/app_spec/feedback_state.md の
 「intake wave と high-watermark」。順序番号は時刻や directory の列挙順から推測しない。
 """
 

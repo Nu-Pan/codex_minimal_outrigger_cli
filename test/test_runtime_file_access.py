@@ -1,7 +1,7 @@
 """FileAccessMode の永続化値を検証する。
 
 根拠:
-- {{work-root}}/oracle/src/oracle/acp_builder/basic.py
+- {{work-root}}/referenece/src/oracle/acp_builder/basic.py
 
 sandbox の全 mode 変換と未知 mode の拒否は test_runtime_codex_profile.py で検証する。
 """

@@ -1,8 +1,8 @@
 """Codex JSONL の異常系と CLI 不在時のログを検証する。
 
 対応する正本:
-    {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    {{work-root}}/spec/app_spec/codex_exec_rule.md
+    {{work-root}}/spec/app_spec/console_and_file_log.md
 """
 
 import json

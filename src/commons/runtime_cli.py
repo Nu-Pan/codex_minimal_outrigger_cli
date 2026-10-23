@@ -113,8 +113,8 @@ def run_cli_subcommand(
     """最外側 CLI サブコマンドの実行、診断ログ、terminal result を管理する。
 
     根拠:
-    - {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-    - {{work-root}}/oracle/doc/app_spec/error_handling.md
+    - {{work-root}}/spec/app_spec/console_and_file_log.md
+    - {{work-root}}/spec/app_spec/error_handling.md
     """
     logger: SubcommandLogger | None = None
     logger_token = None
@@ -341,14 +341,14 @@ def run_cli_subcommand(
 
 def mark_current_subcommand_interrupted() -> None:
     """現在の最外側サブコマンドを正常なユーザー中断完了として印付けする。"""
-    # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+    # {{work-root}}/spec/app_spec/subcommand_interruption.md
     if _CURRENT_USER_INTERRUPTION.get() is not None:
         _CURRENT_USER_INTERRUPTION.set(True)
 
 
 def mark_current_tui_process_started() -> None:
     """現在の TUI invocation が Codex process の起動境界へ到達したと印付けする。"""
-    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    # {{work-root}}/spec/app_spec/windows_toast_notification.md
     if _CURRENT_TUI_PROCESS_STARTED.get() is not None:
         _CURRENT_TUI_PROCESS_STARTED.set(True)
 
@@ -359,7 +359,7 @@ def _notify_terminal_result_safely(
     state: ToastState,
 ) -> None:
     """確定済み result を、通知失敗から完全に分離して送る。"""
-    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    # {{work-root}}/spec/app_spec/windows_toast_notification.md
     try:
         notify_terminal_result(command_name, repository_root, state)
     except BaseException:
@@ -372,7 +372,7 @@ def start_subcommand_step(
     log_description: str | None = None,
 ) -> None:
     """全 step をログへ記録し、トップレベル step だけを stderr へ通知する。"""
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # {{work-root}}/spec/app_spec/console_and_file_log.md
     logger = current_subcommand_logger()
     if logger is None:
         return
@@ -389,7 +389,7 @@ def start_subcommand_step(
 def require_current_directory_is_work_root(root: Path) -> None:
     """cmoc が work root で実行されている前提を検査する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/codex_common_rule.md の
+    根拠: {{work-root}}/spec/app_spec/codex_common_rule.md の
     「cmoc process の cwd との関係」
     """
     if Path.cwd().resolve() == root.resolve():
@@ -455,7 +455,7 @@ def _finalize_subcommand(
             logger,
         )
     except PrimaryReportSaveError as report_error:
-        # {{work-root}}/oracle/doc/app_spec/error_handling.md
+        # {{work-root}}/spec/app_spec/error_handling.md
         # report 保存失敗は元の終端結果に代わる internal failure とする。未保存の
         # role/path を持たない新しい result を使い、console へ候補 path を出さない。
         recovered_result = recover_primary_report_save_failure()
@@ -591,7 +591,7 @@ def _failure_record(error: BaseException) -> dict[str, object]:
             "traceback": "".join(traceback.format_exception(error)),
         }
         if error.target_path is not None:
-            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # {{work-root}}/spec/app_spec/error_handling.md
             # 未保存 path は terminal result へ出さないが、失敗対象の特定に必要な
             # 診断情報として subcommand log には絶対 path を残す。
             record["target_path"] = str(error.target_path.absolute())

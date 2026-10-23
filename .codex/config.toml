@@ -21,7 +21,7 @@
 
 # 権限関係
 # NOTE
-#   cmoc は agent call ごとに --sandbox を明示し、permission profile を使用しない (oracle/doc/app_spec/codex_exec_rule.md) 。
+#   cmoc は agent call ごとに --sandbox を明示し、permission profile を使用しない (spec/app_spec/codex_exec_rule.md) 。
 #   そのため、この用途では default_permissions は使わない。
 # NOTE
 #   個別の許可設定は実際困ってから慎重に書き足していくこと。

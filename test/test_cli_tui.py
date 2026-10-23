@@ -1,9 +1,9 @@
 """TUI 起動直前の CLI 前処理の外部挙動を検証する。
 
 正本仕様:
-- {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
-- {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
+- {{work-root}}/spec/app_spec/sub_command/tui.md
+- {{work-root}}/spec/app_spec/prompt_editor_input.md
+- {{work-root}}/referenece/src/oracle/prompt_builder/editor_input.py
 """
 
 import json

@@ -5,8 +5,8 @@ feedback report は最外側の invocation 結果を掲載し、immutable な pu
 区別する。個別 report がない早期終了は確定済みの runtime 情報から要約する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-- {{work-root}}/oracle/doc/app_spec/error_handling.md
+- {{work-root}}/spec/app_spec/console_and_file_log.md
+- {{work-root}}/spec/app_spec/error_handling.md
 """
 
 import os
@@ -111,7 +111,7 @@ def start_primary_report_context(
             "second_agent_call_status": "not_started",
         }
     elif command_name == "realization apply":
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
         # fallback は reporter の agent call より前にも発生するため、0 件の
         # invocation では正本が要求する空の observation 集合を確定値にする。
         fields = {
@@ -202,9 +202,11 @@ def recover_primary_report_save_failure() -> TerminalResult:
     fields = context.fields if context is not None else {}
     actions = fields.get("recovery_next_actions")
     return TerminalResult(
-        completion_reason="error"
-        if context is not None and context.spec.template == "refactor_fork"
-        else None,
+        completion_reason=(
+            "error"
+            if context is not None and context.spec.template == "refactor_fork"
+            else None
+        ),
         details=tuple(
             (name, fields[name])
             for name in (
@@ -222,9 +224,11 @@ def recover_primary_report_save_failure() -> TerminalResult:
             if "unresolved_target_count" in fields
             else ()
         ),
-        next_actions=tuple(str(action) for action in actions)
-        if isinstance(actions, (tuple, list))
-        else (),
+        next_actions=(
+            tuple(str(action) for action in actions)
+            if isinstance(actions, (tuple, list))
+            else ()
+        ),
     )
 
 
@@ -459,7 +463,7 @@ def _finish_prepared_report(
 
 def open_primary_report_in_editor(path: Path) -> None:
     """保存済み report を独立した editor process で表示し、終了は待たない。"""
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # {{work-root}}/spec/app_spec/console_and_file_log.md
     # code は単独でファイルを開ける。端末用 editor は別の端末を用意し、cmoc の
     # stdio と process session から分離して終了後も閲覧できるようにする。
     command, executable = select_editor()
@@ -571,11 +575,11 @@ def _report_fields(
         "user_interruption",
         "error",
     }:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+        # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
         # report fallback 自体が作られる終了経路でも、共通分類と reason を一致させる。
         known["completion_reason"] = classification
     if command_name == "realization apply" and classification == "error":
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
         # apply の共通 fork report は error 終了理由を必須項目として持つ。
         # run 開始前の fallback では個別 report が reason を渡せないため補う。
         known["completion_reason"] = "error"

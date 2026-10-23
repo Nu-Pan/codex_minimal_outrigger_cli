@@ -1,6 +1,6 @@
 """Windows toast の内容、transport、Codex callback 境界を検証する。
 
-根拠: {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+根拠: {{work-root}}/spec/app_spec/windows_toast_notification.md
 """
 
 import base64

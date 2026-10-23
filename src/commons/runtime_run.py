@@ -6,8 +6,8 @@
 lifecycle 境界として保つ。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/run_isolation.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+- {{work-root}}/spec/app_spec/run_isolation.md
+- {{work-root}}/spec/app_spec/sub_command/editing_run.md
 """
 
 import os
@@ -110,7 +110,7 @@ def worktrees_for_branches(
                 continue
             pending.remove(branch)
             if branch.startswith("cmoc/run/"):
-                # {{work-root}}/oracle/doc/branch_model.md
+                # {{work-root}}/spec/branch_model.md
                 expected = expected_run_worktree(root, branch)
                 # run worktree は managed path そのものに限定し、symlink 経由で
                 # run-root 外へ解決される登録を受け入れない。
@@ -146,7 +146,7 @@ _LIFECYCLE_LOCKS = threading.local()
 @contextmanager
 def run_lifecycle_lock(root: Path, session_id: str) -> Iterator[None]:
     """session と run の lifecycle 操作を repository 内で直列化する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # session fork/join/abandon も同じ state・branch・worktree を操作するため、
     # session_fork_lock と異なる per-run lock を使うと stale な ready state の
     # 保存や session branch の削除が run 開始と競合する。
@@ -219,7 +219,7 @@ def _read_run_process_id_file(path: Path) -> RunProcessIdentity | None:
             child_id = int(parts[1])
             child_start_time = int(parts[2])
             group_id = int(parts[3]) if len(parts) == 4 else None
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # run_tracked_codex_subprocess は start_new_session child の PID を PGID
             # として保存する。別 PGID を受け入れると、leader 消滅後に tracking の
             # stale 値を再利用した別 process group を停止し得る。
@@ -253,7 +253,7 @@ def _run_process_tracking_present(root: Path, session_id: str) -> bool:
 
 def _invalid_run_process_tracking_error(root: Path, session_id: str) -> CmocError:
     """破損した tracking を停止対象なしとして扱わないための error を作る。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     return CmocError(
         "run process tracking を検証できません。",
         ["tracking file を確認してから再実行してください。"],
@@ -267,7 +267,7 @@ def delete_run_process_id(root: Path, session_id: str) -> None:
     with run_process_id_file_lock(path):
         process = _read_run_process_id_file(path)
         if process is None:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # unreadable tracking は停止対象を検証できない状態なので、error cleanup
             # が証跡を消して live process を見失わないよう fail closed に保つ。
             return
@@ -304,7 +304,7 @@ def stop_run_process(
 def stop_error_run_process(root: Path, session_id: str) -> tuple[bool, str | None]:
     """error state の残存 process を停止し、tracking を整理する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     process = read_run_process_id(root, session_id)
     if process is None:
@@ -323,7 +323,7 @@ def _stop_parent_run_process(process: RunProcessIdentity) -> str | None:
     """保存済み start time を確認して親 run process を停止する。"""
     process_fd = open_process_fd(process.process_id)
     if process_fd is None:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # open_process_fd は pidfd_open の EINVAL でも None を返す。live process を
         # already stopped と誤認すると、停止確認前に run worktree を削除してしまうため、
         # kill(pid, 0) と start time の両方で消滅・stale・検証不能を分ける。
@@ -399,7 +399,7 @@ def _stop_orphaned_child_process_group(
         )
     if not members:
         return f"run child process already stopped: {process.process_id}"
-    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # {{work-root}}/spec/app_spec/run_isolation.md
     # leader が消えても member が残る専用 PGID は再利用されない。snapshot の一部を
     # stop_process_group でも確認し、group が一度空になって再利用された race は拒否する。
     stop_process_group(process_group_id, expected_members=expected_members)
@@ -408,7 +408,7 @@ def _stop_orphaned_child_process_group(
 
 def stop_child_process_group(process: ProcessIdentity) -> str | None:
     """Codex group を保存済み group ID と member pidfd で停止する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # tracking が壊れていても cleanup 自身を Codex child として停止しない。
     if process.process_id == os.getpid():
         raise CmocError(
@@ -417,7 +417,7 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             f"pid: {process.process_id}",
         )
     process_group_id = process.process_group_id or process.process_id
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # identity 検証後に leader が終了しても descendant を停止できるよう、停止前の
     # group snapshot を渡す。snapshot と現在 group に重なりがなければ停止側が拒否する。
     expected_members = process_group_members(process_group_id)
@@ -444,7 +444,7 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
                     )
                 if current_start_time != process.start_time:
                     return _stale_child_process_warning(process, process_group_id)
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # run_tracked_codex_subprocess は start_new_session child の PID を PGID として
             # 保存するため、停止完了まで pidfd を保持して leader/PGID の再利用による
             # 別 process group への signal を防ぐ。
@@ -477,7 +477,7 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
     else:
         current_start_time = process_start_time(process.process_id)
         if current_start_time is None:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # pidfd が使えず proc stat も読めない場合は、leader の終了と観測欠落を
             # 区別できない。kill(pid, 0) で終了を確認できた場合だけ orphan group の
             # snapshot 検証へ進め、live process を停止済みとして cleanup しない。
@@ -531,7 +531,7 @@ def _stale_child_process_warning(
 ) -> str:
     """stale leader 後も process group が残る場合は cleanup を止める。"""
     if process_group_has_running_member(process_group_id):
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # leader の PID 再利用後に group の対応を確認できないまま cleanup すると、
         # run の descendant または別 process group を残したまま worktree を破棄する。
         raise CmocError(
@@ -544,7 +544,7 @@ def _stale_child_process_warning(
 
 def stop_tracked_codex_children(root: Path, session_id: str) -> list[str]:
     """追跡中の Codex child group を停止する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # run の cleanup 前に tracking された child を停止し、error 後も実行中 process が
     # worktree を変更し続ける状態を残さない。
     tracked = read_run_process_id(root, session_id)

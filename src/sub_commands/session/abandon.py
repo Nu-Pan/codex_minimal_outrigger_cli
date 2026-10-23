@@ -1,6 +1,6 @@
 """active session を home branch へ取り込まず破棄する CLI 処理を実装する。"""
 
-# {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+# {{work-root}}/spec/app_spec/sub_command/session_abandon.md
 from cmoc_runtime import (
     CmocError,
     TerminalResult,
@@ -86,14 +86,14 @@ def _cmoc_session_abandon_body() -> TerminalResult:
             )
         start_subcommand_step(3, "session をクリーンアップ", "cleanup session")
         try:
-            # {{work-root}}/oracle/doc/branch_model.md
+            # {{work-root}}/spec/branch_model.md
             # session home branch は local branch なので、確認と切替の間に local ref が
             # 消えても同名 remote-tracking branch を別の home branch として推測しない。
             run_git(["switch", "--no-guess", home], work)
             state.session.state = "abandoned"
             write_state(path, state)
             update_primary_report_fields(session_state_after="abandoned")
-            # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+            # {{work-root}}/spec/app_spec/sub_command/session_abandon.md
             # home branch を保持したまま session branch だけを削除する必要がある。
             delete_result = delete_branch(repo, branch, force=True)
             if delete_result.returncode != 0:
@@ -103,7 +103,7 @@ def _cmoc_session_abandon_body() -> TerminalResult:
                     delete_result.stderr,
                 )
         except BaseException as error:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+            # {{work-root}}/spec/app_spec/sub_command/session_abandon.md
             # cleanup 中の利用者中断は cleanup failure として扱い、session を再実行可能な
             # state へ戻さなければならない。
             cleanup_detail = (
@@ -118,7 +118,7 @@ def _cmoc_session_abandon_body() -> TerminalResult:
             except BaseException as rollback_error:
                 rollback_errors.append(f"state rollback failed: {rollback_error!r}")
             try:
-                # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+                # {{work-root}}/spec/app_spec/sub_command/session_abandon.md
                 # 削除処理が副作用後に中断しても、元の commit から session branch を復元する。
                 if not branch_exists(repo, branch):
                     run_git(["branch", branch, session_commit], repo)

@@ -1,10 +1,10 @@
 """bin/cmoc の仮想環境検査とエラーレポートを検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/dev_rule/development_environment.md
-- {{work-root}}/oracle/doc/app_spec/error_handling.md
-- {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
-- {{work-root}}/oracle/src/oracle/other/path_model.py
+- {{work-root}}/spec/dev_rule/development_environment.md
+- {{work-root}}/spec/app_spec/error_handling.md
+- {{work-root}}/spec/app_spec/cli_auto_completion.md
+- {{work-root}}/referenece/src/oracle/other/path_model.py
 """
 
 import shutil
@@ -68,7 +68,7 @@ def _run_wrapper(
 
 def _assert_error_report(result: subprocess.CompletedProcess[str]) -> None:
     """wrapper の失敗が簡潔な error terminal result を stderr に含むことを確認する。"""
-    # {{work-root}}/oracle/doc/app_spec/error_handling.md
+    # {{work-root}}/spec/app_spec/error_handling.md
     report = result.stderr
     assert result.returncode == 1
     assert result.stdout == ""

@@ -1,8 +1,8 @@
 """prompt editor input の外部挙動を検証する。
 
 正本仕様:
-- {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/editor_input.py
+- {{work-root}}/spec/app_spec/prompt_editor_input.md
+- {{work-root}}/referenece/src/oracle/prompt_builder/editor_input.py
 """
 
 import os

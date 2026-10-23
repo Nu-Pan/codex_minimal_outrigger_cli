@@ -6,8 +6,8 @@ import pytest
 
 from basic.acp import AgentCallParameter, FileAccessMode
 
-# {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+# {{work-root}}/spec/app_spec/codex_common_rule.md
+# {{work-root}}/spec/app_spec/codex_exec_rule.md
 
 
 class FakeCodexResult:
@@ -20,7 +20,7 @@ class FakeCodexResult:
 
 def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """test-root 内に provider 固有の認証を仮定しない Codex 環境を準備する。"""
-    # {{work-root}}/oracle/doc/dev_rule/test_rule.md
+    # {{work-root}}/spec/dev_rule/test_rule.md
     home = tmp_path / "home"
     home.mkdir()
     codex_home = tmp_path / "codex_home"

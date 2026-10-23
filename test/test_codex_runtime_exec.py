@@ -81,8 +81,8 @@ def test_interactive_resume_is_rejected_before_exec_preparation(tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
-# {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+# {{work-root}}/spec/app_spec/codex_common_rule.md
+# {{work-root}}/spec/app_spec/codex_exec_rule.md
 def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     """Codex exec の必須 argv と prompt の stdin 渡しを検証する。"""
     assert "--json" in args
@@ -108,7 +108,7 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
     assert not list(codex_home.glob("*.config.toml"))
 
 
-# {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
+# {{work-root}}/spec/app_spec/codex_model_provider.md
 def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

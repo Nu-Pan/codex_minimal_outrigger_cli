@@ -35,7 +35,7 @@ def add_primary_report_review(
     state: PrimaryReportReviewState,
 ) -> str:
     """共通の回復・補正を使って確認し、その記録を機械生成版へ追記する。"""
-    # oracle/doc/app_spec/console_and_file_log.md の「重要事項確認用 call」。
+    # spec/app_spec/console_and_file_log.md の「重要事項確認用 call」。
     # 入力の固定後は確認自身の記録を戻さず、report を再帰的に確認しない。
     first_event = logger.event_count()
     input_path: Path | None = None

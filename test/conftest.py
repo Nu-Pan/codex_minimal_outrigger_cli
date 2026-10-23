@@ -84,7 +84,7 @@ def _prepare_run_session(
     # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
     init_repo(root)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
-    for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
+    for relative in ("spec", "referenece/src", "oracle/test", "src", "test"):
         (root / relative).mkdir(parents=True, exist_ok=True)
     if with_content:
         # 初期内容を session fork 後に追加する履歴は利用側の検査に不要。
@@ -350,7 +350,7 @@ def unsynced_search_storage(monkeypatch):
 def document_repository(tmp_path, monkeypatch):
     """Git 検査以外の検索契約に、検証済みの root・文書集合を渡す。"""
     root = tmp_path / "repo"
-    docs = root / "oracle/doc"
+    docs = root / "spec"
     docs.mkdir(parents=True)
     (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
 
@@ -426,7 +426,7 @@ def _isolate_windows_toast_transport(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """test が利用者の Windows 通知履歴へ toast を残さないようにする。"""
-    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+    # {{work-root}}/spec/app_spec/windows_toast_notification.md
     # subprocess callback も同じ隔離先を使えるよう、PATH に fake transport を置く。
     executable = _noop_external_commands / "powershell.exe"
     monkeypatch.setenv("PATH", f"{executable.parent}:{os.environ.get('PATH', '')}")

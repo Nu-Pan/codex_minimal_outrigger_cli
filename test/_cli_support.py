@@ -26,7 +26,7 @@ runner = _CliRunner()
 
 def seed_search_config(root: Path) -> None:
     """通常起動の設定を用意し、管理物の修復・検証は試験対象の doctor に残す。"""
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
 
 
@@ -34,8 +34,8 @@ def run_doctor(root: Path) -> Result:
     """doctor CLI を対象 worktree の cwd で実行する。"""
     from main import app
 
-    # {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/sub_command/doctor.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # os.chdir と CliRunner の isolation は process-global なので共有 lock 内で実行する。
     with pushd(root):
         result = runner.invoke(app, ["doctor"], catch_exceptions=False)
@@ -45,7 +45,7 @@ def run_doctor(root: Path) -> Result:
 
 def terminal_primary_report(result: Result | str) -> Path:
     """terminal result または captured output の primary report path を取り出す。"""
-    # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+    # {{work-root}}/spec/app_spec/console_and_file_log.md
     prefix = "- primary report ("
     output = result if isinstance(result, str) else result.output
     for line in output.splitlines():

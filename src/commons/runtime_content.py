@@ -12,7 +12,7 @@ def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -
     content_bytes = content.encode("utf-8")
     digest = hashlib.sha256(content_bytes).hexdigest()
     path = directory / f"{prefix}{digest}{suffix}"
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の schema store は、
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md の schema store は、
     # hash path 自体の種類を一度だけ調べ、symlink のリンク先は読まない。
     try:
         mode = path.lstat().st_mode

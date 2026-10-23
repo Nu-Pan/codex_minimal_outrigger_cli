@@ -6,7 +6,7 @@
 commit 対象の対応を複数 file で追う必要が生じるため、現状は doctor preprocess
 の境界として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+根拠: {{work-root}}/spec/app_spec/oracle_and_realization.md の
 「realization file を扱う判断基準」
 """
 
@@ -246,7 +246,7 @@ def run_doctor_preprocess(
             "sqlite_vec": SEARCH_MATERIALS.sqlite_vec_version,
         },
     )
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # snapshot 作成から修復 commit と元の index 復元までを同じ Git common
     # directory の lock 内で行い、並行 doctor が共有 index を混ぜないようにする。
     with ExitStack() as locks, ExitStack() as path_queries:
@@ -293,8 +293,8 @@ def run_doctor_preprocess(
                     directories.extend(
                         root / path / ".placeholder"
                         for path in (
-                            "oracle/doc",
-                            "oracle/src",
+                            "spec",
+                            "referenece/src",
                             "oracle/test",
                             "src",
                             "test",
@@ -338,7 +338,7 @@ def run_doctor_preprocess(
                         )
                     )
 
-                # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+                # {{work-root}}/spec/app_spec/doctor_preprocess.md
                 # ignore と .agents の保証後に、config と refactor state を current
                 # work-root だけで同期する。index には直接触れず、後続の一時 index
                 # で他の doctor 修復と同じ commit にまとめる。
@@ -349,9 +349,9 @@ def run_doctor_preprocess(
                 ) -> None:
                     """保存前の補完候補も失敗 report へ残す。"""
                     update_primary_report_fields(
-                        config_generation="新規ファイル候補"
-                        if generated
-                        else "既存ファイル",
+                        config_generation=(
+                            "新規ファイル候補" if generated else "既存ファイル"
+                        ),
                         config_additions=additions,
                     )
 
@@ -361,9 +361,9 @@ def run_doctor_preprocess(
                     on_candidate=report_config_candidate if explicit_doctor else None,
                 )
                 update_primary_report_fields(
-                    config_generation="新規生成"
-                    if config_result.generated
-                    else "既存ファイル",
+                    config_generation=(
+                        "新規生成" if config_result.generated else "既存ファイル"
+                    ),
                     config_additions=config_result.additions,
                     config_validation="成功",
                     config_saved=config_result.saved,
@@ -435,13 +435,15 @@ def run_doctor_preprocess(
                     raise CmocError(
                         "文書検索索引の同期に失敗しました。",
                         [
-                            f"対象 work-root ({root}) で cmoc doctor を実行してください。"
-                            if exc.code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}
-                            else "文書検索の設定、資材、許可対象ファイルを確認してください。"
+                            (
+                                f"対象 work-root ({root}) で cmoc doctor を実行してください。"
+                                if exc.code in {"NOT_READY", "MODEL_IDENTITY_MISMATCH"}
+                                else "文書検索の設定、資材、許可対象ファイルを確認してください。"
+                            )
                         ],
                         f"work-root: {root}\ncode: {exc.code}\nreason: {exc}",
                     ) from exc
-                # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+                # {{work-root}}/spec/app_spec/doctor_preprocess.md
                 # reporter 固有の不一致は修復や version command を行わず degraded にする。
                 try:
                     validate_feedback_reporter_availability()
@@ -575,7 +577,7 @@ def doctor_lock_path(root: Path) -> Path:
 
 def _ensure_agents_tracked(root: Path) -> bool:
     """.agentsの追跡用placeholderを準備し、追加したかを返す。"""
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # .agents は agent 操作禁止領域なので、tracked file がない場合だけ
     # placeholder を追加して差分が出る余地を小さくする。
     agents = root / ".agents"
@@ -632,7 +634,7 @@ def _ensure_agents_tracked(root: Path) -> bool:
 
 def _validate_agents_paths(root: Path) -> None:
     """.agents の doctor 書き込み対象を通常の directory/file に限定する。"""
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # symlink 経由の mkdir/touch は .agents 外へ書き込むため、修復前に拒否する。
     agents = root / ".agents"
     gitkeep = agents / ".gitkeep"
@@ -680,7 +682,7 @@ def _preexisting_repair_paths(
     root: Path, index_path: Path, *, include_config: bool = True
 ) -> set[str]:
     """開始前の runtime 差分と .gitignore の staged deletion を一括で保存対象にする。"""
-    # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
+    # {{work-root}}/referenece/src/oracle/other/cmoc_config.py
     # config は人間が編集するため、既存の staged/unstaged 変更を doctor の
     # repair commit に混ぜない。state も同じ一時 index で扱うため同じ境界にする。
     paths = (
@@ -747,7 +749,7 @@ def _commit_doctor_repairs(
 def _restore_index(root: Path, index_path: Path) -> None:
     """一時 index の内容を現在の Git index へ復元する。"""
 
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # tree 化では index 固有状態が失われるため、一時 index file 自体を復元する。
     shutil.copyfile(index_path, _current_index_path(root))
 
@@ -761,7 +763,7 @@ def _commit_doctor_repairs_from_head(
     preserved_paths: set[str],
 ) -> None:
     """HEAD起点の一時indexでdoctor修復だけをcommitする。"""
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # repair commit は doctor の作業差分だけなので、通常 index ではなく
     # HEAD 起点の一時 index で user staged hunks と同一 path 上でも分離する。
     fd, index_name = tempfile.mkstemp(prefix="cmoc-doctor-index-")
@@ -817,7 +819,7 @@ def _restored_index(
     preserved_paths: set[str],
 ) -> Path:
     """doctor 修復を合成した一時 index file を作る。"""
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # 復元対象は path 列挙ではなく index 全体で扱い、rename や unstaged hunk を保つ。
     # 通常 index は ensure_cmoc_ignored と _ensure_agents_tracked で修復済みなので、
     # コピー後に .cmoc/gu の除外と .agents の追跡処理を繰り返す必要はない。
@@ -849,7 +851,7 @@ def _copy_current_index(root: Path) -> Path:
         if current_index.exists():
             shutil.copy2(current_index, index_path)
         else:
-            # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+            # {{work-root}}/spec/app_spec/doctor_preprocess.md
             _run_git_with_index(["read-tree", "HEAD"], root, index_path)
             # 修復処理の Git command は通常の index を参照するため、index が
             # 欠落していた場合も HEAD の完全な index を先に復元する。
@@ -891,7 +893,7 @@ def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
             [(".agents/.gitkeep", current_fields[0], current_fields[1])],
         )
         return
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # HEAD に既存の placeholder がある場合は、復元用 index と repair commit 用
     # index の双方で同じ blob/mode を参照する。新規作成時だけ空 blob にする。
     entry = _head_entry(root, ".agents/.gitkeep")

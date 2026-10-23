@@ -5,9 +5,9 @@
 root 不変条件の検証文脈が複数 file に分散するため、一つの runtime 回帰として保つ。
 
 根拠:
-- {{work-root}}/oracle/src/oracle/other/path_model.py
-- {{work-root}}/oracle/doc/branch_model.md
-- {{work-root}}/oracle/doc/app_spec/run_isolation.md
+- {{work-root}}/referenece/src/oracle/other/path_model.py
+- {{work-root}}/spec/branch_model.md
+- {{work-root}}/spec/app_spec/run_isolation.md
 """
 
 import shutil
@@ -618,6 +618,6 @@ def test_remove_worktree_rejects_noncanonical_run_ids(
     with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
         remove_worktree(root, target)
     assert target.is_dir()
-    assert not any(args[:2] == ["worktree", "list"] for args in git_queries), (
-        git_queries
-    )
+    assert not any(
+        args[:2] == ["worktree", "list"] for args in git_queries
+    ), git_queries

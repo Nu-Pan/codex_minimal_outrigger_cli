@@ -27,7 +27,7 @@ RefactorState = dict[str, RefactorEntry]
 def load_refactor_state(root: Path) -> RefactorState:
     """refactor state を読み、永続情報を破棄せず schema を検証する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    根拠: {{work-root}}/spec/app_spec/doctor_preprocess.md
     """
     path = refactor_state_path(root)
     if not _validate_refactor_state_path(path):
@@ -46,7 +46,7 @@ def write_refactor_state(root: Path, state: RefactorState) -> None:
     validated = _validated_state(path, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+        # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
         # の「回帰検証」
         # JSON の ASCII escape で surrogateescape された filesystem path も UTF-8
         # の state file へ保存し、列挙結果の entry を失わないようにする。
@@ -118,9 +118,9 @@ def merge_refactor_states(
 def _synchronized_entries(root: Path, state: RefactorState) -> RefactorState:
     # 内容は読まず、既存 entry を再利用し、新規 path だけ初期 entry を作る。
     return {
-        relative: state[relative]
-        if relative in state
-        else {"last_investigated_at": None}
+        relative: (
+            state[relative] if relative in state else {"last_investigated_at": None}
+        )
         for relative in enumerate_refactor_targets(root)
     }
 
@@ -136,7 +136,7 @@ def _parse_state(path: Path, content: str) -> RefactorState:
 
 def enumerate_refactor_targets(root: Path) -> list[str]:
     """現在存在する全 oracle file と realization file を列挙する。"""
-    # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
+    # {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
     # の「分類結果」
     # doctor preprocess と refactor workload は、共通の full-tree 分類結果で
     # state entry を同期する。
@@ -160,7 +160,7 @@ def refactor_cycle_targets(state: RefactorState) -> list[str]:
 
 def _validate_refactor_state_path(path: Path) -> bool:
     """state と親の種類を一度ずつ検証し、state file の存在を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    # {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     # 祖先から検証し、symlink の参照先へ降りずに file/directory の種類を確認する。
     absolute = path.absolute()
     for current in (*reversed(absolute.parents), absolute):
@@ -191,7 +191,7 @@ def _validate_refactor_state_path(path: Path) -> bool:
 def _validated_state(path: Path, value: object) -> RefactorState:
     """refactor state 全体を schema 検証し、型付けされた state として返す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     """
     if not isinstance(value, dict):
         raise _invalid_refactor_state(
@@ -208,7 +208,7 @@ def _validated_state(path: Path, value: object) -> RefactorState:
 def is_normalized_relative_path(value: str) -> bool:
     """refactor 契約で許可される正規化済み work-root 相対 path か判定する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     """
     path = Path(value)
     return (
@@ -225,14 +225,14 @@ def is_normalized_relative_path(value: str) -> bool:
 def _validated_entry(path: Path, key: str, value: object) -> RefactorEntry:
     """JSON の entry を検証し、型付けされた refactor entry として返す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     """
     if not isinstance(value, dict):
         raise _invalid_refactor_state(path, f"entry は object ではありません: {key}")
     if set(value) != {"last_investigated_at"}:
         raise _invalid_refactor_state(path, f"entry field が不正です: {key}")
     investigated_at = value["last_investigated_at"]
-    # {{work-root}}/oracle/doc/app_spec/timestamp.md
+    # {{work-root}}/spec/app_spec/timestamp.md
     # state の履歴時刻はミリ秒精度の {{time-stamp}} として保存する。
     if investigated_at is not None and (
         not isinstance(investigated_at, str)

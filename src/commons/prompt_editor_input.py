@@ -42,7 +42,7 @@ class EmptyPromptInput(CmocError):
 
 def reserve_prompt_editor_input(root: Path) -> Path:
     """編集から確定保存まで共用する空の本文 file を予約する。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # {{work-root}}/spec/app_spec/prompt_editor_input.md
     # 保存済み入力も編集中の入力も、排他的な予約で上書きを避ける。
     directory = editor_input_log_dir(root)
     _validate_editor_storage_path(directory, require_directory=True)
@@ -62,7 +62,7 @@ def edit_prompt_editor_input(
     complete_prompt_skeleton: str,
 ) -> None:
     """予約済みの入力 file と独立した handoff ガイドで、エディタを起動する。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # {{work-root}}/spec/app_spec/prompt_editor_input.md
     validate_editor_input_file(root, input_path)
 
     argv = [*_select_editor(), str(input_path)]
@@ -98,7 +98,7 @@ def collect_prompt_editor_input(
     input_path: Path,
 ) -> str:
     """本文を一度だけ読んで確定保存し、空なら中断、非空なら入力を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
+    # {{work-root}}/spec/app_spec/prompt_editor_input.md
     # 最終時点の通常 file を一度だけ読み、同じ結果を保存と入力抽出に使う。
     validate_editor_input_file(root, input_path)
     final_read_result = input_path.read_bytes()

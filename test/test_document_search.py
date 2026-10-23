@@ -162,13 +162,13 @@ def _repo_with_docs(tmp_path: Path, *, committed: bool = False) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
     init_repo(root)
-    docs = root / "oracle/doc"
+    docs = root / "spec"
     docs.mkdir(parents=True)
     (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
-    (root / ".gitignore").write_text("oracle/doc/ignored.md\n/.cmoc/gu/\n")
+    (root / ".gitignore").write_text("spec/ignored.md\n/.cmoc/gu/\n")
     (docs / "ignored.md").write_text("# 非公開の本文\n")
     if committed:
-        run_git(root, "add", ".gitignore", "oracle/doc")
+        run_git(root, "add", ".gitignore", "spec")
         run_git(root, "commit", "-m", "add docs")
     return root
 
@@ -265,13 +265,13 @@ def test_heading_ranges_follow_markdown_structure(body: str, parts: list[str]) -
 def test_search_only_reads_oracle_doc_markdown(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """分類と oracle/doc・拡張子の条件を本文の open より前に適用する。"""
+    """分類と spec・拡張子の条件を本文の open より前に適用する。"""
     root = _repo_with_docs(tmp_path)
     for relative in (
-        "oracle/doc/AGENTS.md",
-        "oracle/doc/note.txt",
-        "oracle/src/code.md",
-        "oracle/document/other.md",
+        "spec/AGENTS.md",
+        "spec/note.txt",
+        "referenece/src/code.md",
+        "specument/other.md",
         "realization.md",
     ):
         target = root / relative
@@ -288,8 +288,8 @@ def test_search_only_reads_oracle_doc_markdown(
 
     monkeypatch.setattr(module, "_secure_read", tracked_read)
     result = scan_documents(root)
-    assert set(result) == {"oracle/doc/allowed.md"}
-    assert opened == ["oracle/doc/allowed.md"]
+    assert set(result) == {"spec/allowed.md"}
+    assert opened == ["spec/allowed.md"]
 
 
 def test_search_syncs_edits_and_reuses_unchanged_embeddings(
@@ -307,7 +307,7 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(
     ) as search:
         first = search.search("内容")
         assert first["status"] == "ok"
-        assert [hit["path"] for hit in first["hits"]] == ["oracle/doc/allowed.md"]
+        assert [hit["path"] for hit in first["hits"]] == ["spec/allowed.md"]
         assert first["hits"][0]["ranges"] == [
             {"start_line": 1, "end_line": 2, "max_similarity": 1.0}
         ]
@@ -316,11 +316,11 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(
         unchanged = search.search("内容")
         assert unchanged == first
         assert len(worker.operations) == 2
-        (root / "oracle/doc/allowed.md").write_text("# 変更後\n次の内容\n追加の行\n")
+        (root / "spec/allowed.md").write_text("# 変更後\n次の内容\n追加の行\n")
         changed = search.search("内容")
         assert changed["hits"] == [
             {
-                "path": "oracle/doc/allowed.md",
+                "path": "spec/allowed.md",
                 "ranges": [{"start_line": 1, "end_line": 3, "max_similarity": 1.0}],
             }
         ]
@@ -328,9 +328,9 @@ def test_search_syncs_edits_and_reuses_unchanged_embeddings(
         assert worker.operations.count("chunk_embed") == 2
         assert worker.operations.count("embed_query") == 1
 
-        (root / "oracle/doc/allowed.md").write_text(" \n\t")
+        (root / "spec/allowed.md").write_text(" \n\t")
         assert search.search("内容") == {"status": "ok", "hits": []}
-        (root / "oracle/doc/allowed.md").unlink()
+        (root / "spec/allowed.md").unlink()
         sync = search.synchronize()
         assert sync.deleted == 1 and sync.chunk_count == 0
 
@@ -346,7 +346,7 @@ def test_sync_rechecks_event_source_without_rereading_other_documents(
 
     # Git 分類は専用ケースに残し、ここでは各確定時の本文読取りを検査する。
     root = document_repository
-    docs = root / "oracle/doc"
+    docs = root / "spec"
     (docs / "second.md").write_text("# second\n本文\n")
     opened = []
     secure_read = module._secure_read
@@ -406,7 +406,7 @@ def test_sync_rejects_changed_or_unreadable_source_before_saving(
     root = cli_repository
     ignore = root / ".gitignore"
     ignore.write_text(".cmoc/gu/\n")
-    document = root / "oracle/doc/fresh.md"
+    document = root / "spec/fresh.md"
     document.parent.mkdir(parents=True)
     document.write_text("# 生成に使用した本文\n")
 
@@ -415,7 +415,7 @@ def test_sync_rejects_changed_or_unreadable_source_before_saving(
             if change == "edit":
                 document.write_text("# 生成後に編集された本文\n")
             elif change == "ignore":
-                ignore.write_text(ignore.read_text() + "oracle/doc/fresh.md\n")
+                ignore.write_text(ignore.read_text() + "spec/fresh.md\n")
             elif change == "invalid_utf8":
                 document.write_bytes(b"\xff")
             else:
@@ -443,7 +443,7 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
     pytest.importorskip("sqlite_vec")
     # 分類済みの文書を使い、途中保存と再開の検査に Git 準備を重ねない。
     root = document_repository
-    document = root / "oracle/doc/allowed.md"
+    document = root / "spec/allowed.md"
     document.write_text("# 前半の原文\n後半の原文\n")
     vector = [1.0] + [0.0] * (SEARCH_MATERIALS.embedding_dimensions - 1)
 
@@ -504,13 +504,13 @@ def test_incomplete_stream_keeps_verified_chunks_and_resumes(
     # 再開と結果公開を一度の自動同期で検査し、明示同期直後の再同期を省く。
     resumed = search.search("原文")
     assert worker.resumes == [
-        {"oracle/doc/allowed.md": 0},
-        {"oracle/doc/allowed.md": 1},
+        {"spec/allowed.md": 0},
+        {"spec/allowed.md": 1},
     ]
     assert search.sync_progress["reused_embeddings"] == 1
     assert search.sync_progress["persisted_chunks"] == 1
     assert resumed["status"] == "ok"
-    assert [hit["path"] for hit in resumed["hits"]] == ["oracle/doc/allowed.md"]
+    assert [hit["path"] for hit in resumed["hits"]] == ["spec/allowed.md"]
     assert sorted(
         resumed["hits"][0]["ranges"], key=lambda location: location["start_line"]
     ) == [
@@ -592,8 +592,7 @@ def test_worker_streams_utf8_chunks_and_reuse_through_small_pipe(
     _fake_node_model(tmp_path)
     # OS の pipe 分割や sleep に依存せず、実入力のバイト境界を固定する。
     preload = tmp_path / "fragmented-stdin.mjs"
-    preload.write_text(
-        """import { readFileSync } from "node:fs";
+    preload.write_text("""import { readFileSync } from "node:fs";
 import { Readable } from "node:stream";
 // 実 runtime と同様に stdout を初期化し、非同期 pipe の部分書込みを再現する。
 void process.stdout;
@@ -603,8 +602,7 @@ for (let start = 0; start < input.length; start++) {
   fragments.push(input.subarray(start, start + 1));
 }
 Object.defineProperty(process, "stdin", { value: Readable.from(fragments) });
-"""
-    )
+""")
     text = "# 日本語\néあ😀 と ASCII\n受信境界をまたいでも末尾まで保つ。\n"
     config = _tuning()
     documents = {
@@ -799,7 +797,7 @@ def test_changed_sections_and_moved_files_reuse_saved_embeddings(
     # Git 分類は読取り範囲・同期競合・worktree 再利用の test で検査する。
     # 実 Node の分割・cache・現在位置を通し、各 event の Git 走査を重ねない。
     root = document_repository
-    document = root / "oracle/doc/allowed.md"
+    document = root / "spec/allowed.md"
     a, b, c = "# A\nalpha\n", "# B\nbravo\n", "# C\ncharlie\n"
     document.write_text(a + b + c)
     runtime = tmp_path / "fake-worker"
@@ -1078,7 +1076,7 @@ def test_zero_hit_search_rechecks_source_before_return(
     """空白文書の同期直後に本文が変わったら、ゼロ件を成功として返さない。"""
     pytest.importorskip("sqlite_vec")
     root = document_repository
-    document = root / "oracle/doc/allowed.md"
+    document = root / "spec/allowed.md"
     document.write_text(" \n")
     search = DocumentSearch(
         root,
@@ -1135,7 +1133,7 @@ def _assert_search_result(response, schema, *, error):
         {"query": " \n\t"},
         {"query": None},
         {"query": "内容", "work_root": "/elsewhere"},
-        {"query": "内容", "path": "oracle/doc/allowed.md"},
+        {"query": "内容", "path": "spec/allowed.md"},
         *({"query": "内容", "limit": limit} for limit in (None, True, 19, 51, 20.5)),
     ],
 )
@@ -1241,7 +1239,7 @@ def test_mcp_success_schema_and_candidate_limits(
     """負値・境界値・同点でも、集約前に既定・設定・引数の件数上限を適用する。"""
     # 同じ embedding の候補は本文も共有し、各行の位置と件数を保って cache 保存を減らす。
     root = document_repository
-    path = "oracle/doc/allowed.md"
+    path = "spec/allowed.md"
     available = len(candidates)
     similarities = sorted((similarity for _, similarity in candidates), reverse=True)
     (root / path).write_text("".join(f"候補 {vector}\n" for vector, _ in candidates))
@@ -1302,8 +1300,8 @@ def test_mcp_aggregates_current_locations_without_excerpts(
 ):
     """重複・入れ子・連鎖する重なりの最大値を保ち、ファイルと範囲を類似度順に返す。"""
     root = document_repository
-    path = "oracle/doc/allowed.md"
-    other = "oracle/doc/second.md"
+    path = "spec/allowed.md"
+    other = "spec/second.md"
     (root / other).write_text("別の原文\n")
     (root / path).write_text("".join(f"原文 {i}\n" for i in range(81)))
     worker = candidate_worker(
@@ -1393,7 +1391,7 @@ def test_mcp_cosine_ranking_is_independent_of_candidate_limit(
 ):
     """既知の embedding の順位と値を、同じ query の異なる返却件数で検証する。"""
     root = document_repository
-    path = "oracle/doc/allowed.md"
+    path = "spec/allowed.md"
     # 異なる合法上限 20・21 と未採用候補一件で順位と値を検査する。50 の境界は別ケースで保つ。
     candidate_count = 21
     available = candidate_count + 1
@@ -1454,7 +1452,7 @@ def test_mcp_candidate_limit_applies_before_range_merging(
 ):
     """採用候補が一範囲へ統合されても、残りの候補で件数を補充しない。"""
     root = document_repository
-    path = "oracle/doc/allowed.md"
+    path = "spec/allowed.md"
     # 20・21 件の採用で統合前の上限違反を検出する。50 の境界は別ケースで保つ。
     candidate_count = 21
     # 上位 20 件は同じ本文片にし、22 件の候補を三種類の cache 保存だけで用意する。
@@ -1510,7 +1508,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
     from commons import runtime_document_search as module
 
     root = document_repository
-    path = "oracle/doc/allowed.md"
+    path = "spec/allowed.md"
     # 採用上限を満たす正常候補と、上限外にある異常候補一つを用意する。
     candidate_count = 20
     available = candidate_count + 1
@@ -1593,15 +1591,15 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
             {"status": "ok", "hits": [hit]}
             for hit in [
                 {
-                    "path": "oracle/doc/a.md",
+                    "path": "spec/a.md",
                     "start_line": 1,
                     "end_line": 2,
                     "excerpt": "old",
                 },
-                {"path": "oracle/doc/a.md", "ranges": []},
-                {"path": "oracle/doc/a.md", "ranges": [[1, 2]]},
+                {"path": "spec/a.md", "ranges": []},
+                {"path": "spec/a.md", "ranges": [[1, 2]]},
                 *(
-                    {"path": "oracle/doc/a.md", "ranges": [location]}
+                    {"path": "spec/a.md", "ranges": [location]}
                     for location in [
                         {"start_line": 1, "end_line": 2},
                         {"start_line": 0, "end_line": 2, "max_similarity": 0.5},
@@ -1621,7 +1619,7 @@ def test_mcp_rejects_invalid_similarity_even_outside_candidate_limit(
                     ]
                 ),
                 {
-                    "path": "oracle/doc/a.md",
+                    "path": "spec/a.md",
                     "ranges": [{"start_line": 1, "end_line": 2, "max_similarity": 0.5}],
                     "excerpt": "extra",
                 },
@@ -1737,7 +1735,7 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
     environment = {
         **os.environ,
         "PYTHONPATH": os.pathsep.join(
-            (str(project / "src"), str(project / "oracle/src"))
+            (str(project / "src"), str(project / "referenece/src"))
         ),
     }
     with subprocess.Popen(

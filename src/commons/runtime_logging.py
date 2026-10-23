@@ -57,11 +57,11 @@ class SubcommandLogger:
         self._event_records: list[dict[str, Any]] = []
         # ContextVar の worker context から同じ logger object が共有されるため、並列 Codex
         # event の追記と quota 待機時間の集計を直列化する。
-        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        # {{work-root}}/spec/app_spec/console_and_file_log.md
         self._lock = threading.Lock()
         log_dir = logs_dir(root)
         log_dir.mkdir(parents=True, exist_ok=True)
-        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        # {{work-root}}/spec/app_spec/console_and_file_log.md
         self.path = log_dir / f"{self.execution_id}.jsonl"
         self.path.open("x").close()
 
@@ -69,7 +69,7 @@ class SubcommandLogger:
         """実行時に後から検査したい event を安定した JSON record として残す。"""
         record = self._new_event_record(kind, payload)
         self._append_event_record(record)
-        # {{work-root}}/oracle/doc/app_spec/feedback_observation.md
+        # {{work-root}}/spec/app_spec/feedback_observation.md
         # detector は event が flush された後だけ評価し、失敗を本命 logger へ返さない。
         if {
             "event_schema_version",
@@ -151,8 +151,8 @@ class SubcommandLogger:
     ) -> None:
         """完了サマリー用の step 実測値を開始 event と同じ単位で保持する。
 
-        根拠: {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
-        `{{work-root}}/oracle/doc/dev_rule/coding_rule.md` が log message を英語に
+        根拠: {{work-root}}/spec/app_spec/console_and_file_log.md
+        `{{work-root}}/spec/dev_rule/coding_rule.md` が log message を英語に
         限るため、console 表示名と JSON Lines の step 名は分けられる。
         """
         self.finish_current_step()
@@ -203,7 +203,7 @@ class SubcommandLogger:
 
     def event_records(self, *, start: int = 0) -> tuple[dict[str, Any], ...]:
         """指定位置以降の flush 済み event を独立した snapshot として返す。"""
-        # {{work-root}}/oracle/doc/app_spec/console_and_file_log.md
+        # {{work-root}}/spec/app_spec/console_and_file_log.md
         # 確認自身の記録だけが必要な場合は、それ以前の本文をコピーしない。
         with self._lock:
             return tuple(

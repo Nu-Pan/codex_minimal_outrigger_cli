@@ -4,25 +4,25 @@
 SDHeader 出力を共有する一つの責務であるため、prompt builder 回帰として一箇所に保つ。
 
 対応する正本:
-- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-- {{work-root}}/oracle/doc/app_spec/feedback_observation.md
-- {{work-root}}/oracle/doc/app_spec/editor_input_handoff.md
-- {{work-root}}/oracle/doc/app_spec/document_search.md
-- {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md
-- {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-- {{work-root}}/oracle/src/oracle/other/struct_doc.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/basic.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/complete_prompt.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/conflict_resolution.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/editor_input_handoff.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/feedback_reporting.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/oracle.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization_findings.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/realization.py
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/routing.py
+- {{work-root}}/spec/app_spec/codex_common_rule.md
+- {{work-root}}/spec/app_spec/feedback_observation.md
+- {{work-root}}/spec/app_spec/editor_input_handoff.md
+- {{work-root}}/spec/app_spec/document_search.md
+- {{work-root}}/spec/app_spec/oracle_and_realization.md
+- {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
+- {{work-root}}/spec/app_spec/sub_command/session_join.md
+- {{work-root}}/referenece/src/oracle/other/struct_doc.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/basic.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/complete_prompt.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/conflict_resolution.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/editor_input_handoff.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/feedback_reporting.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/file_access.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/oracle.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/realization_findings.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/realization.py
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/routing.py
 """
 
 from pathlib import Path

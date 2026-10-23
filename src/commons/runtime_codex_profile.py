@@ -5,7 +5,7 @@
 CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
 subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
 失敗時文脈が増える。現状は Codex subprocess 境界として一箇所に保つ方が凝集性が高い。
-根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+根拠: {{work-root}}/spec/app_spec/oracle_and_realization.md の
 「realization file を扱う判断基準」
 """
 
@@ -76,7 +76,7 @@ def _first_symlink_component(path: Path) -> Path | None:
 def _validate_process_tracking_path(path: Path) -> None:
     """tracking file と lock を管理領域内の通常 file として扱えるか検証する。"""
     lock_path = path.with_name(f"{path.name}.lock")
-    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # {{work-root}}/spec/app_spec/run_isolation.md
     # process tracking は repo-root 側に置く cmoc 管理データなので、symlink 経由の
     # 外部 read/write と lock の外部化を許可しない。
     for candidate in (path, lock_path):
@@ -101,7 +101,7 @@ def _validate_process_tracking_path(path: Path) -> None:
 
 def _is_valid_process_id(process_id: int) -> bool:
     """OS の process API へ安全に渡せる pid_t 範囲か判定する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     return 0 < process_id <= 2**31 - 1
 
 
@@ -112,7 +112,7 @@ def run_process_id_file_lock(path: Path) -> Iterator[None]:
     lock_path = path.with_name(f"{path.name}.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # abandon が Codex child 起動直後の未記録状態を読まないよう、
         # parent/child pid file 操作は同じ advisory lock に集約する。
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
@@ -124,7 +124,7 @@ def run_process_id_file_lock(path: Path) -> Iterator[None]:
 
 def _read_tracked_process_file(path: Path) -> list[str]:
     """tracking file を読み、形式を検証した非空行を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # abandon は壊れた tracking file を停止対象なしとして扱うため、壊れた既存 state に
     # child 行だけを追記すると、実行中 process を cleanup できないまま worktree を破棄する。
     lines = [
@@ -181,7 +181,7 @@ def open_process_fd(process_id: int, process_name: str = "run process") -> int |
         ) from exc
     except OSError as exc:
         if exc.errno == errno.EINVAL:
-            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # {{work-root}}/spec/app_spec/run_isolation.md
             # pidfd を開けない場合は呼び出し側の start time/group 検証へ渡し、
             # leader が消えた group を数値 PGID だけで停止しない。
             return None
@@ -332,7 +332,7 @@ def _wait_tracked_process_group_exit(
 def _unverified_process_group_error(process_group_id: int) -> CmocError:
     """既知の member が消えた後に残る未検証 group の error を作る。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     return CmocError(
         "実行中 Codex subprocess の同一性を確認できません。",
@@ -362,7 +362,7 @@ def stop_process_group(
     expected_members: tuple[tuple[int, int], ...] | None = None,
 ) -> None:
     """Codex と tool の process tree を同一性を固定して停止・回収する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # PGID は member discovery にだけ使い、signal delivery は pidfd に固定する。
     # 初回 snapshot と同じ group identity が消えた後の PGID 再利用へ signal を送らない。
     # leader が検証直後に終了しても、停止前 snapshot と現在の member に重なりが
@@ -574,7 +574,7 @@ def _is_bare_toml_key_segment(value: str) -> bool:
 
 def _toml_key_segment(value: str) -> str:
     """provider ID/key を意味を保つ単一の TOML key segment にする。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+    # {{work-root}}/spec/app_spec/codex_common_rule.md
     # Codex CLI の dotted override path は bare key を引用せず渡す必要がある。
     if _is_bare_toml_key_segment(value):
         return value
@@ -665,7 +665,7 @@ def _model_provider_override_args(
         normalized_settings[key] = normalized_value
         has_non_bare_segment |= not _is_bare_toml_key_segment(key)
     if has_non_bare_segment and normalized_settings:
-        # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+        # {{work-root}}/spec/app_spec/codex_common_rule.md
         # Codex CLI の dotted override parser は quoted key segment を path として解釈せず、
         # provider ID/key に dot を含む設定を壊す。inline TOML table なら同じ
         # provider-local key を一つの config override として意味を保てる。
@@ -685,7 +685,7 @@ def _model_provider_override_args(
 
 def _feedback_mcp_override_args(enable_feedback_reporting: bool) -> list[str]:
     """cmoc_feedback server の effective configuration 全体を支配する。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+    # {{work-root}}/spec/app_spec/codex_common_rule.md
     # capability value は argv に載せず、Codex process の local environment から
     # reporter process だけが whitelist 名で継承する。
     server: dict[str, JsonTomlValue] = {
@@ -816,7 +816,7 @@ def document_search_mcp_override_args(
                 "PYTHONPATH": os.pathsep.join(
                     (
                         str(Path(__file__).resolve().parents[1]),
-                        str(Path(__file__).resolve().parents[2] / "oracle/src"),
+                        str(Path(__file__).resolve().parents[2] / "referenece/src"),
                     )
                 )
             },
@@ -873,7 +873,7 @@ def build_codex_override_args(
         *_config_override(
             "model_reasoning_effort", _toml_value(call_config.reasoning_effort)
         ),
-        # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+        # {{work-root}}/spec/app_spec/windows_toast_notification.md
         # 固定した session ID は通知専用処理へ渡し、TUI の状態監視に使わない。
         *_config_override("notify", _toml_value(notification_argv)),
         *_config_override("tui.notifications", "false"),
@@ -948,7 +948,7 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     value = os.environ.get("CODEX_HOME")
     if value is None:
         value = str(codex_home)
-    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+    # {{work-root}}/spec/app_spec/codex_common_rule.md
     # 別の Codex call や親 process の MCP context を継承させず、現在 call が
     # 明示的に有効化した context だけを後から追加できるようにする。
     call_context_env_names = {
@@ -1056,7 +1056,7 @@ def run_codex_subprocess(
         _verify_document_search_server(
             argv, cwd=kwargs.get("cwd"), env=kwargs.get("env")
         )
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # tracking は editing run の内部 state なので、継承した env var だけで無関係な Codex
         # call を stale または別 process の pid file へ向けてはならない。
         if _active_run_process_tracking_path is not None and argv[:1] == ["codex"]:
@@ -1080,7 +1080,7 @@ def run_codex_subprocess(
     except FileNotFoundError as exc:
         if not _is_missing_codex_executable(exc, argv, kwargs):
             raise
-        # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        # {{work-root}}/spec/app_spec/codex_exec_rule.md
         # Codex CLI missing は想定外の exec 失敗として即時に利用者向け失敗にする。
         raise CmocError(
             "Codex CLI が見つかりません。",
@@ -1133,7 +1133,7 @@ def _run_subprocess_with_started_callback(
         ) from exc
     try:
         try:
-            # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+            # {{work-root}}/spec/app_spec/windows_toast_notification.md
             # Popen が成功した後だけ TUI process 起動済みとして扱い、起動前の
             # KeyboardInterrupt を terminal failure notification の対象に残す。
             if process_started_callback is not None:
@@ -1287,7 +1287,7 @@ def _is_missing_codex_executable(
     if exc.filename is None:
         # テスト double などが filename を設定しない FileNotFoundError を許容する。
         return True
-    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # {{work-root}}/spec/dev_rule/coding_rule.md
     # subprocess の cwd key は API 名として維持し、内部値には process の役割を付ける。
     codex_process_cwd = kwargs.get("cwd")
     if codex_process_cwd is not None and not isinstance(codex_process_cwd, int):
@@ -1336,7 +1336,7 @@ def run_tracked_codex_subprocess(
     cleanup_expected_leader: tuple[int, int] | None = None
     cleanup_expected_members: tuple[tuple[int, int], ...] | None = None
     tracked_start_time: int | None = None
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # Popen と child 行の登録だけを遅延させ、exec 後の child は通常の SIGTERM を受ける。
     previous_sigterm_handler = signal.getsignal(signal.SIGTERM)
     sigterm_pending = False
@@ -1350,7 +1350,7 @@ def run_tracked_codex_subprocess(
         """保留した SIGTERM を setup 成否にかかわらず復元する。"""
         signal.signal(signal.SIGTERM, previous_sigterm_handler)
         if sigterm_pending and previous_sigterm_handler != signal.SIG_IGN:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # Popen/child 行登録の途中だけ signal を遅延し、setup 失敗時も元の
             # handler へ再配送して run の中断を握りつぶさない。
             os.kill(os.getpid(), signal.SIGTERM)
@@ -1361,7 +1361,7 @@ def run_tracked_codex_subprocess(
             with run_process_id_file_lock(tracking_path):
                 _read_tracked_process_file(tracking_path)
                 process = subprocess.Popen(argv, start_new_session=True, **kwargs)
-                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # {{work-root}}/spec/app_spec/sub_command/editing_run.md
                 # tracking 更新に失敗しても、後から PGID を再探索して別 group を停止しない
                 # よう、Popen 直後の identity snapshot を cleanup に引き継ぐ。
                 cleanup_start_time = process_start_time(process.pid)
@@ -1381,7 +1381,7 @@ def run_tracked_codex_subprocess(
                         cleanup_expected_leader,
                     )
                 if process_started_callback is not None:
-                    # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
+                    # {{work-root}}/spec/app_spec/windows_toast_notification.md
                     # Popen 成功直後に起動境界を通知し、tracking 更新中の中断も
                     # すでに起動した TUI の終了として区別する。cleanup 用 identity は
                     # callback 自体が失敗しても利用できるよう先に確保する。
@@ -1394,7 +1394,7 @@ def run_tracked_codex_subprocess(
                 raise
             try:
                 if cleanup_expected_members is None or cleanup_expected_leader is None:
-                    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
                     # leader の identity を取得できない snapshot を停止済みと
                     # 扱うと、live child の process.wait() だけを無期限に待つ。
                     # group 停止を証明できない場合は outer fallback の Popen child
@@ -1412,7 +1412,7 @@ def run_tracked_codex_subprocess(
                 process.wait()
             except BaseException as cleanup_exc:
                 try:
-                    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                    # {{work-root}}/spec/app_spec/sub_command/editing_run.md
                     # process group cleanup が完了しない場合は PGID を推測して signal せず、
                     # Popen が直接保持する child だけを停止してから reap する。
                     if process.poll() is None:
@@ -1476,7 +1476,7 @@ def run_tracked_codex_subprocess(
             )
         return result
     finally:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # leader 終了後も descendant が group に残る間は tracking を保持する。
         if (
             process.poll() is not None
@@ -1526,7 +1526,7 @@ def _remove_tracked_child_process(
         if not path.exists():
             return
 
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # PID は再利用されるため、古い child の cleanup で新しい tracking 行を消さない。
         def is_same_child(line: str) -> bool:
             """PID 再利用後に登録された新しい child 行を保持する。"""
@@ -1554,7 +1554,7 @@ def _remove_tracked_child_process(
 
 def prepare_schema(root: Path, schema_source_path: Path) -> tuple[Path, str]:
     """schema を内容 hash store へ配置し、保存先と検証用の本文を返す。"""
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/spec/app_spec/codex_exec_rule.md
     # hash path と保存本文を schema source の UTF-8 bytes に一致させるため、
     # Path.read_text() の改行変換を通さない。
     schema_text = schema_source_path.read_bytes().decode("utf-8")
@@ -1569,13 +1569,13 @@ def codex_error_text(stdout_text: str, stderr_text: str) -> str:
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
-            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/spec/app_spec/codex_exec_rule.md
             # blank でも元の line を表示できるようにする。malformed stdout は無視できる
             # diagnostic ではなく protocol failure である。
             fragments.append(f"malformed JSONL event (invalid JSON): {line}")
             continue
         if not isinstance(item, dict):
-            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/spec/app_spec/codex_exec_rule.md
             # 既知の JSONL event は object なので、malformed output を error detail に残して
             # caller が non-retryable failure path を選ぶようにする。
             fragments.append(f"malformed JSONL event (expected object): {line}")
@@ -1597,7 +1597,7 @@ def extract_resume_token(stdout_text: str) -> str | None:
         except json.JSONDecodeError:
             continue
         if not isinstance(item, dict):
-            # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+            # {{work-root}}/spec/app_spec/codex_exec_rule.md
             # non-object event は session ID を持てない。
             continue
         if item.get("type") != "thread.started":
@@ -1632,7 +1632,7 @@ def _failure_outcome(message: object) -> CodexOutcome:
 
 def classify_codex_call(stdout_text: str, returncode: int) -> CodexOutcome:
     """CLI 終了状態と最後の turn 診断から、成功または回復待ちの理由を返す。"""
-    # oracle/doc/app_spec/codex_exec_rule.md の最終的な成功と失敗の判断。
+    # spec/app_spec/codex_exec_rule.md の最終的な成功と失敗の判断。
     # Codex 0.155.1: JSONL terminal と exit status の両方を確認する。
     # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/exec/src/event_processor_with_jsonl_output.rs#L506-L556
     # https://github.com/openai/codex/blob/be2951ea34f0d295ed0becf97079f92fa5f6950e/codex-rs/exec/src/lib.rs#L1243-L1264

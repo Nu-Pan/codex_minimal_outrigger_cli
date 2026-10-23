@@ -1,18 +1,18 @@
 """oracle 変更後の公開 CLI leaf 集合を固定する。
 
 正本仕様:
-- {{work-root}}/oracle/doc/app_spec/sub_command/doctor.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/oracle_investigation.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
-- {{work-root}}/oracle/doc/dev_rule/test_rule.md
+- {{work-root}}/spec/app_spec/sub_command/doctor.md
+- {{work-root}}/spec/app_spec/sub_command/tui.md
+- {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
+- {{work-root}}/spec/app_spec/sub_command/oracle_investigation.md
+- {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+- {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
+- {{work-root}}/spec/app_spec/sub_command/editing_run.md
+- {{work-root}}/spec/app_spec/sub_command/session_fork.md
+- {{work-root}}/spec/app_spec/sub_command/session_join.md
+- {{work-root}}/spec/app_spec/sub_command/session_abandon.md
+- {{work-root}}/spec/app_spec/sub_command/feedback_report.md
+- {{work-root}}/spec/dev_rule/test_rule.md
 """
 
 import inspect
@@ -32,7 +32,7 @@ def _clear_completion_probe_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """通常の CLI tree test を外部の completion probe 環境から分離する。"""
-    # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+    # {{work-root}}/spec/app_spec/cli_auto_completion.md
     monkeypatch.delenv("_CMOC_COMPLETE", raising=False)
 
 

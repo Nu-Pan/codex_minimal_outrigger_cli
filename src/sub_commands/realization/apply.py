@@ -100,7 +100,7 @@ def _cmoc_realization_apply_body() -> TerminalResult:
             context.run_worktree,
         )
         start_subcommand_step(4, "realization 追従 agent を実行", "run apply agent")
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # agent call から処理単位の commit 検査まで同じ tracking scope に含める。
         run_worktree = context.run_worktree
         with run_process_tracking(context.repo, context.session_id):
@@ -137,8 +137,8 @@ def _cmoc_realization_apply_body() -> TerminalResult:
             start_subcommand_step(
                 5, "realization 差分を検査して commit", "commit changes"
             )
-            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-            # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+            # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+            # {{work-root}}/spec/app_spec/run_isolation.md
             # tracked Codex child を停止し、agent 終了後の遅延書き込みを防ぐ。
             cleanup_warnings.extend(
                 stop_tracked_codex_children(context.repo, context.session_id)
@@ -176,7 +176,7 @@ def _cmoc_realization_apply_body() -> TerminalResult:
         update_primary_report_fields(changed_paths=changed_paths)
     except BaseException as exc:
         if context is None:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # 共通事前条件の CmocError では、既存 run をこの fork の失敗として
             # 回収してはいけない。start が公開済み context を付加した例外、または
             # start 処理が context を呼び出し側へ返す前の非 CmocError だけを回収する。
@@ -270,7 +270,7 @@ def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
     if after_head == before_head:
         return
     try:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+        # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
         # agent の変更は cmoc が差分検査後に処理単位として commit するため、agent
         # が先に履歴を進めた場合は本命 call 前の run tree へ戻して error cleanup へ渡す。
         run_git(["reset", "--hard", before_head], worktree)
@@ -307,7 +307,7 @@ def _record_error(
         cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
     if agent_head is not None:
         try:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+            # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
             # 初回検査後に遅延 child が作った commit も、停止完了後に検出して
             # agent boundary の HEAD へ戻し、error run へ混入させない。
             _ensure_agent_did_not_commit(context.run_worktree, agent_head)
@@ -333,7 +333,7 @@ def _record_error(
                 f"primary report state update failed: {report_state_error!r}"
             )
     # 最終 git inspection が失敗しても error report を保存できるようにする。
-    # 根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md。
+    # 根拠: {{work-root}}/spec/app_spec/sub_command/realization_apply.md。
     try:
         changed_paths: list[str] | None = flattened_change_paths(
             tree_changes(context.run_worktree, context.run_fork_commit)
@@ -377,7 +377,7 @@ def _record_error(
 def _cleanup_warning_lines(warnings: list[str]) -> list[str]:
     """fork report 用の cleanup warning section を組み立てる。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     return [
         "## Cleanup warnings",
@@ -388,7 +388,7 @@ def _cleanup_warning_lines(warnings: list[str]) -> list[str]:
 def _apply_report_fields(diff_base_commit: str | None) -> dict[str, object]:
     """apply 固有の diff 始点と accepted feedback 参照を返す。"""
     observations = accepted_feedback_observations()
-    # {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
+    # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
     # 通常 report の保存失敗後に共通 fallback が再試行しても、同じ invocation
     # で受理した observation を失わないよう先に report context へ反映する。
     update_primary_report_fields(

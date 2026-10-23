@@ -1,9 +1,9 @@
 """Codex exec の cwd、schema 保存先、sandbox argv を検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-- {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
+- {{work-root}}/spec/app_spec/codex_common_rule.md
+- {{work-root}}/spec/app_spec/codex_exec_rule.md
+- {{work-root}}/referenece/src/oracle/prompt_builder/policy/file_access.py
 """
 
 import json
@@ -60,7 +60,7 @@ def run_fixed_codex_exec(
                 monkeypatch,
                 [(0, '{"type": "turn.completed"}\n', "done\n")] * 2,
             )
-            # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+            # {{work-root}}/spec/app_spec/codex_common_rule.md
             # 発行前に同期し、記録日時が一致しても各 log が分離されることを調べる。
             barrier.wait(timeout=5)
             records = []
@@ -189,8 +189,8 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     """パラメータの cwd と pure-oracle read の権限境界を検証する。
 
     正本仕様:
-        {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-        {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
+        {{work-root}}/spec/app_spec/codex_common_rule.md
+        {{work-root}}/referenece/src/oracle/prompt_builder/policy/file_access.py
     """
     root = cli_repository
     (root / "oracle").mkdir()
@@ -265,8 +265,8 @@ def test_run_codex_exec_uses_linked_worktree_context(
     """linked worktree の cwd・sandbox と main repository の schema 保存先を検証する。
 
     正本仕様:
-        {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
-        {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        {{work-root}}/spec/app_spec/codex_common_rule.md
+        {{work-root}}/spec/app_spec/codex_exec_rule.md
     """
     # cwd・sandbox・schema の境界には実 linked metadata と HEAD だけを用意する。
     root = committed_repository

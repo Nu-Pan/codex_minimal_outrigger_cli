@@ -1,7 +1,7 @@
 """Codex が起動する call-scoped stdio MCP feedback reporter/client。
 
 対応する oracle file:
-`{{work-root}}/oracle/doc/app_spec/feedback_observation.md`。
+`{{work-root}}/spec/app_spec/feedback_observation.md`。
 """
 
 import json

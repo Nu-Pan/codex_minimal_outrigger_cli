@@ -1,6 +1,6 @@
 """Publication に結び付けた案件履歴と入力消費を保持する。
 
-根拠: oracle/doc/app_spec/feedback_state.md の「history の保存と参照」
+根拠: spec/app_spec/feedback_state.md の「history の保存と参照」
 および「入力の消費と cleanup」。履歴は候補の再構築には使わない。
 """
 

@@ -1,6 +1,6 @@
 """共有・個別 call の設定選択と起動前拒否を Fake Codex CLI で検証する。
 
-根拠: oracle/doc/dev_rule/test_rule.md の「agent call の設定選択と固定」。
+根拠: spec/dev_rule/test_rule.md の「agent call の設定選択と固定」。
 """
 
 import json
@@ -197,9 +197,9 @@ def test_shared_settings_remain_fixed_across_output_corrections(
             config.codex.agent_calls["realization_edit"] = CodexCallConfig(
                 "openai", "changed", "low"
             )
-            config.codex.model_providers["provider_0"].settings["base_url"] = (
-                "https://changed.invalid"
-            )
+            config.codex.model_providers["provider_0"].settings[
+                "base_url"
+            ] = "https://changed.invalid"
 
     accepted = {
         "findings": [],

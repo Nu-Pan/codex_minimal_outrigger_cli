@@ -46,7 +46,7 @@ def cmoc_run_abandon_impl() -> None:
 def _cmoc_run_abandon_body() -> TerminalResult:
     """active run を停止し、worktree・branch・state を cleanup する。"""
     start_subcommand_step(1, "doctor preprocess", "doctor preprocess")
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     # abandon は run branch を merge しないため、entry 集合を通常どおり同期する。
     run_doctor_preprocess(work_root())
     start_subcommand_step(2, "active run を特定", "resolve active run")
@@ -89,7 +89,7 @@ def _cmoc_run_abandon_body() -> TerminalResult:
         if Path.cwd().resolve() == context.run_worktree.resolve():
             os.chdir(context.session_worktree)
         worktree_removed = _remove_run_worktree(context, warnings)
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # worktree が残った場合は branch を保持し、同じ managed target で cleanup を
         # 再試行できるようにする。
         branch_removed = (
@@ -158,7 +158,7 @@ def _stop_running_run(
     """running run の追跡 process を停止し、警告を収集する。"""
     process = read_run_process_id(context.repo, context.session_id)
     if process is None:
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # running の process 停止を確認できないまま run 資源を破棄しない。
         tracking_path = run_process_id_path(context.repo, context.session_id)
         raise CmocError(
@@ -183,7 +183,7 @@ def _stop_error_run(
 ) -> str:
     """error state の残存 process を停止し、tracking を削除する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/editing_run.md
     """
     tracked, warning = stop_error_run_process(context.repo, context.session_id)
     if warning:
@@ -196,7 +196,7 @@ def _stop_joinable_run(
     warnings: list[str],
 ) -> str:
     """joinable run に残った Codex child を cleanup 前に停止する。"""
-    # {{work-root}}/oracle/doc/app_spec/run_isolation.md
+    # {{work-root}}/spec/app_spec/run_isolation.md
     # joinable の通常経路では tracking file が消えるが、既存 state や中断後に
     # 残った descendant があれば run worktree の破棄前に停止する。
     tracked = read_run_process_id(context.repo, context.session_id)
@@ -213,7 +213,7 @@ def _remove_run_worktree(
     """active run の worktree を削除し、削除結果を返す。"""
     if not context.run_worktree.exists() and not context.run_worktree.is_symlink():
         warnings.append("run worktree was already absent")
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # Git の登録も消えている場合は、管理外 path として扱わず cleanup 済みとする。
         if (
             worktree_for_branch_optional(

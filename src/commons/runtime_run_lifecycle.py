@@ -1,6 +1,6 @@
 """editing run の開始、成果確定、差分分類を共有する。
 
-共通処理の canonical な配置は {{work-root}}/oracle/doc/dev_rule/design_rule.md
+共通処理の canonical な配置は {{work-root}}/spec/dev_rule/design_rule.md
 に従っている。
 
 この file は 16,000 文字を超えるが、run の開始・state 遷移・commit、差分分類、
@@ -8,7 +8,7 @@ cleanup 判定は同じ EditingRunContext と lifecycle lock を共有する一�
 責務である。分割すると、run branch の不変条件と差分許可範囲を複数 file で追う必要が
 生じるため、現状は editing run lifecycle として一箇所に保つ。
 
-根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+根拠: {{work-root}}/spec/app_spec/oracle_and_realization.md の
 「realization file を扱う判断基準」
 """
 
@@ -126,7 +126,7 @@ def require_ready_session() -> tuple[Path, Path, str, Path, SessionState, str]:
 
 def session_run_was_ready() -> bool:
     """新しい editing run を開始できる状態だったかを確認する。"""
-    # {{work-root}}/oracle/doc/dev_rule/design_rule.md
+    # {{work-root}}/spec/dev_rule/design_rule.md
     try:
         require_ready_session()
     except CmocError:
@@ -147,11 +147,11 @@ def start_editing_run(kind: str) -> EditingRunContext:
     session_branch = f"cmoc/session/{session_id}"
     # lock 取得後だけ配置照会を共有し、待機前の情報や次回の開始へ持ち越さない。
     with run_lifecycle_lock(repository, session_id), reuse_git_path_queries():
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # editor 入力中や並行 process の間に状態が変わり得るため lock 内で再検査する。
         locked_branch = current_branch(session_worktree)
         if locked_branch != session_branch:
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # lock 外で確認した session branch と fork 対象が変わった場合、別
             # branch の HEAD から run を作成して元の state を更新しない。
             raise CmocError(
@@ -204,7 +204,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
             write_run_process_id(repository, session_id, os.getpid())
         except BaseException as exc:
             if published:
-                # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+                # {{work-root}}/spec/app_spec/sub_command/editing_run.md
                 # state を公開した後の CmocError も workload 側がこの run を
                 # report できるよう、競合時の CmocError と区別できる context を
                 # 例外へ付加する。
@@ -213,7 +213,7 @@ def start_editing_run(kind: str) -> EditingRunContext:
                     state.run.state = "error"
                     write_state(path, state)
             else:
-                # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
+                # {{work-root}}/spec/app_spec/subcommand_interruption.md
                 # create_run_worktree または state 公開の途中で中断しても、未公開の
                 # branch/worktree と running state を残さない。run target は lock 下で
                 # 新規確保済みなので、ここで扱う state/resource はこの invocation の
@@ -328,7 +328,7 @@ def recover_started_run(kind: str) -> EditingRunContext | None:
     tracked = read_run_process_id(context.repo, context.session_id)
     tracking_path = run_process_id_path(context.repo, context.session_id)
     if tracked is None and (tracking_path.exists() or tracking_path.is_symlink()):
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # 壊れた tracking を「未作成」と区別できないまま recovery すると、別
         # process の active run をこの invocation が回収し得るため fail closed にする。
         return None
@@ -337,7 +337,7 @@ def recover_started_run(kind: str) -> EditingRunContext | None:
         or tracked.start_time is None
         or process_start_time(os.getpid()) != tracked.start_time
     ):
-        # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+        # {{work-root}}/spec/app_spec/sub_command/editing_run.md
         # ready 確認後に別 process が run を公開しても、その run を recovery しない。
         return None
     return replace(context, state_before="ready")
@@ -356,7 +356,7 @@ def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
             or state.run.fork_commit != context.run_fork_commit
             or state.run.state not in {"running", run_state}
         ):
-            # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
+            # {{work-root}}/spec/app_spec/sub_command/editing_run.md
             # terminal state の公開後に遅延した cleanup が別の terminal state を
             # 上書きしないよう、running からの一方向遷移として検査する。同じ
             # state の再適用だけは、state write 直後の中断からの recovery に許可
@@ -401,7 +401,7 @@ def worktree_change_paths(
     include_rename_sources: bool = False,
 ) -> list[str]:
     """未 commit 差分の変更対象を repository 相対 path で返す。"""
-    # {{work-root}}/oracle/doc/branch_model.md の
+    # {{work-root}}/spec/branch_model.md の
     # 「`{{cmoc-managed-branch}}` 上で～」の定義
     # report 用の既定値は rename 後の path だけを返し、差分の有無を判定する
     # 呼び出し側だけが rename 元も明示的に含める。
@@ -424,8 +424,8 @@ def unexpected_agent_paths(
 ) -> list[str]:
     """agent call が realization file 以外へ生じさせた差分を返す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
-    {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+    {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     """
     # 同じ検査の候補を一括判定し、child 停止後の再検査へ判定結果を持ち越さない。
     if context.kind not in {
@@ -474,7 +474,7 @@ def tree_changes(worktree: Path, base: str, end: str = "HEAD") -> list[GitChange
 
 def flattened_change_paths(changes: list[GitChange]) -> list[str]:
     """managed branch の変更 file path を重複なしで返す。"""
-    # {{work-root}}/oracle/doc/branch_model.md の
+    # {{work-root}}/spec/branch_model.md の
     # 「`{{cmoc-managed-branch}}` 上で～」の定義
     # 削除 path と rename 元 path は変更対象の集合に含めず、rename 後だけを残す。
     paths: set[str] = set()
@@ -513,7 +513,7 @@ def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
     run_id = new_id(repository, "run")
     branch = f"cmoc/run/{session_id}/{run_id}"
     worktree = expected_run_worktree(repository, branch)
-    # {{work-root}}/oracle/doc/branch_model.md
+    # {{work-root}}/spec/branch_model.md
     # dangling symlink も占有済みの保存先として扱う。
     if branch_exists(repository, branch) or worktree.exists() or worktree.is_symlink():
         raise CmocError(

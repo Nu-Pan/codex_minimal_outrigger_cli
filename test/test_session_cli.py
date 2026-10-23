@@ -6,14 +6,14 @@ dirty worktree 拒否は同じ session 状態遷移の観測点であり、分�
 fixture を追う文脈が分散する。現状は session CLI 回帰として一箇所に保つ方が凝集性が高い。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/oracle_and_realization.md の
+- {{work-root}}/spec/app_spec/oracle_and_realization.md の
   「realization file を扱う判断基準」
-- {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-- {{work-root}}/oracle/doc/app_spec/feedback_state.md
-- {{work-root}}/oracle/doc/app_spec/session_state.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-- {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
+- {{work-root}}/spec/app_spec/doctor_preprocess.md
+- {{work-root}}/spec/app_spec/feedback_state.md
+- {{work-root}}/spec/app_spec/session_state.md
+- {{work-root}}/spec/app_spec/sub_command/session_fork.md
+- {{work-root}}/spec/app_spec/sub_command/session_abandon.md
+- {{work-root}}/spec/app_spec/sub_command/session_join.md
 """
 
 import json
@@ -83,7 +83,7 @@ def _branch_refs(root: Path) -> set[str]:
 def session_state_path(root: Path, session_branch: str) -> Path:
     """managed session branch に対応する永続 state file の path を求める。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
+    根拠: {{work-root}}/spec/app_spec/session_state.md
     """
 
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -122,8 +122,8 @@ def _seed_session_in_worktree(root: Path, work: Path) -> tuple[str, str]:
 def write_abandoned_state(root: Path, session_id: str) -> Path:
     """session fork の session-id collision 用に abandoned state を作る。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-    {{work-root}}/oracle/doc/app_spec/session_state.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/session_fork.md
+    {{work-root}}/spec/app_spec/session_state.md
     """
 
     path = root / ".cmoc" / "gu" / "session" / f"{session_id}.json"
@@ -155,7 +155,7 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
 def break_preprocess_invariants(work: Path) -> Path:
     """doctor preprocess が修復すべき ignore/tracking 破損状態を commit する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    根拠: {{work-root}}/spec/app_spec/doctor_preprocess.md
     """
 
     gitignore = work / ".gitignore"
@@ -270,7 +270,7 @@ def test_session_fork_uses_captured_head_when_home_advances_before_branch_creati
 ) -> None:
     """HEAD取得後にhome branchが進んでも、その時点のcommitからforkする。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/session_fork.md
     """
     root = session_fork_repository
     monkeypatch.chdir(root)
@@ -315,8 +315,8 @@ def test_session_fork_rechecks_branch_and_ignore_after_lifecycle_lock(
 ) -> None:
     """lock 待ち中の branch・ignore の変更を反映して clean な session を作る。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-    {{work-root}}/oracle/doc/app_spec/session_state.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/session_fork.md
+    {{work-root}}/spec/app_spec/session_state.md
     """
     root = session_fork_repository
     monkeypatch.chdir(root)
@@ -365,7 +365,7 @@ def test_session_fork_rolls_back_when_state_save_fails(
 ) -> None:
     """state 保存失敗時に branch と state を作成前へ戻す。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/session_fork.md
     """
 
     root = session_fork_repository
@@ -409,8 +409,8 @@ def test_session_fork_rollback_does_not_guess_remote_home_branch(
     """rollback が消えた local home branch を remote から推測しない。
 
     根拠:
-    - {{work-root}}/oracle/doc/branch_model.md
-    - {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    - {{work-root}}/spec/branch_model.md
+    - {{work-root}}/spec/app_spec/sub_command/session_fork.md
     """
     root = session_fork_repository
     monkeypatch.chdir(root)
@@ -448,7 +448,7 @@ def test_session_fork_does_not_delete_branch_from_id_collision_race(
 ) -> None:
     """branch 作成前に同名 branch が現れても既存 branch を削除しない。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/session_fork.md
     """
     root = session_fork_repository
     monkeypatch.chdir(root)
@@ -480,7 +480,7 @@ def test_session_fork_does_not_overwrite_state_from_id_collision_race(
 ) -> None:
     """state file が競合した場合に既存 state を保持する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/session_fork.md
     """
     root = session_fork_repository
     monkeypatch.chdir(root)
@@ -568,8 +568,8 @@ def test_session_abandon_repairs_linked_worktree_before_failure_and_completion(
 ) -> None:
     """linked worktree の修復・事前条件拒否・再実行による破棄を同じ session で検証する。"""
     # repository・管理物・linked worktree の再準備を省き、両方の CLI 経路を残す。
-    # {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/sub_command/session_abandon.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     root = cli_repository
     monkeypatch.chdir(root)
     _seed_session_management_files(root)
@@ -699,8 +699,8 @@ def test_session_abandon_does_not_guess_remote_home_branch_after_validation_race
     """home branch の検証後に local ref が消えても remote branch へ切り替えない。
 
     根拠:
-    - {{work-root}}/oracle/doc/branch_model.md
-    - {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
+    - {{work-root}}/spec/branch_model.md
+    - {{work-root}}/spec/app_spec/sub_command/session_abandon.md
     """
     root, home_branch = session_completion_repository
     monkeypatch.chdir(root)
@@ -1091,7 +1091,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     # 一つの linked 成功経路で cwd・sandbox・report と各編集・NUL framing を検証する。
     # 同じ内容解消のための repository・branch・競合履歴を別途準備しない。
     # marker が残る失敗時の作業保持は専用ケースで検査する。
-    # {{work-root}}/oracle/doc/app_spec/merge_conflict_resolution.md
+    # {{work-root}}/spec/app_spec/merge_conflict_resolution.md
     repository = shutil.copytree(_session_home_repository_seed, tmp_path / "repo")
     root = repository / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(repository, "worktree", "add", "-b", "linked-home", str(root), "HEAD")
@@ -1307,9 +1307,9 @@ def test_session_fork_and_join_repair_linked_worktree_before_failure_and_complet
 ) -> None:
     """linked worktree の fork・join 前の修復・失敗時の停止・正常終了を検証する。"""
     # fork の branch/HEAD/state 検査と join で repository・linked worktree を共有する。
-    # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md
-    # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-    # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
+    # {{work-root}}/spec/app_spec/sub_command/session_fork.md
+    # {{work-root}}/spec/app_spec/sub_command/session_join.md
+    # {{work-root}}/spec/app_spec/doctor_preprocess.md
     root = cli_repository
     monkeypatch.chdir(root)
     # 後半で変更する file は管理物と同じ初期 commit に揃え、追加の履歴準備を省く。
@@ -1414,7 +1414,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     feedback.write_text(feedback_content)
     original_run_git = session_join_module.run_git
 
-    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # {{work-root}}/spec/dev_rule/coding_rule.md
     def fake_run_git(args: list[str], git_cwd: Path, check: bool = True) -> object:
         """session branch削除だけを失敗させ、他のGit操作は委譲する。"""
         if args == ["branch", "-d", session_branch]:
@@ -1452,7 +1452,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
     original_run_git = session_join_module.run_git
     delete_calls = 0
 
-    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # {{work-root}}/spec/dev_rule/coding_rule.md
     def fake_run_git(args: list[str], git_cwd: Path, check: bool = True) -> object:
         """reachability確認を失敗させ、他のGit操作は委譲する。"""
         nonlocal delete_calls
@@ -1487,8 +1487,8 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
 ) -> None:
     """local home branch がない場合に同名 remote branch へ join しない。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
-    {{work-root}}/oracle/doc/app_spec/session_state.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/session_join.md
+    {{work-root}}/spec/app_spec/session_state.md
     """
     root, home_branch = session_completion_repository
     monkeypatch.chdir(root)

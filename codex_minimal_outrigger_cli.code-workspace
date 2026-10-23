@@ -24,11 +24,11 @@
         "python.testing.pytestArgs": ["test", "-ra", "-m", "not real_path_integration"],
         "python.analysis.extraPaths": [
             "./src",
-            "./oracle/src"
+            "./referenece/src"
         ],
         "python.analysis.include": [
             "src",
-            "oracle/src",
+            "referenece/src",
             "test"
         ],
 		"[markdown]": {

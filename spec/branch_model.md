@@ -1,0 +1,86 @@
+# cmoc の branch model
+
+## 概要
+
+cmoc は、人間が作業する session と、そこから隔離して成果物を作る run を、branch、commit、および worktree で管理する。これらには workload に共通の名称を使い、workload の種類は run state と report で表す。
+
+## git branch
+
+### `{{repository-default-branch}}`
+
+- cmoc 管理ではない、その git repository の既定 branch である。
+- 典型的には `main`, `master` である。
+- cmoc は、この branch を特別扱いしない。
+
+### `{{local-branch}}`
+
+- cmoc 管理ではない通常の git local branch である。
+
+### `{{remote-tracking-branch}}`
+
+- cmoc 管理ではない通常の remote-tracking branch である。
+
+### `{{cmoc-managed-branch}}`
+
+- cmoc が管理する branch の総称である。
+
+#### 「`{{cmoc-managed-branch}}` 上で～」の定義
+
+「`{{cmoc-managed-branch}}` 上で～」という表現は、次の二つを合わせた範囲を指す。
+
+- `{{cmoc-managed-branch}}` の作成元 commit から `HEAD` までの commit 上で起きたこと
+- working tree または staging area で起きていること
+
+削除済み file は対象から除外する。rename は rename 後の path を対象とする。
+
+### `{{cmoc-session-branch}}`
+
+- `cmoc session fork` が `{{local-branch}}` から作成する `{{cmoc-managed-branch}}` である。
+- 命名規則は `cmoc/session/{{session-id}}` とする。
+- `{{session-id}}` の発行と保持は、`{{cmoc-root}}/spec/app_spec/sub_command/session_fork.md` の「実行手順」と「`{{cmoc-session-branch}}` の命名規則」に従う。
+- ユーザーはこの branch 上で oracle の変更を確認し、各種サブコマンドを呼び出す。
+
+### `{{cmoc-session-home-branch}}`
+
+- `cmoc session fork` 実行時に checkout されていた `{{local-branch}}` である。
+- session の分岐元であり、最終的な merge 先でもある。
+
+### `{{cmoc-run-branch}}`
+
+- `{{cmoc-session-branch}}` から作成し、run の作業を隔離するための `{{cmoc-managed-branch}}` である。
+- 命名規則は workload にかかわらず `cmoc/run/{{session-id}}/{{run-id}}` とする。
+- `{{session-id}}` は所属する session の ID、`{{run-id}}` はこの編集 run の ID とする。run ID の書式と採番は、`{{cmoc-root}}/spec/app_spec/id.md` の「ID のフォーマット」「プレフィックス」「採番と順序保証」、発行と保持は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「共通開始処理」に従う。
+- run の差分を git commit として積み上げ、ユーザーが直接作業する branch にはしない。
+- 1 つの branch は 1 つの run instance だけに対応する。
+
+## git commit
+
+### `{{cmoc-session-fork-commit}}`
+
+- `{{cmoc-session-branch}}` の分岐元 commit である。
+- 通常は session fork 時点の `{{cmoc-session-home-branch}}` HEAD である。
+
+### `{{cmoc-session-join-commit}}`
+
+- `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge した commit である。
+
+### `{{cmoc-run-fork-commit}}`
+
+- `{{cmoc-run-branch}}` の分岐元 commit である。
+- run 開始時点の `{{cmoc-session-branch}}` HEAD である。
+- apply の追従対象差分の終点、run join 時の差分検査、および run report は、この名前を一貫して使用する。
+
+### `{{cmoc-run-join-commit}}`
+
+- 準備完了の `{{cmoc-run-branch}}` を `{{cmoc-session-branch}}` へ `--no-ff` で取り込んだ commit である。準備中に session を run へ統合した commit や、run 上の同期 commit とは区別する。
+
+no-op join では取り込み commit を作らないため、`{{cmoc-run-join-commit}}` は存在せず、state または report では `null` とする。準備と no-op の成立条件、取り込み済みの復旧、およびその記録は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「merge と post-join」「join の失敗と復旧」「join の共通記録」に従う。
+
+## git worktree
+
+### `{{cmoc-run-worktree}}`
+
+- run を `{{repo-root}}` から隔離するための git linked worktree である。
+- `{{run-root}}` は `{{repo-root}}/.cmoc/gu/worktree/{{session-id}}/{{run-id}}` とする。
+- path の session ID と run ID は、対応する `{{cmoc-run-branch}}` 名と同じ値を使う。
+- `{{cmoc-run-branch}}` を checkout し、run の workload を実行する。

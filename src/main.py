@@ -30,7 +30,7 @@ _CLICK_EXCEPTION_TYPES = _click_exception_types()
 
 def _patch_typer_click_help_compatibility() -> None:
     """Click 8.2 の metavar 引数変更を Typer の help 実装へ反映する。"""
-    # {{work-root}}/oracle/doc/dev_rule/design_rule.md
+    # {{work-root}}/spec/dev_rule/design_rule.md
     # CLI の引数解釈とライブラリ間の互換境界は main.py に閉じ込める。
     if "ctx" in inspect.signature(click.Option.make_metavar).parameters:
         # Click 8.2 は metavar の生成に context を要求するが、Typer 0.12 の rich
@@ -118,20 +118,20 @@ class _CmocTyperGroup(typer.core.TyperGroup):
             **extra,
         }
         if "_CMOC_COMPLETE" in os.environ:
-            # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+            # {{work-root}}/spec/app_spec/cli_auto_completion.md
             # 空の marker も通常実行ではなく補完 probe として扱い、副作用を防ぐ。
             if not os.environ["_CMOC_COMPLETE"]:
                 if standalone_mode:
                     raise SystemExit(0)
                 return 0
-            # {{work-root}}/oracle/doc/app_spec/cli_auto_completion.md
+            # {{work-root}}/spec/app_spec/cli_auto_completion.md
             # `_CMOC_COMPLETE` を常に Click へ明示し、呼び出し側の prog_name に
             # 依存して通常 command が実行される経路を防ぐ。
             completion_kwargs = {**click_kwargs, "complete_var": "_CMOC_COMPLETE"}
             return super().main(standalone_mode=standalone_mode, **completion_kwargs)
         try:
             result = super().main(standalone_mode=False, **click_kwargs)
-        # {{work-root}}/oracle/doc/app_spec/error_handling.md
+        # {{work-root}}/spec/app_spec/error_handling.md
         # Typer 0.27 は Click compatibility module を通じて parse するため、version に
         # 依存しない error-handling contract のため両方の exception class に対応する。
         except _CLICK_EXCEPTION_TYPES as exc:
@@ -152,7 +152,7 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                         raise SystemExit(close_exit.exit_code) from exc
                     return close_exit.exit_code
                 return 1
-            # {{work-root}}/oracle/doc/app_spec/error_handling.md
+            # {{work-root}}/spec/app_spec/error_handling.md
             # スタックを表示しない解析エラーは、描画用の例外を送出せず整形する。
             report_error = CmocError(
                 "CLI 引数解析に失敗しました。",
@@ -242,7 +242,7 @@ def session_abandon() -> None:
 @oracle_app.command("edit")
 def oracle_edit() -> None:
     """oracle file を main worktree の 2 回の Codex exec で編集する CLI 入口。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
+    # {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
     from sub_commands.oracle.edit import cmoc_oracle_edit_impl
 
     cmoc_oracle_edit_impl()
@@ -293,7 +293,7 @@ def run_abandon() -> None:
 @feedback_app.command("report")
 def feedback_report() -> None:
     """pending feedback observation から current report を publication する。"""
-    # {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+    # {{work-root}}/spec/app_spec/sub_command/feedback_report.md
     from sub_commands.feedback.report import cmoc_feedback_report_impl
 
     cmoc_feedback_report_impl()

@@ -7,7 +7,7 @@ detector が参照する collector の有効性を複数 module で同期する�
 collector lifecycle として一箇所に保つ。
 
 対応する oracle file:
-`{{work-root}}/oracle/doc/app_spec/feedback_observation.md`。
+`{{work-root}}/spec/app_spec/feedback_observation.md`。
 """
 
 import json
@@ -442,7 +442,7 @@ class FeedbackInvocation:
                 raise FeedbackRejected(
                     "rate_limited", "accepted observation limit reached", retryable=True
                 )
-            # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+            # {{work-root}}/spec/dev_rule/coding_rule.md
             # 保留中の予約も上限に含める。永続保存が rate window より長くかかることがあり、
             # 開始時刻で保留予約を失効させると、同じ 60 秒間に 3 件を超えて受理できる。
             if len(context.accepted_times) + len(context.pending_times) >= 3:
@@ -787,7 +787,7 @@ def _validate_stdio_reporter(
     expected_schema: dict[str, Any], reporter_cwd: Path
 ) -> None:
     """local stdio MCP process を起動し、公開 tool 面と schema を確認する。"""
-    # {{work-root}}/oracle/doc/dev_rule/coding_rule.md
+    # {{work-root}}/spec/dev_rule/coding_rule.md
     # reporter process の起動先は、他の process の cwd と区別できる内部名で扱う。
     requests = [
         {

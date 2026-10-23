@@ -1,7 +1,7 @@
 """runtime content helper の hash と安全な保存を検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+- {{work-root}}/spec/app_spec/codex_exec_rule.md
 """
 
 import hashlib
