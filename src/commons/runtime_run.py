@@ -12,6 +12,7 @@ lifecycle 境界として保つ。
 
 import os
 import signal
+import threading
 from collections.abc import Callable, Collection, Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -34,6 +35,7 @@ from .runtime_errors import CmocError
 from .runtime_git import (
     _has_linked_worktree_metadata,
     expected_run_worktree,
+    reuse_git_path_queries,
     run_git,
 )
 from .runtime_paths import repo_root, untracked_data_dir
@@ -81,6 +83,7 @@ def worktree_for_branch_optional(
     )
 
 
+@reuse_git_path_queries()
 def worktrees_for_branches(
     root: Path,
     branches: Collection[str],
@@ -88,7 +91,7 @@ def worktrees_for_branches(
     allow_missing: bool = False,
 ) -> dict[str, Path]:
     """指定 branch の安全な worktree を一回の Git 一覧照会で解決する。"""
-    # この呼び出し内だけ一覧を共有し、次の解決では登録と実体を取り直す。
+    # この呼び出し内だけ一覧と配置照会を共有し、次の解決では登録と実体を取り直す。
     output = run_git(["worktree", "list", "--porcelain"], root).stdout
     pending = set(branches)
     worktrees: dict[str, Path] = {}
@@ -137,6 +140,9 @@ def run_process_id_path(root: Path, session_id: str) -> Path:
     return untracked_data_dir(root) / "state" / "run_processes" / f"{session_id}.pid"
 
 
+_LIFECYCLE_LOCKS = threading.local()
+
+
 @contextmanager
 def run_lifecycle_lock(root: Path, session_id: str) -> Iterator[None]:
     """session と run の lifecycle 操作を repository 内で直列化する。"""
@@ -144,8 +150,17 @@ def run_lifecycle_lock(root: Path, session_id: str) -> Iterator[None]:
     # session fork/join/abandon も同じ state・branch・worktree を操作するため、
     # session_fork_lock と異なる per-run lock を使うと stale な ready state の
     # 保存や session branch の削除が run 開始と競合する。
-    with session_fork_lock(root):
+    key = root.resolve()
+    held: set[Path] = getattr(_LIFECYCLE_LOCKS, "roots", set())
+    if key in held:
         yield
+        return
+    with session_fork_lock(root):
+        _LIFECYCLE_LOCKS.roots = held | {key}
+        try:
+            yield
+        finally:
+            _LIFECYCLE_LOCKS.roots = held
 
 
 def write_run_process_id(root: Path, session_id: str, process_id: int) -> None:
@@ -295,7 +310,6 @@ def stop_error_run_process(root: Path, session_id: str) -> tuple[bool, str | Non
     if process is None:
         if _run_process_tracking_present(root, session_id):
             raise _invalid_run_process_tracking_error(root, session_id)
-        delete_run_process_id(root, session_id)
         return False, "run process tracking was absent or stale"
     warning = stop_run_process(
         process,

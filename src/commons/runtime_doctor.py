@@ -179,6 +179,35 @@ def run_doctor_preprocess(
 ) -> None:
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
+    # 停止した join の後処理を、通常同期で上書きしない。
+    from .runtime_run_join_state import confirm_import, restore_pending_join
+
+    branch = run_git(
+        ["symbolic-ref", "-q", "--short", "HEAD"], root, check=False
+    ).stdout.strip()
+    record = restore_pending_join(repo_root(root), branch)
+    if record is not None:
+        imported = confirm_import(record)
+        if imported and not explicit_doctor:
+            update_primary_report_fields(
+                **record.report_fields(), join_recovery="post_join"
+            )
+            return
+        if any(
+            candidate.is_dir()
+            and run_git(
+                ["rev-parse", "-q", "--verify", "MERGE_HEAD"], candidate, check=False
+            ).returncode
+            == 0
+            for candidate in {root, record.context.run_worktree}
+        ):
+            raise CmocError(
+                "join 準備の復旧を先に実行してください。",
+                ["`cmoc run join` で復旧してください。"],
+                "",
+            )
+        if not explicit_doctor:
+            sync_refactor_entries = False
     update_primary_report_fields(
         work_root=str(root),
         config_path=str(config_path(root)),
@@ -288,10 +317,8 @@ def run_doctor_preprocess(
                     include_gu_ignore = True
                     original_index_path = _copy_current_index(repair_root)
                     original_indexes.append((repair_root, original_index_path))
-                    preserved_runtime_paths = (
-                        _preexisting_runtime_paths(repair_root, original_index_path)
-                        if include_config
-                        else set()
+                    preserved_paths = _preexisting_repair_paths(
+                        repair_root, original_index_path, include_config=include_config
                     )
                     # ensure_cmoc_ignored と _ensure_agents_tracked は通常 index を
                     # 変更するため、後続処理の失敗時も元の staged 状態へ戻せるようにする。
@@ -307,7 +334,7 @@ def run_doctor_preprocess(
                             agents_gitkeep_added,
                             include_config,
                             include_gu_ignore,
-                            preserved_runtime_paths,
+                            preserved_paths,
                         )
                     )
 
@@ -442,16 +469,15 @@ def run_doctor_preprocess(
                 agents_gitkeep_added,
                 include_config,
                 include_gu_ignore,
-                preserved_runtime_paths,
+                preserved_paths,
             ) in repairs:
                 restored_index_path: Path | None = None
                 try:
                     restored_index_path = _restored_index(
                         repair_root,
-                        original_index_path=original_index_path,
                         include_config=include_config,
                         include_gu_ignore=include_gu_ignore,
-                        preserved_runtime_paths=preserved_runtime_paths,
+                        preserved_paths=preserved_paths,
                     )
                     with (
                         defer_recovery_interruption()
@@ -465,7 +491,7 @@ def run_doctor_preprocess(
                             agents_gitkeep_added,
                             include_config=include_config,
                             include_gu_ignore=include_gu_ignore,
-                            preserved_runtime_paths=preserved_runtime_paths,
+                            preserved_paths=preserved_paths,
                         )
                         # commit と index 復元の成功後を、次の rollback 境界とする。
                         if repair_root in preparation_snapshots:
@@ -650,15 +676,21 @@ def _validate_tracked_runtime_files(root: Path) -> None:
         )
 
 
-def _preexisting_runtime_paths(root: Path, index_path: Path) -> set[str]:
-    """doctor 開始前から差分がある runtime path を repair 対象から外す。"""
+def _preexisting_repair_paths(
+    root: Path, index_path: Path, *, include_config: bool = True
+) -> set[str]:
+    """開始前の runtime 差分と .gitignore の staged deletion を一括で保存対象にする。"""
     # {{work-root}}/oracle/src/oracle/other/cmoc_config.py
     # config は人間が編集するため、既存の staged/unstaged 変更を doctor の
     # repair commit に混ぜない。state も同じ一時 index で扱うため同じ境界にする。
-    paths = [
-        str(config_path(root).relative_to(root)),
-        str(refactor_state_path(root).relative_to(root)),
-    ]
+    paths = (
+        {
+            str(config_path(root).relative_to(root)),
+            str(refactor_state_path(root).relative_to(root)),
+        }
+        if include_config
+        else set()
+    )
     # staged/unstaged を同時に調べ、退避 index の stat refresh は保存しない。
     # rename の元は独立した削除として扱い、未追跡ファイルは列挙しない。
     records = _run_git_with_index(
@@ -670,14 +702,19 @@ def _preexisting_runtime_paths(root: Path, index_path: Path) -> set[str]:
             "--untracked-files=no",
             "--no-renames",
             "--",
-            *paths,
+            ".gitignore",
+            *sorted(paths),
         ],
         root,
         index_path,
     ).stdout.split("\0")
-    # 通常の staged deletion (D ) だけは entry がない。DD/DU は conflict entry を保つ。
+    # runtime の通常削除 (D ) は修復し、DD/DU の conflict entry は保つ。
+    # .gitignore は修復規則を合成するが、利用者の staged deletion には合成しない。
     return {
-        record[3:] for record in records if record[:2] != "D " and record[3:] in paths
+        record[3:]
+        for record in records
+        if (record[:2] != "D " and record[3:] in paths)
+        or (record[:2] == "D " and record[3:] == ".gitignore")
     }
 
 
@@ -689,7 +726,7 @@ def _commit_doctor_repairs(
     *,
     include_config: bool,
     include_gu_ignore: bool,
-    preserved_runtime_paths: set[str],
+    preserved_paths: set[str],
 ) -> None:
     """doctorの修復差分をcommitし、呼び出し元のGit indexを復元する。"""
     try:
@@ -698,7 +735,7 @@ def _commit_doctor_repairs(
             agents_gitkeep_added,
             include_config=include_config,
             include_gu_ignore=include_gu_ignore,
-            preserved_runtime_paths=preserved_runtime_paths,
+            preserved_paths=preserved_paths,
         )
     except BaseException:
         _restore_index(root, original_index_path)
@@ -721,7 +758,7 @@ def _commit_doctor_repairs_from_head(
     *,
     include_config: bool,
     include_gu_ignore: bool,
-    preserved_runtime_paths: set[str],
+    preserved_paths: set[str],
 ) -> None:
     """HEAD起点の一時indexでdoctor修復だけをcommitする。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -735,18 +772,13 @@ def _commit_doctor_repairs_from_head(
         if include_gu_ignore:
             _stage_gitignore_repair(root, index_path)
         _stage_agents_gitkeep_repair(root, index_path, agents_gitkeep_added)
-        if include_config:
-            _stage_tracked_runtime_repair(
-                root,
-                index_path,
-                skip_paths=preserved_runtime_paths,
-            )
-        if include_gu_ignore:
-            _run_git_with_index(
-                ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
-                root,
-                index_path,
-            )
+        _stage_tracked_runtime_repair(
+            root,
+            index_path,
+            skip_paths=preserved_paths,
+            include_config=include_config,
+            include_gu_ignore=include_gu_ignore,
+        )
         paths = _run_git_with_index(
             ["diff", "--cached", "--name-only"], root, index_path
         ).stdout.splitlines()
@@ -780,10 +812,9 @@ def _stage_agents_gitkeep_repair(
 def _restored_index(
     root: Path,
     *,
-    original_index_path: Path,
     include_config: bool,
     include_gu_ignore: bool,
-    preserved_runtime_paths: set[str],
+    preserved_paths: set[str],
 ) -> Path:
     """doctor 修復を合成した一時 index file を作る。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -793,15 +824,13 @@ def _restored_index(
     index_path = _copy_current_index(root)
     try:
         # 修復 commit は HEAD を更新するが、復元 index では利用者の staged deletion を保つ。
-        if include_gu_ignore and not _is_staged_deletion_of_head_entry(
-            root, original_index_path, ".gitignore"
-        ):
+        if include_gu_ignore and ".gitignore" not in preserved_paths:
             _stage_gitignore_repair_from_index(root, index_path)
         if include_config:
             _stage_tracked_runtime_repair(
                 root,
                 index_path,
-                skip_paths=preserved_runtime_paths,
+                skip_paths=preserved_paths,
             )
         return index_path
     except BaseException:
@@ -856,12 +885,10 @@ def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
     )
     current_fields = current.stdout.split()
     if current.returncode == 0 and len(current_fields) >= 3:
-        _stage_blob(
+        _stage_blobs(
             root,
             index_path,
-            ".agents/.gitkeep",
-            current_fields[0],
-            current_fields[1],
+            [(".agents/.gitkeep", current_fields[0], current_fields[1])],
         )
         return
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
@@ -872,7 +899,7 @@ def _stage_agents_gitkeep(root: Path, index_path: Path) -> None:
         _stage_text(root, index_path, ".agents/.gitkeep", "")
         return
     mode, blob = entry
-    _stage_blob(root, index_path, ".agents/.gitkeep", mode, blob)
+    _stage_blobs(root, index_path, [(".agents/.gitkeep", mode, blob)])
 
 
 def _stage_tracked_runtime_repair(
@@ -880,18 +907,27 @@ def _stage_tracked_runtime_repair(
     index_path: Path,
     *,
     skip_paths: Collection[str] = (),
+    include_config: bool = True,
+    include_gu_ignore: bool = False,
 ) -> None:
-    """同期済み config/state を ignore 規則に左右されず一時 index へ載せる。"""
-    # 同じ一時 index の対象 entry をまとめて読み、既存の stage と mode を保つ。
-    paths = {
-        str(path.relative_to(root)): path
-        for path in (config_path(root), refactor_state_path(root))
-        if str(path.relative_to(root)) not in skip_paths
-    }
-    if not paths:
+    """一時 index の config/state を同期し、必要なら .cmoc/gu の追跡を外す。"""
+    # 対象 entry を一度に読み、stage と mode の保持、追跡除外の要否に共用する。
+    paths = (
+        {
+            str(path.relative_to(root)): path
+            for path in (config_path(root), refactor_state_path(root))
+            if str(path.relative_to(root)) not in skip_paths
+        }
+        if include_config
+        else {}
+    )
+    pathspecs = list(paths)
+    if include_gu_ignore:
+        pathspecs.append(".cmoc/gu")
+    if not pathspecs:
         return
     entries = _run_git_with_index(
-        ["ls-files", "--stage", "-z", "--", *paths], root, index_path
+        ["ls-files", "--stage", "-z", "--", *pathspecs], root, index_path
     )
     metadata: dict[str, tuple[str, str, str]] = {}
     for record in entries.stdout.split("\0"):
@@ -900,9 +936,24 @@ def _stage_tracked_runtime_repair(
             mode, blob, stage = fields.split()
             metadata.setdefault(relative, (mode, blob, stage))
 
+    # HEAD 起点の index でも追跡済みの管理物がある場合だけ Git を起動する。
+    if include_gu_ignore and any(
+        path == ".cmoc/gu" or path.startswith(".cmoc/gu/") for path in metadata
+    ):
+        _run_git_with_index(
+            ["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"],
+            root,
+            index_path,
+        )
+
+    # index にない runtime の mode も HEAD から一括取得し、path ごとの起動を省く。
+    missing = paths.keys() - metadata.keys()
+    head_entries = _head_entries(root, sorted(missing)) if missing else {}
+
     # hash-object --stdin の text input と同じ encoding で比較する。
     # Git 自身が返した object ID の長さから SHA-1 / SHA-256 を区別する。
     encoding = "utf-8" if sys.flags.utf8_mode else locale.getencoding()
+    updates: list[tuple[str, str, str]] = []
     for relative, path in paths.items():
         content = path.read_text()
         existing = metadata.get(relative)
@@ -918,41 +969,11 @@ def _stage_tracked_runtime_repair(
         if existing is not None:
             mode = existing[0]
         else:
-            head_entry = _head_entry(root, relative)
+            head_entry = head_entries.get(relative)
             mode = head_entry[0] if head_entry is not None else "100644"
-        _stage_text(
-            root,
-            index_path,
-            relative,
-            content,
-            mode=mode,
-        )
-
-
-def _is_staged_deletion_of_head_entry(
-    root: Path,
-    index_path: Path,
-    path: str,
-) -> bool:
-    """元 index が HEAD の tracked path を staged deletion にしているか返す。"""
-    # HEAD と退避 index の削除差分を一度に調べる。rename の元は削除とし、
-    # intent-to-add や conflict の entry が残る path は削除扱いにしない。
-    return bool(
-        _run_git_with_index(
-            [
-                "diff",
-                "--cached",
-                "--no-renames",
-                "--ita-visible-in-index",
-                "--diff-filter=D",
-                "--name-only",
-                "--",
-                path,
-            ],
-            root,
-            index_path,
-        ).stdout.strip()
-    )
+        updates.append((relative, mode, _write_text_blob(root, index_path, content)))
+    # 同じ一時 index の更新をまとめ、path ごとの Git 起動と index 書き換えを省く。
+    _stage_blobs(root, index_path, updates)
 
 
 def _index_text(root: Path, index_path: Path, path: str) -> str | None:
@@ -968,27 +989,37 @@ def _stage_text(
     index_path: Path,
     path: str,
     content: str,
-    *,
-    mode: str | None = None,
 ) -> None:
     """テキスト内容をblob化して一時indexへ登録する。"""
-    blob = _run_git_with_index(
-        ["hash-object", "-w", "--stdin"], root, index_path, input_text=content
-    ).stdout.strip()
-    if mode is None:
-        mode = _index_mode(root, index_path, path)
+    # 単独登録でも runtime の一括更新と同じ blob 生成・登録経路を使う。
+    blob = _write_text_blob(root, index_path, content)
+    mode = _index_mode(root, index_path, path)
     if mode is None:
         entry = _head_entry(root, path)
         mode = entry[0] if entry else "100644"
-    _stage_blob(root, index_path, path, mode, blob)
+    _stage_blobs(root, index_path, [(path, mode, blob)])
 
 
-def _stage_blob(root: Path, index_path: Path, path: str, mode: str, blob: str) -> None:
-    """指定blobとmodeを一時indexのpathへ登録する。"""
+def _write_text_blob(root: Path, index_path: Path, content: str) -> str:
+    """既存の text encoding と改行で blob を保存し、object ID を返す。"""
+    # object の保存と index 更新を分け、呼び出し側で複数登録をまとめられるようにする。
+    return _run_git_with_index(
+        ["hash-object", "-w", "--stdin"], root, index_path, input_text=content
+    ).stdout.strip()
+
+
+def _stage_blobs(
+    root: Path, index_path: Path, entries: Collection[tuple[str, str, str]]
+) -> None:
+    """path・mode・blob の組を一度の一時 index 更新で登録する。"""
+    # NUL 区切りで特殊文字を path の一部として渡し、空の更新では Git を起動しない。
+    if not entries:
+        return
     _run_git_with_index(
-        ["update-index", "--add", "--cacheinfo", mode, blob, path],
+        ["update-index", "-z", "--index-info"],
         root,
         index_path,
+        input_text="".join(f"{mode} {blob}\t{path}\0" for path, mode, blob in entries),
     )
 
 
@@ -1021,11 +1052,22 @@ def _run_git_with_index(
 
 def _head_entry(root: Path, path: str) -> tuple[str, str] | None:
     """HEAD treeからpathのmodeとblobを取得する。"""
-    result = run_git(["ls-tree", "HEAD", "--", path], root, check=False)
-    metadata = result.stdout.split("\t", 1)[0].split()
-    if result.returncode != 0 or len(metadata) < 3:
-        return None
-    return metadata[0], metadata[2]
+    return _head_entries(root, (path,)).get(path)
+
+
+def _head_entries(root: Path, paths: Collection[str]) -> dict[str, tuple[str, str]]:
+    """HEAD tree から修復対象の mode と blob をまとめて取得する。"""
+    # NUL 区切りで path を読み、単独照会も同じ decoder を使う。
+    result = run_git(["ls-tree", "-z", "HEAD", "--", *paths], root, check=False)
+    if result.returncode != 0:
+        return {}
+    entries = {}
+    for record in result.stdout.split("\0"):
+        if record:
+            fields, path = record.split("\t", 1)
+            mode, _kind, blob = fields.split()
+            entries[path] = (mode, blob)
+    return entries
 
 
 def _index_mode(root: Path, index_path: Path, path: str) -> str | None:

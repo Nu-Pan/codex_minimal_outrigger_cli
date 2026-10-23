@@ -10,7 +10,7 @@ agent が必要な正本の原文へ到達するため、cmoc は日本語を含
 
 検索対象は、call の `{{work-root}}/oracle/doc` 内の Markdown（拡張子 `.md`）のうち、oracle file と分類される文書に限る。分類・安全な列挙・性能条件は、`{{cmoc-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md` の「分類結果」「traversal と事前 pruning」「Git ignore 判定の性能不変条件」に従う。
 
-work-root は `{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」に従って接続ごとに固定し、MCP 引数から検索対象を変更させない。文書埋め込みの生成と cache への登録は、生成元 worktree で読取時に検索対象と確認した文書に限る。対象を確認できなければ失敗させる。
+work-root は `{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の path context」に従って接続ごとに固定し、MCP 引数から検索対象を変更させない。文書埋め込みの生成と cache への登録は、生成元 worktree で読取時に検索対象と確認した文書に限る。対象を確認できなければ失敗させる。
 
 索引を検索へ公開する前に、再利用する文書埋め込みを含め、接続先 worktree の現在の検索対象・本文・path・位置情報との対応を確認する。再利用元の索引 identity や検索対象集合をそのまま採用してはならない。検索の提供や cache の共有によって agent のファイルアクセス権限を拡張しない。
 
@@ -111,7 +111,7 @@ MCP 検索要求では、進捗のある同期には時間を与えつつ、待�
 | `request_timeout_seconds` | コンポーネント検証の推論要求。 |
 | `startup_timeout_seconds`、`shutdown_grace_seconds` | 推論処理の起動期限と、強制停止前の終了猶予。 |
 
-処理中の通知や同じ処理の繰返しだけを進捗として期限を延ばさない。MCP 検索要求で適用中の期限に達したら処理を打ち切り、期限超過として返す。取消は別の失敗として識別する。外側の tool 期限との関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
+処理中の通知や同じ処理の繰返しだけを進捗として期限を延ばさない。MCP 検索要求で適用中の期限に達したら処理を打ち切り、期限超過として返す。取消は別の失敗として識別する。外側の tool 期限との関係は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「文書検索 MCP」に従う。
 
 doctor preprocess の索引同期には、初回構築や大量の差分を処理するため、資源待ちや推論処理の起動を含めてタイムアウトを設定しない。コンポーネントの検証期限は索引同期へ適用しない。
 
@@ -134,7 +134,7 @@ doctor preprocess の索引同期には、初回構築や大量の差分を処�
 
 行範囲の要素構造は出力形式の互換性に関わるため、公開 schema、返却処理、および結果を読む側の形式を整合させる。
 
-公開定義へ agent の判断に不要な内部説明を含めない。stdio の stdout は MCP protocol 専用とする。接続の起動・固定 context・終了は、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「文書検索 MCP」に従う。
+公開定義へ agent の判断に不要な内部説明を含めない。stdio の stdout は MCP protocol 専用とする。接続の起動・固定 context・終了は、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「文書検索 MCP」に従う。
 
 ## 設定と未確定事項
 

@@ -4,17 +4,19 @@ import json
 import subprocess
 import time
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from jsonschema import SchemaError
 from jsonschema.protocols import Validator
+from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
 from config.cmoc_config import CmocConfig
 
-from .runtime_codex_logging import format_codex_call_error
+from .runtime_codex_logging import format_codex_call_error, write_codex_prompt_log
 from .runtime_codex_profile import (
     classify_codex_call,
     codex_error_text,
@@ -23,7 +25,6 @@ from .runtime_codex_profile import (
     extract_resume_token,
     prepare_codex_override_args,
     prepare_schema,
-    read_output_json,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
@@ -35,8 +36,10 @@ from .runtime_codex_recovery import (
     current_recovery_cancellation,
     wait_for_recovery,
 )
+from .runtime_codex_session import CodexSessionLease
 from .runtime_config import load_config
-from .runtime_errors import CmocError
+from .runtime_editor_input_handoff_protocol import editor_input_handoff_subprocess_env
+from .runtime_errors import CmocError, TuiStartupCancelled
 from .runtime_feedback import begin_feedback_call
 from .runtime_feedback_store import rfc3339_now, sha256_bytes, uuid7_prefixed
 from .runtime_git import (
@@ -62,13 +65,47 @@ from .runtime_results import (
 )
 
 _MAX_OUTPUT_CORRECTIONS = 2
+_TUI_AGENT_CALL_KINDS = frozenset(
+    {
+        "build_tui_request",
+        "build_oracle_investigation_request",
+    }
+)
 
 
-def _write_prompt_log(path: Path, prompt: str) -> None:
-    """Codex に渡した完全 prompt を再実行可能な stdin log として保存する。"""
+def _save_interrupted_process_logs(
+    error: BaseException, stdout_path: Path, stderr_path: Path
+) -> None:
+    # 停止時に回収できた診断を、通常の call と同じ保存先へ残す。
+    for name, path in (
+        ("cmoc_process_stdout", stdout_path),
+        ("cmoc_process_stderr", stderr_path),
+    ):
+        content = getattr(error, name, None)
+        if isinstance(content, str):
+            path.write_text(content, encoding="utf-8")
+
+
+def _read_optional_output(path: Path) -> tuple[str, Any]:
+    """schema なしの出力から本文と JSON を取得し、不正 JSON は None とする。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # prompt log 自体を再実行可能な stdin source とし、metadata にはしない。
-    path.write_text(prompt, encoding="utf-8")
+    try:
+        output_bytes = path.read_bytes()
+    except FileNotFoundError:
+        return "", None
+    try:
+        output_text = output_bytes.decode("utf-8")
+    except UnicodeError:
+        # 表示用の置換文字を、正常に符号化された JSON として受理しない。
+        output_text = output_bytes.decode("utf-8", errors="replace")
+        output_json = None
+    else:
+        try:
+            output_json = json.loads(output_text)
+        except (RecursionError, json.JSONDecodeError):
+            output_json = None
+    # Path.read_text() が行っていた改行変換を本文の返却でも保つ。
+    return output_text.replace("\r\n", "\n").replace("\r", "\n"), output_json
 
 
 def _read_required_output(path: Path) -> tuple[str, Any]:
@@ -235,10 +272,10 @@ def _quota_availability_probe_parameter(
     """quota判定用のprobe parameterをcanonical builderから作る。"""
     try:
         from oracle.acp_builder.quota_probe import (
-            build_quota_availability_probe_parameter,
+            build_quota_availability_probe_request,
         )
 
-        return build_quota_availability_probe_parameter(base_parameter.agent_call_cwd)
+        return build_quota_availability_probe_request(base_parameter.agent_call_cwd)
     except (AttributeError, ModuleNotFoundError) as exc:
         raise CmocError(
             "quota availability probe の builder が見つかりません。",
@@ -279,29 +316,50 @@ def run_codex_exec(
     probe_timeout_sec: float = 120.0,
     quota_poll_interval_sec: float = 1800.0,
     subcommand_logger: SubcommandLogger | None = None,
+    tui_session_lease: CodexSessionLease | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 補正、実行記録を一括制御する。"""
+    # 対話再開の入力不在を、非対話の補正・回復用 prompt と混同しない。
+    # oracle/doc/app_spec/codex_tui_rule.md の「TUI の新規起動と対話 resume」。
+    initial_prompt = parameter.prompt
+    if initial_prompt is None:
+        raise CmocError(
+            "対話 TUI の再開パラメータは codex exec に渡せません。",
+            ["対話 TUI の起動経路を使用してください。"],
+            f"tui_resume_session_id: {parameter.tui_resume_session_id}",
+        )
+    tui_initial = parameter.agent_call_kind in _TUI_AGENT_CALL_KINDS
+    if tui_initial and parameter.structured_output_schema_path is not None:
+        raise CmocError(
+            "TUI 起動用の初回 exec に Structured Output は指定できません。",
+            ["TUI workload の builder が返したパラメータを使用してください。"],
+            f"agent call kind: {parameter.agent_call_kind}",
+        )
     # 設定の外部変更を correction・probe・resume へ持ち込まない。
     check_recovery_interruption()
     path_context = AgentCallPathContext(parameter.agent_call_cwd)
     root = root or path_context.repo_root
     config = deepcopy(config or load_config(path_context.work_root))
+    agent_call_cwd = path_context.agent_call_cwd
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+    # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
+    # path を対象にする。
+    codex_home = resolve_codex_home(agent_call_cwd)
+    validate_codex_home(codex_home)
+
+    # 起動できない home では、採番 DB と空の Codex ログディレクトリを作らない。
     logger = subcommand_logger or current_subcommand_logger()
     execution_id = (
         logger.execution_id if logger is not None else current_execution_id(root)
     )
     log_dir = codex_log_dir(root) / execution_id
     log_dir.mkdir(parents=True, exist_ok=True)
-    agent_call_cwd = path_context.agent_call_cwd
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # 相対 CODEX_HOME は変更せず渡すため、preflight は Codex が実際の cwd から解決する
-    # path を対象にする。
-    codex_home = resolve_codex_home(agent_call_cwd)
-    validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
     override_args = prepare_codex_override_args(
         parameter,
         config,
+        path_context=path_context,
+        include_document_search=False,
     )
     schema_path: Path | None = None
     schema_validator: Validator | None = None
@@ -312,11 +370,9 @@ def run_codex_exec(
         # local schema store を指さなければならない。source の読み取り・UTF-8 decode、
         # JSON parse、schema validation を同じ local failure として扱う。
         try:
-            schema_path = prepare_schema(root, schema_source_path)
-            assert schema_path is not None
-            schema_validator = checked_schema_validator(
-                schema_path.read_text(encoding="utf-8")
-            )
+            schema_path, schema_text = prepare_schema(root, schema_source_path)
+            # 保存に使った本文を検証し、同一内容の再読み取りを省く。
+            schema_validator = checked_schema_validator(schema_text)
         except (
             OSError,
             UnicodeError,
@@ -351,6 +407,7 @@ def run_codex_exec(
     active_agent_call_id = agent_call_id
     active_agent_call_kind = parameter.agent_call_kind
     active_codex_call_id: str | None = None
+    initial_process_state = "not_started"
 
     def _call_data(
         run_parameter: AgentCallParameter,
@@ -361,7 +418,9 @@ def run_codex_exec(
         """call log に残す論理値を実際の呼び出し parameter に揃える。"""
         call_config = run_config.codex.agent_calls[run_parameter.agent_call_kind]
         return {
-            "codex_home": str(run_codex_home),
+            "codex_home": str(
+                run_codex_home.resolve() if tui_initial else run_codex_home
+            ),
             "agent_call_kind": run_parameter.agent_call_kind,
             "model_provider": call_config.model_provider,
             "model": call_config.model,
@@ -371,6 +430,48 @@ def run_codex_exec(
         }
 
     base_call_data = _call_data(parameter, codex_home, agent_call_cwd)
+    initial_log_paths: dict[str, str] | None = None
+
+    def _record_tui_initial(
+        state: str,
+        *,
+        status: str | None = None,
+        returncode: int | None = None,
+        codex_session_id: str | None = None,
+    ) -> None:
+        """初回 exec の実際の call と、起動・停止・最終結果を即時記録する。"""
+        # 初回だけの記録であり、他 workload の補正や probe の結果と混ぜない。
+        nonlocal initial_log_paths
+        if not tui_initial or logger is None:
+            return
+        # 初回 exec は再試行せず、同じ保存先を全状態の記録で共有する。
+        if initial_log_paths is None:
+            initial_log_paths = {
+                "sub_command_log_path": str(logger.path.resolve()),
+                "call_log_path": str(call_path.resolve()),
+                "prompt_log_path": str(prompt_path.resolve()),
+                "stdout_log_path": str(stdout_path.resolve()),
+                "stderr_log_path": str(stderr_path.resolve()),
+                "output_path": str(output_path.resolve()),
+            }
+        cancellation = current_recovery_cancellation()
+        logger.event(
+            "tui_initial_exec",
+            tui_record_version=3,
+            execution_id=execution_id,
+            subcommand=logger.command,
+            **initial_log_paths,
+            agent_call_id=agent_call_id,
+            codex_call_id=active_codex_call_id,
+            **base_call_data,
+            work_root=str(path_context.work_root),
+            repo_root=str(path_context.repo_root),
+            process_state=state,
+            status=status,
+            returncode=returncode,
+            codex_session_id=codex_session_id,
+            cancel_requested=cancellation is not None and cancellation.is_set(),
+        )
 
     def _new_log_paths(codex_call_id: str) -> tuple[str, Path, Path, Path, Path, Path]:
         """発行済み Codex call ID の log path 群を予約する。"""
@@ -391,7 +492,11 @@ def run_codex_exec(
             [
                 *override_args,
                 *document_search_mcp_override_args(
-                    parameter, config, codex_call_id=active_codex_call_id, logger=logger
+                    parameter,
+                    config,
+                    path_context=path_context,
+                    codex_call_id=active_codex_call_id,
+                    logger=logger,
                 ),
             ],
             agent_call_cwd,
@@ -416,7 +521,68 @@ def run_codex_exec(
         # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
         # prompt log file は `codex exec ... -` の stdin source である。
         check_recovery_interruption()
-        with run_prompt_path.open(encoding="utf-8") as prompt_file:
+        with run_prompt_path.open(encoding="utf-8", newline="") as prompt_file:
+            if tui_initial:
+                # 中断時も CLI が既に出した診断を保持し、本文を console へ流さない。
+                def process_started() -> None:
+                    # Popen の成功後だけ、起動準備から起動確認へ進める。
+                    nonlocal initial_process_state
+                    initial_process_state = "started"
+                    _record_tui_initial("started")
+
+                def observe_stdout(line: str) -> None:
+                    # 非対話 JSONL だけを観測し、取得した ID を移行まで確保する。
+                    try:
+                        event = json.loads(line)
+                    except ValueError:
+                        return
+                    if (
+                        not isinstance(event, dict)
+                        or event.get("type") != "thread.started"
+                    ):
+                        return
+                    session_id = event.get("thread_id")
+                    if not isinstance(session_id, str):
+                        return
+                    if tui_session_lease is not None:
+                        tui_session_lease.acquire(session_id)
+                        tui_session_lease.process_started()
+                    _record_tui_initial("started", codex_session_id=session_id)
+
+                with (
+                    stdout_path.open("w", encoding="utf-8") as stdout_file,
+                    stderr_path.open("w", encoding="utf-8") as stderr_file,
+                ):
+                    try:
+                        result = run_codex_subprocess(
+                            run_argv,
+                            cwd=run_agent_call_cwd,
+                            stdin=prompt_file,
+                            stdout=stdout_file,
+                            stderr=stderr_file,
+                            text=True,
+                            encoding="utf-8",
+                            env=run_codex_env,
+                            start_new_session=True,
+                            cancellation=current_recovery_cancellation(),
+                            process_started_callback=process_started,
+                            stdout_line_callback=observe_stdout,
+                        )
+                    except BaseException as exc:
+                        if tui_session_lease is not None and isinstance(
+                            getattr(exc, "cmoc_process_returncode", None), int
+                        ):
+                            tui_session_lease.process_stopped()
+                        raise
+                    if tui_session_lease is not None:
+                        tui_session_lease.process_stopped()
+                initial_process_state = "exited"
+                return subprocess.CompletedProcess(
+                    run_argv,
+                    result.returncode,
+                    stdout_path.read_text(encoding="utf-8"),
+                    stderr_path.read_text(encoding="utf-8"),
+                )
             return run_codex_subprocess(
                 run_argv,
                 cwd=run_agent_call_cwd,
@@ -565,7 +731,7 @@ def run_codex_exec(
             changed = frozen_snapshot.changed_paths(current_snapshot)
             if not changed:
                 return
-            restore_worktree_snapshot(frozen_snapshot)
+            restore_worktree_snapshot(frozen_snapshot, current=current_snapshot)
         except Exception as exc:
             detail = f"artifact inspection or restoration failed: {exc!r}"
             if emit_exhausted:
@@ -621,7 +787,7 @@ def run_codex_exec(
     resume_session_id: str | None = None
     correction_session_id: str | None = None
     recovery_source_call_id: str | None = None
-    current_prompt = parameter.prompt
+    current_prompt = initial_prompt
     frozen_artifact_snapshot: WorktreeSnapshot | None = None
     artifact_changed_paths: frozenset[str] = frozenset()
 
@@ -633,10 +799,20 @@ def run_codex_exec(
         nonlocal quota_polls
         check_recovery_interruption()
         probe_parameter = _quota_availability_probe_parameter(parameter)
-        probe_config = deepcopy(config)
+        # 開始時に固定した設定を共有し、probe の選択だけ別の map にする。
+        probe_config = config
         if inherited:
-            probe_config.codex.agent_calls[probe_parameter.agent_call_kind] = (
-                config.codex.agent_calls[parameter.agent_call_kind]
+            probe_config = replace(
+                config,
+                codex=replace(
+                    config.codex,
+                    agent_calls={
+                        **config.codex.agent_calls,
+                        probe_parameter.agent_call_kind: config.codex.agent_calls[
+                            parameter.agent_call_kind
+                        ],
+                    },
+                ),
             )
         # 正本 builder が cwd と Git context を検証済みなので、その結果を再利用する。
         probe_agent_call_cwd = probe_parameter.agent_call_cwd
@@ -663,7 +839,8 @@ def run_codex_exec(
             if reason == "quota"
             else "transient recovery probe"
         )
-        _write_prompt_log(probe_prompt, probe_parameter.prompt)
+        assert probe_parameter.prompt is not None
+        write_codex_prompt_log(probe_prompt, probe_parameter.prompt)
         _write_call_log(
             probe_call,
             run_purpose=probe_purpose,
@@ -734,6 +911,7 @@ def run_codex_exec(
         except BaseException as exc:
             error = format_codex_call_error(exc)
             outcome = "failed"
+            _save_interrupted_process_logs(exc, probe_stdout, probe_stderr)
             raise
         finally:
             probe_feedback.close()
@@ -763,7 +941,7 @@ def run_codex_exec(
         active_agent_call_id = agent_call_id
         active_agent_call_kind = parameter.agent_call_kind
         current_argv = _build_argv(output_path, resume_session_id)
-        _write_prompt_log(prompt_path, current_prompt)
+        write_codex_prompt_log(prompt_path, current_prompt)
         _write_call_log(
             call_path,
             run_purpose=purpose,
@@ -783,6 +961,7 @@ def run_codex_exec(
                 ),
             },
         )
+        _record_tui_initial("prepared")
         attempt_started_at = time.perf_counter()
         feedback_call = begin_feedback_call(
             agent_call_cwd=agent_call_cwd,
@@ -799,12 +978,51 @@ def run_codex_exec(
             enable_feedback_reporting=parameter.enable_feedback_reporting,
         )
         try:
+            call_environment = feedback_call.subprocess_env(codex_env)
+            if parameter.enable_editor_input_handoff_mcp:
+                source = None
+                if logger is not None:
+                    source = EditorInputHandoffSource(
+                        subcommand=logger.command,
+                        execution_id=execution_id,
+                        codex_call_id=active_codex_call_id,
+                        sub_command_log_path=logger.path.resolve(),
+                    )
+                    logger.event(
+                        "editor_input_handoff_source",
+                        subcommand=source.subcommand,
+                        execution_id=source.execution_id,
+                        codex_call_id=source.codex_call_id,
+                        sub_command_log_path=str(source.sub_command_log_path),
+                        call_log_path=str(call_path.resolve()),
+                    )
+                call_environment = editor_input_handoff_subprocess_env(
+                    call_environment, path_context.repo_root, source
+                )
             result = _run_with_prompt_file(
                 current_argv,
                 prompt_path,
-                run_codex_env=feedback_call.subprocess_env(codex_env),
+                run_codex_env=call_environment,
             )
         except BaseException as exc:
+            if not tui_initial:
+                _save_interrupted_process_logs(exc, stdout_path, stderr_path)
+            if tui_initial:
+                stopped_returncode = getattr(exc, "cmoc_process_returncode", None)
+                state = (
+                    "exited"
+                    if stopped_returncode is not None
+                    else "unknown"
+                    if initial_process_state == "started"
+                    else initial_process_state
+                )
+                _record_tui_initial(
+                    state,
+                    status="cancelled"
+                    if isinstance(exc, KeyboardInterrupt)
+                    else "failed",
+                    returncode=stopped_returncode,
+                )
             _ensure_correction_artifacts_unchanged(
                 frozen_artifact_snapshot,
                 run_call_path=call_path,
@@ -836,11 +1054,14 @@ def run_codex_exec(
                 status="failed",
                 error=startup_error,
             )
+            if tui_initial and isinstance(exc, KeyboardInterrupt):
+                raise TuiStartupCancelled from exc
             raise
         finally:
             feedback_call.close()
-        stdout_path.write_text(result.stdout, encoding="utf-8")
-        stderr_path.write_text(result.stderr, encoding="utf-8")
+        if not tui_initial:
+            stdout_path.write_text(result.stdout, encoding="utf-8")
+            stderr_path.write_text(result.stderr, encoding="utf-8")
         _ensure_correction_artifacts_unchanged(
             frozen_artifact_snapshot,
             run_call_path=call_path,
@@ -852,14 +1073,22 @@ def run_codex_exec(
             returncode=result.returncode,
         )
         # 最終 outcome を先に確定し、途中の error と回復済みの成功を区別する。
-        check_recovery_interruption()
+        try:
+            check_recovery_interruption()
+        except KeyboardInterrupt as exc:
+            if tui_initial:
+                _record_tui_initial(
+                    "exited", status="cancelled", returncode=result.returncode
+                )
+                raise TuiStartupCancelled from exc
+            raise
         resume_session_id = resume_session_id or _extract_session_id_from_stdout_log(
             stdout_path
         )
         outcome = classify_codex_call(result.stdout, result.returncode)
         if outcome != "succeeded":
             error_text = codex_error_text(result.stdout, result.stderr)
-            if outcome in {"quota", "transient"}:
+            if not tui_initial and outcome in {"quota", "transient"}:
                 _emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
@@ -907,6 +1136,12 @@ def run_codex_exec(
                 continue
             if schema_path is not None and output_corrections > 0:
                 _emit_structured_output_exhausted("resume_unavailable", call_path)
+            _record_tui_initial(
+                "exited",
+                status="failed",
+                returncode=result.returncode,
+                codex_session_id=resume_session_id,
+            )
             _emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
@@ -933,14 +1168,17 @@ def run_codex_exec(
             )
         if schema_path is not None:
             assert schema_validator is not None
-            if frozen_artifact_snapshot is None:
+            # 事後条件の照合がなければ、成果物の固定は補正が必要になるまで待つ。
+            if (
+                artifact_snapshot_before is not None
+                and frozen_artifact_snapshot is None
+            ):
                 frozen_artifact_snapshot = capture_worktree_snapshot(
                     path_context.work_root
                 )
-                if artifact_snapshot_before is not None:
-                    artifact_changed_paths = artifact_snapshot_before.changed_paths(
-                        frozen_artifact_snapshot
-                    )
+                artifact_changed_paths = artifact_snapshot_before.changed_paths(
+                    frozen_artifact_snapshot
+                )
             try:
                 output_text, output_json, validation_issues = (
                     _validate_structured_output(
@@ -986,6 +1224,10 @@ def run_codex_exec(
                     if correction_session_id is None:
                         failure_reason = "Codex session ID is unavailable"
                 if failure_reason is None:
+                    if frozen_artifact_snapshot is None:
+                        frozen_artifact_snapshot = capture_worktree_snapshot(
+                            path_context.work_root
+                        )
                     output_corrections += 1
                     resume_session_id = correction_session_id
                     current_prompt = _build_output_correction_prompt(validation_issues)
@@ -1045,7 +1287,7 @@ def run_codex_exec(
                     detail,
                 )
         else:
-            output_json = read_output_json(output_path)
+            output_text, output_json = _read_optional_output(output_path)
         _emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=call_path,
@@ -1058,13 +1300,12 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        # Structured Output は検証した本文を再利用し、結果構築で再読み取りしない。
-        if schema_path is None:
-            try:
-                # schema-less output の不正 UTF-8 でも結果構築を中断しない。
-                output_text = output_path.read_text(encoding="utf-8", errors="replace")
-            except FileNotFoundError:
-                output_text = ""
+        _record_tui_initial(
+            "exited",
+            status="succeeded",
+            returncode=result.returncode,
+            codex_session_id=resume_session_id,
+        )
         return CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,

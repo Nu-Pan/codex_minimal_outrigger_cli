@@ -1,12 +1,25 @@
-"""並行取得の子 process を、CLI と pytest の初期化から分離する。"""
+"""代替 HTTP 配布元と、fork した process の並行取得 worker を用意する。"""
 
 import io
+import ssl
 import urllib.request
 import urllib.response
 from email.message import Message
 
 import commons.runtime_download_asset_cache as cache_module
 from commons.runtime_download_asset_cache import DownloadAssetCache
+
+
+def http_distribution_opener():
+    """代替 HTTP 配布元に不要な CA 読み込みを省く opener factory を返す。"""
+    # 配布元は HTTP のみ。通常の handler 構成と取得ごとの通信記録は保つ。
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    build_opener = urllib.request.build_opener
+
+    def opener(*handlers):
+        return build_opener(*handlers, urllib.request.HTTPSHandler(context=context))
+
+    return opener
 
 
 def download_response(url, body, code=200, location=None):
@@ -33,6 +46,7 @@ def process_obtain(cache_root, root, asset, destination, downloading, waiting, r
         assert waiting.wait(10), "no concurrent cache waiter"
         return download_response(request.full_url, b"model bytes")
 
+    # HTTP opener は親の fixture を継承し、取得の応答と回数だけを分離する。
     urllib.request.HTTPHandler.http_open = transport
     try:
         action = DownloadAssetCache(root).obtain(asset, destination)

@@ -12,6 +12,7 @@ from .runtime_feedback_state import (
     _atomic_write_json,
     _corruption,
     _read_canonical_object,
+    _relative_path,
     _resolve_reference_path,
     artifact_reference,
 )
@@ -21,6 +22,7 @@ from .runtime_feedback_store import (
     iter_observation_paths,
     observation_publication_lock,
     observation_root,
+    sha256_bytes,
 )
 
 
@@ -62,9 +64,9 @@ def _read_ledger(repo: Path) -> dict[str, Any]:
     return value
 
 
-def _register(repo: Path, ledger: dict[str, Any], path: Path) -> bool:
-    """保存済み raw を一度だけ counter に登録する。呼び出し側が排他を保持する。"""
-    reference = artifact_reference(repo, path)
+def _register(repo: Path, ledger: dict[str, Any], reference: dict[str, Any]) -> bool:
+    """検証済み raw の参照を一度だけ登録する。呼び出し側が排他を保持する。"""
+    path = repo / reference["path"]
     identity = path.stem
     if not is_observation_id(identity) or path.name != f"{identity}.json":
         raise _corruption("intake observation ID が不正です。", path)
@@ -84,10 +86,12 @@ def _register(repo: Path, ledger: dict[str, Any], path: Path) -> bool:
     return True
 
 
-def record_observation_receipt(repo: Path, path: Path) -> None:
-    """accepted を返す前に、保持中の collector 排他内で receipt を durable 保存する。"""
+def record_observation_receipt(repo: Path, path: Path, digest: str) -> None:
+    """collector 排他内で、保存・照合済み raw の hash を receipt へ durable 保存する。"""
+    # 同じ排他内で保存・照合した byte 列の hash を使い、raw を読み直さない。
     ledger = _read_ledger(repo)
-    if _register(repo, ledger, path):
+    reference = {"path": _relative_path(repo, path), "sha256": digest}
+    if _register(repo, ledger, reference):
         _atomic_write_json(feedback_root(repo) / "intake.json", ledger)
 
 
@@ -113,7 +117,13 @@ def capture_high_watermark(repo: Path, after: int) -> tuple[int, list[dict[str, 
         for path in iter_observation_paths(repo):
             if path.stem in consumed:
                 continue
-            changed = _register(repo, ledger, path) or changed
+            # 列挙済み path は repo 配下の通常 file で symlink を含まない。
+            # 同じ排他内では祖先の再検査・再解決をせず、内容の hash を照合する。
+            reference = {
+                "path": path.relative_to(repo).as_posix(),
+                "sha256": sha256_bytes(path.read_bytes()),
+            }
+            changed = _register(repo, ledger, reference) or changed
             validated.add(path.stem)
         if changed:
             _atomic_write_json(feedback_root(repo) / "intake.json", ledger)

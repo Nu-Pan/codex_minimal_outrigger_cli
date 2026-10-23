@@ -10,10 +10,12 @@ root 不変条件の検証文脈が複数 file に分散するため、一つの
 - {{work-root}}/oracle/doc/app_spec/run_isolation.md
 """
 
+import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import oracle.other.path_model as oracle_path_model
 import pytest
 from _git_support import (
     RUN_BRANCH,
@@ -25,6 +27,7 @@ from _git_support import (
     run_git,
 )
 
+import commons.runtime_git as runtime_git
 import commons.runtime_paths as runtime_paths
 from basic.path_model import (
     AgentCallPathContext,
@@ -40,7 +43,11 @@ from cmoc_runtime import (
     repo_root,
     work_root,
 )
-from commons.runtime_run import expected_run_worktree, worktree_for_branch_optional
+from commons.runtime_run import (
+    expected_run_worktree,
+    worktree_for_branch_optional,
+    worktrees_for_branches,
+)
 
 
 @pytest.fixture
@@ -103,30 +110,6 @@ def test_make_repo_ignores_global_git_config(
         "README.md",
         "oracle/spec.md",
     ]
-
-
-def test_runtime_roots_distinguish_linked_worktree_from_nested_main(
-    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """linked worktree の両 root を区別し、nested main は run root から除く。"""
-    # 成功と拒否に同じ linked metadata を使い、外側の履歴・worktree 準備を共用する。
-    root = committed_repository
-    linked = tmp_path / "linked"
-    run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
-
-    monkeypatch.chdir(linked)
-    assert repo_root(linked) == root.resolve()
-    assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
-    assert work_root(linked) == linked.resolve()
-
-    # 内側の main repository に履歴は不要。外側の linked root を誤採用しない。
-    nested_main = linked / "repo"
-    nested_main.mkdir()
-    init_repo(nested_main)
-    monkeypatch.chdir(nested_main)
-
-    with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
-        resolve_real_path(RootPathPlaceHolder.RUN)
 
 
 @pytest.mark.parametrize("marker_kind", ["file", "directory"])
@@ -210,9 +193,8 @@ def test_agent_call_path_context_ignores_repository_selection_environment(
     """Git の repository 選択環境変数で agent call の cwd 起点を上書きしない。"""
     # 両方を実 repository にする。環境変数による誤選択の検出に履歴は不要。
     target = cli_repository
-    override = tmp_path / "override"
-    override.mkdir()
-    init_repo(override)
+    # 空の main repository は metadata ごと独立コピーし、追加の init を省く。
+    override = shutil.copytree(target, tmp_path / "override")
     monkeypatch.setenv("GIT_DIR", str(override / ".git"))
     monkeypatch.setenv("GIT_WORK_TREE", str(override))
     monkeypatch.setenv("GIT_COMMON_DIR", str(override / ".git"))
@@ -224,11 +206,12 @@ def test_agent_call_path_context_ignores_repository_selection_environment(
 
 
 def test_agent_call_path_contexts_are_parallel_and_call_scoped(
-    committed_repository: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """並列 call が process cwd を変えず、互いに異なる work root を保持する。"""
+    """並列 call の root・cwd 隔離と、nested main の run root 拒否を検証する。"""
+    # 並列 call と runtime root の検査で、実 Git の履歴・linked metadata を共用する。
     root = committed_repository
-    worktrees = [root / "first-worktree", root / "second-worktree"]
+    worktrees = [tmp_path / "linked", root / "second-worktree"]
     for index, worktree in enumerate(worktrees):
         run_git(
             root,
@@ -254,6 +237,45 @@ def test_agent_call_path_contexts_are_parallel_and_call_scoped(
             "work-root": worktree.resolve(),
         }
 
+    # runtime API でも同じ両 root を区別し、linked worktree を run root として返す。
+    linked = worktrees[0]
+    monkeypatch.chdir(linked)
+    assert repo_root(linked) == root.resolve()
+    assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
+    assert work_root(linked) == linked.resolve()
+
+    # 同じ root の再探索を防ぎ、suffix の正規化も検査済みの root から行う。
+    run_root_scans = 0
+    original_resolve_run_root = oracle_path_model.resolve_run_root
+
+    def record_run_root_scan(*args, **kwargs):
+        nonlocal run_root_scans
+        run_root_scans += 1
+        return original_resolve_run_root(*args, **kwargs)
+
+    monkeypatch.setattr(oracle_path_model, "resolve_run_root", record_run_root_scan)
+    monkeypatch.chdir(root)
+    (linked / "alias").symlink_to(root, target_is_directory=True)
+    for source, expected in (
+        (RootPathPlaceHolder.RUN, linked),
+        ("{{run-root}}", linked),
+        (Path("{{run-root}}"), linked),
+        (Path("{{run-root}}/missing/../result.py"), linked / "result.py"),
+        ("{{run-root}}/alias/result.py", root / "result.py"),
+    ):
+        run_root_scans = 0
+        assert resolve_real_path(source, contexts[0]) == expected.resolve()
+        assert run_root_scans <= 1
+
+    # 内側の main repository に履歴は不要。外側の linked root を誤採用しない。
+    nested_main = linked / "repo"
+    nested_main.mkdir()
+    init_repo(nested_main)
+    monkeypatch.chdir(nested_main)
+
+    with pytest.raises(ValueError, match="`{{run-root}}` was not found"):
+        resolve_real_path(RootPathPlaceHolder.RUN)
+
 
 def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     cli_repository: Path,
@@ -264,9 +286,7 @@ def test_root_resolution_serializes_relative_cwd_and_accepts_missing_anchor(
     """relativeな起点の解決をcwd切替と直列化し、未作成の祖先も受理する。"""
     # cwd の混線を検出するための二つの Git root だけを準備する。
     first = cli_repository
-    second = tmp_path / "second"
-    second.mkdir()
-    init_repo(second)
+    second = shutil.copytree(first, tmp_path / "second")
     original = first.resolve()
     monkeypatch.chdir(original)
     first_ready = threading.Event()
@@ -392,12 +412,13 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
 
 
 def test_run_worktree_rejects_noncanonical_branch(
-    cli_repository: Path,
+    tmp_path: Path,
 ) -> None:
     """現行 ID を持たない branch を worktree の保存先へ解決しない。"""
-    root = cli_repository
+    # 名前の拒否は root 探索より前に行うため、Git repository を準備しない。
+    root = tmp_path
 
-    # 拒否で repository は変わらないため、全 branch 境界に同じ実 Git root を使う。
+    # 全 branch 境界を両 API で検査し、root 探索へ進めば未初期化の root で失敗する。
     for branch in (
         f"cmoc/run/../{RUN_ID}",
         f"cmoc/run/{SESSION_ID}/..",
@@ -412,32 +433,39 @@ def test_run_worktree_rejects_noncanonical_branch(
             )
 
 
-def test_run_worktree_lookup_rejects_symlink_components(
+def test_run_worktree_lookup_and_removal_reject_symlink_components(
     committed_repository: Path, tmp_path: Path
 ) -> None:
-    """登録後に symlink 化された run worktree を作業 root として扱わない。"""
+    """symlink 化された run worktree の照会・削除を拒否し、内容を保護する。"""
     root = committed_repository
     managed = root / ".cmoc" / "gu" / "worktree"
     expected = managed / SESSION_ID / RUN_ID
     run_git(root, "worktree", "add", "-b", RUN_BRANCH, str(expected), "HEAD")
+    (expected / "keep.txt").write_text("keep\n")
 
-    # 同じ登録済み worktree を毎回元へ戻し、リンク位置だけを切り替える。
+    # 照会・削除に同じ実 Git 登録を使い、末端・session 親・管理ルートを各々検査する。
     moved = tmp_path / "moved-worktree"
     for symlink_path in (expected, expected.parent, managed):
         symlink_path.rename(moved)
         symlink_path.symlink_to(moved, target_is_directory=True)
 
         assert worktree_for_branch_optional(root, RUN_BRANCH) is None, symlink_path
-        assert symlink_path.is_symlink(), symlink_path
+        with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+            remove_worktree(root, expected)
 
+        assert symlink_path.is_symlink(), symlink_path
+        assert (expected / "keep.txt").read_text() == "keep\n", symlink_path
+
+        # 拒否後の内容を確認してから元へ戻し、次の境界でも同じ登録を使う。
         symlink_path.unlink()
         moved.rename(symlink_path)
 
 
-def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
-    committed_repository: Path, tmp_path: Path
+def test_worktree_lookup_rejects_invalid_registered_paths(
+    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """stale な Git 登録先を作業 root として使わず、置換した内容も削除しない。"""
+    """照会内で配置を再利用し、次回は stale な登録先と置換した内容を保護する。"""
+    # 両 branch の検査で repository と空 commit を共用し、登録先は別々に保つ。
     root = committed_repository
     target = root / ".cmoc" / "gu" / "worktree" / SESSION_ID / RUN_ID
     run_git(
@@ -449,6 +477,34 @@ def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
         str(target),
         "HEAD",
     )
+    session_worktree = tmp_path / "session-worktree"
+    run_git(
+        root, "worktree", "add", "-b", SESSION_BRANCH, str(session_worktree), "HEAD"
+    )
+
+    queries: list[tuple[str, ...]] = []
+    original_run = runtime_git.subprocess.run
+
+    def record_query(argv, *args, **kwargs):
+        if argv[0] == "git":
+            queries.append(tuple(argv[1:]))
+        return original_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr(runtime_git.subprocess, "run", record_query)
+    # main/linked の両起点で、同じ root・common dir を branch ごとに取り直さない。
+    for anchor in (root, session_worktree):
+        queries.clear()
+        assert worktrees_for_branches(anchor, (RUN_BRANCH, SESSION_BRANCH)) == {
+            RUN_BRANCH: target,
+            SESSION_BRANCH: session_worktree,
+        }
+        assert sum("--show-toplevel" in args for args in queries) <= 1, queries
+        assert (
+            queries.count(("rev-parse", "--path-format=absolute", "--git-common-dir"))
+            <= 1
+        ), queries
+        assert queries.count(("worktree", "list", "--porcelain")) == 1, queries
+
     target.rename(tmp_path / "moved-worktree")
     assert worktree_for_branch_optional(root, RUN_BRANCH) is None
     target.mkdir(parents=True)
@@ -461,22 +517,8 @@ def test_run_worktree_lookup_and_removal_reject_replaced_registered_path(
 
     assert (target / "keep.txt").read_text() == "keep\n"
 
-
-def test_session_worktree_lookup_rejects_invalid_registered_path(
-    committed_repository: Path, tmp_path: Path
-) -> None:
-    """session branch も stale な Git 登録先を worktree として扱わない。"""
-    root = committed_repository
-    target = tmp_path / "session-worktree"
-    run_git(
-        root,
-        "worktree",
-        "add",
-        "-b",
-        SESSION_BRANCH,
-        str(target),
-        "HEAD",
-    )
+    # session は管理領域外の linked worktree で、同じ stale 判定を検証する。
+    target = session_worktree
     target.rename(tmp_path / "moved-session-worktree")
 
     # Git 登録は不変なので、欠損・file・directory 置換に同じ準備を使う。
@@ -540,44 +582,6 @@ def test_run_worktree_operations_reject_unregistered_managed_path(
     assert (target / "keep.txt").read_text() == "keep\n"
 
 
-def test_remove_worktree_rejects_symlink_components(
-    committed_repository: Path, tmp_path: Path
-) -> None:
-    """symlink componentを経由したworktree削除を拒否することを検証する。"""
-    root = committed_repository
-    managed = root / ".cmoc" / "gu" / "worktree"
-    external = tmp_path / "external"
-    actual = external / SESSION_ID / RUN_ID
-    actual.parent.mkdir(parents=True)
-    run_git(
-        root,
-        "worktree",
-        "add",
-        "-b",
-        RUN_BRANCH,
-        str(actual),
-        "HEAD",
-    )
-
-    target = managed / SESSION_ID / RUN_ID
-    target.parent.mkdir(parents=True)
-    # 外側の実 worktree と登録は不変。内側から親へ link を掛け替えて準備を共用する。
-    for symlink_path, destination in (
-        (target, actual),
-        (target.parent, actual.parent),
-        (managed, external),
-    ):
-        if symlink_path.exists():
-            symlink_path.rmdir()
-        symlink_path.symlink_to(destination, target_is_directory=True)
-        with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
-            remove_worktree(root, target)
-
-        assert symlink_path.is_symlink(), symlink_path
-        assert actual.exists(), symlink_path
-        symlink_path.unlink()
-
-
 def test_remove_worktree_rejects_non_run_branch_at_managed_path(
     committed_repository: Path,
 ) -> None:
@@ -594,13 +598,26 @@ def test_remove_worktree_rejects_non_run_branch_at_managed_path(
 
 def test_remove_worktree_rejects_noncanonical_run_ids(
     committed_repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """旧 ID の branch と登録先が一致しても削除対象にしない。"""
+    """旧 ID は登録済みでも拒否し、不要な worktree 一覧取得を行わない。"""
     root = committed_repository
     old_id = "2026-09-29_15-04_07_123456789"
     target = root / ".cmoc/gu/worktree" / old_id / old_id
     run_git(root, "worktree", "add", "-b", f"cmoc/run/{old_id}/{old_id}", str(target))
 
+    # 実登録と拒否後の保存を検査しつつ、ID だけで拒否できる候補の Git 起動を数える。
+    git_queries = []
+    original_run_git = runtime_git.run_git
+
+    def record_query(args, repository, **kwargs):
+        git_queries.append(args)
+        return original_run_git(args, repository, **kwargs)
+
+    monkeypatch.setattr(runtime_git, "run_git", record_query)
     with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
         remove_worktree(root, target)
     assert target.is_dir()
+    assert not any(args[:2] == ["worktree", "list"] for args in git_queries), (
+        git_queries
+    )

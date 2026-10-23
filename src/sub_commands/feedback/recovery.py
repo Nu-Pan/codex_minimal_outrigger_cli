@@ -9,6 +9,7 @@ from typing import Any
 
 from cmoc_runtime import (
     RunPart,
+    SessionState,
     TerminalResult,
     branch_exists,
     head_commit,
@@ -23,9 +24,9 @@ from commons.runtime_feedback_state import (
     _require_exact_fields,
     artifact_reference,
     cleanup_published_report,
+    current_pointer_path,
     discard_report_cut,
     feedback_writer_lock,
-    load_active_state,
     load_report_cut,
     recover_report_cut_checkpoint_references,
     validate_feedback_state,
@@ -33,14 +34,24 @@ from commons.runtime_feedback_state import (
 from commons.runtime_feedback_store import feedback_root, write_immutable_json
 from commons.runtime_ids import is_common_id
 from commons.runtime_logging import current_subcommand_logger
-from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_primary_report import (
+    current_primary_report_fields,
+    primary_report_finalization_lock,
+    set_primary_report_completion_handler,
+    set_primary_report_save_failure_handler,
+    update_primary_report_fields,
+)
 from commons.runtime_run import (
     delete_run_process_id,
     expected_run_worktree,
-    run_lifecycle_lock,
     worktree_for_branch,
 )
-from commons.runtime_run_join import cleanup_joined_run
+from commons.runtime_run_join import (
+    cleanup_joined_run,
+    remaining_run_resources,
+    restore_run_error,
+)
+from commons.runtime_run_join_state import confirm_import, join_record, load_join_record
 from commons.runtime_run_lifecycle import EditingRunContext
 
 
@@ -55,6 +66,7 @@ def finish_feedback_run(
     completion = read_run_artifact(context.repo, manifest["run"]["completion"])
     merged = read_run_artifact(context.repo, manifest["run"]["merged"])
     path = feedback_root(context.repo) / "finalization.json"
+    # journal には pointer だけを固定し、参照先の検証は lifecycle lock 内で一度行う。
     journal = {
         "schema_version": 1,
         "feedback_run_id": manifest["run"]["feedback_run_id"],
@@ -62,13 +74,15 @@ def finish_feedback_run(
         "identity": manifest["run"]["identity"],
         "report_cut_id": manifest["report_cut_id"],
         "report": artifact_reference(context.repo, result.primary_report),
-        "current": load_active_state(context.repo).current,
+        "current": _read_canonical_object(
+            current_pointer_path(context.repo), "feedback current pointer"
+        ),
         "completion": completion,
         "merged": merged,
         "result": result.result,
     }
     write_immutable_json(path, journal)
-    return _finish_from_journal(_journal_context(context.repo, journal), journal, path)
+    return _finish_from_journal(context, journal, path)
 
 
 def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | None:
@@ -77,7 +91,7 @@ def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | No
     if not path.exists() and not path.is_symlink():
         return None
     journal = _read_canonical_object(path, "feedback finalization journal")
-    context = _journal_context(repo, journal)
+    context, _ = _journal_context(repo, journal)
     if context.session_branch != session_branch:
         from .remediation import _failure
 
@@ -103,8 +117,10 @@ def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | No
         return _finish_from_journal(context, journal, path)
 
 
-def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
-    """journal の保存先を active session と managed run の正規 path へ照合する。"""
+def _journal_context(
+    repo: Path, journal: dict[str, Any]
+) -> tuple[EditingRunContext, SessionState]:
+    """journal の identity を照合し、検証した session state とともに返す。"""
     from .remediation import _failure
 
     path = feedback_root(repo) / "finalization.json"
@@ -170,7 +186,7 @@ def _journal_context(repo: Path, journal: dict[str, Any]) -> EditingRunContext:
         )
     ):
         raise _failure("feedback finalization の対象とは異なる active run があります。")
-    return context
+    return context, session
 
 
 def _finish_from_journal(
@@ -179,7 +195,7 @@ def _finish_from_journal(
     """raw/work cleanup、ready 遷移、隔離資源回収を idempotent に確定する。"""
     from .remediation import _failure
 
-    # 呼び出し側で検証済みの identity を使い、lock 内では最新状態と再照合する。
+    # 呼び出し元の session を排他対象とし、journal は lock 内で最新状態と照合する。
     repo = context.repo
     report_reference = journal["report"]
     if not isinstance(report_reference, dict) or set(report_reference) != {
@@ -213,10 +229,28 @@ def _finish_from_journal(
         or journal["merged"].get("sealed") != completion.get("sealed")
     ):
         raise _failure("feedback finalization の join evidence が不正です。")
-    with run_lifecycle_lock(repo, context.session_id):
-        # context 検証後に別 run が state を公開していないことを、変更操作の
-        # 直前に同じ lifecycle lock 内でも確認する。
-        context = _journal_context(repo, journal)
+    with primary_report_finalization_lock(repo, context.session_id):
+        # lock 取得後の identity と最新 state を照合し、同じ snapshot から
+        # state_before を得る。lock 取得前の state を使い回さない。
+        validated_context, initial_session = _journal_context(repo, journal)
+        if validated_context.session_id != context.session_id:
+            raise _failure("feedback finalization の排他対象 session が一致しません。")
+        context = validated_context
+        state_before = current_primary_report_fields().get(
+            "state_before", initial_session.run.state
+        )
+
+        def retain_failed_finalization() -> None:
+            # journal を保持した自然完了経路は、手動 join/abandon へ切り替えない。
+            restore_run_error(context)
+            update_primary_report_fields(
+                recovery_next_actions=(
+                    "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+                )
+            )
+
+        set_primary_report_save_failure_handler(retain_failed_finalization)
+        phase = "publication recovery validation"
         try:
             # 同じ検証済み snapshot で current pointer と publication point を照合する。
             state = validate_feedback_state(repo)
@@ -237,9 +271,13 @@ def _finish_from_journal(
                 or state.current["report_sha256"] != report_reference["sha256"]
             ):
                 raise _failure("feedback publication point を確認できません。")
-            work = load_report_cut(repo)
-            if work is not None:
-                manifest, manifest_path = work
+            # 同じ排他区間で検証した cleanup manifest を再読・再検証しない。
+            manifest = state.cleanup_manifest
+            if manifest is None:
+                # cleanup 完了後も、別の未完了 cut を見逃さず identity を検査する。
+                work = load_report_cut(repo)
+                manifest = work[0] if work is not None else None
+            if manifest is not None:
                 if (
                     manifest["report_cut_id"] != journal["report_cut_id"]
                     or manifest["run"]["identity"] != journal["identity"]
@@ -247,15 +285,67 @@ def _finish_from_journal(
                     raise _failure(
                         "feedback finalization の cleanup 対象が一致しません。"
                     )
+                phase = "publication cleanup"
+                update_primary_report_fields(feedback_stage=phase)
                 cleanup_published_report(repo, state)
-            # work artifact の cleanup が完了してから state と隔離資源を回収する。
+            # work artifact の cleanup と結果保存の後に state と隔離資源を回収する。
+            from .report import save_feedback_invocation_report
+
+            update_primary_report_fields(
+                run_kind=context.kind,
+                session_branch=context.session_branch,
+                session_fork_commit=context.session_fork_commit,
+                run_branch=context.run_branch,
+                run_fork_commit=context.run_fork_commit,
+                run_worktree=context.run_worktree,
+                state_before=state_before,
+                state_after="joinable",
+                publication_established=True,
+                publication_report=str(report_path),
+                publication_result=journal["result"],
+                feedback_run_id=journal["feedback_run_id"],
+                report_cut_id=journal["report_cut_id"],
+                publication_execution_id=journal["report_execution_id"],
+                join_status="merged",
+                join_preconditions="completed"
+                if state_before == "ready"
+                else "previously_completed",
+                join_diff_validation="completed"
+                if state_before == "ready"
+                else "previously_completed",
+                merge_status="merged"
+                if journal["merged"]["run_join_commit"]
+                else "no_op",
+                run_join_commit=journal["merged"]["run_join_commit"],
+                conflict_resolution=journal["merged"].get("resolution"),
+                workload_post_join="completed",
+                post_join_hook="none",
+                refactor_state_sync_status="completed"
+                if state_before == "ready"
+                else "previously_completed",
+                cleanup="pending",
+                state_reset="not_run",
+            )
+            phase = "invocation report save"
+            invocation_report = save_feedback_invocation_report(
+                repo,
+                "natural_completion",
+                TerminalResult(result=journal["result"]),
+                publication_report=report_path,
+            )
             _, _, session = load_state_for_branch(repo, context.session_branch)
+            record = join_record(context)
+            record.workload_post_join = True
+            record.save()
+            phase = "state reset"
             session.run = RunPart()
             write_state(context.state_path, session)
             warnings: list[str] = []
+            phase = "run cleanup"
+            cleanup = "completed"
             if branch_exists(repo, context.run_branch):
-                cleanup = cleanup_joined_run(context, warnings)
-                if cleanup != "completed":
+                cleanup = cleanup_joined_run(context, warnings, invocation_report)
+                if cleanup not in {"completed", "deferred"}:
                     raise _failure(
                         "feedback run の隔離資源 cleanup に失敗しました。",
                         detail="\n".join(warnings),
@@ -265,7 +355,30 @@ def _finish_from_journal(
                     "feedback run branch がない状態で worktree が残っています。"
                 )
             delete_run_process_id(repo, context.session_id)
-            _durable_unlink(path)
+            update_primary_report_fields(
+                state_after="ready",
+                state_reset="completed",
+                join_status="completed",
+                cleanup=cleanup,
+                remaining_resources=remaining_run_resources(context),
+            )
+            phase = "final invocation report save"
+            invocation_report = save_feedback_invocation_report(
+                repo,
+                "natural_completion",
+                TerminalResult(result=journal["result"], warnings=tuple(warnings)),
+                publication_report=report_path,
+            )
+
+            # 最外側での最後の report 保存が終わるまで recovery の根拠を保持する。
+            def finish_join() -> None:
+                # 最外側の report 保存後にだけ、次の run を許可する。
+                record.finished = True
+                record.save()
+                _durable_unlink(path)
+
+            if not set_primary_report_completion_handler(finish_join):
+                finish_join()
         except BaseException:
             _, _, session = load_state_for_branch(repo, context.session_branch)
             session.run = RunPart(
@@ -275,10 +388,18 @@ def _finish_from_journal(
                 fork_commit=context.run_fork_commit,
             )
             write_state(context.state_path, session)
+            update_primary_report_fields(
+                state_after="error",
+                failure_stage=phase,
+                remaining_resources=remaining_run_resources(context),
+                recovery_next_actions=(
+                    "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+                ),
+            )
             raise
     update_primary_report_fields(
         state_after="ready",
-        cleanup="completed",
+        cleanup=cleanup,
         run_join_commit=journal["merged"]["run_join_commit"],
     )
     logger = current_subcommand_logger()
@@ -290,26 +411,27 @@ def _finish_from_journal(
             report_execution_id=journal["report_execution_id"],
             report_path=str(report_path),
             state_after="ready",
-            cleanup="completed",
+            cleanup=cleanup,
             result=journal["result"],
         )
     return TerminalResult(
-        primary_report=report_path,
-        primary_report_role="incomplete feedback diagnostic report"
-        if journal["result"] == "incomplete"
-        else "feedback report",
+        primary_report=invocation_report,
+        primary_report_role="feedback invocation report",
         result=journal["result"],
         details=(
             ("run_kind", "feedback_report"),
             ("run_join_commit", journal["merged"]["run_join_commit"]),
-            ("cleanup", "completed"),
+            ("post_join_hook", "none"),
+            ("refactor_state_sync", "completed"),
+            ("cleanup", cleanup),
         ),
+        warnings=tuple(warnings),
     )
 
 
 def require_manual_feedback_run(context: EditingRunContext) -> None:
     """自動 join 済み feedback run を明示 join/abandon で破棄させない。"""
-    from .remediation import _failure, _is_ancestor, _validate_context
+    from .remediation import _failure, _validate_context
 
     if context.kind != "feedback_report":
         return
@@ -329,8 +451,8 @@ def require_manual_feedback_run(context: EditingRunContext) -> None:
     run = manifest["run"]
     joined = run["merged"] is not None
     if not joined and run["join_intent"] is not None:
-        intent = read_run_artifact(context.repo, run["join_intent"])
-        joined = _is_ancestor(context, intent["run_head"])
+        record = load_join_record(context.repo, context.session_id)
+        joined = record is not None and confirm_import(record)
     if joined:
         raise _failure(
             "feedback run は自動 join 済みです。",
@@ -341,7 +463,7 @@ def require_manual_feedback_run(context: EditingRunContext) -> None:
 
 
 def finish_manual_feedback_run(context: EditingRunContext, operation: str) -> None:
-    """明示終了した run の結果を監査記録へ移し、raw/current を維持して work を除く。"""
+    """非 publication join は必要な checkpoint を保持し、abandon は work を破棄する。"""
     if context.kind != "feedback_report":
         return
     with feedback_writer_lock(context.repo):
@@ -353,6 +475,23 @@ def finish_manual_feedback_run(context: EditingRunContext, operation: str) -> No
 
         _validate_context(context, manifest)
         recover_report_cut_checkpoint_references(context.repo, manifest, path)
+        if operation == "joined":
+            # 次回の新規 report からは除外し、checkpoint の再利用で publication しない。
+            result_path = path.parent / "join_result.json"
+            write_immutable_json(
+                result_path,
+                {
+                    "schema_version": 1,
+                    "publication": False,
+                    "identity": manifest["run"]["identity"],
+                    "session_commit": head_commit(context.session_worktree),
+                    "manifest": artifact_reference(context.repo, path),
+                },
+            )
+            update_primary_report_fields(
+                publication_established=False, feedback_work_state=str(result_path)
+            )
+            return
         logger = current_subcommand_logger()
         if logger is not None:
             logger.event(

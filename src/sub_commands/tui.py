@@ -3,7 +3,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
+from oracle.acp_builder.tui.launch_tui import build_tui_request
+
 from cmoc_runtime import (
     load_config,
     repo_root,
@@ -21,7 +22,6 @@ from commons.prompt_editor_input import (
 )
 from commons.runtime_paths import reuse_root_queries
 from commons.runtime_results import CommandResult
-from config.cmoc_config import CmocConfig
 
 _CodexTui = Callable[..., CommandResult]
 
@@ -42,7 +42,7 @@ def _cmoc_tui_body(
     run_codex_tui: _CodexTui,
     *,
     root: Path,
-    config: CmocConfig,
+    config_root: Path,
 ) -> None:
     """依頼文を編集し、構築したパラメータで Codex TUI を起動する。"""
     # オリジナル prompt だけ未確定の完全 prompt を handoff ガイドに使う。
@@ -51,9 +51,10 @@ def _cmoc_tui_body(
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"
     )
     input_path = reserve_prompt_editor_input(root)
-    complete_prompt_skeleton = build_tui_launch_tui_parameter(
+    complete_prompt_skeleton = build_tui_request(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
+    assert complete_prompt_skeleton is not None
 
     # {{work-root}}/oracle/doc/app_spec/prompt_editor_input.md
     start_subcommand_step(3, "オリジナルプロンプトを入力", "edit original prompt")
@@ -70,15 +71,16 @@ def _cmoc_tui_body(
     # 抽出した入力から担当固有の完全 prompt と起動パラメータを構築する。
     # {{work-root}}/oracle/doc/app_spec/sub_command/tui.md
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
-    parameter = build_tui_launch_tui_parameter(original_prompt)
+    parameter = build_tui_request(original_prompt)
 
-    start_subcommand_step(5, "AI Agent TUI を起動", "launch agent TUI")
+    start_subcommand_step(
+        5, "初回 exec と対話再開を起動", "launch initial exec and resume"
+    )
     run_codex_tui(
         parameter,
         root=root,
-        config=config,
+        config=load_config(config_root),
         purpose="tui codex",
-        notification_command_name="tui",
     )
 
 
@@ -91,5 +93,5 @@ def _cmoc_tui_from_current_context() -> None:
     _cmoc_tui_body(
         run_codex_tui,
         root=root,
-        config=load_config(current_root),
+        config_root=current_root,
     )

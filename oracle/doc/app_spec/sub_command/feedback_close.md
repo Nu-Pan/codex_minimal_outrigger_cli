@@ -1,6 +1,6 @@
 # `cmoc feedback close`
 
-人間が外部で解決を確認した `inconclusive` 案件を、理由を伴う宣言によって終了する。close の本処理では agent を呼ばず、外部解決の妥当性を再判定しない。
+人間が外部で解決を確認した `inconclusive` 案件を、理由を伴う宣言によって終了する。close の本処理では agent を呼ばず、外部解決の妥当性を再判定しない。primary report の重要事項確認は、本書の「primary report と終了結果」に従う資料の確認であり、close の判定には関与しない。
 
 用語と agent の結果分類は、`{{cmoc-root}}/oracle/doc/app_spec/feedback.md` の「用語と結果分類」、保存と状態遷移は、`{{cmoc-root}}/oracle/doc/app_spec/feedback_state.md` の「案件 ID と状態遷移」「最新状態の atomic publication」を正本とする。
 
@@ -71,19 +71,21 @@ publication 済みで cleanup などが未完了の場合は、同じ案件 ID �
 
 ## primary report と終了結果
 
-実行 ID、共通掲載内容、primary report の表示、および terminal result の共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」「terminal result」に従う。エラーの分類と report 保存自体の失敗は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従う。
+実行 ID、本節の各 report の共通表示契約、および terminal result の共通規則は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」「terminal result」に従う。エラーの分類と report 保存自体の失敗は、`{{cmoc-root}}/oracle/doc/app_spec/error_handling.md` の「エラーハンドリング規則」に従う。
 
-close report は Markdown と YAML Front Matter で構成し、次へ保存する。publication する report の掲載時点と、保存後に確定する処理結果の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。
+close report は次へ保存する。publication する report の掲載時点と、保存後に確定する処理結果の記録先は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication report と終了時の記録」に従う。
 
 ```text
 {{repo-root}}/.cmoc/gu/report/feedback/close/{{execution-id}}.md
 ```
 
-新しい close の publication target には、最初に固定した実行 ID を使用する。その report には対象案件 ID と issue ID、元の判定、人間の理由・日時、更新前後の generation、history への参照、および更新後の現在の案件一覧を含める。close による更新であり、他の案件の再確認を行っていないことを判別可能にする。
+新しい close の publication target には、最初に固定した実行 ID を使用する。自由記述入力として、本書の「close の確定と最新状態」で固定した人間の理由を掲載する。実行情報には対象案件 ID と issue ID、元の判定、理由とともに固定した日時、更新前後の generation、および history への参照を含め、詳細結果には更新後の現在の案件一覧を含める。close による更新であり、他の案件の再確認を行っていないことを判別可能にする。
 
-正常に完了した新規 close では、その publication 済み report を primary report とする。確定済み close の再実行で recovery が不要な場合は、今回の実行 ID で `already_closed` の report を作り、元の close と現在の state を参照する。この report を current pointer の参照先にしない。
+正常に完了した新規 close では、その publication 済み report を primary report とする。確定済み close の再実行で recovery が不要な場合は、今回の実行 ID で `already_closed` の report を作り、元の close と現在の state を参照する。自由記述入力には今回の理由を掲載し、保存済みの元の理由と区別する。この report を current pointer の参照先にしない。
 
-recovery では元の publication report を書き換えず、未保存なら固定済み target へ保存し、保存済みなら path と hash を検証して再利用する。正常に recovery を完了した場合は、その report の保存確認を primary report の要件を満たすものとする。再開した実行には新しい実行 ID を付与し、今回の入力・作業・終端結果と共通掲載内容をその実行のサブコマンドログに残して、元の実行・report・close との対応を示す。
+primary report を兼ねる publication report は、初回の durable 保存前に、その掲載時点の機械生成版の全文を対象とする確認工程を行い、確認状態・結果と確認自身の実行記録を組み込む。確認には `{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」を適用し、終了結果への影響と必要な保存・終了処理の失敗との区別は、同文書の「確認結果と終了結果の分離」に従う。current pointer 切替や cleanup の前であることを維持し、それらを完了済みとは記載しない。確認用 agent に、人間の外部解決宣言や直前の issue 判定を再検証させない。
+
+recovery では元の publication report を書き換えず、未保存なら固定済み target へ上記の初回保存手順で保存し、保存済みなら path と hash を検証して再利用する。保存済み report は、冒頭の要約、重要事項の確認結果と確認自身の記録、元の指示も含めて固定済みの理由と掲載時点を維持し、今回の入力や結果に置き換えない。保存済みの確認が未完了でも再確認 call を開始せず、確認結果の追記・差し替え・report の上書きを行わない。正常に recovery を完了した場合は、その report の保存確認を primary report の要件を満たすものとする。再開した実行には新しい実行 ID を付与し、今回の入力・作業・終端結果と共通掲載内容をその実行のサブコマンドログに残して、元の実行・report・close との対応を示す。
 
 エラー時は、今回の実行 ID を使った次の invocation report を primary report とする。
 
@@ -92,6 +94,8 @@ recovery では元の publication report を書き換えず、未保存なら固
 ```
 
 事前条件違反で本処理を開始しなかった場合も対象とする。確認できた入力と state、理由、publication の成立有無、未実行・未完了の処理、次の操作、および関連ログを記載し、確定できない値や成功した操作を作らない。
+
+今回の `already_closed` report とエラー時の invocation report は、新規 primary report として共通の重要事項確認を行う。確認の取消を受理済みの場合の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認の停止・失敗と保存」に従う。保存済み publication report の再利用と、この別の report の生成を混同しない。
 
 | 終端結果 | 共通分類 | 終了コード |
 |---|---|---|

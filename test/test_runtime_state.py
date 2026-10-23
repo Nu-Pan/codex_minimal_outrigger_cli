@@ -3,7 +3,6 @@
 import json
 import multiprocessing
 import os
-import threading
 from multiprocessing.connection import Connection
 from pathlib import Path
 
@@ -27,18 +26,30 @@ from commons.runtime_state import (
 )
 
 
-def _hold_session_fork_lock(
-    root: Path, common_dir: Path, ready: Connection, release: Connection
+def _acquire_session_fork_lock(
+    root: Path, common_dir: Path, status: Connection
 ) -> None:
-    """別 process で session fork lock を保持し、解放指示を待つ。"""
+    """別 process から実 lock の競合と取得を通知する。"""
     # spawn でも親の monkeypatch に依存せず、同じ共有 directory を使う。
-    with pytest.MonkeyPatch.context() as monkeypatch:
+    with status, pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(
             runtime_state_module, "git_common_dir", lambda _root: common_dir
         )
+        original_flock = runtime_state_module.fcntl.flock
+
+        def observe_lock_attempt(fd: int, operation: int) -> None:
+            # 親が保持する lock への競合を、時間経過に頼らず確かめる。
+            if operation & runtime_state_module.fcntl.LOCK_EX:
+                try:
+                    original_flock(fd, operation | runtime_state_module.fcntl.LOCK_NB)
+                except BlockingIOError:
+                    status.send("contended")
+            original_flock(fd, operation)
+
+        monkeypatch.setattr(runtime_state_module.fcntl, "flock", observe_lock_attempt)
+        assert status.recv() == "acquire"
         with session_fork_lock(root):
-            ready.send(True)
-            release.recv()
+            status.send("acquired")
 
 
 def _valid_state() -> SessionState:
@@ -104,12 +115,27 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     assert active_session_for_home(tmp_path, "main") == path
     assert active_session_for_home(tmp_path, "other") is None
 
+    # JSON 用 snapshot と元の state は双方向に変更を持ち越さない。
+    snapshot = state.to_dict()
+    snapshot["run"]["state"] = "error"
+    assert state.run.state == "joinable"
+    state.session.session_home_branch = "開発/作業"
+    assert snapshot["session"]["session_home_branch"] == "main"
+
+    # 既存 file の更新でも run payload を消去し、session branch から復元できる。
+    state.run = RunPart()
+    write_state(path, state)
+    assert load_state_for_branch(tmp_path, SESSION_BRANCH) == (SESSION_ID, path, state)
+    assert active_session_for_home(tmp_path, "main") is None
+    assert active_session_for_home(tmp_path, "開発/作業") == path
+
 
 @pytest.mark.parametrize("branch", [None, 1])
-def test_load_state_rejects_non_string_branch(tmp_path: Path, branch: object) -> None:
+def test_load_state_rejects_non_string_branch(branch: object) -> None:
     """branch の型異常を raw AttributeError として漏らさない。"""
+    # branch の型検証に保存先は不要なので、directory を準備しない。
     with pytest.raises(CmocError, match="cmoc 管理 branch"):
-        load_state_for_branch(tmp_path, branch)  # type: ignore[arg-type]
+        load_state_for_branch(Path("unused"), branch)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -125,12 +151,11 @@ def test_load_state_rejects_non_string_branch(tmp_path: Path, branch: object) ->
         RUN_ID,
     ],
 )
-def test_state_path_rejects_noncanonical_session_id(
-    tmp_path: Path, session_id: str
-) -> None:
+def test_state_path_rejects_noncanonical_session_id(session_id: str) -> None:
     """現行 session ID 以外を state の保存先に使わない。"""
+    # ID の書式検証に保存先は不要なので、directory を準備しない。
     with pytest.raises(CmocError, match="session-id"):
-        state_path(tmp_path, session_id)
+        state_path(Path("unused"), session_id)
 
 
 def test_state_io_rejects_noncanonical_filename(tmp_path: Path) -> None:
@@ -346,7 +371,9 @@ def test_session_state_rejects_empty_payload(part: str, field: str) -> None:
     assert f"`{part}.{field}`" in exc_info.value.detail
 
 
-@pytest.mark.parametrize("value", ["main\x00branch", "main\ud800"])
+@pytest.mark.parametrize(
+    "value", ["main\x00branch", "開発\x00branch", "main\ud800", "開発\ud800"]
+)
 def test_session_state_rejects_unrepresentable_payload(value: str) -> None:
     """state payload に process/file 境界で扱えない文字を保存しない。"""
     data = _valid_state().to_dict()
@@ -516,26 +543,26 @@ def test_active_run_rejects_noncanonical_branch(branch: str) -> None:
         SessionState.from_dict(data)
 
 
-def test_session_state_rejects_unknown_fields() -> None:
-    """session state の未定義 field を拒否する。"""
+@pytest.mark.parametrize(
+    "part", [None, "session", "run"], ids=["top", "session", "run"]
+)
+@pytest.mark.parametrize("defect", ["missing", "extra", "replaced"])
+def test_session_state_rejects_invalid_field_sets(part, defect) -> None:
+    """各階層の欠落・余分な field と、同数の field の置換を拒否する。"""
     data = _valid_state().to_dict()
-    data["run"]["obsolete"] = None
+    fields = data if part is None else data[part]
+    if defect in ("missing", "replaced"):
+        del fields[next(iter(fields))]
+    if defect in ("extra", "replaced"):
+        fields["obsolete"] = None
 
     with pytest.raises(CmocError) as exc_info:
         SessionState.from_dict(data)
 
-    assert "未定義 field" in exc_info.value.detail
-
-
-def test_session_state_rejects_unknown_top_level_fields() -> None:
-    """session state の top-level 未定義 field を拒否する。"""
-    data = _valid_state().to_dict()
-    data["obsolete"] = None
-
-    with pytest.raises(CmocError) as exc_info:
-        SessionState.from_dict(data)
-
-    assert "top-level に未定義 field" in exc_info.value.detail
+    detail = exc_info.value.detail
+    assert ("top-level" if part is None else f"`{part}` に") in detail
+    assert ("必須 field" in detail) == (defect in ("missing", "replaced"))
+    assert ("未定義 field" in detail) == (defect in ("extra", "replaced"))
 
 
 def test_session_fork_lock_is_shared_across_processes(
@@ -546,55 +573,32 @@ def test_session_fork_lock_is_shared_across_processes(
     common_dir = tmp_path / "common"
     # Git common directory の実解決は test_git_query_reuse.py に残し、
     # ここでは異なる起点からの実 flock の競合・解放後の取得だけを検証する。
-    ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
-    release_child, release_parent = multiprocessing.Pipe(duplex=False)
+    status_parent, status_child = multiprocessing.Pipe()
     process = multiprocessing.Process(
-        target=_hold_session_fork_lock,
-        args=(root / "linked", common_dir, ready_child, release_child),
+        target=_acquire_session_fork_lock,
+        args=(root / "linked", common_dir, status_child),
     )
-    process.start()
     monkeypatch.setattr(
         runtime_state_module, "git_common_dir", lambda _root: common_dir
     )
-    lock_contended = threading.Event()
-    acquired = threading.Event()
-
-    original_flock = runtime_state_module.fcntl.flock
-
-    def observe_lock_attempt(fd: int, operation: int) -> None:
-        """実 flock の競合を通知してから、通常の blocking 取得へ進む。"""
-        # 子 process が保持する lock への競合を、時間経過に頼らず確かめる。
-        if operation & runtime_state_module.fcntl.LOCK_EX:
-            try:
-                original_flock(fd, operation | runtime_state_module.fcntl.LOCK_NB)
-            except BlockingIOError:
-                lock_contended.set()
-        original_flock(fd, operation)
-
-    monkeypatch.setattr(runtime_state_module.fcntl, "flock", observe_lock_attempt)
-    worker = threading.Thread(target=lambda: _acquire_lock(root, acquired))
-    released = False
     try:
-        assert ready_parent.recv()
-        worker.start()
-        assert lock_contended.wait(timeout=3)
-        assert not acquired.is_set()
-        release_parent.send(True)
-        released = True
-        assert acquired.wait(timeout=3)
-    finally:
-        if not released:
-            release_parent.send(True)
-        worker.join(timeout=3)
+        # fork で holder の file descriptor を子へ継承させない。
+        process.start()
+        status_child.close()
+        # 親を holder にすることで、取得側に追加の thread と解放用 Pipe を使わない。
+        with session_fork_lock(root):
+            status_parent.send("acquire")
+            assert status_parent.poll(timeout=3)
+            assert status_parent.recv() == "contended"
+            assert not status_parent.poll()
+        assert status_parent.poll(timeout=3)
+        assert status_parent.recv() == "acquired"
         process.join(timeout=3)
+        assert process.exitcode == 0
+    finally:
         if process.is_alive():
             process.terminate()
             process.join(timeout=3)
-    assert not worker.is_alive()
-    assert not process.is_alive()
-
-
-def _acquire_lock(root: Path, acquired: threading.Event) -> None:
-    """lock を取得して worker 側の event を通知する。"""
-    with session_fork_lock(root):
-        acquired.set()
+        process.close()
+        status_parent.close()
+        status_child.close()

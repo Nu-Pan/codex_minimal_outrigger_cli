@@ -13,8 +13,15 @@ from typing import Any, NamedTuple
 
 from .runtime_errors import safe_text
 from .runtime_feedback_store import mask_feedback_text
-from .runtime_logging import SubcommandLogger
+from .runtime_logging import SubcommandLogger, current_subcommand_logger
 from .runtime_primary_report_specs import PrimaryReportSpec, TerminalClassification
+from .runtime_report_markdown import (
+    ReportSummary,
+    inline_code,
+    markdown_sections,
+    render_report_document,
+    terminal_outcome,
+)
 from .runtime_results import TerminalResult
 
 # 各キー・文字列の行・scalar で共通の設定を使い、encoder の再生成を省く。
@@ -33,23 +40,21 @@ def render_primary_report(
     classification: TerminalClassification,
     result: TerminalResult,
     logger: SubcommandLogger,
+    *,
+    original_input: str | None = None,
 ) -> str:
     """個別 template を使い、確定済み情報だけから report を構築する。"""
-    front_matter = [
-        "---",
-        *[f"{name}: {yaml_scalar(value)}" for name, value in fields],
-        "---",
-    ]
+    # 表示順と入力原文は全 writer と共通にし、固有結果だけを template で描画する。
     field_values = dict(fields)
     if spec.template == "feedback_invocation":
-        body = _feedback_invocation_body(
+        body = feedback_invocation_lines(
             classification,
             result,
             logger,
             field_values,
         )
     elif spec.template == "doctor":
-        body = _doctor_body(spec.title, classification, result, logger, field_values)
+        body = _doctor_body(classification, result, logger, field_values)
     elif spec.template == "session_fork":
         body = _session_fork_body(classification, result, logger, field_values)
     elif spec.template == "refactor_fork":
@@ -67,8 +72,195 @@ def render_primary_report(
     elif spec.template == "run_abandon":
         body = _run_abandon_body(classification, result, logger, field_values)
     else:
-        body = _summary_body(spec.title, classification, result, logger)
-    return "\n".join([*front_matter, *body, "", execution_record_markdown(logger)])
+        body = _summary_body(classification, result, logger)
+    if "join_status" in field_values:
+        body.extend(join_result_lines(field_values))
+    return render_report_document(
+        spec.title,
+        field_values,
+        _report_summary(spec, classification, result, logger, field_values),
+        markdown_sections(body),
+        original_input=original_input,
+        execution_record=execution_record_markdown(logger),
+    )
+
+
+def _report_summary(
+    spec: PrimaryReportSpec,
+    classification: TerminalClassification,
+    result: TerminalResult,
+    logger: SubcommandLogger,
+    fields: dict[str, object],
+) -> ReportSummary:
+    # 詳細本文を再解析せず、runtime が確定した結果と処理段階から要点を作る。
+    scope: list[str] = []
+    attention = list(execution_notices(logger))
+    if classification in {"error", "user_interruption"}:
+        attention.extend(
+            f"{name}: {_inline_text(value)}" for name, value in result.details
+        )
+    if logger.step_timings:
+        scope.append(
+            "終了時の処理段階: "
+            + _step_lines(logger, classification)[-1].removeprefix("- ")
+        )
+    else:
+        scope.append("サブコマンド固有の処理段階は未開始です。")
+    if spec.template == "oracle_edit":
+        scope.extend(
+            [
+                f"1 回目の agent call: {_field_status(fields.get('first_agent_call_status'))}",
+                f"2 回目の agent call: {_field_status(fields.get('second_agent_call_status'))}",
+            ]
+        )
+        attention.append(
+            "既存差分と今回の編集を分離していないため、差分をこの実行固有の成果として認定していません。"
+        )
+    elif spec.template == "doctor":
+        scope.append(f"doctor preprocess: {_stage_status(logger, classification)}")
+        for name, label in (
+            ("material_validation", "検索用コンポーネントの検証"),
+            ("doctor_sync_status", "検索索引の同期"),
+        ):
+            status = _field_status(fields.get(name))
+            scope.append(f"{label}: {status}")
+            if fields.get(name) is None or status in {
+                "not_started",
+                "not_completed",
+                "失敗",
+            }:
+                attention.append(f"{label}は成功を確認できていません。")
+    elif spec.template == "feedback_invocation":
+        scope.extend(
+            f"{label}: {_field_status(fields.get(name))}"
+            for name, label in (
+                ("wave_count", "完了 wave 数"),
+                ("current_pointer_update_status", "current pointer 更新"),
+                ("last_confirmed_generation", "最後に確定した generation"),
+            )
+        )
+        if fields.get("publication_established") is not True:
+            attention.append(
+                "今回の invocation では最新状態を publication していません。"
+            )
+    elif spec.template in {"apply_fork", "refactor_fork", "run_join", "run_abandon"}:
+        scope.append(
+            f"run state: {_field_status(fields.get('state_before'))} → {_field_status(fields.get('state_after'))}"
+        )
+        if spec.template == "apply_fork":
+            scope.append(
+                f"Codex 終了結果: {_field_status(fields.get('codex_returncode'))}"
+            )
+            count = fields.get("feedback_observation_count")
+            if isinstance(count, int) and count > 0:
+                attention.append(observation_count_notice(count))
+    elif spec.template.startswith("session_"):
+        scope.append(
+            f"session state: {_field_status(fields.get('session_state_before'))} → {_field_status(fields.get('session_state_after'))}"
+        )
+    elif "case_id" in fields:
+        scope.append(
+            f"close publication: {_field_status(fields.get('publication_status'))}"
+        )
+        scope.append(f"cleanup: {_field_status(fields.get('cleanup'))}")
+        latest_summary = fields.get("latest_state_summary")
+        if latest_summary is not None:
+            attention.append(
+                f"現在の案件の要約: {latest_summary}。close 自体の成否とは別です。"
+            )
+    actions = result.next_actions
+    if not actions and classification == "error":
+        actions = ("診断ログと失敗した処理を確認してから再実行してください。",)
+    return ReportSummary(
+        terminal_outcome(classification),
+        tuple(scope),
+        tuple(dict.fromkeys(attention)),
+        actions,
+    )
+
+
+def observation_count_notice(count: int) -> str:
+    """受理した observation を、未判定の問題内容として要約する。"""
+    # 件数を workload の成否や解決判定へ読み替えない。
+    return (
+        f"新規 feedback observation: {count} 件。問題内容は実行記録を確認してください。"
+    )
+
+
+def join_result_lines(fields: dict[str, object]) -> list[str]:
+    """最外側の report に、実際の join 段階と回収結果を掲載する。"""
+    # null の commit と未実行を混同せず、処理の status を併記する。
+    names = (
+        "join_status",
+        "join_preconditions",
+        "join_diff_validation",
+        "merge_status",
+        "run_join_commit",
+        "post_join_hook",
+        "refactor_state_sync_status",
+        "refactor_state_sync_commit",
+        "workload_post_join",
+        "state_reset",
+        "state_after",
+        "cleanup",
+        "process_stop",
+        "merge_rollback",
+        "failure_stage",
+        "remaining_resources",
+        "conflict_resolution",
+    )
+    return [
+        "## Join と終了処理",
+        *(f"- {name}: {inline_code(_inline_text(fields.get(name)))}" for name in names),
+    ]
+
+
+def execution_notices(
+    logger: SubcommandLogger | None,
+    *,
+    saved_events: tuple[dict[str, Any], ...] = (),
+) -> tuple[str, ...]:
+    """掲載対象の実行で確認した warning と新規 observation を要約する。"""
+    # 復旧時は元の実行の event を渡し、現在の実行へ付け替えない。
+    events = (*saved_events, *(logger.event_records() if logger else ()))
+    notices = list(logger.warning_messages) if logger else []
+    notices.extend(
+        str(event["message"])
+        for event in events
+        if event.get("event") == "warning" and isinstance(event.get("message"), str)
+    )
+    count = len(
+        {
+            event.get("observation_id")
+            for event in events
+            if event.get("event") == "feedback_observation_accepted"
+        }
+    )
+    if count:
+        notices.append(observation_count_notice(count))
+    return tuple(dict.fromkeys(notices))
+
+
+def saved_execution_notices(log_path: Path, execution_id: str) -> tuple[str, ...]:
+    """固定済み report の所有実行から注意事項を取得し、再開実行と区別する。"""
+    # 現在の実行と一致しない場合も、指示原文ではなく元の診断 event だけを読む。
+    logger = current_subcommand_logger()
+    if (
+        logger is not None
+        and logger.execution_id == execution_id
+        and logger.path == log_path
+    ):
+        return execution_notices(logger)
+    try:
+        events = tuple(
+            json.loads(line)
+            for line in log_path.read_text(encoding="utf-8").splitlines()
+        )
+        if not all(isinstance(event, dict) for event in events):
+            raise ValueError("invalid execution log")
+    except (OSError, ValueError):
+        return ("元の実行ログを取得できないため、実行上の warning は未確認です。",)
+    return execution_notices(None, saved_events=events)
 
 
 def execution_record_markdown(
@@ -190,27 +382,33 @@ def _render_structured_value(value: Any) -> str:
         if kind == "text":
             fragments.append(current)
         elif isinstance(current, (_JsonObjectPairs, list)):
-            entries: list[tuple[Any, Any]]
+            entries: list[Any]
             if isinstance(current, _JsonObjectPairs):
                 is_object = True
                 entries = current.entries
                 opening, closing = "{", "}"
             else:
                 is_object = False
-                entries = list(enumerate(current))
+                entries = current
                 opening, closing = "[", "]"
             if not entries:
                 fragments.append("{}" if is_object else "[]")
                 continue
             fragments.append(opening + "\n")
             pending.append(("text", "\n" + "  " * depth + closing, 0))
-            for index in range(len(entries) - 1, -1, -1):
-                key, item = entries[index]
-                pending.append(("text", ",\n" if index < len(entries) - 1 else "", 0))
-                pending.append(("value", item, depth + 1))
-                prefix = "  " * (depth + 1)
+            # 配列を複製せず参照し、兄弟要素のインデントは一度だけ作る。
+            indent = "  " * (depth + 1)
+            last_index = len(entries) - 1
+            for index in range(last_index, -1, -1):
+                prefix = indent
                 if is_object:
+                    key, item = entries[index]
                     prefix += _display_json_string(str(key)) + ": "
+                else:
+                    item = entries[index]
+                if index < last_index:
+                    pending.append(("text", ",\n", 0))
+                pending.append(("value", item, depth + 1))
                 pending.append(("text", prefix, 0))
         elif isinstance(current, str):
             fragments.append(_display_json_string(current))
@@ -218,17 +416,18 @@ def _render_structured_value(value: Any) -> str:
             fragments.append(str(current))
         else:
             fragments.append(_DISPLAY_JSON_ENCODER.encode(current))
-    return "".join(fragments)
+    # surrogate の可視化は描画全体で一度だけ行い、キー・文字列の各行で反復しない。
+    return "".join(fragments).encode("utf-8", errors="backslashreplace").decode("utf-8")
 
 
 def _display_json_string(value: str) -> str:
     """引用符とバックスラッシュを区切りと区別して一度だけ表示する。"""
+    # 改行のないキー・文字列は、行分割と引用符の組み直しを省く。
+    if "\n" not in value:
+        return _DISPLAY_JSON_ENCODER.encode(value)
     # 改行で先に分割し、元のリテラル \\n を再解釈しない。
     segments = [
-        _DISPLAY_JSON_ENCODER.encode(segment)[1:-1]
-        .encode("utf-8", errors="backslashreplace")
-        .decode("utf-8")
-        for segment in value.split("\n")
+        _DISPLAY_JSON_ENCODER.encode(segment)[1:-1] for segment in value.split("\n")
     ]
     return '"' + "\n".join(segments) + '"'
 
@@ -243,13 +442,8 @@ def _code_fence(value: str) -> str:
 
 def _path_code_span(path: Path) -> str:
     """元の出力 path の backtick も保持して参照として示す。"""
-    # code span の delimiter を path に含まれる backtick より長くする。
-    value = safe_text(path.resolve(strict=False))
-    delimiter = "`" * max(
-        1, 1 + max((len(run) for run in re.findall(r"`+", value)), default=0)
-    )
-    padding = " " if value.startswith("`") or value.endswith("`") else ""
-    return f"{delimiter}{padding}{value}{padding}{delimiter}"
+    # report 内の他の一行表示と同じ区切りを使う。
+    return inline_code(safe_text(path.resolve(strict=False)))
 
 
 def oracle_edit_statuses(logger: SubcommandLogger) -> dict[str, object]:
@@ -289,19 +483,6 @@ def feedback_statuses(logger: SubcommandLogger) -> dict[str, object]:
     }
 
 
-def yaml_scalar(value: object) -> str:
-    """report の YAML scalar として安全に表現する。"""
-    if value is None:
-        return "null"
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        return str(value)
-    if isinstance(value, (list, dict)):
-        return json.dumps(_safe_json_value(value), ensure_ascii=False, sort_keys=True)
-    return json.dumps(safe_text(value), ensure_ascii=False)
-
-
 def execution_step_lines(
     logger: SubcommandLogger,
     classification: TerminalClassification,
@@ -316,15 +497,12 @@ def related_log_lines(logger: SubcommandLogger) -> list[str]:
 
 
 def _summary_body(
-    title: str,
     classification: TerminalClassification,
     result: TerminalResult,
     logger: SubcommandLogger,
 ) -> list[str]:
     """通常の機械的 invocation summary を要点先行で描画する。"""
     return [
-        f"# {title}",
-        _outcome_sentence(classification),
         "## 実行段階",
         *_step_lines(logger, classification),
         *_standard_tail(classification, result, logger),
@@ -350,7 +528,6 @@ def _standard_tail(
 
 
 def _doctor_body(
-    title: str,
     classification: TerminalClassification,
     result: TerminalResult,
     logger: SubcommandLogger,
@@ -364,8 +541,6 @@ def _doctor_body(
         for name, value in added.items()
     ] or ["- 補完した項目: なし"]
     return [
-        f"# {title}",
-        _outcome_sentence(classification),
         "## doctor preprocess",
         f"- 検査と修復: `{_stage_status(logger, classification)}`",
         f"- 共通実行環境: `{_field_status(fields.get('common_environment'))}`",
@@ -483,8 +658,6 @@ def _session_fork_body(
     )
     state_status = "completed" if state_after is not None else "未実行"
     return [
-        "# cmoc session fork report",
-        _outcome_sentence(classification),
         "## branch の作成と checkout",
         f"- home branch: `{_field_status(fields.get('home_branch'))}`",
         f"- session branch: `{_field_status(session_branch)}`",
@@ -503,24 +676,22 @@ def _session_fork_body(
     ]
 
 
-def _feedback_invocation_body(
+def feedback_invocation_lines(
     classification: TerminalClassification,
     result: TerminalResult,
     logger: SubcommandLogger,
     fields: dict[str, object],
 ) -> list[str]:
     """feedback publication と混同しない invocation summary を描画する。"""
-    # front matter と同じ確定済み publication 状態を本文にも使う。
+    # 実行情報と同じ確定済み publication 状態を本文にも使う。
     return [
-        "# cmoc feedback report invocation summary",
-        _outcome_sentence(classification),
         "この report は feedback publication または active state ではありません。",
         "## 実行段階",
         *_step_lines(logger, classification),
         "## 確定済みの部分結果",
-        f"- 正常 publication: `{fields['normal_publication_status']}`",
-        f"- incomplete 診断: `{fields['incomplete_diagnostic_status']}`",
-        f"- current pointer 更新: `{fields['current_pointer_update_status']}`",
+        f"- 正常 publication: `{_field_status(fields.get('normal_publication_status'))}`",
+        f"- incomplete 診断: `{_field_status(fields.get('incomplete_diagnostic_status'))}`",
+        f"- current pointer 更新: `{_field_status(fields.get('current_pointer_update_status'))}`",
         "## checkpoint と部分結果",
         f"- report cut: `{_field_status(fields.get('report_cut_id'))}`",
         "- normalization checkpoint: "
@@ -556,8 +727,6 @@ def _refactor_fork_body(
     """refactor 固有 report の未確定項目を fallback でも明示する。"""
     not_fixed = "not_fixed"
     return [
-        "# cmoc realization refactor fork report",
-        _outcome_sentence(classification),
         "## Current fork",
         f"- stage: {_field_status(fields.get('refactor_stage'))}",
         f"- completed cycles / current cycle / cycle counts: {not_fixed}",
@@ -571,12 +740,6 @@ def _refactor_fork_body(
         f"  - {not_fixed}",
         "## Unresolved findings",
         f"- {not_fixed}",
-        "## Refactor state",
-        f"- entries: {not_fixed}",
-        f"- investigation_required: {not_fixed}",
-        f"- not_investigated: {not_fixed}",
-        f"- no_findings: {not_fixed}",
-        f"- findings: {not_fixed}",
         "## Change summary",
         f"- {not_fixed}",
         "## Test timing",
@@ -642,8 +805,6 @@ def _session_join_body(
     state_before = _field_status(fields.get("session_state_before"))
     state_after = _field_status(fields.get("session_state_after"))
     return [
-        "# cmoc session join report",
-        _outcome_sentence(classification),
         "## 事前検証",
         *_step_lines(logger, classification),
         "## branch 切替と merge",
@@ -697,8 +858,6 @@ def _session_abandon_body(
     if cleanup is None and state_after == "abandoned":
         cleanup_status = "completed"
     return [
-        "# cmoc session abandon report",
-        _outcome_sentence(classification),
         "## 破棄対象",
         f"- session branch: `{_field_status(fields.get('session_branch'))}`",
         f"- home branch: `{_field_status(fields.get('home_branch'))}`",
@@ -728,8 +887,6 @@ def _oracle_edit_body(
 ) -> list[str]:
     """oracle edit の二つの agent call 状態を描画する。"""
     return [
-        "# cmoc oracle edit report",
-        _outcome_sentence(classification),
         "## agent call",
         f"- first agent call: `{_field_status(fields.get('first_agent_call_status'))}`",
         "- second agent call: "
@@ -746,10 +903,8 @@ def _apply_fork_body(
     logger: SubcommandLogger,
     fields: dict[str, object],
 ) -> list[str]:
-    """realization apply fork の run、差分、Codex、feedback を描画する。"""
+    """realization apply の run、差分、Codex、feedback を描画する。"""
     return [
-        "# cmoc realization apply fork report",
-        _outcome_sentence(classification),
         "## run",
         f"- run kind: `{_field_status(fields.get('run_kind'))}`",
         f"- session branch: `{_field_status(fields.get('session_branch'))}`",
@@ -782,8 +937,6 @@ def _run_join_body(
     """run join の差分検査、取り込み、hook、state、cleanup を描画する。"""
     run_join_commit = _detail_or_field(fields, result, "run_join_commit")
     return [
-        "# cmoc run join report",
-        _outcome_sentence(classification),
         "## run join",
         f"- run kind: `{_field_status(fields.get('run_kind'))}`",
         f"- session branch: `{_field_status(fields.get('session_branch'))}`",
@@ -816,8 +969,6 @@ def _run_abandon_body(
 ) -> list[str]:
     """run abandon の process、対象、state、cleanup を描画する。"""
     return [
-        "# cmoc run abandon report",
-        _outcome_sentence(classification),
         "## process と cleanup",
         f"- process stop: `{_field_status(fields.get('process_stop'))}`",
         f"- worktree: `{_field_status(fields.get('run_worktree'))}`",
@@ -837,7 +988,7 @@ def _run_abandon_body(
 def _detail_or_field(
     fields: dict[str, object], result: TerminalResult, name: str
 ) -> object:
-    """front matter context を優先し、terminal result の detail を補う。"""
+    """report context を優先し、terminal result の detail を補う。"""
     if name in fields:
         return fields[name]
     return next(
@@ -1002,15 +1153,6 @@ def _agent_call_status(logger: SubcommandLogger, purpose: str) -> str:
     return "not_started"
 
 
-def _outcome_sentence(classification: TerminalClassification) -> str:
-    """report 冒頭へ共通分類の要点を一文で置く。"""
-    return {
-        "natural_completion": "この invocation は自然完了しました。",
-        "user_interruption": "この invocation はユーザー中断要求により完了しました。",
-        "error": "この invocation はエラー終了しました。",
-    }[classification]
-
-
 def _inline_text(value: object) -> str:
     """任意の確定値を Markdown の一行へ安全に収める。"""
     if isinstance(value, Path):
@@ -1018,17 +1160,6 @@ def _inline_text(value: object) -> str:
     else:
         text = safe_text(value)
     return text.replace("`", "'").replace("\r", " ").replace("\n", " | ")
-
-
-def _safe_json_value(value: object) -> object:
-    """report の JSON/YAML 値から Unicode surrogate を除く。"""
-    if isinstance(value, str):
-        return safe_text(value)
-    if isinstance(value, list):
-        return [_safe_json_value(item) for item in value]
-    if isinstance(value, dict):
-        return {safe_text(key): _safe_json_value(item) for key, item in value.items()}
-    return value
 
 
 def _field_status(value: object) -> str:

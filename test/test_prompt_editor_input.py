@@ -17,8 +17,8 @@ from oracle.prompt_builder.editor_input import (
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor as runtime_editor_module
+import commons.runtime_logging as runtime_logging_module
 from cmoc_runtime import CmocError
-from commons.runtime_ids import is_common_id
 
 _SKELETON = "# skeleton\n\n{{original-prompt-here}}\n"
 
@@ -30,6 +30,19 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     handoff_start: Mock,
 ) -> None:
     """同じ本文 path を保存まで使い、別実行と旧データの変更を避ける。"""
+    # 採番の順序・永続化は test_runtime_ids.py、logger の ID 引き継ぎは
+    # test_oracle_edit_cli.py と test_oracle_investigation_cli.py に残す。
+    execution_ids = (
+        "exec_00000z_2000-01-01_00-00",
+        "exec_000010_2000-01-01_00-00",
+    )
+    issued_ids = iter(execution_ids)
+
+    def issue_execution_id(repository: Path, prefix: str) -> str:
+        assert (repository, prefix) == (tmp_path, "exec")
+        return next(issued_ids)
+
+    monkeypatch.setattr(runtime_logging_module, "new_id", issue_execution_id)
     old_recovery = tmp_path / ".cmoc/gu/editor_input/old_orig.md"
     old_log = tmp_path / ".cmoc/gu/log/editor_input/old_orig.md"
     for existing in (old_recovery, old_log):
@@ -72,9 +85,9 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
         assert input_path.read_text(encoding="utf-8") == original_prompt + "\n"
 
     assert opened == paths
-    execution_ids = [path.name.removesuffix("_orig.md") for path in paths]
-    assert all(is_common_id(value, "exec") for value in execution_ids)
-    assert execution_ids[0] < execution_ids[1]
+    assert [path.name for path in paths] == [
+        f"{value}_orig.md" for value in execution_ids
+    ]
     assert paths[0].read_text(encoding="utf-8") == "<!-- editor note -->\ninput-1\n"
     assert set(old_log.parent.iterdir()) == {old_log, *paths}
     assert list(old_recovery.parent.iterdir()) == [old_recovery]
@@ -90,13 +103,23 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
     assert handoff_lines == [expected_handoff_line] * 2
 
 
+@pytest.mark.parametrize(
+    "raw_input",
+    [
+        "  <!-- note -->\r\n確定した入力\r\n".encode("utf-8"),
+        b" \r\n<!-- note -->\n ",
+        b"",
+        " \t\r\n\u3000\u00a0\n".encode("utf-8"),
+    ],
+    ids=["text", "comment-only", "empty", "whitespace"],
+)
 def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     input_path: Path,
+    raw_input: bytes,
 ) -> None:
-    """最終読み取り後の再編集にかかわらず、保存と抽出に固定した原文を使う。"""
-    raw_input = "  <!-- note -->\r\n確定した入力\r\n".encode("utf-8")
+    """再編集にかかわらず、保存・抽出・空入力の判定には固定した原文を使う。"""
     input_path.write_bytes(raw_input)
     original_read_bytes = Path.read_bytes
     final_reads = 0
@@ -110,13 +133,20 @@ def test_editor_input_freezes_one_final_read_for_storage_and_prompt(
         return content
 
     monkeypatch.setattr(Path, "read_bytes", read_then_edit)
-    original_prompt = prompt_editor_input_module.collect_prompt_editor_input(
-        tmp_path, input_path
-    )
+    expected_prompt = raw_input.decode("utf-8").strip()
+    if expected_prompt:
+        original_prompt = prompt_editor_input_module.collect_prompt_editor_input(
+            tmp_path, input_path
+        )
+        assert original_prompt == expected_prompt
+    else:
+        with pytest.raises(
+            prompt_editor_input_module.EmptyPromptInput, match="プロンプトが空"
+        ):
+            prompt_editor_input_module.collect_prompt_editor_input(tmp_path, input_path)
 
     assert final_reads == 1
     assert original_read_bytes(input_path) == raw_input
-    assert original_prompt == raw_input.decode("utf-8").strip()
 
 
 @pytest.mark.parametrize(

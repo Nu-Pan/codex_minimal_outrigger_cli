@@ -33,10 +33,8 @@ def cmoc_session_fork_impl() -> None:
     """CLI runtime を通して session fork を実行する。"""
     run_cli_subcommand(
         _cmoc_session_fork_body,
-        pre_log_check=ensure_cmoc_ignored_in_exclude,
         command_name="session fork",
         command_argv=["cmoc", "session", "fork"],
-        use_work_root_runtime=True,
         total_steps=7,
     )
 
@@ -61,6 +59,7 @@ def _cmoc_session_fork_body() -> TerminalResult:
                 ["通常の local branch に checkout してから再実行してください。"],
                 f"current branch: {branch}",
             )
+        # lock 待ち中に index・ignore source が変わり得るため、clean 検査の直前で保証する。
         ensure_cmoc_ignored_in_exclude(work)
         require_clean_worktree(work)
         # {{work-root}}/oracle/doc/app_spec/sub_command/session_fork.md

@@ -9,6 +9,7 @@ import re
 from dataclasses import asdict
 from functools import lru_cache
 from importlib import resources
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
 
@@ -17,16 +18,17 @@ from jsonschema import Draft202012Validator
 from .runtime_feedback_state import (
     _corruption,
     _read_canonical_object,
+    _read_resolved_canonical_object,
     _require_exact_fields,
     _resolve_artifact_reference,
     _validate_artifact_reference,
     artifact_reference,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from .runtime_feedback_store import (
     canonical_json_bytes,
     sha256_bytes,
-    write_immutable_json,
 )
 from .runtime_ids import is_common_id, new_id
 from .runtime_logging import current_subcommand_logger
@@ -89,8 +91,7 @@ def save_run_artifact(
         "completion": "publication_completion.json",
     }[name]
     path = directory / relative
-    write_immutable_json(path, content)
-    reference = artifact_reference(repo, path)
+    reference = write_immutable_artifact(repo, path, content)
     manifest["run"][name] = reference
     write_report_cut_manifest(repo, manifest)
     return reference
@@ -105,7 +106,48 @@ def read_run_artifact(repo: Path, reference: dict[str, Any]) -> dict[str, Any]:
         expected_root=repo / ".cmoc/gu/feedback/work",
         description="feedback run artifact",
     )
-    return _read_canonical_object(path, "feedback run artifact", expected_sha256=digest)
+    return _read_resolved_canonical_object(
+        path, "feedback run artifact", expected_sha256=digest
+    )
+
+
+def unpublished_join_record(repo: Path, directory: Path) -> dict[str, Any] | None:
+    """終了済みの非 publication run を、再開対象の report cut と区別する。"""
+    # checkpoint は元の参照とともに残し、receipt が固定した manifest を検証する。
+    path = directory / "join_result.json"
+    if not path.exists() and not path.is_symlink():
+        return None
+    record = _read_canonical_object(path, "unpublished feedback join")
+    _require_exact_fields(
+        record,
+        {"schema_version", "publication", "identity", "session_commit", "manifest"},
+        path,
+        "unpublished feedback join",
+    )
+    if (
+        type(record["schema_version"]) is not int
+        or record["schema_version"] != 1
+        or record["publication"] is not False
+    ):
+        raise _corruption("非 publication join の version/result が不正です。", path)
+    manifest_path, digest = _resolve_artifact_reference(
+        repo,
+        record["manifest"],
+        expected_root=directory,
+        description="unpublished join manifest",
+    )
+    if manifest_path != directory / "manifest.json":
+        raise _corruption("非 publication join の manifest path が不正です。", path)
+    manifest = _read_resolved_canonical_object(
+        manifest_path, "unpublished join manifest", expected_sha256=digest
+    )
+    if (
+        record["identity"] != manifest.get("run", {}).get("identity")
+        or not isinstance(record["session_commit"], str)
+        or re.fullmatch(r"[0-9a-f]{40}", record["session_commit"]) is None
+    ):
+        raise _corruption("非 publication join の identity/commit が不正です。", path)
+    return record
 
 
 def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str, Any]]:
@@ -117,6 +159,15 @@ def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str,
     ):
         selected[reference["candidate_id"]] = reference
     return [selected[identity] for identity in sorted(selected)]
+
+
+@lru_cache(maxsize=1)
+def _remediation_schema_resource() -> Traversable:
+    """正本 schema の所在だけを共有し、本文の再読込は呼出側で行う。"""
+    # namespace 全体の列挙を避け、schema を所有する module を起点にする。
+    return resources.files("oracle.acp_builder.feedback.remediate_issue").joinpath(
+        "remediate_issue.json"
+    )
 
 
 @lru_cache(maxsize=4)
@@ -203,11 +254,7 @@ def validate_decision_basis(
             "feedback 循環診断の状態が一意な hash 順ではありません。", path
         )
     if compact:
-        schema_text = (
-            resources.files("oracle.acp_builder.feedback")
-            .joinpath("remediate_issue.json")
-            .read_text(encoding="utf-8")
-        )
+        schema_text = _remediation_schema_resource().read_text(encoding="utf-8")
         for field, definition in (
             ("verification", "verifications"),
             ("current_evidence", "current_evidence_optional"),
@@ -421,7 +468,7 @@ def validate_run_artifacts(
             continue
         if missing_wave_artifact:
             continue
-        wave = _read_canonical_object(
+        wave = _read_resolved_canonical_object(
             target, "feedback intake wave", expected_sha256=digest
         )
         _require_exact_fields(
@@ -456,7 +503,7 @@ def validate_run_artifacts(
             raise _corruption("feedback run artifact の path が不正です。", target)
         if allow_missing and not target.exists():
             continue
-        value = _read_canonical_object(
+        value = _read_resolved_canonical_object(
             target, f"feedback {name}", expected_sha256=digest
         )
         if value.get("report_cut_id") != manifest["report_cut_id"]:
@@ -531,11 +578,7 @@ def validate_remediation_checkpoint(checkpoint: dict[str, Any], path: Path) -> N
     if not isinstance(input_value["issue"], dict):
         raise _corruption("remediation issue input が不正です。", path)
     output = checkpoint["structured_output"]
-    schema_text = (
-        resources.files("oracle.acp_builder.feedback")
-        .joinpath("remediate_issue.json")
-        .read_text(encoding="utf-8")
-    )
+    schema_text = _remediation_schema_resource().read_text(encoding="utf-8")
     try:
         output_json = canonical_json_bytes(output)
     except (TypeError, ValueError) as exc:

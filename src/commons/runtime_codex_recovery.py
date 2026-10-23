@@ -12,7 +12,6 @@ from types import FrameType
 from typing import Literal
 
 from .runtime_errors import CmocError
-from .runtime_feedback_store import uuid7_prefixed
 from .runtime_logging import SubcommandLogger
 from .runtime_paths import console_timestamp
 
@@ -24,9 +23,16 @@ _CANCELLATION: ContextVar[threading.Event | None] = ContextVar(
 _CONDITION = threading.Condition()
 
 
+def _new_recovery_id() -> str:
+    # 中断制御だけを使う process では feedback store と schema 検査を読み込まない。
+    from .runtime_feedback_store import uuid7_prefixed
+
+    return uuid7_prefixed("rcv_")
+
+
 @dataclass
 class _RecoveryGroup:
-    recovery_id: str = field(default_factory=lambda: uuid7_prefixed("rcv_"))
+    recovery_id: str = field(default_factory=_new_recovery_id)
     done: bool = False
     error: BaseException | None = None
     outcome: CodexOutcome = "failed"
@@ -72,6 +78,29 @@ def check_recovery_interruption() -> None:
     cancellation = current_recovery_cancellation()
     if cancellation is not None and cancellation.is_set():
         raise KeyboardInterrupt
+
+
+@contextmanager
+def isolated_recovery_interruption() -> Iterator[threading.Event]:
+    """終了工程の確認に、新しい取消要求だけを受け付ける。"""
+    # 本命処理の停止要求や finalization の signal mask を確認へ持ち越さない。
+    cancellation = threading.Event()
+    token = _CANCELLATION.set(cancellation)
+    previous = signal.getsignal(signal.SIGINT)
+
+    def interrupt(_signum: int, _frame: FrameType | None) -> None:
+        # 受理と競合しても、この確認での後続 call を開始させない。
+        cancellation.set()
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGINT, interrupt)
+    previous_mask = signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT})
+    try:
+        yield cancellation
+    finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+        signal.signal(signal.SIGINT, previous)
+        _CANCELLATION.reset(token)
 
 
 @contextmanager

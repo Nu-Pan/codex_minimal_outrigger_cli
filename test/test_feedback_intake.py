@@ -8,6 +8,7 @@ import pytest
 
 import commons.runtime_feedback_intake as intake
 import commons.runtime_feedback_state as feedback_state
+import commons.runtime_feedback_store as feedback_store
 from commons.runtime_errors import CmocError
 from commons.runtime_feedback_intake import (
     capture_high_watermark,
@@ -24,6 +25,13 @@ from commons.runtime_feedback_store import (
 )
 
 
+@pytest.fixture(autouse=True)
+def skip_disk_sync(monkeypatch):
+    # 同期の順序・失敗は test_feedback_store.py、実同期との結合は collector・wave test
+    # に残す。ここでは receipt の登録・参照検証・cleanup を実行し、同期待ちだけを省く。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
+
+
 def _raw_input(root, identity, observed_at="2026-10-08T00:00:00Z"):
     # envelope schema は store・wave のテストが検査し、ここでは receipt の内容を扱う。
     path = observation_path(root, identity, observed_at)
@@ -36,18 +44,31 @@ def _raw_input(root, identity, observed_at="2026-10-08T00:00:00Z"):
     }
 
 
+def _seed_receipts(root, inputs):
+    ledger = {
+        "schema_version": 1,
+        "high_watermark": len(inputs),
+        "pending": {
+            path.stem: {"sequence": index, **reference}
+            for index, (path, reference) in enumerate(inputs, 1)
+        },
+    }
+    (feedback_root(root) / "intake.json").write_bytes(canonical_json_bytes(ledger))
+
+
 @pytest.fixture
 def pending_receipt(tmp_path):
     path, reference = _raw_input(tmp_path, "fbo_" + "1" * 32)
-    with observation_publication_lock(tmp_path):
-        record_observation_receipt(tmp_path, path)
+    # 破損拒否の前提だけを作る。実登録と境界の結合は正常ケースで検証する。
+    _seed_receipts(tmp_path, [(path, reference)])
     return tmp_path, path, reference
 
 
-def test_capture_reads_each_raw_once_and_preserves_receipt_order(
-    pending_receipt, monkeypatch
-):
-    root, received, _ = pending_receipt
+def test_capture_reads_each_raw_once_and_preserves_receipt_order(tmp_path, monkeypatch):
+    root = tmp_path
+    received, received_reference = _raw_input(root, "fbo_" + "1" * 32)
+    with observation_publication_lock(root):
+        record_observation_receipt(root, received, received_reference["sha256"])
     # raw 保存直後に停止した入力は、ID・日時が古くても今回の受理順序へ追加する。
     orphan, reference = _raw_input(root, "fbo_" + "0" * 32, "2026-10-07T00:00:00Z")
     reads = Counter()
@@ -108,30 +129,65 @@ def test_capture_rejects_corrupt_receipt_even_before_requested_boundary(
 
 
 def test_new_receipt_rejects_raw_outside_observation_store(tmp_path):
-    raw, _ = _raw_input(tmp_path, "fbo_" + "1" * 32)
+    raw, reference = _raw_input(tmp_path, "fbo_" + "1" * 32)
     outside = tmp_path / raw.name
     raw.rename(outside)
 
     with observation_publication_lock(tmp_path):
         with pytest.raises(CmocError, match="期待 root 外"):
-            record_observation_receipt(tmp_path, outside)
+            record_observation_receipt(tmp_path, outside, reference["sha256"])
     assert outside.is_file()
     assert not (feedback_root(tmp_path) / "intake.json").exists()
 
 
+def test_store_reuses_verified_hash_for_receipt_and_checks_replays(
+    tmp_path, monkeypatch
+):
+    identity = "fbo_" + "1" * 32
+    observation = {"observation_id": identity}
+    dates = ["2026-10-08T00:00:00Z", "2026-10-09T00:00:00Z"]
+    reads = []
+    original_read = Path.read_bytes
+
+    def counted_read(path):
+        if path.name == f"{identity}.json":
+            reads.append(path)
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", counted_read)
+    raw = feedback_store._store_observation(tmp_path, identity, dates[0], observation)
+    assert reads == []
+    ledger_path = feedback_root(tmp_path) / "intake.json"
+    ledger = ledger_path.read_bytes()
+    assert read_json_object(ledger_path)["pending"][identity] == {
+        "sequence": 1,
+        "path": raw.relative_to(tmp_path).as_posix(),
+        "sha256": sha256_bytes(canonical_json_bytes(observation)),
+    }
+
+    # 同日・別日の再送では既存内容を一回だけ照合し、台帳と境界を変えない。
+    for date in dates:
+        reads.clear()
+        assert (
+            feedback_store._store_observation(tmp_path, identity, date, observation)
+            == raw
+        )
+        assert reads == [raw]
+        assert ledger_path.read_bytes() == ledger
+
+    # 保存済み raw の破損は両再送経路で拒否し、receipt を上書きしない。
+    raw.write_bytes(canonical_json_bytes({"changed": True}))
+    for date in dates:
+        with pytest.raises(feedback_store.FeedbackRejected):
+            feedback_store._store_observation(tmp_path, identity, date, observation)
+        assert ledger_path.read_bytes() == ledger
+
+
 @pytest.fixture
 def cleanup_receipts(tmp_path):
-    # 登録・durability は既存の intake・store test に残し、cleanup の固定入力だけ作る。
+    # 登録は intake の正常ケースで検査し、ここでは cleanup 前の台帳だけを用意する。
     inputs = [_raw_input(tmp_path, "fbo_" + str(index) * 32) for index in (1, 2, 3)]
-    ledger = {
-        "schema_version": 1,
-        "high_watermark": 3,
-        "pending": {
-            path.stem: {"sequence": index, **reference}
-            for index, (path, reference) in enumerate(inputs, 1)
-        },
-    }
-    (feedback_root(tmp_path) / "intake.json").write_bytes(canonical_json_bytes(ledger))
+    _seed_receipts(tmp_path, inputs)
     return (
         tmp_path,
         [path for path, _ in inputs[:2]],

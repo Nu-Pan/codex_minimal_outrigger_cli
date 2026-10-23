@@ -7,6 +7,7 @@
 
 import json
 import subprocess
+from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -16,6 +17,7 @@ from _codex_support import codex_parameter, setup_codex_home, stub_codex_overrid
 
 import cmoc_runtime
 import commons.runtime_codex_exec as exec_module
+import commons.runtime_logging as logging_module
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec
 from commons.runtime_codex_profile import (
@@ -33,7 +35,7 @@ from config.cmoc_config import CmocConfig
 
 @pytest.fixture
 def codex_error_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """応答と起動失敗の検証では、Git context を解決済みとして扱う。"""
+    """応答と起動失敗に不要な Git 探索と永続採番を省く。"""
     # 実 Git の cwd・worktree 境界は test_codex_runtime_paths.py に残す。
     root = tmp_path / "repo"
     root.mkdir()
@@ -46,13 +48,25 @@ def codex_error_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
             agent_call_cwd=agent_call_cwd, work_root=root, repo_root=root
         ),
     )
+    # 採番の永続性は test_runtime_ids.py、実 logger との結合は
+    # test_runtime_cli.py と test_codex_runtime_paths.py で検証する。
+    ids = count()
+
+    def next_id(_root: Path, prefix: str) -> str:
+        """エラー検査に必要な異なる識別子を、DB 書き込みなしで供給する。"""
+        return f"{prefix}_{next(ids):06d}_2000-01-01_00-00"
+
+    monkeypatch.setattr(exec_module, "new_id", next_id)
+    monkeypatch.setattr(logging_module, "new_id", next_id)
     return root
 
 
 @pytest.mark.parametrize("line", ["null", "[]", "1"])
 def test_codex_jsonl_non_object_events_are_unexpected(line: str) -> None:
     """非 object event を parser 境界で安全に malformed error として扱う。"""
-    assert "malformed JSONL event" in codex_error_text(line, "")
+    assert f"malformed JSONL event (expected object): {line}" in codex_error_text(
+        line, ""
+    )
     assert extract_resume_token(line) is None
     assert classify_codex_call(line, 0) == "failed"
 
@@ -64,43 +78,26 @@ def test_codex_jsonl_invalid_lines_are_unexpected(stdout_text: str) -> None:
     assert "malformed JSONL event (invalid JSON):" in codex_error_text(stdout_text, "")
 
 
-@pytest.mark.parametrize(
-    ("stdout_text", "output_text", "expected_error"),
-    [
-        pytest.param(
-            "null\n",
-            None,
-            "malformed JSONL event (expected object): null",
-            id="non_object",
-        ),
-        pytest.param(
-            "not-json\n",
-            '{"ok": true}',
-            "malformed JSONL event (invalid JSON): not-json",
-            id="invalid_json_with_valid_output",
-        ),
-    ],
-)
 def test_codex_runtime_rejects_malformed_jsonl(
     codex_error_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
-    stdout_text: str,
-    output_text: str | None,
-    expected_error: str,
 ) -> None:
-    """不正 stdout は即時失敗させ、本文を console へ漏らさず log に残す。"""
+    """不正 stdout は正常な最終出力があっても失敗させ、本文を log だけに残す。"""
+    # JSONL の境界値は上の parser test に集約し、共通の失敗・保存経路を一度検査する。
     # 実 process の argv・stdin・出力取得は test_codex_runtime_exec.py に残す。
     root = codex_error_directory
+    stdout_text = "not-json\n"
+    output_text = '{"ok": true}'
+    expected_error = "malformed JSONL event (invalid JSON): not-json"
     stderr_text = "private stderr\n"
 
     def fake_codex(
         args: list[str], **_kwargs: object
     ) -> subprocess.CompletedProcess[str]:
-        """元の非 object・valid output の前提を process 起動なしで再現する。"""
-        if output_text is not None:
-            output = Path(args[args.index("--output-last-message") + 1])
-            output.write_text(output_text, encoding="utf-8")
+        """正常な出力 file を残し、malformed な stdout を返す。"""
+        output = Path(args[args.index("--output-last-message") + 1])
+        output.write_text(output_text, encoding="utf-8")
         return subprocess.CompletedProcess(args, 0, stdout_text, stderr_text)
 
     codex_call = Mock(side_effect=fake_codex)
@@ -124,8 +121,7 @@ def test_codex_runtime_rejects_malformed_jsonl(
     assert expected_error in event["error"]
     assert Path(event["stdout_log_path"]).read_text() == stdout_text
     assert Path(event["stderr_log_path"]).read_text() == stderr_text
-    if output_text is not None:
-        assert Path(event["output_path"]).read_text() == output_text
+    assert Path(event["output_path"]).read_text() == output_text
     assert expected_error not in exc_info.value.detail
     assert stderr_text not in exc_info.value.detail
     captured = capsys.readouterr()

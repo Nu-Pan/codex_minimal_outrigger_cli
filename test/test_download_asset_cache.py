@@ -11,7 +11,6 @@ import io
 import json
 import multiprocessing
 import shutil
-import ssl
 import subprocess
 import tarfile
 import urllib.error
@@ -19,18 +18,24 @@ import urllib.request
 from dataclasses import replace
 from importlib import resources
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.parse import unquote, urlsplit
 
 import pytest
 from _cli_support import runner, terminal_primary_report
-from _download_asset_support import download_response, process_obtain
-from _git_support import make_repo
+from _download_asset_support import (
+    download_response,
+    http_distribution_opener,
+    process_obtain,
+)
 
 import commons.runtime_cli as cli_module
 import commons.runtime_doctor as doctor_module
+import commons.runtime_document_search as search_module
 import commons.runtime_document_search_assets as assets
 import commons.runtime_document_search_setup as setup
 import commons.runtime_download_asset_cache as cache_module
+import commons.runtime_logging as logging_module
 from commons.runtime_document_search import SearchError
 from commons.runtime_download_asset_cache import DownloadAsset, DownloadAssetCache
 from commons.runtime_logging import (
@@ -44,14 +49,8 @@ from commons.runtime_results import TerminalResult
 from main import app
 
 
-@pytest.fixture(scope="module")
-def download_tls_context():
-    """代替 HTTP 通信のたびに、同じ標準 CA 証明書を読み込み直さない。"""
-    return ssl.create_default_context()
-
-
 @pytest.fixture
-def distribution(monkeypatch, download_tls_context):
+def distribution(monkeypatch):
     """HTTP transport の応答を置換し、urllib の redirect と通信記録を通す。"""
     bodies = {"/model": b"model bytes", "/dependency": b"dependency bytes"}
     requests = []
@@ -65,15 +64,7 @@ def distribution(monkeypatch, download_tls_context):
             request.full_url, bodies.get(path, b""), 200 if path in bodies else 503
         )
 
-    build_opener = urllib.request.build_opener
-
-    def opener(*handlers):
-        # handler と通信記録は取得ごとに作り、TLS context の準備だけを共有する。
-        return build_opener(
-            *handlers, urllib.request.HTTPSHandler(context=download_tls_context)
-        )
-
-    monkeypatch.setattr(urllib.request, "build_opener", opener)
+    monkeypatch.setattr(urllib.request, "build_opener", http_distribution_opener())
     monkeypatch.setattr(urllib.request.HTTPHandler, "http_open", transport)
     return "http://distribution.invalid", bodies, requests
 
@@ -91,13 +82,27 @@ def _asset(distribution, path="/model"):
 
 
 @pytest.fixture
-def asset_logger(tmp_path):
+def asset_logger(tmp_path, nonpersistent_execution_ids):
+    """資材と実行 ID の対応を保ち、採番 DB の初期化・同期書き込みを省く。"""
+    # 採番の永続性は test_runtime_ids.py、実 logger との結合は
+    # test_runtime_cli.py の test_subcommand_logger_keeps_one_file_per_execution に残す。
     logger = SubcommandLogger(tmp_path, "doctor")
     token = set_current_subcommand_logger(logger)
     try:
         yield logger
     finally:
         reset_current_subcommand_logger(token)
+
+
+@pytest.fixture
+def asset_events(asset_logger, monkeypatch):
+    """実ファイルと logger の状態を検査し、重複するディスク追記・同期を省く。"""
+    # 保存・report との結合は redirect と doctor の専用ケースに残す。
+    monkeypatch.setattr(logging_module, "append_log_record", lambda *_args: None)
+    # 実 fsync による取得・公開は並行取得・redirect・doctor のケースに残す。
+    # ここでも write・flush・rename と保存内容・完全性の照合は実行する。
+    monkeypatch.setattr(cache_module.os, "fsync", lambda _fd: None)
+    return asset_logger
 
 
 def _states(logger):
@@ -113,7 +118,7 @@ def _forbid_download(*_args, **_kwargs):
 
 
 @pytest.mark.parametrize("damage", ["content", "identity", "size", "version"])
-def test_only_invalid_asset_is_downloaded(tmp_path, distribution, damage, asset_logger):
+def test_only_invalid_asset_is_downloaded(tmp_path, distribution, damage, asset_events):
     """不適合な一資材だけ再取得し、他の資材と別版を保持する。"""
     first, second = _asset(distribution), _asset(distribution, "/dependency")
     cache = DownloadAssetCache(tmp_path / "cmoc-a")
@@ -137,7 +142,7 @@ def test_only_invalid_asset_is_downloaded(tmp_path, distribution, damage, asset_
     cache.obtain(second, tmp_path / "dependency-b")
     assert distribution[2] == ["/model", "/dependency", "/model"]
     assert (tmp_path / "model-b").read_bytes() == distribution[1]["/model"]
-    assert _states(asset_logger)[-1]["download_count"] == 0
+    assert _states(asset_events)[-1]["download_count"] == 0
     if damage == "version":
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
@@ -145,7 +150,7 @@ def test_only_invalid_asset_is_downloaded(tmp_path, distribution, damage, asset_
 
 
 def test_local_asset_and_cache_loss_are_independent(
-    tmp_path, distribution, monkeypatch, asset_logger
+    tmp_path, distribution, monkeypatch, asset_events
 ):
     """導入前の資材を優先し、cache の消失でコピー済み資材を破損させない。"""
     asset = _asset(distribution)
@@ -156,7 +161,7 @@ def test_local_asset_and_cache_loss_are_independent(
         patch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
         cache.obtain(asset, tmp_path / "prepared", local_sources=(existing,))
     assert not cache_module.asset_cache_directory().exists()
-    assert _states(asset_logger)[-1]["cache_status"] == "not_checked_local_available"
+    assert _states(asset_events)[-1]["cache_status"] == "not_checked_local_available"
     cache.obtain(asset, tmp_path / "copied")
     shutil.rmtree(cache_module.asset_cache_directory())
     assert (tmp_path / "copied").read_bytes() == existing.read_bytes()
@@ -165,7 +170,7 @@ def test_local_asset_and_cache_loss_are_independent(
 
 
 def test_publication_failure_preserves_existing_unreadable_cache(
-    tmp_path, distribution, monkeypatch, asset_logger
+    tmp_path, distribution, monkeypatch, asset_events
 ):
     """読み取り失敗で再取得しても、公開失敗によって既存保存物を消さない。"""
     asset = _asset(distribution)
@@ -193,7 +198,7 @@ def test_publication_failure_preserves_existing_unreadable_cache(
             cache.obtain(asset, tmp_path / "second")
     assert (entry / "receipt.json").read_bytes() == old_receipt
     assert (entry / "content").read_bytes() == distribution[1]["/model"]
-    assert _states(asset_logger)[-1]["cache_status"] == "read_failed"
+    assert _states(asset_events)[-1]["cache_status"] == "read_failed"
     with monkeypatch.context() as patch:
         patch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
         cache.obtain(asset, tmp_path / "recovered")
@@ -201,7 +206,7 @@ def test_publication_failure_preserves_existing_unreadable_cache(
 
 @pytest.mark.parametrize("failure", ["http", "integrity", "publication", "cancel"])
 def test_partial_failure_preserves_published_assets(
-    tmp_path, distribution, monkeypatch, asset_logger, failure
+    tmp_path, distribution, monkeypatch, asset_events, failure
 ):
     """失敗・取消前の公開済み資材を再取得せず、未完成の保存物を拒否する。"""
     first, second = _asset(distribution), _asset(distribution, "/dependency")
@@ -232,7 +237,7 @@ def test_partial_failure_preserves_published_assets(
         ):
             cache.obtain(second, tmp_path / "second")
     distribution[1]["/dependency"] = b"dependency bytes"
-    failed = _states(asset_logger)[-1]
+    failed = _states(asset_events)[-1]
     assert failed["status"] == "failed"
     assert failed["publication"] != "succeeded"
     assert not (cache_module.asset_cache_directory() / second.key).exists()
@@ -245,14 +250,14 @@ def test_partial_failure_preserves_published_assets(
 
 def test_parallel_installations_download_once(tmp_path, distribution, monkeypatch):
     """独立 process と異なる cmoc 配置でも、待機後に完成品を再利用する。"""
-    context = multiprocessing.get_context("spawn")
+    # lock は親子の obtain 内で別々に開き、interpreter の再起動だけを省く。
+    context = multiprocessing.get_context("fork")
     downloading = context.Event()
     waiting = context.Event()
     asset = _asset(distribution)
     receive, send = context.Pipe(duplex=False)
     destination = tmp_path / "child-result"
     process = context.Process(
-        # spawn がテスト全体と CLI を再 import しない、小さな worker を使う。
         target=process_obtain,
         args=(
             cache_module.asset_cache_directory(),
@@ -273,12 +278,24 @@ def test_parallel_installations_download_once(tmp_path, distribution, monkeypatc
             waiting.set()
             raise
 
+    def wait_for_publication(_seconds):
+        assert receive.poll(20), "child publication did not finish"
+
     try:
         process.start()
         send.close()
         assert downloading.wait(10), "child download did not start"
         # 親を二つ目の取得 process とし、実 lock の競合を観測する。
         monkeypatch.setattr(fcntl, "flock", observe_lock)
+        # poll 間隔を待たず、lock 解放後の子の通知で再試行する。
+        # 待機時間の計測と取消は test_document_search.py の専用 test に残す。
+        monkeypatch.setattr(
+            search_module,
+            "time",
+            SimpleNamespace(
+                monotonic=cache_module.time.monotonic, sleep=wait_for_publication
+            ),
+        )
         parent_destination = tmp_path / "parent-result"
         action = DownloadAssetCache(tmp_path / "cmoc-parent").obtain(
             asset, parent_destination
@@ -327,6 +344,8 @@ def test_redirect_failure_and_report_preserve_observed_counts(
     assert event["download_count"] == 1
     assert event["communications"][0]["status"] == "failed"
     saved = [json.loads(line) for line in asset_logger.path.read_text().splitlines()]
+    # 後続の通信更新で過去の snapshot が変わらず、保存内容と一致することを確認する。
+    assert saved == list(asset_logger.event_records())
     assert saved[-1]["execution_id"] == asset_logger.execution_id
     assert saved[-1]["cmoc_root"] == str(tmp_path)
     assert saved[-1]["component"] == "document_search"
@@ -340,10 +359,12 @@ def test_redirect_failure_and_report_preserve_observed_counts(
 
 
 def test_doctor_reports_asset_success_separately_from_validation_failure(
-    tmp_path, distribution, monkeypatch
+    committed_repository, distribution, monkeypatch, nonpersistent_execution_ids
 ):
     """取得・公開成功を保持し、検証失敗を報告して索引同期前に停止する。"""
-    root = make_repo(tmp_path)
+    # 前処理に必要な HEAD だけ用意し、使わない初期内容と git add は準備しない。
+    # 既存ファイルの Git 修復・commit は test_doctor_cli.py に残す。
+    root = committed_repository
     monkeypatch.chdir(root)
     # 資材準備から失敗 report までを通し、TCP 受付は test_feedback.py に残す。
     monkeypatch.setattr(
@@ -411,7 +432,8 @@ def test_node_preparation_uses_adopted_distribution_without_system_node(
     filename = adopted["filename"]
     directory = filename.removesuffix(".tar.xz")
     output = io.BytesIO()
-    with tarfile.open(fileobj=output, mode="w:xz") as archive:
+    # 内容照合・展開の検査用なので、fixture の圧縮には最小 preset を使う。
+    with tarfile.open(fileobj=output, mode="w:xz", preset=0) as archive:
         for name in ("bin/node", "lib/node_modules/npm/bin/npm-cli.js"):
             body = name.encode()
             info = tarfile.TarInfo(f"{directory}/{name}")
@@ -471,20 +493,15 @@ def _npm_fixture(base, distribution):
         "packages": packages,
     }
     (base / "package-lock.json").write_text(json.dumps(lock))
-    node = base / "node/bin/node"
-    node.parent.mkdir(parents=True)
-    node.symlink_to(shutil.which("node"))
-    npm = base / "node/lib/node_modules/npm"
-    npm.parent.mkdir(parents=True)
-    npm.symlink_to(Path(shutil.which("npm")).resolve().parent.parent)
     return (base / "package-lock.json").read_bytes()
 
 
 def test_npm_build_reuses_all_dependencies_without_network(
-    tmp_path, distribution, monkeypatch, asset_logger
+    tmp_path, distribution, monkeypatch, asset_events
 ):
     """取得資材を照合し、別配置の cold build を実 npm で通信なしに完了する。"""
-    if not shutil.which("node") or not shutil.which("npm"):
+    system_node, system_npm = shutil.which("node"), shutil.which("npm")
+    if not system_node or not system_npm:
         pytest.skip("Node and npm are required for offline asset preparation")
     # Node の socket 境界で通信を禁止し、試行もファイルから検出する。
     attempted = tmp_path / "network-attempts"
@@ -519,12 +536,19 @@ def test_npm_build_reuses_all_dependencies_without_network(
                 )
     assert (base / "package-lock.json").read_bytes() == original
     assert not (base / ".assets").exists()
-    assert all(event["source"] == "download" for event in _states(asset_logger))
+    assert all(event["source"] == "download" for event in _states(asset_events))
 
     # 同じ依存物の npm 構築は、全資材を再利用する別配置の cold build で一度通す。
     root = tmp_path / "cmoc-cached"
     base = root / "build"
     original = _npm_fixture(base, distribution)
+    # 実 Node/npm は、この cold build でだけ用意する。
+    node = base / "node/bin/node"
+    node.parent.mkdir(parents=True)
+    node.symlink_to(system_node)
+    npm = base / "node/lib/node_modules/npm"
+    npm.parent.mkdir(parents=True)
+    npm.symlink_to(Path(system_npm).resolve().parent.parent)
     monkeypatch.setattr(urllib.request.OpenerDirector, "open", _forbid_download)
     with (root / "lock").open("w") as descriptor:
         try:
@@ -537,16 +561,16 @@ def test_npm_build_reuses_all_dependencies_without_network(
     assert not (base / ".assets").exists()
     assert not attempted.exists()
     assert distribution[2] == ["/a.tgz", "/b.tgz"]
-    assert sum(event["download_count"] for event in _states(asset_logger)) == 2
-    assert all(event["source"] == "cache" for event in _states(asset_logger)[-2:])
+    assert sum(event["download_count"] for event in _states(asset_events)) == 2
+    assert all(event["source"] == "cache" for event in _states(asset_events)[-2:])
 
 
-@pytest.mark.parametrize("nested_version", ["1.0.0", "2.0.0"])
 def test_npm_uses_preexisting_cache_and_platform_pins(
-    tmp_path, distribution, monkeypatch, asset_logger, nested_version
+    tmp_path, distribution, monkeypatch, asset_events
 ):
     """同一資材を共有し、同名の別版と異なる OS/CPU の optional 資材を区別する。"""
     # platform の実取得と npm への受け渡しは、通信禁止の実 npm test で通す。
+    monkeypatch.setenv("PATH", "")
     monkeypatch.setattr(
         assets,
         "_npm_platform",
@@ -557,17 +581,17 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
     _npm_fixture(base, distribution)
     lock = json.loads((base / "package-lock.json").read_text())
     nested_name = "node_modules/asset-a/node_modules/asset-b"
-    # 実 lock 同様、同じ tarball を複数の依存階層から参照する。
+    versioned_name = "node_modules/asset-b/node_modules/asset-b"
+    # 同一 tarball の共有と同名別版の区別を、一つの lock で検査する。
     lock["packages"][nested_name] = dict(lock["packages"]["node_modules/asset-b"])
-    if nested_version != "1.0.0":
-        body = _tarball("asset-b", version=nested_version)
-        distribution[1]["/b-2.tgz"] = body
-        lock["packages"][nested_name] = {
-            "version": nested_version,
-            "resolved": distribution[0] + "/b-2.tgz",
-            "integrity": "sha512-"
-            + base64.b64encode(hashlib.sha512(body).digest()).decode(),
-        }
+    body = _tarball("asset-b", version="2.0.0")
+    distribution[1]["/b-2.tgz"] = body
+    lock["packages"][versioned_name] = {
+        "version": "2.0.0",
+        "resolved": distribution[0] + "/b-2.tgz",
+        "integrity": "sha512-"
+        + base64.b64encode(hashlib.sha512(body).digest()).decode(),
+    }
     seeded = set()
     for package in lock["packages"].values():
         if "integrity" in package and package["integrity"] not in seeded:
@@ -600,9 +624,12 @@ def test_npm_uses_preexisting_cache_and_platform_pins(
         )
         direct = local_lock["packages"]["node_modules/asset-b"]["resolved"]
         nested = local_lock["packages"][nested_name]["resolved"]
-        assert (direct == nested) == (nested_version == "1.0.0")
+        versioned = local_lock["packages"][versioned_name]["resolved"]
+        assert direct == nested
+        assert direct != versioned
+        assert Path(unquote(urlsplit(versioned).path)).read_bytes() == body
     # 一度検証・コピーした tarball の準備を、lock の参照数だけ繰り返さない。
-    states = _states(asset_logger)
+    states = _states(asset_events)
     assert len(states) == len(seeded)
     assert all(event["source"] == "local" for event in states)
     assert (base / "package-lock.json").read_bytes() == original

@@ -11,7 +11,7 @@ from oracle.other.struct_doc import render_sd_node_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_quota_availability_probe_parameter(
+def build_quota_availability_probe_request(
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """Codex CLI の quota 回復確認用 agent call を構築する。"""
@@ -28,7 +28,7 @@ def build_quota_availability_probe_parameter(
         # NOTE 利用可否の観測だけが目的なので調査用の policy は含めない
     )
     return AgentCallParameter(
-        agent_call_kind=build_quota_availability_probe_parameter.__name__,
+        agent_call_kind=build_quota_availability_probe_request.__name__,
         file_access_mode=FileAccessMode.READONLY,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,

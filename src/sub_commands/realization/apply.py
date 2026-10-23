@@ -1,9 +1,10 @@
-"""`cmoc realization apply fork` の差分追従 workload。"""
+"""`cmoc realization apply` の差分追従 workload。"""
 
+from dataclasses import replace
 from pathlib import Path
 
 from acp.builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_fork_launch_exec_parameter,
+    build_realization_apply_request,
 )
 from cmoc_runtime import (
     CmocError,
@@ -18,7 +19,10 @@ from cmoc_runtime import (
 )
 from commons.runtime_feedback import accepted_feedback_observations
 from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_primary_report_specs import TerminalClassification
+from commons.runtime_report_markdown import ReportSummary, terminal_outcome
 from commons.runtime_run import run_process_tracking, stop_tracked_codex_children
+from commons.runtime_run_join import join_editing_run, join_recovery_actions
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
     commit_work_unit,
@@ -26,34 +30,32 @@ from commons.runtime_run_lifecycle import (
     recover_started_run,
     rollback_work_unit,
     session_run_was_ready,
-    set_run_error_after_joinable_publication,
     set_run_state,
     start_editing_run,
     tree_changes,
     unexpected_agent_paths,
     worktree_change_paths,
 )
-from commons.runtime_run_report import write_fork_report
+from commons.runtime_run_report import write_workload_report
 
 
-def cmoc_realization_apply_fork_impl() -> None:
-    """CLI runtime を通して realization apply fork を実行する。"""
+def cmoc_realization_apply_impl() -> None:
+    """CLI runtime を通して realization apply を実行する。"""
     run_cli_subcommand(
-        _cmoc_realization_apply_fork_body,
-        command_name="realization apply fork",
-        command_argv=["cmoc", "realization", "apply", "fork"],
+        _cmoc_realization_apply_body,
+        command_name="realization apply",
+        command_argv=["cmoc", "realization", "apply"],
         total_steps=7,
     )
 
 
-def _cmoc_realization_apply_fork_body() -> TerminalResult:
+def _cmoc_realization_apply_body() -> TerminalResult:
     """realization apply agent を実行し、差分を joinable run として公開する。"""
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
     diff_base_commit: str | None = None
     agent_head: str | None = None
     agent_commit_check_active = False
-    joinable_publication_attempted = False
     cleanup_warnings: list[str] = []
     start_attempted = False
     start_was_ready = False
@@ -92,7 +94,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             context.run_worktree,
         ).stdout.strip()
         update_primary_report_fields(diff_base_commit=diff_base_commit)
-        parameter = build_realization_apply_fork_launch_exec_parameter(
+        parameter = build_realization_apply_request(
             diff_base_commit,
             context.run_fork_commit,
             context.run_worktree,
@@ -110,7 +112,7 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
                     parameter,
                     root=context.repo,
                     config=load_config(context.run_worktree),
-                    purpose="realization apply fork",
+                    purpose="realization apply",
                 )
             except BaseException:
                 _ensure_agent_did_not_commit(run_worktree, agent_head)
@@ -159,31 +161,19 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             if unexpected:
                 raise _unexpected_change_error(unexpected)
             agent_commit_check_active = False
-            commit_work_unit(
-                context.run_worktree,
-                "cmoc realization apply fork",
-                allow_empty=True,
-            )
-            changes = tree_changes(context.run_worktree, context.run_fork_commit)
-        start_subcommand_step(6, "run を joinable に更新", "publish joinable")
-        joinable_publication_attempted = True
-        set_run_state(context, "joinable")
+            # 停止後の HEAD・差分検査で無変更が確定したら、commit の準備と
+            # 履歴差分の再照会は不要。
+            # no-op join と比較始点の更新は既存の run lifecycle に任せる。
+            if post_agent_paths:
+                commit_work_unit(
+                    context.run_worktree,
+                    "cmoc realization apply",
+                )
+                changes = tree_changes(context.run_worktree, context.run_fork_commit)
+            else:
+                changes = []
         changed_paths = flattened_change_paths(changes)
-        update_primary_report_fields(
-            state_after="joinable",
-            changed_paths=changed_paths,
-        )
-        start_subcommand_step(7, "fork report を保存", "write fork report")
-        report = write_fork_report(
-            context,
-            "realization/apply/fork",
-            state_after="joinable",
-            completion_reason="completed",
-            changed_paths=changed_paths,
-            codex_returncode=codex_returncode,
-            extra_fields=_apply_report_fields(diff_base_commit),
-            body_lines=_cleanup_warning_lines(cleanup_warnings),
-        )
+        update_primary_report_fields(changed_paths=changed_paths)
     except BaseException as exc:
         if context is None:
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
@@ -210,10 +200,9 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             exc,
             cleanup_warnings,
             agent_head=agent_head if agent_commit_check_active else None,
-            joinable_publication_attempted=joinable_publication_attempted,
         )
         error = CmocError(
-            "realization apply fork は error state で停止しました。",
+            "realization apply は error state で停止しました。",
             [
                 "確定済み成果物を取り込む場合は `cmoc run join` を実行してください。",
                 "run 全体を破棄する場合は `cmoc run abandon` を実行してください。",
@@ -221,29 +210,56 @@ def _cmoc_realization_apply_fork_body() -> TerminalResult:
             f"report: {report}\nerror: {exc!r}",
             terminal_result=TerminalResult(
                 primary_report=report,
-                primary_report_role="realization apply fork report",
+                primary_report_role="realization apply report",
                 details=(("run_state", "error"),),
                 warnings=tuple(cleanup_warnings),
             ),
         )
         raise error from exc
-    return TerminalResult(
-        primary_report=report,
-        primary_report_role="realization apply fork report",
-        details=(("run_state", "joinable"),),
-        next_actions=(
-            "`cmoc run join` で確定済み成果物を取り込んでください。",
-            "`cmoc run abandon` で run 全体を破棄できます。",
-        ),
-        warnings=tuple(cleanup_warnings),
+    # 本命処理の失敗経路を抜けてから、自動 join の独立した失敗境界へ進む。
+    report_path: Path | None = None
+
+    def save_report(
+        state_after: str, classification: TerminalClassification, warnings: list[str]
+    ) -> Path:
+        nonlocal report_path
+        reason = "error" if classification == "error" else "completed"
+        actions = join_recovery_actions(context) if reason == "error" else ()
+        report_path = write_workload_report(
+            context,
+            "realization/apply",
+            summary=ReportSummary(
+                terminal_outcome(classification),
+                (
+                    f"run state: {state_after}",
+                    f"Codex 終了コード: {codex_returncode}",
+                    f"確定済みの変更 path: {len(changed_paths)} 件",
+                ),
+                tuple(warnings),
+                actions,
+            ),
+            state_after=state_after,
+            completion_reason=reason,
+            changed_paths=changed_paths,
+            codex_returncode=codex_returncode,
+            extra_fields=_apply_report_fields(diff_base_commit),
+            body_lines=_cleanup_warning_lines(warnings),
+            report_path=report_path,
+        )
+        return report_path
+
+    joined = join_editing_run(
+        context, automatic=True, warnings=cleanup_warnings, save_report=save_report
     )
+    return replace(joined, primary_report_role="realization apply report")
 
 
 def _unexpected_change_error(paths: list[str]) -> CmocError:
     """想定外の apply 差分を共通の利用者向け例外へ変換する。"""
+    # 想定外差分は本命処理の失敗として扱い、自動 join しない。
     return CmocError(
         "realization apply run に想定外差分があります。",
-        ["run report を確認し、run を join または abandon してください。"],
+        ["run report と差分を確認してください。"],
         "\n".join(paths),
     )
 
@@ -267,9 +283,7 @@ def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
         ) from reset_error
     raise CmocError(
         "realization apply agent が git commit を実行しました。",
-        [
-            "agent の commit を取り除いてから realization apply fork を再実行してください。"
-        ],
+        ["agent の commit を取り除いてから realization apply を再実行してください。"],
         f"before HEAD: {before_head}\nafter HEAD: {after_head}",
     )
 
@@ -282,7 +296,6 @@ def _record_error(
     cleanup_warnings: list[str] | None = None,
     *,
     agent_head: str | None = None,
-    joinable_publication_attempted: bool = False,
 ) -> Path:
     """apply run の差分を戻し、error state と fork report を保存する。"""
     cleanup_errors = list(cleanup_warnings or [])
@@ -311,17 +324,7 @@ def _record_error(
         set_run_state(context, "error")
         state_updated = True
     except BaseException as state_error:
-        if joinable_publication_attempted:
-            try:
-                set_run_error_after_joinable_publication(context)
-                state_updated = True
-            except BaseException as recovery_error:
-                cleanup_errors.append(
-                    f"state update failed: {state_error!r}; "
-                    f"joinable publication recovery failed: {recovery_error!r}"
-                )
-        else:
-            cleanup_errors.append(f"state update failed: {state_error!r}")
+        cleanup_errors.append(f"state update failed: {state_error!r}")
     if state_updated:
         try:
             update_primary_report_fields(state_after="error")
@@ -344,9 +347,20 @@ def _record_error(
         codex_returncode=codex_returncode,
         error=repr(exc),
     )
-    return write_fork_report(
+    return write_workload_report(
         context,
-        "realization/apply/fork",
+        "realization/apply",
+        summary=ReportSummary(
+            terminal_outcome("error"),
+            (
+                f"Codex 終了結果: {codex_returncode if codex_returncode is not None else '未確定'}",
+                f"確定済みの変更 path: {len(changed_paths) if changed_paths is not None else '未確認'}",
+            ),
+            (repr(exc), *cleanup_errors),
+            (
+                "run report と残存資源を確認し、`cmoc run join` または `cmoc run abandon` を実行してください。",
+            ),
+        ),
         state_after="error",
         completion_reason="error",
         changed_paths=changed_paths,

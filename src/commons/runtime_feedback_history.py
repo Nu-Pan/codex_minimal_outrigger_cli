@@ -82,8 +82,8 @@ def validate_history_record(record: dict[str, Any], path: Path) -> None:
         value = record[name]
         if (
             not isinstance(value, str)
-            or Path(value).is_absolute()
-            or ".." in Path(value).parts
+            or (relative := Path(value)).is_absolute()
+            or ".." in relative.parts
             or not value.startswith(".cmoc/gu/")
         ):
             raise _corruption(f"feedback history {name} が不正です。", path)
@@ -172,8 +172,8 @@ def validate_history_record(record: dict[str, Any], path: Path) -> None:
             or identity in consumed
             or not isinstance(entry["path"], str)
             or not entry["path"].startswith(".cmoc/gu/feedback/observation/v1/")
-            or ".." in Path(entry["path"]).parts
-            or Path(entry["path"]).stem != identity
+            or ".." in (relative := Path(entry["path"])).parts
+            or relative.stem != identity
             or not isinstance(entry["sha256"], str)
             or re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]) is None
             or not isinstance(entry["issue_ids"], list)
@@ -202,7 +202,7 @@ def load_history(repo: Path, references: object) -> list[dict[str, Any]]:
     from .runtime_feedback_state import (
         _corruption,
         _read_canonical_object,
-        _resolve_artifact_reference,
+        _require_exact_fields,
     )
 
     # Directory に存在するだけの staged history は採用しない。
@@ -215,18 +215,27 @@ def load_history(repo: Path, references: object) -> list[dict[str, Any]]:
     # repository だけを正規化し、history 以下の symlink 検査は各参照に残す。
     repo = repo.resolve(strict=False)
     history_root = feedback_root(repo) / "history"
+    relative_root = history_root.relative_to(repo)
     records = []
     paths: set[Path] = set()
     for reference in references:
-        target, digest = _resolve_artifact_reference(
-            repo,
+        reference = _require_exact_fields(
             reference,
-            expected_root=history_root,
-            description="feedback history",
+            {"path", "sha256"},
+            history_root,
+            "feedback history reference",
         )
-        if target in paths or target.parent != history_root:
+        raw_path = reference["path"]
+        # 直下の参照だけを許し、祖先の symlink 検査は読込側で一度行う。
+        if not isinstance(raw_path, str) or Path(raw_path).parent != relative_root:
+            raise _corruption("feedback history path が不正です。", history_root)
+        target = repo / raw_path
+        if target in paths:
             raise _corruption("feedback history path が重複または不正です。", target)
         paths.add(target)
+        digest = reference["sha256"]
+        if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+            raise _corruption("feedback history SHA256 が不正です。", target)
         record = _read_canonical_object(
             target, "feedback history", expected_sha256=digest
         )

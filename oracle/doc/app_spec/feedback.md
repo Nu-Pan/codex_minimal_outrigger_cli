@@ -63,7 +63,7 @@ issue の結果分類を確定するための再確認と必要な再修正・�
 
 封印後の自動 join では、封印済み結果を維持するためのマージ調整と検証を認める。調整の範囲、検証記録、publication の停止条件、および join 後の recovery は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」と「join 後の publication failure」を正本とする。report の publication は、join 後の状態に対して有効な結果だけで確定する。
 
-自動 join と必要な検証が成功した report は、`inconclusive` を含む場合も最新状態を publication する。未終了の案件は次回の report で active の記録から再確認する。手動 close の CLI と対象判定は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「CLI 契約」「対象と理由」を正本とする。
+自然完了し、自動 join と必要な検証が成功した report は、`inconclusive` を含む場合も最新状態を publication する。正常なユーザー中断では、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「publication を行わない feedback join」に従う。未終了の案件は次回の report で active の記録から再確認する。手動 close の CLI と対象判定は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_close.md` の「CLI 契約」「対象と理由」を正本とする。
 
 ## 正本仕様の分担
 
@@ -91,6 +91,8 @@ feedback の仕様は、責務ごとに次の正本へ分ける。同じ schema�
 - run、session、および TUI の完了結果
 - feedback remediation run 自身の agent、tool、validation、差分検査、commit、merge、publication、または orchestration の失敗
 
+primary report の重要事項確認は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従い、掲載済み本文から注意点を抽出する。新しい問題の探索・報告とは区別し、その抽出結果や確認未完了を observation・issue・remediation result へ変換しない。既存の allowlist rule による call の機械的診断は、この抽出結果とは区別する。
+
 realization 作業中に oracle の問題を自己申告できるのは、次の場合に限る。
 
 - oracle file 間に矛盾がある
@@ -107,6 +109,8 @@ accepted observation は、TUI の終了、ユーザー中断、または Codex 
 - AI-generated kaizen を後続の Codex CLI 呼び出しへ自動注入しない。kaizen の意味と非注入の理由は、`{{cmoc-root}}/oracle/doc/considered_alternative/memory_alternative.md` の「AI-generated kaizen を自動的に次回実行へ反映しない理由」を参照する。
 - 別 clone、別 machine、または Git remote への feedback data の複製は保証しない。
 - realization apply と realization refactor の既存の意味を変更しない。refactor state を feedback issue queue として流用しない。
+
+primary report の重要事項確認では、確認対象の report に実際に掲載された本文の全文を資料として渡す。上記の非注入規則に対するこの例外は、掲載済みの feedback 情報や改善案を後続作業の指示として採用するものではない。別の過去 report、active state、history、または改善案を追加投入する根拠にしてはならない。
 
 ## non-goal
 

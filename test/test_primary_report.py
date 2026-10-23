@@ -19,17 +19,126 @@ import json
 import threading
 import time
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 import typer
-import yaml
 from _cli_support import terminal_primary_report
+from _report_support import (
+    assert_report_layout,
+    original_report_input,
+    report_metadata,
+    report_section,
+    report_text,
+)
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_primary_report as primary_report_module
+import commons.runtime_primary_report_render as report_render_module
 from cmoc_runtime import CmocError, TerminalResult
+from commons.runtime_logging import SubcommandLogger
 from commons.runtime_primary_report import PrimaryReportSaveError
 from commons.runtime_primary_report_render import execution_record_markdown
+from commons.runtime_report_markdown import (
+    ReportSummary,
+    markdown_sections,
+    render_report_document,
+)
+
+
+@pytest.mark.parametrize("fence", ["```", "~~~~"])
+def test_report_sections_preserve_quoted_content_and_separate_generated_headings(fence):
+    """生成見出しだけを空行で区切り、複数行の原文と code block は変えない。"""
+    quoted = "# 原文の見出し\n## 原文の内部"
+    quoted_code = "```text\n## 原文のコード\n```"
+    fenced = [fence + "text", "# コード内の見出し", fence[:-1], fence]
+    lines = [
+        "# report",
+        "本文",
+        "## 詳細",
+        quoted,
+        quoted_code,
+        *fenced,
+        "####### 見出しではない本文",
+        "#空白のない本文",
+        "## 終了",
+        "- none",
+    ]
+
+    assert markdown_sections(lines) == (
+        "# report\n\n本文\n\n## 詳細\n\n"
+        + quoted
+        + "\n"
+        + quoted_code
+        + "\n"
+        + "\n".join(fenced)
+        + "\n####### 見出しではない本文\n#空白のない本文\n\n## 終了\n\n- none\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        '`cmoc` <target> & "value" | [label](file.md) *literal* \\path',
+        "``quoted`` と `trailing`",
+        "literal &#96; &lt;tag&gt; &amp; &#10;",
+        "# 入力の見出し\n- 項目\n```text\n本文\n```",
+    ],
+)
+def test_report_summary_preserves_symbols_in_source_and_markdown(source):
+    """抜粋・要約は元の記号を保ち、Markdown として読んでも本文を欠落させない。"""
+    rendered = render_report_document(
+        "cmoc oracle edit report",
+        {
+            "command": "cmoc oracle edit",
+            "execution_id": "test-execution",
+            "repo_root": "/repo/<target>&value",
+            "session_branch": "session",
+        },
+        ReportSummary("完了", (source,), (source,), (source,)),
+        "詳細結果なし",
+        original_input=source,
+        execution_record="## 実行記録\n\n実行なし",
+    )
+    assert_report_layout(rendered)
+    assert original_report_input(rendered) == source
+    excerpt = " ".join(source.split())
+    intro = rendered.split("## 実行結果", 1)[0]
+    for section in (
+        intro,
+        *(
+            report_section(rendered, name)
+            for name in ("実行結果", "要注意事項", "次の操作")
+        ),
+    ):
+        assert excerpt in section
+        assert excerpt in report_text(section)
+    assert "/repo/<target>&value" in intro
+    assert "/repo/<target>&value" in report_text(intro)
+
+
+def test_report_metadata_preserves_types_and_escaped_values():
+    """実行情報は値の型と境界を保ち、連続した report 間で本文を混ぜない。"""
+    values = ["", None, True, False, 0, 1.25, [], {}, "null", "日本語\n次の行", r"\n"]
+    for execution_id in ("first", "second", "first"):
+        fields = {
+            "command": "cmoc doctor",
+            "execution_id": execution_id,
+            "work_root": Path('/repo/"quoted"\\path'),
+            "values": values,
+            "nested": {"key\n\ud800": ["\udfff", {"value": "日本語"}]},
+        }
+        rendered = render_report_document("report", fields, ReportSummary("完了"), "")
+        rendered.encode("utf-8")
+        metadata = report_metadata(rendered)
+        assert metadata == {
+            **fields,
+            "work_root": str(fields["work_root"]),
+            "nested": {"key\n\\ud800": [r"\udfff", {"value": "日本語"}]},
+        }
+        assert [type(value) for value in metadata["values"]] == [
+            type(value) for value in values
+        ]
 
 
 @pytest.fixture
@@ -118,6 +227,7 @@ def test_formatted_primary_report_is_opened_once_before_terminal_event(
         assert logger is not None
         assert path.is_file()
         rendered = path.read_text(encoding="utf-8")
+        assert_report_layout(rendered)
         assert "# cmoc doctor report" in rendered
         assert '"message": "first\nsecond"' in rendered
         assert "### Codex 最終出力" in rendered
@@ -244,8 +354,8 @@ _EARLY_ERROR_REPORTS = [
         ("first_agent_call_status", "second_agent_call_status"),
     ),
     (
-        "realization apply fork",
-        "realization/apply/fork",
+        "realization apply",
+        "realization/apply",
         (
             "run_kind",
             "session_branch",
@@ -264,8 +374,8 @@ _EARLY_ERROR_REPORTS = [
         ),
     ),
     (
-        "realization refactor fork",
-        "realization/refactor/fork",
+        "realization refactor",
+        "realization/refactor",
         (
             "run_kind",
             "session_branch",
@@ -346,12 +456,12 @@ _EARLY_ERROR_SECTIONS = {
         "## rollback と残存資源",
     ),
     "oracle edit": ("## agent call", "first agent call", "second agent call"),
-    "realization apply fork": (
+    "realization apply": (
         "## run",
         "## 追従差分と Codex result",
         "## feedback observation",
     ),
-    "realization refactor fork": ("## Current fork", "## Refactor state"),
+    "realization refactor": ("## Current fork", "## Processing units"),
     "run join": (
         "## run join",
         "## 差分検査と merge / no-op join",
@@ -373,7 +483,7 @@ def test_early_error_saves_command_specific_primary_report(
     report_directory: str,
     required_fields: tuple[str, ...],
 ) -> None:
-    """処理開始前の error でも固有の保存先と必須 front matter を保つ。"""
+    """処理開始前の error でも固有の保存先と必須実行情報を保つ。"""
     # doctor preprocess から共通 report 保存へ到達する経路は、
     # test_runtime_cli.py の前処理失敗ケースで検証し、個別 report を重複生成しない。
     root = primary_report_directory
@@ -404,8 +514,9 @@ def test_early_error_saves_command_specific_primary_report(
     assert report_path.is_file()
     assert captured.err.count(str(report_path)) == 1
     rendered = report_path.read_text(encoding="utf-8")
-    front_matter = rendered.split("---", 2)[1]
-    metadata = yaml.safe_load(front_matter)
+    assert_report_layout(rendered)
+    information = report_section(rendered, "実行情報")
+    metadata = report_metadata(rendered)
     assert isinstance(metadata, dict)
     assert metadata["execution_id"] == report_path.stem
     assert metadata["subcommand_log_path"] == str(
@@ -413,11 +524,11 @@ def test_early_error_saves_command_specific_primary_report(
     )
     assert metadata["terminal_classification"] == "error"
     assert metadata["exit_code"] == 1
-    assert 'terminal_classification: "error"' in front_matter
-    assert "exit_code: 1" in front_matter
-    assert f'repo_root: "{root.resolve()}"' in front_matter
-    assert "理由:" not in front_matter
-    assert "詳細:" not in front_matter
+    assert 'terminal_classification: "error"' in information
+    assert "exit_code: 1" in information
+    assert f'repo_root: "{root.resolve()}"' in information
+    assert "理由:" not in information
+    assert "詳細:" not in information
     for field in required_fields:
         assert field in metadata
     assert "early failure" in rendered
@@ -426,22 +537,26 @@ def test_early_error_saves_command_specific_primary_report(
     for section in _EARLY_ERROR_SECTIONS[command_name]:
         assert section in rendered
     if command_name == "oracle edit":
-        assert 'first_agent_call_status: "not_started"' in front_matter
-        assert 'second_agent_call_status: "not_started"' in front_matter
-    if command_name == "realization refactor fork":
-        assert 'completion_reason: "error"' in front_matter
+        assert 'first_agent_call_status: "not_started"' in information
+        assert 'second_agent_call_status: "not_started"' in information
+        assert "入力未確定" in report_section(rendered, "元の指示")
+        assert "入力未確定" in rendered.split("## 元の指示", 1)[0]
+    if command_name == "realization refactor":
+        assert 'completion_reason: "error"' in information
         assert "## Current fork" in rendered
         assert "- processed targets: not_fixed" in rendered
         assert "## Unresolved targets" in rendered
         assert "- count: not_fixed" in rendered
         assert "## Unresolved findings" in rendered
         assert "## Processing units" in rendered
-        assert "## Refactor state" in rendered
+        assert "## Refactor state" not in rendered
+        assert "investigation_required" not in rendered
         assert "## Change summary" in rendered
-    if command_name == "realization apply fork":
-        assert 'completion_reason: "error"' in front_matter
-        assert "feedback_observation_count: 0" in front_matter
-        assert "feedback_observations: []" in front_matter
+    if command_name == "realization apply":
+        assert 'completion_reason: "error"' in information
+        assert "feedback_observation_count: 0" in information
+        assert "feedback_observations: []" in information
+        assert "commit 範囲: 未確定 → 未確定" in report_section(rendered, "元の指示")
     if command_name == "feedback report":
         assert "feedback publication または active state ではありません" in rendered
 
@@ -537,7 +652,12 @@ def test_primary_report_keeps_outputs_observations_and_artifact_paths(
         if supplied_report:
             saved = logger.path.with_suffix(".md")
             saved.write_text(
-                "# Workload report\n\n## 実行記録\n本文にも同じ見出しがある。\n"
+                render_report_document(
+                    "Workload report",
+                    {"command": "cmoc doctor", "execution_id": logger.execution_id},
+                    ReportSummary("完了"),
+                    "## 実行記録\n\n本文にも同じ見出しがある。\n",
+                )
             )
             return TerminalResult(
                 primary_report=saved, primary_report_role="test report"
@@ -559,6 +679,81 @@ def test_primary_report_keeps_outputs_observations_and_artifact_paths(
     assert "different workload" in report
 
 
+def test_saved_individual_report_uses_final_result_and_late_notices(
+    primary_report_directory,
+    capsys,
+):
+    root = primary_report_directory
+    warning = "late warning " + "details " * 80
+
+    def body():
+        logger = runtime_cli.current_subcommand_logger()
+        path = root / "individual.md"
+        content = primary_report_module.prepare_primary_report(
+            path,
+            "cmoc run join report",
+            {
+                "command": "cmoc run join",
+                "execution_id": logger.execution_id,
+                "subcommand_log_path": str(logger.path),
+                "terminal_classification": "natural_completion",
+                "exit_code": 0,
+                "state_after": "ready",
+            },
+            ReportSummary("完了", ("merge は確定済みです。",)),
+            "確定済みの merge を維持します。",
+        )
+        primary_report_module.write_reserved_primary_report(path, content)
+        logger.record_warning(warning, emit=False)
+        logger.event(
+            "feedback_observation_accepted",
+            observation_id="new-observation",
+            payload={"summary": "new issue", "workload_limitation": "external"},
+        )
+        raise CmocError(
+            "late failure",
+            ["inspect latest result"],
+            "late failure detail",
+            terminal_result=TerminalResult(
+                primary_report=path, primary_report_role="run join report"
+            ),
+        )
+
+    with pytest.raises(typer.Exit):
+        runtime_cli.run_cli_subcommand(
+            body, command_name="run join", doctor_preprocess=False
+        )
+    report = terminal_primary_report(capsys.readouterr().err).read_text()
+    assert_report_layout(report)
+    assert "失敗" in report_section(report, "実行結果")
+    assert "merge は確定済み" in report_section(report, "実行結果")
+    assert "late warning" in report_section(report, "要注意事項")
+    assert "新規 feedback observation: 1 件" in report_section(report, "要注意事項")
+    assert "late failure" in report_section(report, "要注意事項")
+    assert "inspect latest result" in report_section(report, "次の操作")
+    assert warning in report
+    assert "new issue" in report
+    assert report_metadata(report)["terminal_classification"] == "error"
+    assert report_metadata(report)["exit_code"] == 1
+
+
+def test_inherited_report_notices_belong_to_original_execution(
+    tmp_path, monkeypatch, nonpersistent_execution_ids
+):
+    # 警告の実行帰属は実ログで検査し、永続採番は logger・ID の専用 test に残す。
+    original = SubcommandLogger(tmp_path, "feedback report")
+    original.record_warning("original warning", emit=False)
+    resumed = SubcommandLogger(tmp_path, "feedback report")
+    resumed.record_warning("resumed warning", emit=False)
+    monkeypatch.setattr(
+        report_render_module, "current_subcommand_logger", lambda: resumed
+    )
+    notices = report_render_module.saved_execution_notices(
+        original.path, original.execution_id
+    )
+    assert notices == ("original warning",)
+
+
 def test_structured_output_display_preserves_json_values_and_hierarchy(
     tmp_path: Path,
 ) -> None:
@@ -575,6 +770,7 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
             "empty": "",
             "nothing": None,
             "items": [True, False, 0, 1.25, [], {}],
+            "groups": [[1], {"key": [2, 3]}, 4],
         }
     }
     output.write_text(json.dumps(source, ensure_ascii=True), encoding="utf-8")
@@ -612,6 +808,11 @@ def test_structured_output_display_preserves_json_values_and_hierarchy(
     assert (
         '"items": [\n      true,\n      false,\n      0,\n      1.25,\n      [],\n      {}\n    ]'
         in report
+    )
+    assert (
+        '"groups": [\n      [\n        1\n      ],\n'
+        '      {\n        "key": [\n          2,\n          3\n        ]\n      },\n'
+        "      4\n    ]" in report
     )
     assert '"literal": "\n"' not in report
     assert '"duplicate": "first",\n  "duplicate": "second"' in report
@@ -688,17 +889,17 @@ def test_refactor_fallback_records_user_interruption_reason(
 
     runtime_cli.run_cli_subcommand(
         interrupt_without_report,
-        command_name="realization refactor fork",
-        command_argv=("cmoc", "realization", "refactor", "fork"),
+        command_name="realization refactor",
+        command_argv=("cmoc", "realization", "refactor"),
         doctor_preprocess=False,
         interruptible=True,
     )
 
     captured = capsys.readouterr()
     report_path = terminal_primary_report(captured.out)
-    front_matter = report_path.read_text(encoding="utf-8").split("---", 2)[1]
-    assert 'terminal_classification: "user_interruption"' in front_matter
-    assert 'completion_reason: "user_interruption"' in front_matter
+    information = report_metadata(report_path.read_text(encoding="utf-8"))
+    assert information["terminal_classification"] == "user_interruption"
+    assert information["completion_reason"] == "user_interruption"
 
 
 def test_existing_primary_report_survives_update_failure(
@@ -723,26 +924,67 @@ def test_existing_primary_report_survives_update_failure(
 
 
 @pytest.mark.parametrize(
-    "invalid_kind", ["missing", "empty", "directory", "symlink", "dangling_symlink"]
+    "invalid_kind", ["empty", "directory", "symlink", "dangling_symlink", "unreadable"]
 )
-def test_invalid_report_path_becomes_internal_failure_without_path_display(
-    primary_report_directory: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
+def test_existing_invalid_report_is_rejected_without_rewrite(
+    tmp_path: Path,
     invalid_kind: str,
 ) -> None:
-    """保存を確認できない path を隠し、report 基盤の internal failure にする。"""
-    root = primary_report_directory
-    unsaved_path = root / "must-not-be-displayed.md"
+    """各 file 境界と読取失敗を拒否し、既存 report と link 先を保持する。"""
+    # missing path と共通の終了処理は次の結合 test に残し、ここでは保存 API を検証する。
+    # report 検査で終了するため、CLI context・実ログ・採番を準備しない。
+    root = tmp_path
+    report_path = root / "invalid-report.md"
     linked_target = root / "linked-report.md"
     if invalid_kind == "empty":
-        unsaved_path.touch()
+        report_path.touch()
     elif invalid_kind == "directory":
-        unsaved_path.mkdir()
+        report_path.mkdir()
     elif invalid_kind in {"symlink", "dangling_symlink"}:
         if invalid_kind == "symlink":
             linked_target.write_text("protected report\n", encoding="utf-8")
-        unsaved_path.symlink_to(linked_target)
+        report_path.symlink_to(linked_target)
+    else:
+        report_path.write_bytes(b"\xff")
+
+    logger = Mock(spec=SubcommandLogger)
+    with pytest.raises(PrimaryReportSaveError) as exc_info:
+        primary_report_module.ensure_primary_report(
+            root,
+            "doctor",
+            ("cmoc", "doctor"),
+            "natural_completion",
+            0,
+            TerminalResult(
+                primary_report=report_path,
+                primary_report_role="doctor execution report",
+            ),
+            logger,
+        )
+
+    assert exc_info.value.target_path == report_path
+    assert logger.mock_calls == []
+    if invalid_kind in {"symlink", "dangling_symlink"}:
+        assert report_path.is_symlink()
+        assert report_path.readlink() == linked_target
+        if invalid_kind == "symlink":
+            assert linked_target.read_text(encoding="utf-8") == "protected report\n"
+        else:
+            assert not linked_target.exists()
+    elif invalid_kind == "directory":
+        assert report_path.is_dir()
+    else:
+        assert report_path.read_bytes() == (b"" if invalid_kind == "empty" else b"\xff")
+
+
+def test_invalid_report_save_becomes_internal_failure_without_path_display(
+    primary_report_directory: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """保存 API の失敗を internal failure にし、未保存 path の表示・起動を防ぐ。"""
+    root = primary_report_directory
+    unsaved_path = root / "must-not-be-displayed.md"
     opened: list[Path] = []
     monkeypatch.setattr(runtime_cli, "open_primary_report_in_editor", opened.append)
 
@@ -766,10 +1008,7 @@ def test_invalid_report_path_becomes_internal_failure_without_path_display(
     assert "primary report の保存を確認できませんでした。" in captured.err
     assert str(unsaved_path) not in captured.err
     assert "- primary report (" not in captured.err
-    if invalid_kind == "missing":
-        assert not unsaved_path.exists()
-    elif invalid_kind == "symlink":
-        assert linked_target.read_text(encoding="utf-8") == "protected report\n"
+    assert not unsaved_path.exists()
     assert opened == []
     log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
     [log_path] = log_directory.glob("*.jsonl")
@@ -778,43 +1017,4 @@ def test_invalid_report_path_becomes_internal_failure_without_path_display(
     assert finished["event"] == "command_finished"
     assert finished["failure"]["classification"] == "internal_failure"
     assert finished["failure"]["target_path"] == str(unsaved_path.absolute())
-    assert finished["terminal_result"]["primary_report_path"] is None
-
-
-def test_unreadable_existing_report_becomes_internal_failure_without_path_display(
-    primary_report_directory: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """既存 report の読み取り失敗も report 基盤の internal failure にする。"""
-    root = primary_report_directory
-    unreadable_path = root / "unreadable-report.md"
-    unreadable_path.write_bytes(b"\xff")
-
-    def return_unreadable_report() -> TerminalResult:
-        return TerminalResult(
-            primary_report=unreadable_path,
-            primary_report_role="doctor execution report",
-        )
-
-    with pytest.raises(typer.Exit) as exc_info:
-        runtime_cli.run_cli_subcommand(
-            return_unreadable_report,
-            command_name="doctor",
-            command_argv=("cmoc", "doctor"),
-            doctor_preprocess=False,
-        )
-
-    captured = capsys.readouterr()
-    assert exc_info.value.exit_code == 1
-    assert "# 失敗: cmoc doctor" in captured.err
-    assert "primary report の保存を確認できませんでした。" in captured.err
-    assert str(unreadable_path) not in captured.err
-    assert "- primary report (" not in captured.err
-    log_directory = root / ".cmoc" / "gu" / "log" / "sub_command"
-    [log_path] = log_directory.glob("*.jsonl")
-    events = [json.loads(line) for line in log_path.read_text().splitlines()]
-    finished = events[-1]
-    assert finished["event"] == "command_finished"
-    assert finished["failure"]["classification"] == "internal_failure"
-    assert finished["failure"]["target_path"] == str(unreadable_path.absolute())
     assert finished["terminal_result"]["primary_report_path"] is None

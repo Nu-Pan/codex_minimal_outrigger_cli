@@ -1,4 +1,4 @@
-"""外部解決を宣言した inconclusive 案件を、agent call なしで終了する。"""
+"""外部解決を宣言した inconclusive 案件を終了し、初回 report を確認する。"""
 
 from pathlib import Path
 from typing import Any
@@ -17,7 +17,11 @@ from commons.runtime_feedback_close_state import (
     load_close_work,
 )
 from commons.runtime_feedback_history import history_artifact, state_summary
-from commons.runtime_feedback_render import publication_notice, render_current_cases
+from commons.runtime_feedback_render import (
+    feedback_report_summary,
+    publication_notice,
+    render_current_cases,
+)
 from commons.runtime_feedback_state import (
     ActiveState,
     current_generation_artifacts,
@@ -40,9 +44,17 @@ from commons.runtime_feedback_store import (
 )
 from commons.runtime_ids import is_common_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
-from commons.runtime_paths import sessions_dir
-from commons.runtime_primary_report import update_primary_report_fields
-from commons.runtime_primary_report_render import execution_record_markdown, yaml_scalar
+from commons.runtime_paths import reuse_root_queries, sessions_dir
+from commons.runtime_primary_report import (
+    review_primary_report,
+    update_primary_report_fields,
+    update_primary_report_input,
+)
+from commons.runtime_primary_report_render import (
+    execution_notices,
+    execution_record_markdown,
+)
+from commons.runtime_report_markdown import fenced_text, render_report_document
 from commons.runtime_state import SessionState, _read_state_data
 
 
@@ -86,7 +98,9 @@ def cmoc_feedback_close_parse_error_impl(arguments: list[str], detail: str) -> N
 
 
 def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
-    repository = repo_root()
+    # 開始時の両 root だけを共有し、doctor の修復・検証へ探索結果を持ち越さない。
+    with reuse_root_queries():
+        repository, current_worktree = repo_root(), work_root()
     update_primary_report_fields(
         case_id=case_id,
         human_reason=reason,
@@ -94,7 +108,9 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
         cleanup="not_started",
         next_operation="同じ案件 ID と保存済み理由で close を再実行してください。",
     )
-    run_doctor_preprocess(work_root())
+    if isinstance(reason, str) and reason.strip():
+        update_primary_report_input(reason)
+    run_doctor_preprocess(current_worktree)
     if (
         not is_common_id(case_id, "fbc")
         or not isinstance(reason, str)
@@ -132,7 +148,7 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
                         ],
                         str(close_work_path(repository)),
                     )
-                path, state = complete_close(repository, work)
+                path, state = complete_close(repository, work, state)
                 cleanup_completed = True
                 return _completed(
                     state,
@@ -196,7 +212,7 @@ def _close_body(case_id: str | None, reason: str | None) -> TerminalResult:
             fixed = _prepare_close(repository, state, target, reason)
             fixed_update = fixed
             write_immutable_json(close_work_path(repository), fixed)
-            path, state = complete_close(repository, fixed)
+            path, state = complete_close(repository, fixed, state)
             cleanup_completed = True
             return _completed(state, path, "closed", fixed, reason)
         except BaseException:
@@ -314,6 +330,7 @@ def _prepare_close(
         execution_id,
         logger.path,
     )
+    report = review_primary_report(repo, report, logger)
     return {
         "schema_version": 1,
         "operation_id": operation_id,
@@ -370,27 +387,40 @@ def _render_close_report(
         "result": "closed",
         "latest_state_summary": state_summary(issues),
         "remaining_cases": len(issues),
+        "history_path": str(history_path),
         "input_boundary": state.generation_manifest["input_boundary"]
         if state.generation_manifest
         else None,
     }
-    return "\n".join(
-        [
-            "---",
-            *[f"{key}: {yaml_scalar(value)}" for key, value in fields.items()],
-            "---",
-            "# cmoc feedback close",
-            "",
-            "人間の外部解決の宣言による更新です。agent の解決判定を生成せず、他の案件の再確認は行っていません。",
-            "",
-            f"History: `{history_path}`",
-            "",
-            publication_notice(str(log_path)),
-            "",
-            render_current_cases(issues),
-            "",
-            execution_record_markdown(current_subcommand_logger()),
-        ]
+    notices = execution_notices(current_subcommand_logger())
+    return render_report_document(
+        "cmoc feedback close",
+        fields,
+        feedback_report_summary(
+            issues,
+            "report 保存時点の記録です。close の対象・理由・更新後の generation を準備しました。",
+            scope=("人間による close の更新です。他の案件の再確認は行っていません。",),
+            publication_pending=True,
+            notices=notices,
+        ),
+        "\n".join(
+            [
+                "人間の外部解決の宣言による更新です。agent の解決判定を生成せず、他の案件の再確認は行っていません。",
+                "",
+                f"History: `{history_path}`",
+                "",
+                publication_notice(str(log_path)),
+                "",
+                render_current_cases(issues),
+                *(
+                    ["## warning と実行上の注意", "", fenced_text("\n".join(notices))]
+                    if notices
+                    else []
+                ),
+            ]
+        ),
+        original_input=reason,
+        execution_record=execution_record_markdown(current_subcommand_logger()),
     )
 
 
@@ -423,22 +453,36 @@ def _already_closed_report(
         else None,
         "latest_state_summary": state_summary(state.issues),
     }
-    content = "\n".join(
-        [
-            "---",
-            *[f"{key}: {yaml_scalar(value)}" for key, value in fields.items()],
-            "---",
-            "# cmoc feedback close: already_closed",
-            "",
-            "確定済みの終了記録を確認しました。今回の理由は元の理由・履歴を変更しません。state の publication は行っていません。",
-            "",
-            f"History: `{feedback_root(repo) / 'history' / (history['generation_id'] + '.json')}`",
-            "",
-            render_current_cases(state.issues),
-            "",
-            execution_record_markdown(logger),
-        ]
+    notices = execution_notices(logger)
+    content = render_report_document(
+        "cmoc feedback close: already_closed",
+        fields,
+        feedback_report_summary(
+            state.issues,
+            "完了（already_closed）。確定済みの close を確認しました。今回の state publication は行っていません。",
+            scope=(
+                "今回の理由による更新はありません。元の close の理由・日時・履歴を維持しています。",
+            ),
+            notices=notices,
+        ),
+        "\n".join(
+            [
+                "確定済みの終了記録を確認しました。今回の理由は元の理由・履歴を変更しません。state の publication は行っていません。",
+                "",
+                f"History: `{feedback_root(repo) / 'history' / (history['generation_id'] + '.json')}`",
+                "",
+                render_current_cases(state.issues),
+                *(
+                    ["## warning と実行上の注意", "", fenced_text("\n".join(notices))]
+                    if notices
+                    else []
+                ),
+            ]
+        ),
+        original_input=reason,
+        execution_record=execution_record_markdown(logger),
     )
+    content = review_primary_report(repo, content, logger)
     write_immutable_bytes(path, content.encode())
     return path
 

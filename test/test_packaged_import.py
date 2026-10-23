@@ -124,7 +124,7 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
             "from oracle.acp_builder.quota_probe import "
-            "build_quota_availability_probe_parameter as build_probe; "
+            "build_quota_availability_probe_request as build_probe; "
             "probe = build_probe(Path.cwd()); "
             "assert probe.agent_call_cwd == Path.cwd(); "
             "assert probe.prompt; "
@@ -155,6 +155,8 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
     # builder・正本 schema・editor input・handoff guide は packaged module の実経路を通す。
     # submission のない TCP 起動は省き、登録・取得・上書き・drain は
     # test_editor_input_handoff.py、editor と target の結合は test_prompt_editor_input.py に残す。
+    # 採番は test_runtime_ids.py、入力 path の ID は test_prompt_editor_input.py に残し、
+    # import 検査では確定済み execution ID を渡して SQLite の準備・同期書き込みを省く。
     result = _run_from_packaged_layout(
         target,
         (
@@ -169,9 +171,9 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
             "from acp.builder.oracle.edit.launch_exec import "
-            "build_oracle_edit_main_launch_exec_parameter as build_main; "
+            "build_oracle_edit_request as build_main; "
             "from oracle.acp_builder.oracle.investigation.launch_tui import "
-            "build_oracle_investigation_launch_tui_parameter as build_investigation; "
+            "build_oracle_investigation_request as build_investigation; "
             "investigation = build_investigation('investigate oracle'); "
             "assert investigation.file_access_mode.value == 'pure_oracle_read'; "
             "assert investigation.agent_call_cwd == Path.cwd(); "
@@ -179,7 +181,7 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "assert investigation.enable_editor_input_handoff_mcp is True; "
             "assert 'investigate oracle' in investigation.prompt; "
             "assert edit_module.__all__ == "
-            "['build_oracle_edit_main_launch_exec_parameter']; "
+            "['build_oracle_edit_request']; "
             "assert sorted(n for n in vars(edit_module) if not n.startswith('_')) "
             "== sorted(edit_module.__all__); "
             "listed = handoff_mcp._response({"
@@ -189,6 +191,8 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "assert listed['result']['tools'][1]['inputSchema']['required'] "
             "== ['target_id', 'goal', 'instructions', 'background', "
             "'decisions', 'open_questions', 'oracle_references']; "
+            "editor_input.current_execution_id = "
+            "lambda root: 'exec_000000_2000-01-01_00-00'; "
             "input_path = "
             "editor_input.reserve_prompt_editor_input(Path.cwd()); "
             "skeleton = build_main("

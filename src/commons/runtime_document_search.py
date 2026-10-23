@@ -365,10 +365,8 @@ def _checked_cached_vector(value: object) -> bytes:
     dimensions = SEARCH_MATERIALS.embedding_dimensions
     if not isinstance(value, bytes) or len(value) != 4 * dimensions:
         raise SearchError("SYNC_FAILED", "cached embedding is invalid")
-    numbers = struct.unpack("<" + "f" * dimensions, value)
-    if not all(math.isfinite(number) for number in numbers) or not any(
-        number != 0 for number in numbers
-    ):
+    numbers = struct.unpack(f"<{dimensions}f", value)
+    if not all(map(math.isfinite, numbers)) or not any(numbers):
         raise SearchError("SYNC_FAILED", "cached embedding is invalid")
     return value
 
@@ -418,24 +416,30 @@ class _EmbeddingCache:
         self.connection.close()
 
     def get(self, digest: str) -> tuple[bytes, str] | None:
-        # 不正な保存結果は公開・再利用せず、不足分として再生成する。
+        # 単一入力片も一覧取得と同じ検証を通して再利用する。
         row = self.connection.execute(
             "select embedding, producer_worktree from embeddings where excerpt_sha256 = ?",
             (digest,),
         ).fetchone()
         if row is None:
             return None
+        with self.connection:
+            return self._validated_entry(digest, row[0], row[1])
+
+    def _validated_entry(
+        self, digest: str, embedding: object, producer: object
+    ) -> tuple[bytes, str] | None:
+        # 呼出元の transaction で不正な保存結果を除き、不足分として再生成する。
         try:
-            vector = _checked_cached_vector(row[0])
-            if not isinstance(row[1], str) or len(row[1]) != 64:
+            vector = _checked_cached_vector(embedding)
+            if not isinstance(producer, str) or len(producer) != 64:
                 raise SearchError("SYNC_FAILED", "embedding producer is invalid")
         except SearchError:
-            with self.connection:
-                self.connection.execute(
-                    "delete from embeddings where excerpt_sha256 = ?", (digest,)
-                )
+            self.connection.execute(
+                "delete from embeddings where excerpt_sha256 = ?", (digest,)
+            )
             return None
-        return vector, row[1]
+        return vector, producer
 
     def save(self, digest: str, vector: bytes, producer: str) -> bool:
         # 先行処理の生成元は後続 worktree での保存・再利用によって置き換えない。
@@ -449,12 +453,14 @@ class _EmbeddingCache:
     def hashes(self, check: Callable[[], None]) -> set[str]:
         # ロック取得後の保存結果を確認し、待機前の不足判定を使わない。
         hashes = set()
-        for (digest,) in self.connection.execute(
-            "select excerpt_sha256 from embeddings"
-        ):
-            check()
-            if self.get(digest) is not None:
-                hashes.add(digest)
+        # 検証に必要な列を一度に読み、破損結果の削除も一括して確定する。
+        with self.connection:
+            for digest, embedding, producer in self.connection.execute(
+                "select excerpt_sha256, embedding, producer_worktree from embeddings"
+            ):
+                check()
+                if self._validated_entry(digest, embedding, producer) is not None:
+                    hashes.add(digest)
         return hashes
 
 
@@ -476,8 +482,10 @@ def _open_database(path: Path) -> sqlite3.Connection:
         if version.removeprefix("v") != SEARCH_MATERIALS.sqlite_vec_version:
             raise SearchError("MODEL_IDENTITY_MISMATCH", "sqlite-vec version mismatch")
         connection.execute("pragma foreign_keys = on")
+        # 初期 schema は一括確定し、テーブルごとのディスク同期を避ける。
         connection.executescript(
             """
+            begin;
             create table if not exists documents(
                 path text primary key, sha256 text not null,
                 complete integer not null check(complete in (0, 1))
@@ -499,6 +507,7 @@ def _open_database(path: Path) -> sqlite3.Connection:
             create table if not exists query_cache(
                 query text primary key, embedding blob not null
             );
+            commit;
             """
         )
         return connection
@@ -1032,7 +1041,8 @@ class DocumentSearch:
                     "chunk_count"
                 ] < max(1, resumes[path]):
                     raise SearchError("MODEL_FAILURE", "document partition is invalid")
-                current_source(path)
+                # 分割通知は入力時点の本文に対する進捗であり、保存は伴わない。
+                # 現在本文は chunk 保存直前と、索引の公開前に照合する。
                 checked_document(path)
                 return
             if kind == "document_complete":
@@ -1042,7 +1052,7 @@ class DocumentSearch:
                     or next_ordinal[path] == 0
                 ):
                     raise SearchError("MODEL_FAILURE", "document chunks are incomplete")
-                current_source(path)
+                # 完了状態は公開前の全体照合まで lock 内に留める。
                 with connection:
                     connection.execute(
                         "update documents set complete = 1 where path = ?", (path,)

@@ -153,22 +153,19 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                     return close_exit.exit_code
                 return 1
             # {{work-root}}/oracle/doc/app_spec/error_handling.md
-            # 未 raise の例外を render_error すると Call stack が概要だけになるため、
-            # parser error を cause にした report exception を raise してから描画する。
-            try:
-                raise CmocError(
-                    "CLI 引数解析に失敗しました。",
-                    [
-                        "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
-                    ],
-                    click_exception.format_message(),
-                ) from exc
-            except CmocError as report_error:
-                typer.echo(
-                    f"{render_error(report_error)}\n"
-                    f"- 終了コード: `{click_exception.exit_code}`",
-                    err=True,
-                )
+            # スタックを表示しない解析エラーは、描画用の例外を送出せず整形する。
+            report_error = CmocError(
+                "CLI 引数解析に失敗しました。",
+                [
+                    "コマンド名、サブコマンド名、option、引数を確認して再実行してください。"
+                ],
+                click_exception.format_message(),
+            )
+            typer.echo(
+                f"{render_error(report_error)}\n"
+                f"- 終了コード: `{click_exception.exit_code}`",
+                err=True,
+            )
             if standalone_mode:
                 raise SystemExit(click_exception.exit_code) from exc
             raise
@@ -185,15 +182,11 @@ app = typer.Typer(
 session_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 oracle_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 realization_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
-realization_apply_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
-realization_refactor_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 run_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 feedback_app = typer.Typer(no_args_is_help=True, rich_markup_mode=None)
 app.add_typer(session_app, name="session")
 app.add_typer(oracle_app, name="oracle")
 app.add_typer(realization_app, name="realization")
-realization_app.add_typer(realization_apply_app, name="apply")
-realization_app.add_typer(realization_refactor_app, name="refactor")
 app.add_typer(run_app, name="run")
 app.add_typer(feedback_app, name="feedback")
 
@@ -212,6 +205,14 @@ def tui() -> None:
     from sub_commands.tui import cmoc_tui_impl
 
     cmoc_tui_impl()
+
+
+@app.command()
+def resume(execution_id: str = typer.Argument(...)) -> None:
+    """終了済みの実行 ID が示す TUI workload の会話を再開する。"""
+    from sub_commands.resume import cmoc_resume_impl
+
+    cmoc_resume_impl(execution_id)
 
 
 @session_app.command("fork")
@@ -255,22 +256,22 @@ def oracle_investigation() -> None:
     cmoc_oracle_investigation_impl()
 
 
-@realization_apply_app.command("fork")
-def realization_apply_fork() -> None:
+@realization_app.command("apply")
+def realization_apply() -> None:
     """oracle 差分へ追従する realization run を開始する CLI 入口。"""
-    from sub_commands.realization.apply.fork import cmoc_realization_apply_fork_impl
+    from sub_commands.realization.apply import cmoc_realization_apply_impl
 
-    cmoc_realization_apply_fork_impl()
+    cmoc_realization_apply_impl()
 
 
-@realization_refactor_app.command("fork")
-def realization_refactor_fork() -> None:
+@realization_app.command("refactor")
+def realization_refactor() -> None:
     """full realization refactor cycle を開始する CLI 入口。"""
-    from sub_commands.realization.refactor.fork import (
-        cmoc_realization_refactor_fork_impl,
+    from sub_commands.realization.refactor import (
+        cmoc_realization_refactor_impl,
     )
 
-    cmoc_realization_refactor_fork_impl()
+    cmoc_realization_refactor_impl()
 
 
 @run_app.command("join")

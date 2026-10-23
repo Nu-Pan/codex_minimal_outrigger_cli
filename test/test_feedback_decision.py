@@ -3,22 +3,59 @@
 from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
+from cmoc_runtime import CmocError
+from commons.runtime_feedback_store import canonical_json_bytes, sha256_bytes
 from sub_commands.feedback import decision
 
 
-@pytest.mark.parametrize(
-    "changed",
-    [
-        ".cmoc/gt/config.json",
-        "nested/source.py",
-    ],
-)
-def test_basis_captures_tracked_configuration_and_nested_inputs(
-    tmp_path, monkeypatch, changed
+def test_issue_history_reads_latest_or_full_history_and_rechecks_artifacts(
+    tmp_path, monkeypatch
 ):
+    references = []
+    for identity, wave in (("issue", 10), ("other", 11), ("issue", 2)):
+        path = tmp_path / ".cmoc/gu/feedback/work/cut" / f"{identity}.{wave:08d}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        content = canonical_json_bytes({"wave": wave})
+        path.write_bytes(content)
+        references.append(
+            {
+                "candidate_id": identity,
+                "path": path.relative_to(tmp_path).as_posix(),
+                "sha256": sha256_bytes(content),
+            }
+        )
+    manifest = {"processing": {"remediation_checkpoints": references}}
+    read = Mock(wraps=decision.read_run_artifact)
+    monkeypatch.setattr(decision, "read_run_artifact", read)
+
+    for latest_only in (False, True):
+        assert (
+            decision.issue_history(
+                tmp_path, manifest, "missing", latest_only=latest_only
+            )
+            == []
+        )
+    read.assert_not_called()
+    assert decision.issue_history(tmp_path, manifest, "issue", latest_only=True) == [
+        (references[0], {"wave": 10})
+    ]
+    assert read.call_count == 1
+    assert decision.issue_history(tmp_path, manifest, "issue") == [
+        (references[2], {"wave": 2}),
+        (references[0], {"wave": 10}),
+    ]
+
+    # 同じ reference でも読み直し、最新 checkpoint の置換を見逃さない。
+    (tmp_path / references[0]["path"]).write_bytes(canonical_json_bytes({"wave": 99}))
+    with pytest.raises(CmocError, match="SHA256"):
+        decision.issue_history(tmp_path, manifest, "issue", latest_only=True)
+
+
+def test_basis_captures_tracked_configuration_and_nested_inputs(tmp_path, monkeypatch):
     paths = [
         "README.md",
         ".cmoc/gt/config.json",
@@ -49,10 +86,13 @@ def test_basis_captures_tracked_configuration_and_nested_inputs(
     )
     before = decision.worktree_inputs(tmp_path)
     assert set(before) == set(paths) - {".cmoc/gt/realization/refactor/state.json"}
-    (tmp_path / changed).write_text("new\n")
-    after = decision.worktree_inputs(tmp_path)
-    assert before["README.md"] == after["README.md"]
-    assert before[changed] != after[changed]
+    # 準備と初回収集を共有し、各入力の変更は一つずつ検出する。
+    for changed in (".cmoc/gt/config.json", "nested/source.py"):
+        (tmp_path / changed).write_text("new\n")
+        after = decision.worktree_inputs(tmp_path)
+        assert set(after) == set(before)
+        assert {name for name in before if before[name] != after[name]} == {changed}
+        before = after
 
 
 def test_basis_uses_git_modes_across_atomic_write_and_checkout(tmp_path, monkeypatch):
@@ -72,32 +112,7 @@ def test_basis_uses_git_modes_across_atomic_write_and_checkout(tmp_path, monkeyp
     assert decision.worktree_inputs(tmp_path) != before
 
 
-def test_basis_includes_nonmetadata_nested_git_named_inputs(tmp_path, monkeypatch):
-    path = tmp_path / "nested" / "fake" / ".git" / "kept.txt"
-    path.parent.mkdir(parents=True)
-    path.write_text("old\n")
-
-    def fake_run_git(args, *_args, **_kwargs):
-        if args[0] == "ls-files":
-            return SimpleNamespace(stdout="nested/fake/.git/kept.txt\0", returncode=0)
-        return SimpleNamespace(stdout="", returncode=1)
-
-    monkeypatch.setattr(decision, "run_git", fake_run_git)
-    monkeypatch.setattr(
-        decision,
-        "enumerate_oracle_and_realization_files",
-        lambda _root: ([], [path]),
-    )
-
-    before = decision.worktree_inputs(tmp_path)
-    path.write_text("new\n")
-    after = decision.worktree_inputs(tmp_path)
-
-    assert set(before) == {"nested/fake/.git/kept.txt"}
-    assert before != after
-
-
-def test_basis_excludes_verified_nested_git_metadata(tmp_path, monkeypatch):
+def test_basis_excludes_only_verified_nested_git_metadata(tmp_path, monkeypatch):
     metadata = tmp_path / "nested" / ".git" / "config"
     kept = tmp_path / "nested" / "fake" / ".git" / "kept.txt"
     metadata.parent.mkdir(parents=True)
@@ -122,7 +137,12 @@ def test_basis_excludes_verified_nested_git_metadata(tmp_path, monkeypatch):
         lambda _root: ([], [kept]),
     )
 
-    assert set(decision.worktree_inputs(tmp_path)) == {"nested/fake/.git/kept.txt"}
+    before = decision.worktree_inputs(tmp_path)
+    assert set(before) == {"nested/fake/.git/kept.txt"}
+    kept.write_text("changed\n")
+    after = decision.worktree_inputs(tmp_path)
+    assert set(after) == set(before)
+    assert before != after
 
 
 def test_basis_ignores_deleted_tracked_nested_git_named_input(tmp_path, monkeypatch):

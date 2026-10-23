@@ -4,6 +4,7 @@ import traceback
 from collections.abc import Callable, Sequence
 from contextlib import nullcontext
 from contextvars import ContextVar
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 
@@ -14,7 +15,13 @@ from .runtime_codex_recovery import (
     install_recovery_interruption,
 )
 from .runtime_doctor import run_doctor_preprocess
-from .runtime_errors import DEFAULT_NEXT_ACTION, CmocError, render_error, safe_text
+from .runtime_errors import (
+    DEFAULT_NEXT_ACTION,
+    CmocError,
+    TuiStartupCancelled,
+    render_error,
+    safe_text,
+)
 from .runtime_feedback import start_feedback_invocation, stop_feedback_invocation
 from .runtime_feedback_store import feedback_completion_counts
 from .runtime_logging import (
@@ -32,8 +39,10 @@ from .runtime_paths import (
 )
 from .runtime_primary_report import (
     PrimaryReportSaveError,
+    current_primary_report_fields,
     ensure_primary_report,
     open_primary_report_in_editor,
+    recover_primary_report_save_failure,
     reset_primary_report_context,
     start_primary_report_context,
 )
@@ -187,7 +196,7 @@ def run_cli_subcommand(
         # refactor の停止後は、report・終端表示中の再中断も同じ正常な終了へ集約する。
         with (
             defer_recovery_interruption(check_pending=False, propagate=False)
-            if name == "realization refactor fork" and _CURRENT_USER_INTERRUPTION.get()
+            if name == "realization refactor" and _CURRENT_USER_INTERRUPTION.get()
             else nullcontext()
         ):
             stop_feedback()
@@ -217,6 +226,22 @@ def run_cli_subcommand(
         terminal_state = "failed"
         raise typer.Exit(exc.returncode) from exc
     except KeyboardInterrupt as exc:
+        if tui_process and isinstance(exc, TuiStartupCancelled):
+            stop_feedback()
+            if logger is not None:
+                _finalize_subcommand(
+                    logger,
+                    name,
+                    argv,
+                    "error",
+                    TerminalResult(result="tui_startup_cancelled"),
+                    returncode=130,
+                    error=exc,
+                    emit_console=False,
+                )
+            _emit_progress("TUI の起動を取り消しました。初回作業は未完了です。")
+            terminal_state = "cancelled"
+            raise typer.Exit(130) from exc
         if interruptible and not impl_started:
             mark_current_subcommand_interrupted()
             stop_feedback()
@@ -364,7 +389,7 @@ def start_subcommand_step(
 def require_current_directory_is_work_root(root: Path) -> None:
     """cmoc が work root で実行されている前提を検査する。
 
-    根拠: {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md の
+    根拠: {{work-root}}/oracle/doc/app_spec/codex_common_rule.md の
     「cmoc process の cwd との関係」
     """
     if Path.cwd().resolve() == root.resolve():
@@ -413,6 +438,12 @@ def _finalize_subcommand(
             pass
 
     terminal_result = _error_terminal_result(specific_result, error)
+    recovery_actions = current_primary_report_fields().get("recovery_next_actions")
+    if error is not None and isinstance(recovery_actions, (tuple, list)):
+        terminal_result = replace(
+            terminal_result,
+            next_actions=tuple(str(action) for action in recovery_actions),
+        )
     try:
         terminal_result = ensure_primary_report(
             logger.root,
@@ -427,10 +458,11 @@ def _finalize_subcommand(
         # {{work-root}}/oracle/doc/app_spec/error_handling.md
         # report 保存失敗は元の終端結果に代わる internal failure とする。未保存の
         # role/path を持たない新しい result を使い、console へ候補 path を出さない。
+        recovered_result = recover_primary_report_save_failure()
         classification = "error"
         returncode = 1
         error = report_error
-        terminal_result = _error_terminal_result(TerminalResult(), report_error)
+        terminal_result = _error_terminal_result(recovered_result, report_error)
     if terminal_result.primary_report is not None:
         try:
             open_primary_report_in_editor(terminal_result.primary_report)

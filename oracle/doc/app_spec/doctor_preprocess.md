@@ -10,17 +10,19 @@ doctor preprocess は、各サブコマンドに共通する実行環境・設�
 
 各サブコマンド固有の branch、session/run state、git working tree・staging area の clean 状態などの操作条件は、この保証に含めず、doctor preprocess の正常終了後に個別仕様に従って検証する。任意の入力での推論成功や、検査後の文書・設定・環境変化に対する成功も保証しない。model provider の稼働・認証などの保証範囲は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「cmoc の責務境界」を維持する。
 
-検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・作業用配置先・コンポーネントまたは索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を作業用配置先の存在保証、必須の検索用コンポーネント、または索引同期へ適用してはならない。
+検証・必要な修復・索引同期を完了できない場合は、本命処理・agent 起動へ進まずエラー終了する。診断には、問題のある依存・設定・作業用配置先・コンポーネントまたは索引同期の処理、対象 root または path、理由、および実際に取り得る修復方法を含める。ただし、本書の「feedback MCP reporter/client の事前検証」が定める degraded warning と、`{{cmoc-root}}/oracle/doc/app_spec/windows_toast_notification.md` の「通知処理と Windows toast transport」が定める非必須機能の失敗契約は維持する。これらの例外を作業用配置先の存在保証、必須の検索用コンポーネント、または索引同期へ適用してはならない。
 
-realization refactor fork の開始前処理をユーザー中断で打ち切る場合は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「ユーザー中断」に従い、前処理の未完了だけを理由に fork をエラー終了させない。未検証の前処理を成功扱いにして本命処理へ進むのではなく、未完了の段階を記録して fork の中断処理へ移る。
+中断可能な workload の開始前処理をユーザー中断で打ち切る場合は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` または `{{cmoc-root}}/oracle/doc/app_spec/sub_command/feedback_report.md` の「ユーザー中断」に従い、前処理の未完了だけを理由にエラー終了させない。未検証の前処理を成功扱いにして本命処理へ進むのではなく、未完了の段階を記録して中断処理へ移る。
 
 ## 共通実行環境の検証
 
-cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利用できることを検証する。検索用コンポーネントとして準備する依存は、本書の「検索用コンポーネントの準備と検査」の経路で扱う。Python 環境の前提は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」に従う。Codex CLI に渡す環境については、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
+cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利用できることを検証する。検索用コンポーネントとして準備する依存は、本書の「検索用コンポーネントの準備と検査」の経路で扱う。Python 環境の前提は、`{{cmoc-root}}/oracle/doc/dev_rule/development_environment.md` の「Python 実行環境」「仮想環境の管理」に従う。Codex CLI に渡す環境については、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「環境変数 `$CODEX_HOME`」「preflight validation」に従う。
 
 cmoc 本体と doctor を起動するための Python 環境・起動用依存は事前導入の範囲とする。検索用 runtime・モデル等の未準備を、doctor 自身を起動できない理由にしてはならない。doctor は OS、Git、Codex CLI、または model provider の導入・修復を担わず、自動修復しない必須依存の不足も診断してエラーとする。
 
-保存設定は、検索設定に加え、既存の agent call 種別に必要な設定の存在・構造と provider 定義への参照整合性を検証する。設定の正確な構造は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig`、検証の意味と限界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「provider 定義」に従う。検索以外の既存設定を自動で置換せず、不備には手動修正を案内する。provider 固有の認証・疎通や Model の互換性検査を追加しない。
+保存設定は、検索設定に加え、`agent_calls` のキー集合、そこに置く共有設定と個別設定、および provider 定義の存在・構造と参照整合性を検証する。設定の正確な構造は、`{{cmoc-root}}/oracle/src/oracle/other/cmoc_config.py` の `CmocConfig` と `CmocConfigCodex`、検証の意味と限界は、`{{cmoc-root}}/oracle/doc/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「provider 定義」に従う。
+
+検索以外の保存済み設定を自動で補完・置換せず、不備には手動修正を案内する。設定ファイル自体がない場合の生成は、本書の「検索設定の検証と補完」に従う。provider 固有の認証・疎通や Model の互換性検査を追加しない。
 
 ## 実行手順
 
@@ -31,7 +33,7 @@ cmoc 本体と doctor を起動するための Python 環境・起動用依存�
 3. 本書の「管理領域の非追跡保証」に従って、それぞれの root の `.cmoc/gu` が git 追跡対象外であることを保証する
 4. `{{work-root}}/.agents` が git 追跡対象であることを保証する
 5. 処理に使用する各 work-root の `{{work-root}}/.cmoc/gt/config.json` に対し、入口に応じた検索設定の検証・補完、共通設定の検証、および追跡保証を行う
-6. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が git 追跡対象であり、schema を満たし、entry 集合と調査要求が同期済みであることを保証する
+6. `{{work-root}}/.cmoc/gt/realization/refactor/state.json` の追跡状態・schema を検証し、entry 集合を同期する。join とその復旧では、本書の「editing run の join での同期時点」を適用する
 7. 入口に応じた検索用コンポーネントの準備・検査を行う
 8. 本書の「検索索引の同期」に従って、処理対象の各 work-root の索引を同期する
 9. cmoc が管理する local stdio MCP reporter/client の利用可能性と collector との protocol compatibility を事前検証する
@@ -53,7 +55,7 @@ cmoc が固定の作業用配置先として案内するディレクトリを、
 
 ### 対象 root と成立時点
 
-処理に使用する各 `{{work-root}}` に適用する。agent call では、`{{cmoc-root}}/oracle/doc/app_spec/codex_exec_rule.md` の「agent call の path context」が定める cwd 起点の worktree root を対象とし、repo-root や cmoc-root で代替しない。管理領域のためだけに扱う cmoc-root や、処理に使用しない worktree へ適用範囲を広げない。
+処理に使用する各 `{{work-root}}` に適用する。agent call では、`{{cmoc-root}}/oracle/doc/app_spec/codex_common_rule.md` の「agent call の path context」が定める cwd 起点の worktree root を対象とし、repo-root や cmoc-root で代替しない。管理領域のためだけに扱う cmoc-root や、処理に使用しない worktree へ適用範囲を広げない。
 
 通常サブコマンドと明示的な `cmoc doctor` の双方で、不足する対象と必要な親ディレクトリを作成し、正常終了を判定する検証時点で対象のすべてがディレクトリとして存在することを保証する。作成・検証は、その work-root の前処理で対象を使うファイル列挙・索引同期より前に完了する。
 
@@ -159,22 +161,26 @@ doctor preprocess の後に作成する run worktree の初回同期にも、同
 - `{{work-root}}/.cmoc/gt/realization/refactor/state.json` が存在していること
 - 同 file が git 追跡対象であること
 - 同 file が `{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「保存先と JSON schema」を満たすこと
-- entry 集合と調査要求が、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」が定める同期完了時点の条件を満たすこと
+- entry 集合が、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」が定める同期完了時点の条件を満たすこと
 
 ### 修復
 
 - file が存在しなければ、空の object `{}` を保存する
 - file を git 追跡対象に追加する
-- 同文書の「entry 集合の同期」に従って entry 集合と調査要求を同期する
-- file が存在するものの schema を満たさない場合は、既存の調査履歴を破棄せずエラー終了する
+- 同文書の「entry 集合の同期」に従って entry 集合を同期する
+- file が存在するものの schema を満たさない場合は、既存の永続情報を破棄せずエラー終了する
 
-調査履歴と一巡内の調査実績の区別は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「調査履歴と巡回の区別」に従う。
+永続する選択順序のための情報と一巡内の調査実績の区別は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「永続情報と巡回管理の区別」に従う。
 
 ### editing run の join での同期時点
 
-active run の kind が `realization_refactor` または `feedback_report` の場合、merge 前の doctor preprocess では追跡状態と schema だけを検証し、entry 集合の同期を merge 後まで遅延する。これは、session branch と run branch が同じ refactor state を独立に更新して merge conflict を起こすことを避けるためである。
+本節は、全編集 workload の同一 invocation 内の自動 join、明示的な `cmoc run join`、および取り込み済み run の後処理の復旧に適用する。run 開始前や通常の doctor による同期は維持する。開始前の doctor preprocess が成功したことだけで、join 時点の検証を省略しない。
 
-merge 後は kind にかかわらず、競合解消の付随編集も反映した最終的な session tree に対して entry 集合を同期する。merge 進行中に doctor preprocess を再実行して同期・commit を割り込ませない。競合中の管理物の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」に従う。
+join 前の doctor preprocess は、refactor state の追跡状態と schema を検証し、entry 集合の同期を run 側での準備へ遅延する。`realization_apply` もこの対象に含む。session と run の独立した同期更新を避け、統合後の tree に一度集約するためである。
+
+同期・commit の順序、初回 no-op、および取り込み済みの復旧で再同期しない境界は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/editing_run.md` の「merge と post-join」「join の失敗と復旧」を正本とする。後処理だけを復旧する起動を通常同期の経路と誤認しないよう、同期に先立って対象 run の復旧情報を確認する。
+
+準備途中の停止による merge や未確定差分は、同文書の復旧処理で整合させてから追跡状態と schema を検証する。merge 進行中に doctor preprocess 全体を再実行して修復・同期・commit を割り込ませない。競合中の管理物の扱いは、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」に従う。
 
 ## feedback MCP reporter/client の事前検証
 

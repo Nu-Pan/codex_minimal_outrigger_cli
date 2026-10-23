@@ -76,16 +76,24 @@ def record_asset_event(kind: str, root: Path, **payload: object) -> None:
     # logger が実行 ID とサブコマンドを補う。本文や認証情報は記録しない。
     logger = current_subcommand_logger()
     if logger is not None:
-        logger.event(kind, cmoc_root=str(root), component="document_search", **payload)
+        # 保存する時だけ複製し、後続更新から in-memory 記録も独立させる。
+        logger.event(
+            kind,
+            cmoc_root=str(root),
+            component="document_search",
+            **copy.deepcopy(payload),
+        )
 
 
 class _AssetUse:
     def __init__(self, root: Path, asset: DownloadAsset, destination: Path) -> None:
         # 終端のない強制終了も requested/downloading のまま識別できるようにする。
         self.root = root
+        # 一回の取得で使う診断・lock・公開先には、同じ識別情報を共有する。
+        self.asset_key = asset.key
         self.fields: dict[str, object] = {
             "use_id": uuid.uuid4().hex,
-            "asset_key": asset.key,
+            "asset_key": self.asset_key,
             "asset": asdict(asset),
             "destination": str(destination),
             "download_count": 0,
@@ -97,10 +105,10 @@ class _AssetUse:
         self.event(status="requested")
 
     def event(self, **fields: object) -> None:
-        # snapshot は後続更新で過去の in-memory 記録が変わらないようにする。
+        # 取得・公開の制御状態は、logger の有無にかかわらず更新する。
         self.fields.update(fields)
         self.fields["communications"] = self.communications
-        record_asset_event("asset.state", self.root, **copy.deepcopy(self.fields))
+        record_asset_event("asset.state", self.root, **self.fields)
 
 
 class _CommunicationRecorder(urllib.request.BaseHandler):
@@ -225,7 +233,13 @@ class DownloadAssetCache:
                     return "reused"
             return self._obtain_cached(asset, destination, use)
         except BaseException as exc:
-            use.event(status="failed", failure=str(exc))
+            # 下位で記録済みの失敗は重ねず、後処理などで生じた別の失敗は残す。
+            failure = str(exc)
+            if (
+                use.fields.get("status") != "failed"
+                or use.fields.get("failure") != failure
+            ):
+                use.event(status="failed", failure=failure)
             raise
 
     def _obtain_cached(
@@ -240,7 +254,7 @@ class DownloadAssetCache:
         except (OSError, ValueError, SearchError):
             use.event(cache_status="write_failed")
             raise
-        entry = root / asset.key
+        entry = root / use.asset_key
         waited = False
 
         def record_wait(seconds: float) -> None:
@@ -250,10 +264,10 @@ class DownloadAssetCache:
 
         use.event(cache_path=str(entry), cache_status="pending", status="waiting")
         with _file_lock(
-            root / f"{asset.key}.lock", time.monotonic() + 7200, on_wait=record_wait
+            root / f"{use.asset_key}.lock", time.monotonic() + 7200, on_wait=record_wait
         ):
             # 公開切替前の異常終了で退避した既存資材を、先に戻して照合する。
-            backup = root / f".previous-{asset.key}"
+            backup = root / f".previous-{use.asset_key}"
             if not entry.exists() and backup.exists():
                 os.replace(backup, entry)
             status = _cache_status(entry, asset)
@@ -279,12 +293,12 @@ class DownloadAssetCache:
         self, root: Path, entry: Path, asset: DownloadAsset, use: _AssetUse
     ) -> None:
         # 同じ資材の lock 内で、前回の未公開 staging だけを回収する。
-        prefix = f".incomplete-{asset.key}-"
+        prefix = f".incomplete-{use.asset_key}-"
         for abandoned in root.glob(f"{prefix}*"):
             if abandoned.is_dir() and not abandoned.is_symlink():
                 shutil.rmtree(abandoned)
         staging = Path(tempfile.mkdtemp(prefix=prefix, dir=root))
-        backup = root / f".previous-{asset.key}"
+        backup = root / f".previous-{use.asset_key}"
         published = False
         try:
             _download(asset, staging / "content", use)

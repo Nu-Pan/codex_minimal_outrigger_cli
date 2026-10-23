@@ -33,7 +33,7 @@ Git ignore 判定の意味は次のとおりとする。
 
 単純な `git ls-files` の結果だけを列挙結果として使用してはならない。
 
-doctor preprocess と realization refactor の refactor state 同期は、この列挙結果を使用する。そのため、列挙の最適化によって、entry 集合、対象 path の正規化、file 内容の SHA256、または `investigation_required` の意味を変更してはならない。
+doctor preprocess と realization refactor の refactor state 同期は、この列挙結果を使用する。そのため、列挙の最適化によって、entry 集合や対象 path の正規化を変更してはならない。同期で保持・更新する情報は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「entry 集合の同期」に従う。
 
 列挙順、repository context の検出手段、一括判定に使用する具体的な command または API、および call-local cache の内部構造は定義しない。
 
@@ -92,7 +92,7 @@ repository ごとの `git check-ignore --stdin -z` は許容する実現方法�
 - Git ignore に一致しない untracked file を保持する
 - outer repository と nested repository に異なる ignore 規則を適用する
 - root と nested の `.gitignore`、repository-local exclude、および global exclude を反映する
-- regular file の列挙結果、対象 path の正規化、file 内容の SHA256、`investigation_required` の意味、および refactor state の entry 集合を full glob の基準結果と一致させ、symlink 対応による不要な変更を生じさせない
+- regular file の列挙結果、対象 path の正規化、および refactor state の entry 集合を full glob の基準結果と一致させ、symlink 対応による不要な変更を生じさせない
 
 性能回帰は、次の回数を観測して検出する。
 

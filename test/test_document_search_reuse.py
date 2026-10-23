@@ -1,7 +1,9 @@
 """文書入力片の repository 内再利用と、生成・再利用元の診断を検証する。"""
 
 import json
+import shutil
 import sqlite3
+import struct
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
@@ -18,10 +20,26 @@ from test_document_search import (
 from commons.runtime_document_search import (
     DocumentSearch,
     SearchError,
+    _EmbeddingCache,
 )
 from commons.runtime_document_search_observation import SearchObservation
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_git import remove_worktree
+
+
+@pytest.fixture(scope="module")
+def _committed_document_seed(tmp_path_factory):
+    """worktree 再利用の前提となる同じ文書と履歴を一度だけ用意する。"""
+    return _repo_with_docs(
+        tmp_path_factory.mktemp("document-repository-seed"), committed=True
+    )
+
+
+@pytest.fixture
+def committed_document_repository(tmp_path, _committed_document_seed):
+    """文書・index・refs を独立させた実 Git repository を各 test に渡す。"""
+    # 共有するのは準備だけとし、cache・linked worktree・可変な Git metadata は共有しない。
+    return shutil.copytree(_committed_document_seed, tmp_path / "repo")
 
 
 def _event_sink(events):
@@ -71,11 +89,72 @@ def _worktree(repository, path, branch=None):
     return path
 
 
+def test_cache_lookup_and_listing_discard_corrupt_entries(
+    tmp_path, unsynced_search_storage
+):
+    """単一取得と一覧取得で、破損結果を除外し前後の正常な結果を保持する。"""
+    # transaction と別接続からの確認は残し、電源断時の耐久性は判定しない。
+    vector = struct.pack("<f", 1.0) + bytes(
+        4 * (SEARCH_MATERIALS.embedding_dimensions - 1)
+    )
+    producer = "a" * 64
+    entries = [
+        (vector, producer),
+        ("not a blob", producer),
+        (b"short", producer),
+        (struct.pack("<f", float("nan")) + vector[4:], producer),
+        (struct.pack("<f", float("inf")) + vector[4:], producer),
+        (bytes(len(vector)), producer),
+        (vector, "short"),
+        (vector, b"a" * 64),
+        (vector, "b" * 64),
+    ]
+    rows = [(f"{index:064x}", *entry) for index, entry in enumerate(entries)]
+    valid = {rows[0][0], rows[-1][0]}
+    path = tmp_path / "cache.sqlite3"
+    with closing(_EmbeddingCache(path)) as cache:
+        # 同じ破損条件を両入口へ渡し、一覧の途中削除で後続を見落とす回帰も検出する。
+        for lookup in ("single", "listing"):
+            with cache.connection:
+                cache.connection.executemany(
+                    "insert or replace into embeddings values(?, ?, ?)", rows
+                )
+            if lookup == "single":
+                found = {digest for digest, *_ in rows if cache.get(digest) is not None}
+            else:
+                # 破損行の削除後に取消が来ても transaction を残さず、再検査できる。
+                checked = 0
+
+                def cancel_after_invalid_entry():
+                    nonlocal checked
+                    checked += 1
+                    if checked == 3:
+                        raise SearchError("CANCELLED", "stop during cache validation")
+
+                with pytest.raises(SearchError) as failure:
+                    cache.hashes(cancel_after_invalid_entry)
+                assert failure.value.code == "CANCELLED"
+                assert not cache.connection.in_transaction
+                found = cache.hashes(lambda: None)
+            assert found == valid
+            # 呼出元 connection の見かけだけでなく、削除が確定済みであることも確認する。
+            with closing(sqlite3.connect(path)) as observer:
+                assert {
+                    digest
+                    for (digest,) in observer.execute(
+                        "select excerpt_sha256 from embeddings"
+                    )
+                } == valid
+            assert cache.get(rows[0][0]) == (vector, producer)
+            assert cache.get(rows[-1][0]) == (vector, "b" * 64)
+            assert cache.get("missing") is None
+
+
 def test_new_run_uses_stale_repository_cache_and_current_locations(
-    tmp_path, cache_search
+    tmp_path, cache_search, committed_document_repository
 ):
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path, committed=True)
+    root = committed_document_repository
     original = (root / "oracle/doc/allowed.md").read_text()
     events = []
     with closing(create(root)) as search:
@@ -88,18 +167,18 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
     (run / "oracle/doc/allowed.md").rename(run / "oracle/doc/moved.md")
     (run / "oracle/doc/copy.md").write_text(original)
     with closing(create(run, events=events)) as search:
-        result = search.synchronize()
-        assert result.chunk_count == result.reused_embeddings == 2
+        # 検索の初回同期で再利用と現在位置を共に検査し、直前の明示同期を重ねない。
+        hits = search.search("原文")["hits"]
+        assert len(hits) == 2
+        assert search.sync_progress["reused_embeddings"] == 2
         assert search.sync_progress["generated_embeddings"] == 0
         assert search.sync_progress["reused_other_worktree"] == 2
+        assert search.sync_progress["reused_same_worktree"] == 0
         assert inputs() == [original]
-        assert {hit["path"] for hit in search.search("原文")["hits"]} == {
+        assert {hit["path"] for hit in hits} == {
             "oracle/doc/moved.md",
             "oracle/doc/copy.md",
         }
-        # 直前の検索が再同期も行うので、その再利用元を検査する。
-        assert search.sync_progress["reused_other_worktree"] == 2
-        assert search.sync_progress["reused_same_worktree"] == 0
     finished = [
         event for event in events if event["event"] == "document_search_sync_finished"
     ]
@@ -111,13 +190,14 @@ def test_new_run_uses_stale_repository_cache_and_current_locations(
 
 
 def test_parallel_worktrees_generate_one_embedding_in_total(
-    tmp_path, cache_search, monkeypatch
+    tmp_path, cache_search, monkeypatch, committed_document_repository
 ):
     """実際に競合する同期でも、待機後に不足分を確認して重複生成を避ける。"""
     # 分割・Node stream は部分編集で検査し、ここでは実 Git・cache・lock を使う。
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path, committed=True)
-    runs = [_worktree(root, tmp_path / f"run-{index}") for index in range(2)]
+    root = committed_document_repository
+    # 主 worktree と linked worktree を競合させ、複製は一つだけ作る。
+    runs = [root, _worktree(root, tmp_path / "run")]
     contender_waiting = threading.Event()
     start_wait = SearchObservation.start_wait
 
@@ -148,9 +228,11 @@ def test_parallel_worktrees_generate_one_embedding_in_total(
     assert sum(item["persisted_embeddings"] for item in progress) == 1
 
 
-def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_search):
+def test_run_removal_preserves_embedding_and_original_producer(
+    tmp_path, cache_search, committed_document_repository
+):
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path, committed=True)
+    root = committed_document_repository
     run = _worktree(root, root / ".cmoc/gu/worktree" / SESSION_ID / RUN_ID, RUN_BRANCH)
     original = (run / "oracle/doc/allowed.md").read_text()
     with closing(create(run)) as search:
@@ -167,27 +249,31 @@ def test_run_removal_preserves_embedding_and_original_producer(tmp_path, cache_s
     assert inputs() == [original]
 
 
-@pytest.mark.parametrize(
-    "change", ["partition", "inference", "runtime", "contract", "model"]
-)
 def test_reuse_compatibility_is_independent_of_partition(
-    tmp_path, cache_search, monkeypatch, change
+    document_repository, cache_search, monkeypatch, unsynced_search_storage
 ):
     """入力片を固定し、分割条件と推論条件による cache の互換性だけを検査する。"""
+    from commons import runtime_document_search as module
+
+    # Git 分類・共有範囲は実 repository の再利用 test に残す。
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     original = (root / "oracle/doc/allowed.md").read_text()
     with closing(create(root)) as search:
         first = search.synchronize()
-    config = _tuning()
-    if change == "partition":
-        config = replace(config, chunk_tokens=64, chunk_overlap_tokens=1)
-    elif change == "inference":
-        config = replace(config, embedding_context_tokens=256)
-    else:
-        from commons import runtime_document_search as module
+    assert inputs() == [original]
 
-        if change == "runtime":
+    # 互換な二条件を先に調べ、非互換条件ごとに新規生成を確認する。
+    # 初期生成だけを共有し、各条件は元の設定・materials から個別に変える。
+    for change in ("partition", "runtime", "inference", "contract", "model"):
+        previous_inputs = inputs()
+        config = _tuning()
+        materials = SEARCH_MATERIALS
+        if change == "partition":
+            config = replace(config, chunk_tokens=64, chunk_overlap_tokens=1)
+        elif change == "inference":
+            config = replace(config, embedding_context_tokens=256)
+        elif change == "runtime":
             materials = replace(
                 SEARCH_MATERIALS,
                 node_version="different-node",
@@ -204,56 +290,65 @@ def test_reuse_compatibility_is_independent_of_partition(
                 SEARCH_MATERIALS,
                 embedding=replace(SEARCH_MATERIALS.embedding, sha256="different-model"),
             )
-        monkeypatch.setattr(module, "SEARCH_MATERIALS", materials)
-    incompatible = change in ("inference", "contract", "model")
-    with closing(create(root, config)) as search:
-        second = search.synchronize()
-        assert first.identity != second.identity
-        assert search.sync_progress["generated_embeddings"] == (
-            1 if incompatible else 0
-        )
-    assert inputs() == [original] * (2 if incompatible else 1)
+        generated = 1 if change in ("inference", "contract", "model") else 0
+        with monkeypatch.context() as patch:
+            patch.setattr(module, "SEARCH_MATERIALS", materials)
+            with closing(create(root, config)) as search:
+                second = search.synchronize()
+                assert first.identity != second.identity, change
+                assert search.sync_progress["generated_embeddings"] == generated, change
+                assert second.reused_embeddings == 1 - generated, change
+        assert inputs() == previous_inputs + [original] * generated, change
 
 
-@pytest.mark.parametrize(
-    "failure_code", ["MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"]
-)
 def test_failed_sync_saved_results_are_reusable_in_another_worktree(
-    tmp_path, cache_search, failure_code
+    tmp_path, cache_search, committed_document_repository
 ):
+    """失敗の種類ごとに未保存の入力を使い、途中保存結果を別 worktree で再利用する。"""
     create, inputs = cache_search
-    root = _repo_with_docs(tmp_path, committed=True)
+    root = committed_document_repository
     run = _worktree(root, tmp_path / "run")
 
-    class FailingWorker(_InferenceDouble):
-        def stream_chunks(self, documents, resumes, on_event, **kwargs):
-            def stop_after_chunk(event):
-                on_event(event)
-                if event["kind"] == "chunk":
-                    raise SearchError(failure_code, "stop after saved embedding")
+    # Git の準備だけを共有し、各失敗では新規生成・保存を必ず通す。
+    # 失敗後の同一 worktree での再開は test_incomplete_stream_keeps_verified_chunks_and_resumes に残す。
+    for failure_code in ("MODEL_FAILURE", "CANCELLED", "DEADLINE_EXCEEDED"):
+        source = f"# {failure_code}\n途中で保存する本文\n"
+        for worktree in (root, run):
+            (worktree / "oracle/doc/allowed.md").write_text(source)
 
-            super().stream_chunks(documents, resumes, stop_after_chunk, **kwargs)
+        class FailingWorker(_InferenceDouble):
+            def stream_chunks(self, documents, resumes, on_event, **kwargs):
+                def stop_after_chunk(event):
+                    on_event(event)
+                    if event["kind"] == "chunk":
+                        raise SearchError(failure_code, "stop after saved embedding")
 
-    with closing(DocumentSearch(root, _tuning(), worker=FailingWorker())) as search:
-        with pytest.raises(SearchError) as failure:
-            search.synchronize()
-        assert failure.value.code == failure_code
-        assert search.sync_progress["generated_embeddings"] == 1
-        assert search.sync_progress["persisted_embeddings"] == 1
-    with closing(create(run)) as search:
-        assert search.synchronize().reused_embeddings == 1
-        assert search.sync_progress["generated_embeddings"] == 0
+                super().stream_chunks(documents, resumes, stop_after_chunk, **kwargs)
+
+        with closing(DocumentSearch(root, _tuning(), worker=FailingWorker())) as search:
+            with pytest.raises(SearchError) as failure:
+                search.synchronize()
+            assert failure.value.code == failure_code
+            assert search.sync_progress["generated_embeddings"] == 1
+            assert search.sync_progress["persisted_embeddings"] == 1
+        with closing(create(run)) as search:
+            assert search.synchronize().reused_embeddings == 1
+            assert search.sync_progress["generated_embeddings"] == 0
+            assert search.sync_progress["reused_other_worktree"] == 1
     assert inputs() == []
 
 
 def test_identical_inputs_in_different_repositories_are_not_shared(
-    tmp_path, cache_search
+    tmp_path, cache_search, committed_document_repository, unsynced_search_storage
 ):
+    # 同じ seed を独立コピーし、別 repository の検査だけのための Git 初期化を省く。
+    # 実 Git・cache 保存は通し、電源断耐久性を判定しないこのケースでは fsync を省く。
     create, inputs = cache_search
-    for name in ("first", "second"):
-        directory = tmp_path / name
-        directory.mkdir()
-        root = _repo_with_docs(directory)
+    roots = (
+        committed_document_repository,
+        shutil.copytree(committed_document_repository, tmp_path / "other-repo"),
+    )
+    for root in roots:
         with closing(create(root)) as search:
             search.synchronize()
             assert search.sync_progress["generated_embeddings"] == 1
@@ -261,8 +356,12 @@ def test_identical_inputs_in_different_repositories_are_not_shared(
     assert len(inputs()) == 2
 
 
-def test_diagnostics_count_actual_duplicate_generation_separately_from_query(tmp_path):
-    root = _repo_with_docs(tmp_path)
+def test_diagnostics_count_actual_duplicate_generation_separately_from_query(
+    document_repository, unsynced_search_storage
+):
+    # 診断件数の検査には、確認済みの文書集合を渡して Git 準備を重ねない。
+    # 実保存と件数の検査を保ち、診断に不要な物理ディスク同期だけを省く。
+    root = document_repository
     original = (root / "oracle/doc/allowed.md").read_text()
     (root / "oracle/doc/copy.md").write_text(original)
     events = []
@@ -298,11 +397,11 @@ def test_diagnostics_count_actual_duplicate_generation_separately_from_query(tmp
 
 
 def test_cache_save_failure_keeps_generated_count_without_claiming_a_save(
-    tmp_path, monkeypatch
+    document_repository, monkeypatch, unsynced_search_storage
 ):
     from commons import runtime_document_search as module
 
-    root = _repo_with_docs(tmp_path)
+    root = document_repository
     events = []
 
     def fail_save(*_args):

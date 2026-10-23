@@ -15,7 +15,7 @@ from oracle.other.struct_doc import SDHeader, SDTagBlock, render_sd_node_as_mark
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_oracle_edit_main_launch_exec_parameter(
+def build_oracle_edit_request(
     user_instruction: str,
 ) -> AgentCallParameter:
     """`cmoc oracle edit` の両回で共用するパラメータを構築する。
@@ -82,7 +82,7 @@ def build_oracle_edit_main_launch_exec_parameter(
         routing_policy=True,
     )
     return AgentCallParameter(
-        agent_call_kind=build_oracle_edit_main_launch_exec_parameter.__name__,
+        agent_call_kind=build_oracle_edit_request.__name__,
         file_access_mode=FileAccessMode.PURE_ORACLE_WRITE,
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,

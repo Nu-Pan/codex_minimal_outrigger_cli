@@ -30,4 +30,12 @@ realization refactor の前身となった orchestration では、次の流れ�
 - 所見リスト全体の改善ループは、重複や false-positive の除去には使えるが、所見を正規化するためだけの独立した orchestration と prompt を増やす
 - 所見 1 件ごとの修正は、複数所見が同じ実装箇所へ関係する場合に、agent call 間の文脈分断とコミット粒度の細分化を招く
 
-これらの理由から、永続的な調査要求に従って file 単位で所見調査と反映作業を進める方式にした。現行の調査要求と処理単位は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「refactor state」と「refactor loop」を正本とする。
+これらの理由から、file を起点に関連範囲の所見調査と反映作業を一つの call で進める方式にした。現行の処理単位は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「1 処理単位」を正本とする。
+
+## refactor state を選択順序のために残す理由
+
+全件巡回だけなら、実行中の対象集合と処理済み集合で管理できる。一方、毎回同じ順序で始めると、短い run を繰り返す利用では先頭の対象ばかりに処理機会が偏り得る。そのため、永続 state の完全廃止ではなく、選択順序に使う最終調査日時だけを残す縮小を選んだ。
+
+内容変更を検知して優先する案は採用しなかった。変更の有無にかかわらず全件を反復する方針では、hash と再調査要求を管理し、要求の持ち越し順まで区別するより、未調査・古い対象へ機会を回すことを重視した。過去の所見別集計のために結果 field を残す案も、選択順序には不要なため採用しなかった。保存先と Git 追跡は、隔離した run の確定済み成果と選択順序の情報を一緒に取り込めるため維持した。
+
+永続情報・巡回管理・報告の現行契約は、`{{cmoc-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md` の「refactor state」「一巡の境界」「保存と掲載内容」、追跡保証は `{{cmoc-root}}/oracle/doc/app_spec/doctor_preprocess.md` の「refactor state の追跡保証と同期」を正本とする。

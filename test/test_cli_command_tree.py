@@ -12,6 +12,7 @@
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/session_abandon.md
 - {{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md
+- {{work-root}}/oracle/doc/dev_rule/test_rule.md
 """
 
 import inspect
@@ -65,15 +66,26 @@ def test_public_cli_leaf_commands_match_oracle(cli_command: click.Command) -> No
         ("feedback", "close"),
         ("oracle", "edit"),
         ("oracle", "investigation"),
-        ("realization", "apply", "fork"),
-        ("realization", "refactor", "fork"),
+        ("realization", "apply"),
+        ("realization", "refactor"),
         ("run", "abandon"),
         ("run", "join"),
         ("session", "abandon"),
         ("session", "fork"),
         ("session", "join"),
         ("tui",),
+        ("resume",),
     }
+
+
+def test_public_leaf_commands_have_production_scenarios(
+    cli_command: click.Command,
+) -> None:
+    """実 CLI を実行しない通常検証でも、公開末端のケース追加漏れを検出する。"""
+    from test_production_cli import PRODUCTION_SCENARIO_COMMANDS
+
+    # 仕様との一致検査と同じ tree を使い、構築と末端列挙の実装を重ねない。
+    assert _leaves(cli_command) == PRODUCTION_SCENARIO_COMMANDS
 
 
 def test_help_renders_without_typer_click_compatibility_error(
@@ -92,6 +104,25 @@ def test_help_renders_without_typer_click_compatibility_error(
     for command_path in (("oracle", "edit"), ("run", "join")):
         result = runner.invoke(cli_command, [*command_path, "--help"])
         assert result.exit_code == 0, result.output
+
+
+@pytest.mark.parametrize("workload", ["apply", "refactor"])
+def test_removed_realization_fork_entry_is_rejected_without_runtime(
+    cli_command,
+    tmp_path,
+    monkeypatch,
+    workload,
+):
+    """旧 fork を alias にせず、help と実行の双方を新しい末端に揃える。"""
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    help_result = runner.invoke(cli_command, ["realization", workload, "--help"])
+    assert help_result.exit_code == 0
+    assert "fork" not in help_result.output
+    removed = runner.invoke(cli_command, ["realization", workload, "fork"])
+    assert removed.exit_code != 0
+    assert "fork" in removed.output
+    assert not (tmp_path / ".cmoc").exists()
 
 
 def test_shared_cli_runner_reuses_tree_with_independent_invocations(

@@ -9,7 +9,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from _command_support import write_python_executable
 
 import cmoc_runtime
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -18,7 +17,7 @@ from commons.runtime_codex_profile import (
     run_codex_subprocess,
     run_tracked_codex_subprocess,
 )
-from commons.runtime_errors import CmocError
+from commons.runtime_errors import CmocError, CodexProcessStopError
 
 
 def _cancel_when_process_is_ready(pid_path, cancellation):
@@ -231,45 +230,38 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "apply.pid"
-    tracking_path.write_text("111 222\n")
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    script = bin_dir / "codex"
-    write_python_executable(
-        script,
-        [
-            "import os, pathlib, sys, time",
-            "path = pathlib.Path(sys.argv[1])",
-            "process_id = os.getpid()",
-            "child_prefix = f'child {process_id} '",
-            "deadline = time.monotonic() + 3",
-            "while True:",
-            "    tracking_text = path.read_text()",
-            "    lines = tracking_text.splitlines()",
-            "    if any(line.startswith(child_prefix) for line in lines):",
-            "        break",
-            "    if time.monotonic() >= deadline:",
-            "        break",
-            "    time.sleep(0.01)",
-            "print(os.getpid())",
-            "print(os.getpgrp())",
-            "print(tracking_text, end='')",
-        ],
-    )
+    initial_tracking = "111 222\nchild 987 654 987\n"
+    tracking_path.write_text(initial_tracking)
+    # tracking 登録後の stdin EOF で同期し、書込み待ちの polling を省く。
+    argv = [
+        sys.executable,
+        "-S",
+        "-c",
+        "import os, pathlib, sys; "
+        "sys.stdin.read(); "
+        "print(os.getpid()); "
+        "print(os.getpgrp()); "
+        "print(pathlib.Path(sys.argv[1]).read_text(), end='')",
+        str(tracking_path),
+    ]
 
     result = run_tracked_codex_subprocess(
-        [str(script), str(tracking_path)],
+        argv,
         tracking_path,
+        input="",
         text=True,
         capture_output=True,
+        timeout=5,
     )
 
     stdout_lines = result.stdout.splitlines()
     process_id = stdout_lines[0]
     assert stdout_lines[1] == process_id
     assert stdout_lines[2] == "111 222"
-    assert stdout_lines[3].startswith(f"child {process_id} ")
-    assert tracking_path.read_text() == "111 222\n"
+    assert stdout_lines[3] == "child 987 654 987"
+    assert stdout_lines[4].startswith(f"child {process_id} ")
+    assert stdout_lines[4].endswith(f" {process_id}")
+    assert tracking_path.read_text() == initial_tracking
 
 
 def test_signal_process_group_members_uses_each_member_pidfd(
@@ -309,6 +301,25 @@ def test_signal_process_group_members_uses_each_member_pidfd(
         (1222, 222, signal.SIGTERM, "Codex subprocess"),
     ]
     assert closed == [1111, 1222]
+
+
+@pytest.mark.parametrize(
+    ("parents", "current_start"),
+    [(set(), None), ({(111, 10)}, None), ({(111, 10)}, 20)],
+    ids=["no-parents", "exited-parent", "reused-pid"],
+)
+def test_descendant_processes_skips_scan_without_current_parent(
+    monkeypatch, parents, current_start
+):
+    """親が不在・終了・PID 再利用の場合は子を探すための /proc 走査を省く。"""
+    monkeypatch.setattr(
+        runtime_codex_profile, "process_start_time", lambda _pid: current_start
+    )
+    proc_path = Mock(side_effect=AssertionError("no current parent to scan for"))
+    monkeypatch.setattr(runtime_codex_profile, "Path", proc_path)
+
+    assert runtime_codex_profile._descendant_processes(parents) == ()
+    proc_path.assert_not_called()
 
 
 def test_stop_process_group_rejects_reused_group_before_signal(
@@ -551,6 +562,10 @@ def test_tracked_codex_subprocess_defers_sigterm_until_tracking_is_written(
         monkeypatch.setattr(
             runtime_codex_profile, "process_start_time", lambda _pid: 333
         )
+        # 実 process の列挙は専用 group test に残し、架空の PID は探索しない。
+        monkeypatch.setattr(
+            runtime_codex_profile, "process_group_members", lambda _group: ()
+        )
         monkeypatch.setattr(
             runtime_codex_profile,
             "process_group_has_running_member",
@@ -629,6 +644,11 @@ def test_tracked_codex_subprocess_keeps_group_tracking_after_leader_exit(
         lambda *_args, **_kwargs: ExitedProcess(),
     )
     monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((4322, 444),),
+    )
     monkeypatch.setattr(
         runtime_codex_profile, "process_group_has_running_member", lambda _group: True
     )
@@ -720,6 +740,11 @@ def test_tracked_codex_subprocess_keeps_live_child_after_interrupt(
         lambda *_args, **_kwargs: process,
     )
     monkeypatch.setattr(runtime_codex_profile, "process_start_time", lambda _pid: 333)
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "process_group_members",
+        lambda _group: ((4321, 333),),
+    )
 
     with pytest.raises(KeyboardInterrupt):
         run_tracked_codex_subprocess(
@@ -1116,11 +1141,21 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
     Oracle: {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
     """
     tracking_path = tmp_path / "external" / "apply.pid"
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(bin_dir / "codex", ["print('ok')"])
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     monkeypatch.setenv(cmoc_runtime.RUN_PROCESS_TRACKING_ENV, str(tracking_path))
+    # dispatch の検査には child を起動せず、実 OS の停止・tracking は上の test に残す。
+
+    def run_process(
+        argv: list[str], **options: object
+    ) -> subprocess.CompletedProcess[str]:
+        assert options["text"] is True
+        assert options["capture_output"] is True
+        return subprocess.CompletedProcess(argv, 0, "ok\n", "")
+
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess,
+        "run",
+        run_process,
+    )
 
     monkeypatch.setattr(
         runtime_codex_profile,
@@ -1136,21 +1171,59 @@ def test_run_codex_subprocess_ignores_inherited_run_tracking_env(
     assert not tracking_path.exists()
 
 
-def test_run_codex_subprocess_notifies_after_process_start() -> None:
+def test_run_codex_subprocess_notifies_after_process_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """process 起動 callback を Popen 成功後に一度だけ呼び出す。"""
     # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
-    callbacks: list[str] = []
+    events: list[str] = []
+    process = MagicMock(returncode=0)
+    process.__enter__.return_value = process
+    process.communicate.return_value = ("ok\n", "")
+    process.wait.return_value = 0
+
+    def start_process(*_args: object, **_kwargs: object) -> MagicMock:
+        assert _kwargs["text"] is True
+        assert _kwargs["stdout"] == subprocess.PIPE
+        assert _kwargs["stderr"] == subprocess.PIPE
+        events.append("started")
+        return process
+
+    monkeypatch.setattr(runtime_codex_profile.subprocess, "Popen", start_process)
 
     result = run_codex_subprocess(
-        [sys.executable, "-S", "-c", "print('ok')"],
+        ["codex"],
         text=True,
         capture_output=True,
         check=True,
-        process_started_callback=lambda: callbacks.append("started"),
+        process_started_callback=lambda: events.append("callback"),
     )
 
-    assert callbacks == ["started"]
+    assert events == ["started", "callback"]
+    assert result.returncode == 0
     assert result.stdout == "ok\n"
+
+
+def test_run_codex_subprocess_exposes_stop_failure_separately(monkeypatch):
+    process = MagicMock(pid=4321, returncode=None)
+    process.poll.return_value = None
+    process.communicate.side_effect = KeyboardInterrupt
+    monkeypatch.setattr(
+        runtime_codex_profile.subprocess, "Popen", Mock(return_value=process)
+    )
+    monkeypatch.setattr(
+        runtime_codex_profile,
+        "_kill_codex_process_group",
+        Mock(side_effect=CmocError("stop failed", [], "process state unknown")),
+    )
+    with pytest.raises(CodexProcessStopError) as error:
+        run_codex_subprocess(
+            ["codex"], text=True, capture_output=True, cancellation=threading.Event()
+        )
+    assert isinstance(error.value.__cause__, CmocError)
+    assert "process state unknown" in error.value.detail
+    process.kill.assert_called_once_with()
+    process.wait.assert_called_once_with(timeout=5)
 
 
 def test_run_codex_subprocess_preserves_missing_cwd_error(

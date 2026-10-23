@@ -1,10 +1,10 @@
-"""Repository 共通 ID の発行順と種類別採番を検証する。"""
+"""Repository 共通 ID の発行順と種類別採番を検証する。
 
-import os
+process 間の共有・永続性とログ削除後の非再利用は test_codex_runtime_paths.py の
+test_codex_call_ids_are_process_safe_on_same_timestamp でログとの結合も検証する。
+"""
+
 import sqlite3
-import subprocess
-import sys
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
@@ -71,75 +71,26 @@ def test_ids_keep_issue_order_when_clock_moves_backward(
     )
 
 
-def test_sequence_survives_artifact_removal(tmp_path: Path) -> None:
-    """ログなどの成果物が存在しなくても、確定済み番号を再利用しない。"""
-    first = runtime_ids.new_id(tmp_path, "sess")
-    artifact = tmp_path / ".cmoc/gu/log/sub_command" / f"{first}.jsonl"
-    artifact.parent.mkdir(parents=True)
-    artifact.write_text("{}\n")
-    artifact.unlink()
-    second = runtime_ids.new_id(tmp_path, "sess")
-
-    assert first.startswith("sess_000000_")
-    assert second.startswith("sess_000001_")
-    assert runtime_ids.is_common_id(second, "sess")
-
-
-@pytest.mark.parametrize(
-    ("sequence", "before", "after"),
-    [(9, "000009", "00000a"), (35, "00000z", "000010")],
-)
-def test_sequence_crosses_base36_boundaries(
-    tmp_path: Path, sequence: int, before: str, after: str
-) -> None:
+def test_sequence_crosses_base36_boundaries(tmp_path: Path) -> None:
     """数字から英字への遷移と桁上がりでも、固定幅と辞書順を保つ。"""
+    # 両境界で同じ DB を使い、初期化だけの発行と同期保存を重ねない。
     runtime_ids.new_id(tmp_path, "sess")
-    # 途中の通番を発行せず、永続状態を境界直前へ進める。
     database = tmp_path / ".cmoc/gu/state/id_sequences.sqlite3"
-    with closing(sqlite3.connect(database)) as connection:
-        connection.execute(
-            "UPDATE sequence SET next_value = ? WHERE prefix = ?", (sequence, "sess")
-        )
-        connection.commit()
+    for sequence, before, after in (
+        (9, "000009", "00000a"),
+        (35, "00000z", "000010"),
+    ):
+        # 各境界の前提は明示的に保存し、前の検査結果に依存させない。
+        with closing(sqlite3.connect(database)) as connection:
+            connection.execute(
+                "UPDATE sequence SET next_value = ? WHERE prefix = ?",
+                (sequence, "sess"),
+            )
+            connection.commit()
 
-    first = runtime_ids.new_id(tmp_path, "sess")
-    second = runtime_ids.new_id(tmp_path, "sess")
+        first = runtime_ids.new_id(tmp_path, "sess")
+        second = runtime_ids.new_id(tmp_path, "sess")
 
-    assert first.startswith(f"sess_{before}_")
-    assert second.startswith(f"sess_{after}_")
-    assert first < second
-
-
-def test_parallel_processes_share_one_sequence(tmp_path: Path) -> None:
-    """同じ repository の別 process が同時に発行しても通番が重複しない。"""
-    # 独立 process でも同じ採番実装を読み込む。
-    source_root = Path(runtime_ids.__file__).resolve().parents[1]
-    environment = os.environ.copy()
-    environment["PYTHONPATH"] = os.pathsep.join(
-        part for part in (str(source_root), environment.get("PYTHONPATH")) if part
-    )
-    script = (
-        "import sys; from pathlib import Path; "
-        "from commons.runtime_ids import new_id; "
-        "print('\\n'.join(new_id(Path(sys.argv[1]), 'cc') for _ in range(2)))"
-    )
-
-    def issue_batch(_: int) -> list[str]:
-        # 標準ライブラリだけの子で実採番を通し、不要な site 初期化を省く。
-        process = subprocess.run(
-            [sys.executable, "-S", "-c", script, str(tmp_path)],
-            env=environment,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=15,
-        )
-        return process.stdout.splitlines()
-
-    # 4 独立 process が各々連続発行する。36 進の境界は専用 test で検査する。
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        issued = [item for batch in pool.map(issue_batch, range(4)) for item in batch]
-
-    assert len(issued) == 8
-    assert sorted(int(item.split("_")[1], 36) for item in issued) == list(range(8))
-    assert runtime_ids.new_id(tmp_path, "cc").startswith("cc_000008_")
+        assert first.startswith(f"sess_{before}_")
+        assert second.startswith(f"sess_{after}_")
+        assert first < second

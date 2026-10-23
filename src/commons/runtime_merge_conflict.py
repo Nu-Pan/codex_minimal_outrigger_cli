@@ -1,24 +1,21 @@
 """join 中の内容統合と cmoc 管理物の解消を分担する。"""
 
 import hashlib
-import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
+from oracle.acp_builder.basic import AgentCallParameter
 
 from .runtime_codex import run_codex_exec
 from .runtime_errors import CmocError
 from .runtime_git import (
-    is_realization_file_path,
-    literal_pathspec,
-    reuse_git_path_queries,
     run_git,
     status_path_statuses,
 )
 from .runtime_paths import refactor_state_path, repo_root
 from .runtime_primary_report import update_primary_report_fields
-from .runtime_refactor import sync_refactor_state, write_refactor_state
+from .runtime_refactor import merge_refactor_states
 from .runtime_results import CodexExecCallable
 
 
@@ -35,20 +32,23 @@ def unmerged_paths(root: Path) -> list[str]:
 
 def resolve_merge_conflicts(
     root: Path,
-    parameter: AgentCallParameter | None,
+    build_parameter: Callable[[], AgentCallParameter],
     *,
     codex_exec: CodexExecCallable | None = None,
     purpose: str,
     initial_conflicts: list[str] | None = None,
+    before_commit: Callable[[], None] | None = None,
+    sync_managed_entries: bool = True,
 ) -> dict[str, Any]:
     """内容を agent に委ね、refactor state と全変更を merge commit に収める。"""
     # report 用の初期一覧を受け取った場合は、同じ index を再照会しない。
     conflicts = unmerged_paths(root) if initial_conflicts is None else initial_conflicts
     if not conflicts:
         raise CmocError("merge 失敗時の競合 path を特定できません。", [], "")
+    conflict_paths = set(conflicts)
     refactor_relative = refactor_state_path(root).relative_to(root).as_posix()
-    managed = {path for path in conflicts if path == refactor_relative}
-    content_conflicts = sorted(set(conflicts) - managed)
+    managed = conflict_paths & {refactor_relative}
+    content_conflicts = sorted(conflict_paths - managed)
     result: dict[str, Any] = {
         "initial_conflicts": conflicts,
         "content_conflicts": content_conflicts,
@@ -57,17 +57,16 @@ def resolve_merge_conflicts(
         "call_log": None,
         "incidental_paths": [],
     }
+    update_primary_report_fields(conflict_resolution=result)
     if content_conflicts:
-        if parameter is None:
-            raise CmocError(
-                "内容競合の agent call を構築できません。",
-                [],
-                "\n".join(content_conflicts),
-            )
-        before = _status_snapshot(root)
+        # 管理物だけの競合では、使わない prompt と path context を構築しない。
+        parameter = build_parameter()
+        before = _status_snapshot(root, conflict_paths)
         output = (codex_exec or run_codex_exec)(
             parameter, root=repo_root(root), purpose=purpose
         )
+        if before_commit is not None:
+            before_commit()
         report = getattr(output, "output_text", "")
         result["agent_report"] = report
         log = getattr(output, "call_log_path", None)
@@ -82,63 +81,43 @@ def resolve_merge_conflicts(
             conflict_agent_report=report,
             conflict_call_log=result["call_log"],
         )
-        after = _status_snapshot(root)
-        changed = {
-            path
-            for path in before.keys() | after.keys()
-            if before.get(path) != after.get(path)
-        }
-        if refactor_relative in changed:
-            raise CmocError(
-                "競合解消 agent が cmoc 管理物を編集しました。",
-                [],
-                refactor_relative,
-            )
-        if parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE:
-            # agent の編集後、staging 前の検査内だけ Git 配置・設定を共有する。
-            with reuse_git_path_queries():
-                forbidden = [
-                    path
-                    for path in sorted(changed)
-                    if not is_realization_file_path(
-                        root, root / path, branch="HEAD", fallback_branch="MERGE_HEAD"
-                    )
-                ]
-            if forbidden:
-                raise CmocError(
-                    "競合解消 agent が編集範囲外を変更しました。",
-                    [],
-                    "\n".join(forbidden),
-                )
-        result["incidental_paths"] = sorted(
-            path for path in changed if path not in conflicts
-        )
         if result["agent_status"] != "resolved":
             raise CmocError(
                 "競合解消 agent が完了を確認できませんでした。",
                 ["Codex call log の未解消理由と検証結果を確認してください。"],
                 report,
             )
+        after = _status_snapshot(root, conflict_paths)
+        changed = {
+            path
+            for path in before.keys() | after.keys()
+            if before.get(path) != after.get(path)
+        }
+        # 付随編集の観測は report 用。受理条件は下記正本の検証境界に従う。
+        # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md の「agent call の差分検証」
+        result["incidental_paths"] = sorted(changed)
     if refactor_relative in managed:
-        _merge_refactor_state(root, refactor_relative)
-    if refactor_relative in managed:
-        sync_refactor_state(root)
+        merge_refactor_states(
+            root, ("HEAD", "MERGE_HEAD"), sync_entries=sync_managed_entries
+        )
     run_git(["add", "-A"], root)
-    remaining = unmerged_paths(root)
-    if remaining:
-        raise CmocError("unmerged path が残っています。", [], "\n".join(remaining))
-    _check_conflict_markers(root)
+    _check_staged_merge(root)
     run_git(["commit", "--no-edit"], root)
     return result
 
 
-def _status_snapshot(root: Path) -> dict[str, tuple[str, str | None]]:
-    """agent の付随編集を、既に差分にある path の再編集も含めて捕捉する。"""
+def _status_snapshot(
+    root: Path, initial_conflicts: set[str]
+) -> dict[str, tuple[str, str | None]]:
+    """初期競合以外の付随編集を、差分 path の再編集も含めて捕捉する。"""
     snapshot: dict[str, tuple[str, str | None]] = {}
     for status, path in status_path_statuses(
         root, untracked_all=True, include_rename_sources=True
     ):
         name = path.relative_to(root).as_posix()
+        # 初期競合は付随編集の報告対象外。内容検査は staging 後の marker 検査が担う。
+        if name in initial_conflicts:
+            continue
         if path.is_symlink():
             content = str(path.readlink()).encode()
         elif path.is_file():
@@ -152,46 +131,17 @@ def _status_snapshot(root: Path) -> dict[str, tuple[str, str | None]]:
     return snapshot
 
 
-def _merge_refactor_state(root: Path, path: str) -> None:
-    """両 branch の調査履歴と調査要求を失わず、後続の集合同期へ渡す。"""
-    sides: list[dict[str, Any]] = []
-    for stage in (2, 3):
-        content = run_git(["show", f":{stage}:{path}"], root, check=False)
-        if content.returncode == 0:
-            value = json.loads(content.stdout)
-            if not isinstance(value, dict):
-                raise CmocError("refactor state の競合内容が不正です。", [], path)
-            sides.append(value)
-    merged: dict[str, Any] = {}
-    for side in sides:
-        for name, entry in side.items():
-            previous = merged.get(name)
-            if previous is None:
-                merged[name] = entry
-            elif isinstance(previous, dict) and isinstance(entry, dict):
-                newer = max(
-                    (previous, entry),
-                    key=lambda item: item.get("last_investigated_at") or "",
-                )
-                merged[name] = {
-                    **newer,
-                    "investigation_required": previous.get(
-                        "investigation_required", True
-                    )
-                    or entry.get("investigation_required", True),
-                }
-            else:
-                raise CmocError("refactor state の競合内容が不正です。", [], name)
-    write_refactor_state(root, merged)
-    run_git(["add", "--", literal_pathspec(path)], root)
-
-
-def _check_conflict_markers(root: Path) -> None:
-    """staging 対象の regular text に残った Git marker block を拒否する。"""
-    paths = run_git(["diff", "--cached", "--name-only", "-z"], root).stdout.split("\0")
-    for relative in paths:
-        if not relative:
-            continue
+def _check_staged_merge(root: Path) -> None:
+    """同じ index 一覧から未統合 entry と regular text の残存 marker を拒否する。"""
+    # rename を削除・追加に分け、status と path の二項を NUL 区切りで取得する。
+    fields = run_git(
+        ["diff", "--cached", "--name-status", "--no-renames", "-z"], root
+    ).stdout.split("\0")
+    staged = list(zip(fields[::2], fields[1::2]))
+    remaining = [relative for status, relative in staged if status == "U"]
+    if remaining:
+        raise CmocError("unmerged path が残っています。", [], "\n".join(remaining))
+    for _status, relative in staged:
         path = root / relative
         if path.is_symlink() or not path.is_file():
             continue
@@ -205,6 +155,8 @@ def _check_conflict_markers(root: Path) -> None:
 
 def _has_conflict_marker_block(text: str) -> bool:
     """行頭の Git marker を検出し、Markdown の bare separator を許す。"""
-    return any(
-        line.startswith(("<<<<<<<", "|||||||", ">>>>>>>")) for line in text.splitlines()
-    )
+    # marker のない本文では、全行の分割と行頭の走査を省く。
+    markers = ("<<<<<<<", "|||||||", ">>>>>>>")
+    if not any(marker in text for marker in markers):
+        return False
+    return any(line.startswith(markers) for line in text.splitlines())

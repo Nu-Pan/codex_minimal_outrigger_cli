@@ -1,4 +1,4 @@
-"""明示的な join を必要とする editing run の共通処理。
+"""editing run の開始、成果確定、差分分類を共有する。
 
 共通処理の canonical な配置は {{work-root}}/oracle/doc/dev_rule/design_rule.md
 に従っている。
@@ -25,7 +25,7 @@ from .runtime_git import (
     current_branch,
     delete_branch,
     head_commit,
-    is_realization_file_path,
+    realization_file_paths,
     remove_worktree,
     require_clean_worktree,
     require_cmoc_ignored,
@@ -96,6 +96,9 @@ def require_ready_session() -> tuple[Path, Path, str, Path, SessionState, str]:
             ["active な cmoc session branch へ checkout して再実行してください。"],
             f"current branch: {branch}",
         )
+    from .runtime_run_join_state import restore_pending_join
+
+    restore_pending_join(repository, branch)
     session_id, path, state = load_state_for_branch(repository, branch)
     if state.session.state != "active" or state.run.state != "ready":
         raise CmocError(
@@ -141,8 +144,9 @@ def start_editing_run(kind: str) -> EditingRunContext:
         _state,
         session_fork_commit,
     ) = require_ready_session()
-    session_branch = current_branch(session_worktree)
-    with run_lifecycle_lock(repository, session_id):
+    session_branch = f"cmoc/session/{session_id}"
+    # lock 取得後だけ配置照会を共有し、待機前の情報や次回の開始へ持ち越さない。
+    with run_lifecycle_lock(repository, session_id), reuse_git_path_queries():
         # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
         # editor 入力中や並行 process の間に状態が変わり得るため lock 内で再検査する。
         locked_branch = current_branch(session_worktree)
@@ -205,8 +209,9 @@ def start_editing_run(kind: str) -> EditingRunContext:
                 # report できるよう、競合時の CmocError と区別できる context を
                 # 例外へ付加する。
                 setattr(exc, "_published_editing_run_context", published_context)
-                state.run.state = "error"
-                write_state(path, state)
+                if not isinstance(exc, KeyboardInterrupt):
+                    state.run.state = "error"
+                    write_state(path, state)
             else:
                 # {{work-root}}/oracle/doc/app_spec/subcommand_interruption.md
                 # create_run_worktree または state 公開の途中で中断しても、未公開の
@@ -238,6 +243,9 @@ def resolve_active_run(
     repository = repo_root()
     current_worktree = work_root()
     branch = current_branch(current_worktree)
+    from .runtime_run_join_state import restore_pending_join
+
+    restore_pending_join(repository, branch)
     session_id, path, state = load_state_for_branch(repository, branch)
     if state.session.state != "active" or state.run.state not in allowed_states:
         raise CmocError(
@@ -339,31 +347,6 @@ def set_run_state(context: EditingRunContext, run_state: str) -> SessionState:
     """同じ active run であることを確認して joinable/error を保存する。"""
     if run_state not in {"joinable", "error"}:
         raise ValueError(f"unsupported terminal run state: {run_state}")
-    return _set_run_state(
-        context,
-        run_state,
-        allowed_previous_states={"running", run_state},
-    )
-
-
-def set_run_error_after_joinable_publication(
-    context: EditingRunContext,
-) -> SessionState:
-    """joinable 公開後の同じ fork の失敗を error state として保存する。"""
-    return _set_run_state(
-        context,
-        "error",
-        allowed_previous_states={"joinable"},
-    )
-
-
-def _set_run_state(
-    context: EditingRunContext,
-    run_state: str,
-    *,
-    allowed_previous_states: set[str],
-) -> SessionState:
-    """active run の identity と許可済み遷移を検査して state を保存する。"""
     with run_lifecycle_lock(context.repo, context.session_id):
         _, _, state = load_state_for_branch(context.repo, context.session_branch)
         if (
@@ -371,14 +354,14 @@ def _set_run_state(
             or state.run.kind != context.kind
             or state.run.branch != context.run_branch
             or state.run.fork_commit != context.run_fork_commit
-            or state.run.state not in allowed_previous_states
+            or state.run.state not in {"running", run_state}
         ):
             # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
             # terminal state の公開後に遅延した cleanup が別の terminal state を
             # 上書きしないよう、running からの一方向遷移として検査する。同じ
             # state の再適用だけは、state write 直後の中断からの recovery に許可
-            # する。joinable 公開後の fork 自身の後処理 failure だけは専用の
-            # 遷移で error へ戻す。
+            # する。join とその後処理の失敗は、共通 join 側が保存した identity
+            # と最新の session 項目を使って回収する。
             raise CmocError(
                 "editing run の state が実行中に変更されました。",
                 ["session state と run branch を確認してください。"],
@@ -396,19 +379,11 @@ def rollback_work_unit(worktree: Path) -> None:
     run_git(["clean", "-fd"], worktree)
 
 
-def commit_work_unit(
-    worktree: Path,
-    message: str,
-    *,
-    allow_empty: bool = False,
-) -> str | None:
+def commit_work_unit(worktree: Path, message: str) -> str | None:
     """worktree の全差分を一つの整合した commit として確定する。"""
     run_git(["add", "-A"], worktree)
     diff = run_git(["diff", "--cached", "--quiet"], worktree, check=False)
     if diff.returncode == 0:
-        if allow_empty:
-            run_git(["commit", "--allow-empty", "-m", message], worktree)
-            return head_commit(worktree)
         return None
     if diff.returncode != 1:
         raise CmocError(
@@ -452,21 +427,23 @@ def unexpected_agent_paths(
     根拠: {{work-root}}/oracle/doc/app_spec/sub_command/realization_apply.md
     {{work-root}}/oracle/doc/app_spec/sub_command/realization_refactor.md
     """
-    # Git の配置・設定だけを検査内で共有し、child 停止後の再検査へ持ち越さない。
-    with reuse_git_path_queries():
-        return sorted(
-            {
-                path
-                for path in changed_paths
-                if not _is_agent_expected_path(
-                    context.run_worktree,
-                    context.kind,
-                    path,
-                    context.run_branch,
-                    context.run_fork_commit,
-                )
-            }
-        )
+    # 同じ検査の候補を一括判定し、child 停止後の再検査へ判定結果を持ち越さない。
+    if context.kind not in {
+        "realization_apply",
+        "realization_refactor",
+        "feedback_report",
+    }:
+        return sorted(set(changed_paths))
+    root = context.run_worktree
+    expected = realization_file_paths(
+        root,
+        [root / path for path in changed_paths],
+        branch=context.run_branch,
+        fallback_branch=context.run_fork_commit,
+    )
+    return sorted(
+        {path for path in changed_paths if (root / path).absolute() not in expected}
+    )
 
 
 def tree_changes(worktree: Path, base: str, end: str = "HEAD") -> list[GitChange]:
@@ -519,24 +496,15 @@ def unexpected_run_paths(
     ignored_paths: Collection[str] = (),
 ) -> list[str]:
     """run branch の workload 想定外 path を返す。"""
-    # commit・rollback の間をまたがず、一つの差分検査内だけ問い合わせを共有する。
-    ignored = set(ignored_paths)
-    with reuse_git_path_queries():
-        return sorted(
-            {
-                path
-                for change in changes
-                for path in change.paths
-                if path not in ignored
-                and not _is_run_expected_path(
-                    context.run_worktree,
-                    context.kind,
-                    path,
-                    context.run_branch,
-                    context.run_fork_commit,
-                )
-            }
-        )
+    # agent 差分との違いは管理 state と明示された対象外 path だけに保つ。
+    paths = {path for change in changes for path in change.paths} - set(ignored_paths)
+    if context.kind in {"realization_refactor", "feedback_report"}:
+        paths = {
+            path
+            for path in paths
+            if not _is_refactor_state_path(context.run_worktree, path)
+        }
+    return unexpected_agent_paths(context, paths)
 
 
 def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
@@ -554,38 +522,6 @@ def new_run_target(repository: Path, session_id: str) -> tuple[str, Path]:
             f"run_branch: {branch}\nrun_worktree: {worktree}",
         )
     return branch, worktree
-
-
-def _is_agent_expected_path(
-    root: Path,
-    kind: str,
-    path: str,
-    branch: str,
-    fork_commit: str,
-) -> bool:
-    """path が workload agent に許可された realization file か判定する。"""
-    if kind not in {"realization_apply", "realization_refactor", "feedback_report"}:
-        return False
-    # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # rename 元と削除 path は HEAD から消えるため、fork 時点の tree でも確認する。
-    return is_realization_file_path(
-        root, root / path, branch=branch, fallback_branch=fork_commit
-    )
-
-
-def _is_run_expected_path(
-    root: Path,
-    kind: str,
-    path: str,
-    branch: str,
-    fork_commit: str,
-) -> bool:
-    """path が run branch の管理対象差分か判定する。"""
-    if kind in {"realization_refactor", "feedback_report"} and _is_refactor_state_path(
-        root, path
-    ):
-        return True
-    return _is_agent_expected_path(root, kind, path, branch, fork_commit)
 
 
 def _is_refactor_state_path(root: Path, path: str) -> bool:

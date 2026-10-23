@@ -10,11 +10,14 @@ normalization、全 candidate の verification、正常 publication、および 
 - `{{work-root}}/oracle/doc/app_spec/sub_command/feedback_report.md`
 """
 
+import errno
 import hashlib
 import html
 import json
 import os
+import stat
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from inspect import getsourcefile
 from pathlib import Path
@@ -24,10 +27,10 @@ from jsonschema.exceptions import SchemaError
 from oracle.other.struct_doc import render_sd_node_as_markdown
 
 from acp.builder.feedback.normalize_issue import (
-    build_feedback_normalize_issue_parameter,
+    build_feedback_issue_normalization_request,
 )
 from acp.builder.feedback.remediate_issue import (
-    build_feedback_remediate_issue_parameter,
+    build_feedback_issue_remediation_request,
 )
 from cmoc_runtime import (
     CmocError,
@@ -38,7 +41,11 @@ from cmoc_runtime import (
     run_codex_exec,
 )
 from commons.runtime_feedback_history import history_artifact
-from commons.runtime_feedback_render import publication_notice, render_current_cases
+from commons.runtime_feedback_render import (
+    feedback_report_summary,
+    publication_notice,
+    render_current_cases,
+)
 from commons.runtime_feedback_state import (
     ActiveState,
     agent_canonical_key,
@@ -54,7 +61,7 @@ from commons.runtime_feedback_state import (
     publish_current_pointer,
     publish_generation_artifacts,
     validate_observation_envelope,
-    write_checkpoint,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
@@ -71,9 +78,28 @@ from commons.runtime_feedback_store import (
     write_immutable_bytes,
 )
 from commons.runtime_json_schema import checked_schema_validator
-from commons.runtime_logging import current_subcommand_logger
+from commons.runtime_logging import current_execution_id, current_subcommand_logger
 from commons.runtime_paths import reports_dir
-from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_primary_report import (
+    current_primary_report_fields,
+    prepare_primary_report,
+    rewrite_primary_report,
+    update_primary_report_fields,
+    write_reserved_primary_report,
+)
+from commons.runtime_primary_report_render import (
+    feedback_invocation_lines,
+    feedback_statuses,
+    saved_execution_notices,
+)
+from commons.runtime_primary_report_specs import TerminalClassification
+from commons.runtime_report_markdown import (
+    ReportSummary,
+    fenced_text,
+    markdown_sections,
+    render_report_document,
+    terminal_outcome,
+)
 from commons.runtime_results import StructuredOutputValidationIssue
 
 _JsonObject = dict[str, Any]
@@ -100,6 +126,101 @@ def _cmoc_feedback_report_body() -> TerminalResult:
     from .remediation import run_feedback_report
 
     return run_feedback_report()
+
+
+def save_feedback_invocation_report(
+    repo: Path,
+    classification: TerminalClassification,
+    result: TerminalResult,
+    *,
+    publication_report: Path | None = None,
+) -> Path:
+    """publication を変更せず、今回の run 終了結果を primary report に保存する。"""
+    # 保存先は今回の execution ID に固定し、recovery 元の入力を付け替えない。
+    logger = current_subcommand_logger()
+    if logger is None:
+        raise RuntimeError("feedback invocation logger is unavailable")
+    path = reports_dir(repo, "feedback/invocation") / f"{current_execution_id(repo)}.md"
+    fields = {
+        "command": "cmoc feedback report",
+        "execution_id": logger.execution_id,
+        "generated_at": rfc3339_now(),
+        "repo_root": repo,
+        "subcommand_log_path": logger.path,
+        **current_primary_report_fields(),
+        **feedback_statuses(logger),
+        "terminal_classification": classification,
+        "exit_code": 1 if classification == "error" else 0,
+    }
+    if result.result is not None:
+        fields["result"] = result.result
+    body = feedback_invocation_lines(classification, result, logger, fields)
+    if publication_report is not None:
+        # publication の generation と一覧を使い、現時点の未確定 candidate は載せない。
+        state = load_active_state(repo)
+        fields.update(
+            publication_established=True,
+            publication_report=str(publication_report),
+            published_generation=state.current,
+        )
+        if fields["current_pointer_update_status"] != "completed":
+            # recovery は今回 pointer を切り替えず、元の publication の成立を確認する。
+            fields.update(
+                normal_publication_status="previously_completed"
+                if result.result != "incomplete"
+                else "not_completed",
+                incomplete_diagnostic_status="previously_completed"
+                if result.result == "incomplete"
+                else "not_completed",
+                current_pointer_update_status="previously_completed",
+            )
+        body.extend(
+            [
+                "## Publication",
+                f"- publication report: `{publication_report}`",
+                "- この一覧は publication が確定した generation の時点を示します。",
+                "",
+                render_current_cases(state.issues),
+            ]
+        )
+        summary = feedback_report_summary(
+            state.issues,
+            terminal_outcome(classification),
+            scope=(
+                f"run state: {fields.get('state_after')}",
+                f"cleanup: {fields.get('cleanup')}",
+            ),
+        )
+    else:
+        summary = ReportSummary(
+            terminal_outcome(classification),
+            (
+                f"run state: {fields.get('state_after')}",
+                "publication は行っていません。保持した観測と active record は次回 report で再確認します。",
+            ),
+            tuple(result.warnings),
+            result.next_actions,
+        )
+    if fields.get("state_after") != "ready" and classification != "error":
+        fields.update(terminal_classification=None, exit_code=None)
+        summary = replace(
+            summary,
+            outcome="取り込み後の終了処理は未完了です。state 初期化と cleanup の結果を確認してください。",
+        )
+    content = prepare_primary_report(
+        path,
+        "cmoc feedback report invocation report",
+        fields,
+        summary,
+        markdown_sections(body),
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        rewrite_primary_report(path, content)
+    else:
+        path.open("x").close()
+        write_reserved_primary_report(path, content)
+    return path.resolve()
 
 
 def _pending_observations(
@@ -223,7 +344,7 @@ def _capture_report_cut_references(
 ) -> list[_JsonObject]:
     """agent に許可する observation と current repository reference を固定する。"""
     references: dict[str, _JsonObject] = {}
-    path_subjects: dict[Path, set[str]] = {}
+    target_subjects: dict[str, set[str]] = {}
 
     # raw observation 自体は current verdict の根拠ではない別種 reference とする。
     for observation_id_value, observation in sorted(observations.items()):
@@ -239,8 +360,8 @@ def _capture_report_cut_references(
             "summary": summary if isinstance(summary, str) else "",
             "evidence": evidence if isinstance(evidence, list) else [],
         }
-        for path in _observation_reference_paths(repo, observation):
-            path_subjects.setdefault(path, set()).add(observation_id_value)
+        for target_path in _observation_reference_paths(observation):
+            target_subjects.setdefault(target_path, set()).add(observation_id_value)
 
     # active issue が保持する stable target を今回の cut で再取得する。
     for current_issue_id, issue in sorted(active_issues.items()):
@@ -250,9 +371,7 @@ def _capture_report_cut_references(
         for target in targets:
             if not isinstance(target, dict) or not isinstance(target.get("path"), str):
                 continue
-            candidate = _repository_path(repo, target["path"])
-            if candidate is not None:
-                path_subjects.setdefault(candidate, set()).add(current_issue_id)
+            target_subjects.setdefault(target["path"], set()).add(current_issue_id)
         verification = issue.get("verification")
         current_evidence = (
             verification.get("current_evidence")
@@ -265,9 +384,16 @@ def _capture_report_cut_references(
                     evidence.get("path"), str
                 ):
                     continue
-                candidate = _repository_path(repo, evidence["path"])
-                if candidate is not None:
-                    path_subjects.setdefault(candidate, set()).add(current_issue_id)
+                target_subjects.setdefault(evidence["path"], set()).add(
+                    current_issue_id
+                )
+
+    # 同じ保存済み path の解決を subject 間で共有する。次の capture では取り直す。
+    path_subjects: dict[Path, set[str]] = {}
+    for target_path, subjects in target_subjects.items():
+        candidate = _repository_path(repo, target_path)
+        if candidate is not None:
+            path_subjects.setdefault(candidate, set()).update(subjects)
 
     # path ごとに一度だけ current state を取得し、複数 candidate の subject を共有する。
     for path, subjects in sorted(path_subjects.items(), key=lambda item: str(item[0])):
@@ -276,24 +402,20 @@ def _capture_report_cut_references(
     return [references[key] for key in sorted(references)]
 
 
-def _observation_reference_paths(repo: Path, observation: _JsonObject) -> list[Path]:
-    """raw observation が既に拘束した repository 内 current target を返す。"""
-    paths: set[Path] = set()
+def _observation_reference_paths(observation: _JsonObject) -> set[str]:
+    """raw observation が保持する target の path 表記を返す。"""
+    paths: set[str] = set()
     fingerprints = observation.get("evidence_fingerprints")
     if isinstance(fingerprints, list):
         for fingerprint in fingerprints:
             if isinstance(fingerprint, dict) and isinstance(
                 fingerprint.get("normalized_path"), str
             ):
-                candidate = _repository_path(repo, fingerprint["normalized_path"])
-                if candidate is not None:
-                    paths.add(candidate)
+                paths.add(fingerprint["normalized_path"])
     source_event = observation.get("source_event")
     if isinstance(source_event, dict) and isinstance(source_event.get("log_path"), str):
-        candidate = _repository_path(repo, source_event["log_path"])
-        if candidate is not None:
-            paths.add(candidate)
-    return sorted(paths)
+        paths.add(source_event["log_path"])
+    return paths
 
 
 def _repository_path(repo: Path, value: str) -> Path | None:
@@ -328,21 +450,27 @@ def _capture_repository_reference(
         "path": relative,
     }
     try:
-        if path.is_symlink():
-            return {
-                **base,
-                "kind": "current_fingerprint",
-                "state": "unreadable",
-                "sha256": None,
-            }
-        if not path.exists():
+        # 種類と存在は同じ lstat で確認し、次の capture では取り直す。
+        try:
+            mode = path.lstat().st_mode
+        except OSError as exc:
+            # pathlib の exists/is_file と同じ「存在しない」扱いを保つ。
+            if exc.errno not in {errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP}:
+                raise
             return {
                 **base,
                 "kind": "current_fingerprint",
                 "state": "missing",
                 "sha256": None,
             }
-        if not path.is_file():
+        if stat.S_ISLNK(mode):
+            return {
+                **base,
+                "kind": "current_fingerprint",
+                "state": "unreadable",
+                "sha256": None,
+            }
+        if not stat.S_ISREG(mode):
             return {
                 **base,
                 "kind": "current_fingerprint",
@@ -383,8 +511,8 @@ def _capture_repository_reference(
 
 def _processing_versions() -> _JsonObject:
     """builder、schema、および deterministic processing rule の content hash を返す。"""
-    normalize_builder = _builder_source_path(build_feedback_normalize_issue_parameter)
-    verify_builder = _builder_source_path(build_feedback_remediate_issue_parameter)
+    normalize_builder = _builder_source_path(build_feedback_issue_normalization_request)
+    verify_builder = _builder_source_path(build_feedback_issue_remediation_request)
     # 動的 code fence を構築する canonical renderer も checkpoint version に含める。
     prompt_renderer = _builder_source_path(render_sd_node_as_markdown)
     normalize_schema = normalize_builder.with_suffix(".json")
@@ -546,6 +674,20 @@ def _build_candidates(
         machine_observations,
     )
 
+    # wave 内の参照を一度だけ逆引きし、同一性照合と candidate の参照付与で共用する。
+    references = inputs.get("references")
+    assert isinstance(references, list)
+    if not candidates and not agent_observations:
+        return candidates, machine_aggregates
+    references_by_subject: dict[str, list[_JsonObject]] = {}
+    for reference in references:
+        if not isinstance(reference, dict) or not isinstance(
+            reference.get("subjects"), list
+        ):
+            continue
+        for subject in {str(value) for value in reference["subjects"]}:
+            references_by_subject.setdefault(subject, []).append(reference)
+
     # agent observation は observed_at と ID の canonical order で一件ずつ処理する。
     for observation in sorted(
         agent_observations,
@@ -554,20 +696,24 @@ def _build_candidates(
             str(item["observation_id"]),
         ),
     ):
-        exact, comparison = _agent_comparison_candidates(
-            observation,
-            candidates,
-            current_cut_fingerprint_pairs=_report_cut_fingerprint_pairs(
-                repo, manifest, observation
-            ),
-        )
-        selected: _JsonObject | None = exact
-        if selected is None and comparison:
-            selected_id = _normalize_issue_identity(
-                repo, worktree, manifest, observation, comparison
+        selected: _JsonObject | None = None
+        # 比較対象がなければ、完全一致判定用の filesystem 参照解決も不要。
+        if candidates:
+            selected, comparison = _agent_comparison_candidates(
+                observation,
+                candidates,
+                current_cut_fingerprint_pairs=_report_cut_fingerprint_pairs(
+                    repo,
+                    references_by_subject.get(str(observation["observation_id"]), []),
+                    observation,
+                ),
             )
-            if selected_id is not None:
-                selected = candidates[selected_id]
+            if selected is None and comparison:
+                selected_id = _normalize_issue_identity(
+                    repo, worktree, manifest, observation, comparison
+                )
+                if selected_id is not None:
+                    selected = candidates[selected_id]
         if selected is None:
             observation_id_value = str(observation["observation_id"])
             canonical_key = agent_canonical_key(observation_id_value)
@@ -575,20 +721,18 @@ def _build_candidates(
             _insert_candidate(candidates, selected)
         _merge_observation(repo, selected, observation)
 
-    # candidate ごとに許可する cut reference を固定済み subject から機械選択する。
-    references = inputs.get("references")
-    assert isinstance(references, list)
+    # observation と既存 candidate の subject を合併し、今回の参照だけへ更新する。
     for candidate in candidates.values():
         subjects = {
             str(candidate["candidate_id"]),
             *[str(value) for value in candidate.get("source_observation_ids", [])],
         }
         candidate["reference_ids"] = sorted(
-            str(reference["reference_id"])
-            for reference in references
-            if isinstance(reference, dict)
-            and isinstance(reference.get("subjects"), list)
-            and subjects.intersection(str(value) for value in reference["subjects"])
+            {
+                str(reference["reference_id"])
+                for subject in subjects
+                for reference in references_by_subject.get(subject, ())
+            }
         )
     return candidates, machine_aggregates
 
@@ -870,13 +1014,14 @@ def _agent_comparison_candidates(
 
 
 def _report_cut_fingerprint_pairs(
-    repo: Path, manifest: _JsonObject, observation: _JsonObject
+    repo: Path, references: list[_JsonObject], observation: _JsonObject
 ) -> list[tuple[str, str, str | None]]:
     """observation subject に紐付く report cut current fingerprint を返す。"""
-    inputs = manifest.get("inputs")
-    references = inputs.get("references") if isinstance(inputs, dict) else None
+    fingerprints = observation.get("evidence_fingerprints")
+    if not isinstance(fingerprints, list) or not fingerprints:
+        return []
     observation_id_value = observation.get("observation_id")
-    if not isinstance(references, list) or not isinstance(observation_id_value, str):
+    if not isinstance(observation_id_value, str):
         return []
     current: dict[str, tuple[str, str | None]] = {}
     for reference in references:
@@ -902,9 +1047,6 @@ def _report_cut_fingerprint_pairs(
             continue
         current[str(candidate)] = (state, sha256)
 
-    fingerprints = observation.get("evidence_fingerprints")
-    if not isinstance(fingerprints, list):
-        return []
     result: list[tuple[str, str, str | None]] = []
     for fingerprint in fingerprints:
         if not isinstance(fingerprint, dict):
@@ -1031,7 +1173,7 @@ def _normalize_issue_identity(
             if key != "deduplication_hint"
         },
     }
-    parameter = build_feedback_normalize_issue_parameter(
+    parameter = build_feedback_issue_normalization_request(
         json.dumps(normalization_observation, ensure_ascii=False, sort_keys=True),
         json.dumps(candidate_payload, ensure_ascii=False, sort_keys=True),
         worktree,
@@ -1080,7 +1222,7 @@ def _normalize_issue_identity(
     path = normalization_checkpoint_path(
         repo, str(manifest["report_cut_id"]), observation_id_value
     )
-    reference = write_checkpoint(repo, path, checkpoint)
+    reference = write_immutable_artifact(repo, path, checkpoint)
     _record_checkpoint(
         repo,
         manifest,
@@ -1552,7 +1694,6 @@ def _publish_report(
     else:
         raise ValueError("report cut publication must be an object or null")
 
-    references_by_id = _report_cut_references_by_id(manifest)
     machine_aggregates = _next_machine_aggregates(
         candidates, verdicts, machine_aggregates
     )
@@ -1561,7 +1702,6 @@ def _publish_report(
             manifest,
             candidates[candidate_id_value],
             verdicts[candidate_id_value],
-            references_by_id,
             generated_at,
         )
         for candidate_id_value in unresolved_ids
@@ -1776,7 +1916,6 @@ def _active_issue_record(
     manifest: _JsonObject,
     candidate: _JsonObject,
     verdict: _JsonObject,
-    references_by_id: dict[str, _JsonObject],
     verified_at: str,
 ) -> _JsonObject:
     """unresolved candidate と最新 verification を compact active record にする。"""
@@ -1786,7 +1925,7 @@ def _active_issue_record(
     if not isinstance(evidence, list):
         raise ValueError("unresolved verdict current_evidence must be an array")
     materialized = [
-        _materialize_current_evidence(item, references_by_id)
+        _materialize_current_evidence(item)
         for item in evidence[:5]
         if isinstance(item, dict)
     ]
@@ -1848,30 +1987,13 @@ def _active_issue_record(
     }
 
 
-def _materialize_current_evidence(
-    evidence: _JsonObject, references_by_id: dict[str, _JsonObject]
-) -> _JsonObject:
-    """cut-scoped ID を削除予定 artifact に依存しない compact evidence へ解決する。"""
-    del references_by_id
+def _materialize_current_evidence(evidence: _JsonObject) -> _JsonObject:
+    """agent の直接 evidence を secret-safe な保存用 record にする。"""
     return {
         "kind": "repository_content",
         "path": mask_feedback_text(str(evidence["path"])),
         "location": mask_feedback_text(str(evidence["location"])),
         "finding": mask_feedback_text(str(evidence["finding"])),
-    }
-
-
-def _report_cut_references_by_id(manifest: _JsonObject) -> dict[str, _JsonObject]:
-    """固定済み reference を ID で引く。"""
-    inputs = manifest.get("inputs")
-    references = inputs.get("references") if isinstance(inputs, dict) else None
-    if not isinstance(references, list):
-        raise ValueError("report cut references must be an array")
-    return {
-        str(reference["reference_id"]): reference
-        for reference in references
-        if isinstance(reference, dict)
-        and isinstance(reference.get("reference_id"), str)
     }
 
 
@@ -1915,30 +2037,33 @@ def _render_feedback_report(
         ("result", result),
     )
     lines = [
-        "---",
-        *[f"{name}: {_yaml_scalar(value)}" for name, value in fields],
-        "---",
-        "# cmoc feedback report",
+        publication_notice(str(repo / manifest["run"]["invocation_log"])),
         "",
+        f"作成元: report cut `{manifest['report_cut_id']}`。入力確認境界: `{manifest['run']['high_watermark']}`。",
+        "",
+        f"History: `{feedback_root(repo) / 'history'}`。今回の履歴: `{repo / history[-1]['path']}`。",
+        "",
+        render_current_cases(issues),
     ]
-    if result == "incomplete":
-        lines.extend(
-            ["この generation には判定不能の案件が含まれ、要約は incomplete です。", ""]
-        )
-    lines.extend(
-        [
-            publication_notice(str(repo / manifest["run"]["invocation_log"])),
-            "",
-            f"作成元: report cut `{manifest['report_cut_id']}`。入力確認境界: `{manifest['run']['high_watermark']}`。",
-            "",
-            f"History: `{feedback_root(repo) / 'history'}`。今回の履歴: `{repo / history[-1]['path']}`。",
-            "",
-            render_current_cases(issues),
-            "",
-            manifest["run"]["execution_record"] or "",
-        ]
+    notices = saved_execution_notices(
+        repo / manifest["run"]["invocation_log"],
+        manifest["run"]["targets"]["execution_id"],
     )
-    return "\n".join(lines)
+    if notices:
+        lines.extend(["## warning と実行上の注意", fenced_text("\n".join(notices))])
+    return render_report_document(
+        "cmoc feedback report",
+        dict(fields),
+        feedback_report_summary(
+            issues,
+            "report 保存時点の記録です。案件の判定と generation の準備までを掲載しています。",
+            scope=("issue の検証と自動 join 後の検査は完了しています。",),
+            publication_pending=True,
+            notices=notices,
+        ),
+        markdown_sections(lines),
+        execution_record=manifest["run"]["execution_record"] or "",
+    )
 
 
 def _publication_history(
@@ -1955,7 +2080,6 @@ def _publication_history(
     report_path: Path,
 ) -> tuple[Path, bytes, _JsonObject]:
     """旧判定、終了結果、検証済み入力の採用先を削除に依存しない記録へ固定する。"""
-    references = _report_cut_references_by_id(manifest)
     events = []
     for identity, verdict in sorted(verdicts.items()):
         before, after = state.issues.get(identity), active.get(identity)
@@ -1978,39 +2102,47 @@ def _publication_history(
                         **verdict,
                         "summary": candidates[identity]["summary"],
                         "current_evidence": [
-                            _materialize_current_evidence(item, references)
+                            _materialize_current_evidence(item)
                             for item in verdict["current_evidence"]
                         ],
                     }
                 ),
             }
         )
+    # 消費先と固定参照を逆引きし、各 observation で全候補・全入力を再走査しない。
+    issues_by_observation: dict[str, set[str]] = {}
+    issues_by_key: dict[str, set[str]] = {}
+    for identity, candidate in candidates.items():
+        for observation_id_value in candidate["source_observation_ids"]:
+            issues_by_observation.setdefault(observation_id_value, set()).add(identity)
+        issues_by_key.setdefault(candidate["canonical_key"], set()).add(identity)
+    input_references = {
+        entry["observation_id"]: entry for entry in manifest["inputs"]["observations"]
+    }
     observations = []
     for identity, observation in _read_cut_observations(repo, manifest).items():
-        selected = sorted(
-            key
-            for key, candidate in candidates.items()
-            if identity in candidate["source_observation_ids"]
-            or (
-                observation["source"] == "machine_rule"
-                and candidate["canonical_key"] == machine_canonical_key(observation)
-            )
-        )
-        keys = (
-            [machine_canonical_key(observation)]
+        selected = set(issues_by_observation.get(identity, ()))
+        canonical_key = (
+            machine_canonical_key(observation)
             if observation["source"] == "machine_rule"
-            and machine_canonical_key(observation) in aggregates
+            else None
+        )
+        if canonical_key is not None:
+            selected.update(issues_by_key.get(canonical_key, ()))
+        keys = (
+            [canonical_key]
+            if canonical_key is not None
+            and canonical_key in aggregates
             and not selected
             else []
         )
         if selected or keys:
-            reference = next(
-                entry
-                for entry in manifest["inputs"]["observations"]
-                if entry["observation_id"] == identity
-            )
             observations.append(
-                {**reference, "issue_ids": selected, "aggregate_keys": keys}
+                {
+                    **input_references[identity],
+                    "issue_ids": sorted(selected),
+                    "aggregate_keys": keys,
+                }
             )
     record = {
         "schema_version": 1,
@@ -2049,17 +2181,6 @@ def _new_report_path(
     if path.exists() or path.is_symlink():
         raise FileExistsError(path)
     return path
-
-
-def _yaml_scalar(value: object) -> str:
-    """YAML 1.2 と互換な JSON scalar を返す。"""
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        return str(value)
-    if value is None:
-        return "null"
-    return json.dumps(str(value), ensure_ascii=False)
 
 
 def _markdown_text(value: object) -> str:
@@ -2198,7 +2319,7 @@ def _record_feedback_interruption(
             ),
         )
         next_actions = (
-            "`cmoc run join` で確定済み修正を取り込むか、`cmoc run abandon` で破棄してください。",
+            "保持した観測と active record は、次の新しい `cmoc feedback report` で再確認してください。",
         )
     return TerminalResult(details=details, next_actions=next_actions)
 

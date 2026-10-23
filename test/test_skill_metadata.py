@@ -7,6 +7,8 @@ import yaml
 
 _WORK_ROOT = Path(__file__).resolve().parents[1]
 _SKILLS_ROOT = _WORK_ROOT / ".agents" / "skills"
+# LibYAML が利用できる環境では、安全な C loader で解析の負担を減らす。
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 def test_repository_skill_frontmatter() -> None:
@@ -24,7 +26,7 @@ def test_repository_skill_frontmatter() -> None:
         frontmatter, separator, _body = content[4:].partition("\n---\n")
         assert separator, f"frontmatter の終了行がありません: {skill_path}"
 
-        metadata = yaml.safe_load(frontmatter)
+        metadata = yaml.load(frontmatter, Loader=_YAML_LOADER)
         assert isinstance(metadata, Mapping), (
             f"frontmatter が mapping ではありません: {skill_path}"
         )

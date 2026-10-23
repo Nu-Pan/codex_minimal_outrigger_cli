@@ -1,6 +1,14 @@
-"""Codex 呼び出し失敗を共通のエラーテキストへ変換する。"""
+"""Codex の prompt 保存と呼び出し失敗の記録を共通化する。"""
+
+from pathlib import Path
 
 from .runtime_errors import CmocError
+
+
+def write_codex_prompt_log(path: Path, prompt: str) -> None:
+    """call に渡す完全 prompt を、意味内容を変更せず保存する。"""
+    # oracle/doc/app_spec/codex_exec_rule.md の「prompt の保存と stdin 入力」。
+    path.write_text(prompt, encoding="utf-8")
 
 
 def format_codex_call_error(error: BaseException) -> str:

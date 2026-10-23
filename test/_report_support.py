@@ -1,0 +1,100 @@
+"""人間向け report を Markdown として読み、表示契約を確認する。"""
+
+from copy import deepcopy
+from functools import lru_cache
+
+import yaml
+from markdown_it import MarkdownIt
+
+# 設定だけ共有する。parse は呼び出しごとに本文の状態と参照定義を作る。
+_REPORT_MARKDOWN = MarkdownIt()
+# 見出し・fence の検査では、本文の装飾・リンクを解析しない。
+_REPORT_STRUCTURE = MarkdownIt().disable("inline")
+# LibYAML があれば同じ安全な型変換を使う C parser でメタデータを読む。
+_REPORT_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
+@lru_cache(maxsize=4)
+def _report_tokens(content, *, inline=False):
+    """同じ本文の解析を共有し、異なる report と抽出章の保持数を制限する。"""
+    # helper 内では共有した token を読み取るだけにする。
+    parser = _REPORT_MARKDOWN if inline else _REPORT_STRUCTURE
+    return tuple(parser.parse(content))
+
+
+def report_text(content):
+    """Markdown の装飾・HTML tag を除いた、読み手に見える本文を取り出す。"""
+    return "\n".join(
+        "".join(
+            child.content
+            for child in token.children or ()
+            if child.type in {"text", "code_inline"}
+        )
+        for token in _report_tokens(content, inline=True)
+        if token.type == "inline"
+    )
+
+
+def report_metadata(content):
+    tokens = _report_tokens(content)
+    information = next(
+        token.content
+        for token in reversed(tokens)
+        if token.type == "fence" and token.info == "yaml"
+    )
+    # 同じ実行情報の再解析を省き、返す入れ子の値は呼び出しごとに独立させる。
+    return deepcopy(_parse_report_metadata(information))
+
+
+@lru_cache(maxsize=4)
+def _parse_report_metadata(information):
+    metadata = yaml.load(information, Loader=_REPORT_YAML_LOADER)
+    assert isinstance(metadata, dict)
+    return metadata
+
+
+def report_section(content, heading):
+    tokens = _report_tokens(content)
+    for index, token in enumerate(tokens):
+        if token.type != "heading_open" or tokens[index + 1].content != heading:
+            continue
+        start = token.map[1]
+        lines = content.splitlines(keepends=True)
+        end = next(
+            (
+                following.map[0]
+                for following in tokens[index + 1 :]
+                if following.type == "heading_open"
+                and following.level <= token.level
+                and following.tag <= token.tag
+            ),
+            len(lines),
+        )
+        return "".join(lines[start:end])
+    raise AssertionError(f"report section is missing: {heading}")
+
+
+def original_report_input(content):
+    section = report_section(content, "元の指示")
+    return next(
+        token.content for token in _report_tokens(section) if token.type == "fence"
+    ).removesuffix("\n")
+
+
+def assert_report_layout(content):
+    tokens = _report_tokens(content)
+    assert tokens[0].type == "heading_open" and tokens[0].tag == "h1"
+    assert not content.startswith("---")
+    lines = content.splitlines()
+    headings = []
+    for index, token in enumerate(tokens):
+        if token.type == "heading_open":
+            headings.append(tokens[index + 1].content)
+            start, end = token.map
+            assert start == 0 or not lines[start - 1].strip(), lines[start]
+            assert end == len(lines) or not lines[end].strip(), lines[start]
+    assert headings.index("次の操作") < headings.index("元の指示")
+    assert headings.index("元の指示") < headings.index("詳細結果")
+    assert headings.index("詳細結果") < headings.index("実行記録")
+    assert headings[-1] == "実行情報"
+    assert report_metadata(content)["execution_id"]

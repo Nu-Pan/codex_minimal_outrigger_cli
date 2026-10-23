@@ -6,6 +6,7 @@ import pytest
 
 from basic.acp import AgentCallParameter, FileAccessMode
 
+# {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 
 
@@ -36,7 +37,7 @@ def codex_parameter(
 ) -> AgentCallParameter:
     """runtime wrapper test で使う小さな既定 Codex parameter を作る。"""
     return AgentCallParameter(
-        agent_call_kind="build_feedback_normalize_issue_parameter",
+        agent_call_kind="build_feedback_issue_normalization_request",
         file_access_mode=mode,
         prompt="prompt",
         structured_output_schema_path=None,
@@ -95,15 +96,10 @@ def stub_codex_overrides(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
     monkeypatch.setattr(exec_module, "prepare_codex_override_args", fake_prepare)
     monkeypatch.setattr(tui_module, "prepare_codex_override_args", fake_prepare)
-    monkeypatch.setattr(
-        tui_module,
-        "codex_cli_supports_tui_notification_hooks",
-        lambda *_args: False,
-    )
     return override_args
 
 
-def script_codex_calls(monkeypatch, responses, *, on_call=None):
+def script_codex_calls(monkeypatch, responses, *, on_call=None, stderr=""):
     """CLI 応答を置換し、出力の bytes、回復・再開とログ保存は実処理する。"""
     import commons.runtime_codex_exec as exec_module
 
@@ -116,8 +112,9 @@ def script_codex_calls(monkeypatch, responses, *, on_call=None):
             {
                 "argv": argv,
                 "prompt": prompt,
+                "cwd": kwargs["cwd"],
                 "env": kwargs["env"],
-                "timeout": kwargs["timeout"],
+                "timeout": kwargs.get("timeout"),
             }
         )
         if on_call is not None:
@@ -126,13 +123,22 @@ def script_codex_calls(monkeypatch, responses, *, on_call=None):
         if isinstance(response, BaseException):
             raise response
         returncode, stdout, output = response
+        if callback := kwargs.get("process_started_callback"):
+            callback()
+        if sink := kwargs.get("stdout"):
+            sink.write(stdout)
+        if sink := kwargs.get("stderr"):
+            sink.write(stderr)
+        if callback := kwargs.get("stdout_line_callback"):
+            for line in stdout.splitlines(keepends=True):
+                callback(line)
         if output is not None:
             output_path = Path(codex_arg_value(argv, "--output-last-message"))
             if isinstance(output, bytes):
                 output_path.write_bytes(output)
             else:
                 output_path.write_text(output)
-        return subprocess.CompletedProcess(argv, returncode, stdout, "")
+        return subprocess.CompletedProcess(argv, returncode, stdout, stderr)
 
     monkeypatch.setattr(exec_module, "run_codex_subprocess", run)
     return calls

@@ -2,12 +2,14 @@
 
 # {{work-root}}/oracle/doc/app_spec/sub_command/session_join.md
 import json
+from functools import partial
 from pathlib import Path
 from typing import Callable
 
-from acp.builder.session.join.conflict_resolution import (
-    build_session_join_conflict_resolution_parameter,
+from oracle.acp_builder.session.join.conflict_resolution import (
+    build_session_join_conflict_resolution_request,
 )
+
 from cmoc_runtime import (
     CmocError,
     CommandResult,
@@ -175,7 +177,8 @@ def resolve_session_join_conflict(
     )
     resolution = resolve_merge_conflicts(
         root,
-        build_session_join_conflict_resolution_parameter(
+        partial(
+            build_session_join_conflict_resolution_request,
             session_head_commit,
             home_head_commit,
             root,

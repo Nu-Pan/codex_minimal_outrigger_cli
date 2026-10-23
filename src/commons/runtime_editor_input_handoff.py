@@ -32,7 +32,8 @@ def validate_editor_input_file(root: Path, path: Path) -> None:
     try:
         resolved_dir = expected_dir.resolve(strict=True)
         mode = path.lstat().st_mode
-        current = path.absolute()
+        # leaf の symlink は後段の regular 判定で拒否し、親だけを追加検査する。
+        current = path.parent.absolute()
         while True:
             if stat.S_ISLNK(current.lstat().st_mode):
                 raise _invalid_editor_input_file(

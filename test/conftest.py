@@ -2,63 +2,106 @@
 
 import json
 import os
+import shutil
 from itertools import count
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
+from _acp_builder_support import oracle_schema_path
 from _git_support import SESSION_BRANCH, SESSION_ID, current_branch, init_repo, run_git
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli
+import commons.runtime_codex_exec as runtime_codex_exec
 import commons.runtime_doctor as runtime_doctor
 import commons.runtime_document_search as runtime_document_search
 import commons.runtime_document_search_observation as observation_module
 import commons.runtime_download_asset_cache as asset_cache_module
+import commons.runtime_editor_input_handoff_protocol as handoff_protocol
 import commons.runtime_feedback as runtime_feedback
+import commons.runtime_feedback_run_state as feedback_run_state
+import commons.runtime_feedback_state as feedback_state
+import commons.runtime_feedback_store as feedback_store
 import commons.runtime_logging as runtime_logging
+import commons.runtime_primary_report_review as report_review
+import commons.runtime_run_lifecycle as run_lifecycle
 import commons.runtime_windows_toast as runtime_windows_toast
+import sub_commands.feedback.remediation as remediation_module
 from commons.runtime_config import write_config
 from commons.runtime_document_search_types import SEARCH_MATERIALS
 from commons.runtime_editor_input_handoff_protocol import EDITOR_INPUT_SOURCE_ENV
+from commons.runtime_refactor import sync_refactor_state, write_refactor_state
 from commons.runtime_state import SessionPart, SessionState, state_path, write_state
 from config.cmoc_config import CmocConfig
 
 
-@pytest.fixture
-def cli_repository(tmp_path: Path) -> Path:
-    """履歴を参照しない CLI lifecycle test に実 Git root を用意する。"""
-    # root 解決とログ・report 保存は実経路を通し、追跡ファイルと初期 commit は作らない。
-    root = tmp_path / "repo"
-    root.mkdir()
+@pytest.fixture(scope="session")
+def _empty_repository_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """履歴不要な test に複製する空の Git repository を一度だけ初期化する。"""
+    root = tmp_path_factory.mktemp("empty-repository-seed")
     init_repo(root)
     return root
 
 
 @pytest.fixture
-def committed_repository(cli_repository: Path) -> Path:
-    """履歴内容を参照せず HEAD が必要な test に空 commit を用意する。"""
-    # root・branch・linked metadata は実 Git を使い、追跡 file と git add は準備しない。
-    run_git(cli_repository, "commit", "--allow-empty", "-m", "initial")
-    return cli_repository
+def cli_repository(tmp_path: Path, _empty_repository_seed: Path) -> Path:
+    """履歴を参照しない CLI lifecycle test に実 Git root を用意する。"""
+    # Git の初期化だけを共有し、設定・index・refs は各 test 内に独立して複製する。
+    return shutil.copytree(_empty_repository_seed, tmp_path / "repo")
+
+
+@pytest.fixture(scope="session")
+def _committed_repository_seed(
+    tmp_path_factory: pytest.TempPathFactory, _empty_repository_seed: Path
+) -> Path:
+    """HEAD だけが必要な test に複製する初期履歴を一度だけ作る。"""
+    # 修復や linked metadata の作成は各ケースで行い、準備用の init・commit を共有する。
+    root = shutil.copytree(
+        _empty_repository_seed,
+        tmp_path_factory.mktemp("committed-repository-seed") / "repo",
+    )
+    run_git(root, "commit", "--allow-empty", "-m", "initial")
+    return root
 
 
 @pytest.fixture
-def ready_run_session(
-    cli_repository: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[Path, str, Path]:
-    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
+def committed_repository(tmp_path: Path, _committed_repository_seed: Path) -> Path:
+    """独立した index・refs・設定を持つ実 repository を各 test 内に用意する。"""
+    # hardlink や linked worktree を使わず、変更可能な Git metadata もすべて複製する。
+    return shutil.copytree(_committed_repository_seed, tmp_path / "repo")
+
+
+def _prepare_run_session(
+    root: Path,
+    *,
+    with_content: bool,
+    with_managed_files: bool = False,
+) -> Path:
+    """必要な初期内容と設定を一つの commit に揃えて session を用意する。"""
     # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
-    root = cli_repository
-    monkeypatch.chdir(root)
+    init_repo(root)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     for relative in ("oracle/doc", "oracle/src", "oracle/test", "src", "test"):
         (root / relative).mkdir(parents=True, exist_ok=True)
+    if with_content:
+        # 初期内容を session fork 後に追加する履歴は利用側の検査に不要。
+        # apply の比較範囲は test_realization_apply_fork_and_run_join_use_common_state で検査する。
+        (root / "README.md").write_text("# repo\n")
+        (root / "oracle/spec.md").write_text("# spec\n")
     # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。
     write_config(root / ".cmoc/gt/config.json", CmocConfig())
-    run_git(root, "add", ".gitignore", ".cmoc/gt/config.json")
+    if with_managed_files:
+        # HEAD を固定する検査には、管理物も初期 commit に揃えて修復 commit を省く。
+        agents = root / ".agents"
+        agents.mkdir()
+        (agents / ".gitkeep").touch()
+        # state 自身を含む entry 集合を、初期内容がすべて揃ってから同期する。
+        write_refactor_state(root, {})
+        sync_refactor_state(root)
+    run_git(root, "add", ".")
     run_git(root, "commit", "-m", "session seed")
     home_branch = current_branch(root)
     fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -72,24 +115,167 @@ def ready_run_session(
             )
         ),
     )
-    return root, SESSION_BRANCH, path
+    return root
+
+
+def _copy_run_session(
+    seed: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """空 directory も複製し、各 test の index・refs・state を独立させる。"""
+    root = shutil.copytree(seed, tmp_path / "repo")
+    monkeypatch.chdir(root)
+    return root, SESSION_BRANCH, state_path(root, SESSION_ID)
+
+
+@pytest.fixture(scope="session")
+def _ready_run_session_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """run の前提だけの init・commit・branch 作成を一度だけ行う。"""
+    return _prepare_run_session(
+        tmp_path_factory.mktemp("run-session-seed"), with_content=False
+    )
+
+
+@pytest.fixture
+def ready_run_session(
+    tmp_path: Path, _ready_run_session_seed: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """run lifecycle の検査に必要な clean session と保存済み state を用意する。"""
+    return _copy_run_session(_ready_run_session_seed, tmp_path, monkeypatch)
+
+
+@pytest.fixture(scope="session")
+def _ready_content_session_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """oracle・realization の初期内容を含む履歴も一度だけ作る。"""
+    return _prepare_run_session(
+        tmp_path_factory.mktemp("content-session-seed"), with_content=True
+    )
 
 
 @pytest.fixture
 def ready_content_session(
-    ready_run_session: tuple[Path, str, Path],
+    tmp_path: Path, _ready_content_session_seed: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, str, Path]:
     """run の検査に使う oracle と realization の初期内容を用意する。"""
-    root, _session_branch, _state_path = ready_run_session
-    (root / "README.md").write_text("# repo\n")
-    (root / "oracle" / "spec.md").write_text("# spec\n")
-    run_git(root, "add", "README.md", "oracle/spec.md")
-    run_git(root, "commit", "-m", "apply input")
-    return ready_run_session
+    return _copy_run_session(_ready_content_session_seed, tmp_path, monkeypatch)
+
+
+@pytest.fixture(scope="session")
+def _ready_join_session_seed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """join の前提となる初期履歴・管理物・state を一度だけ作る。"""
+    # fixture では doctor 全体を実行しない。修復・索引同期は CLI 本処理と
+    # test_doctor_cli.py に残し、join 前後の HEAD と state の比較条件を保つ。
+    return _prepare_run_session(
+        tmp_path_factory.mktemp("join-session-seed"),
+        with_content=True,
+        with_managed_files=True,
+    )
 
 
 @pytest.fixture
-def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def ready_join_session(
+    tmp_path: Path, _ready_join_session_seed: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, str, Path]:
+    """同期済み管理物と独立した Git metadata を各 test の session に複製する。"""
+    return _copy_run_session(_ready_join_session_seed, tmp_path, monkeypatch)
+
+
+@pytest.fixture
+def feedback_remediation_request_stub(monkeypatch: pytest.MonkeyPatch) -> None:
+    """fake 応答の state 検査には、issue 入力・cwd・正本 schema だけを渡す。"""
+    # prompt と起動設定は test_feedback.py の builder 専用ケース、実 Git と
+    # remediation 呼び出しの結合は後続 wave test に残す。応答は正本 schema で検査する。
+    schema = oracle_schema_path("feedback", "remediate_issue.json")
+    monkeypatch.setattr(
+        remediation_module,
+        "build_feedback_issue_remediation_request",
+        lambda text, root: SimpleNamespace(
+            prompt=text, agent_call_cwd=root, structured_output_schema_path=schema
+        ),
+    )
+
+
+@pytest.fixture
+def feedback_publication_session(
+    ready_join_session: tuple[Path, str, Path],
+    feedback_without_transport: None,
+    nonpersistent_feedback_ids: None,
+    feedback_remediation_request_stub: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
+    """案件の publication 検査には、修復不要の session と同期を待たない保存を使う。"""
+    # doctor の修復・設定検査は test_doctor_cli.py、feedback との結合は
+    # test_feedback.py の repairs_sequential_waves_and_preserves_late_intake に残す。
+    # fsync の順序・失敗・再保存は test_feedback_store.py、実同期との結合は
+    # 上記の wave test に残す。write・rename・hash 検査と recovery は実行する。
+    monkeypatch.setattr("os.fsync", lambda _fd: None)
+    # Git・判定根拠・join・publication・cleanup は製品の処理を検査する。
+    monkeypatch.setattr(
+        remediation_module, "doctor_preprocess_for_join", lambda **_kwargs: None
+    )
+    root, _session_branch, _state_path = ready_join_session
+    return root
+
+
+@pytest.fixture
+def nonpersistent_execution_ids(monkeypatch: pytest.MonkeyPatch) -> None:
+    """採番を検査しない CLI test に、保存を伴わない実行 ID を用意する。"""
+    # 永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py の
+    # test_subcommand_logger_keeps_one_file_per_execution に残し、ID の対応は実検査する。
+    ids = count()
+    monkeypatch.setattr(
+        runtime_logging,
+        "new_id",
+        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+    )
+
+
+@pytest.fixture
+def nonpersistent_feedback_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """publication・close の検査に、保存を伴わない feedback・編集 run ID を用意する。"""
+    # SQLite の FULL 同期は os.fsync の置換では省けない。永続採番は
+    # test_runtime_ids.py と test_codex_runtime_paths.py、feedback との結合は
+    # test_feedback.py の後続 wave test と test_feedback_close.py の reported_case に残す。
+    # 各検査では ID の対応・再発時の非再利用・recovery での固定 target を保つ。
+    # 編集 run の採番も同じ対象とし、状態遷移ごとの SQLite 同期を重ねない。
+    for module in (
+        feedback_run_state,
+        feedback_state,
+        feedback_store,
+        remediation_module,
+        run_lifecycle,
+    ):
+        monkeypatch.setattr(module, "new_id", runtime_logging.new_id)
+
+
+@pytest.fixture
+def nonpersistent_codex_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """永続採番を検査しない exec test で、実行・agent・Codex call ID を生成する。"""
+    # 永続採番は test_runtime_ids.py、実採番と log の結合・process 間の共有は
+    # test_codex_runtime_paths.py に残し、ログ間の ID 対応はここでも検査する。
+    monkeypatch.setattr(runtime_codex_exec, "new_id", runtime_logging.new_id)
+
+
+@pytest.fixture
+def nonpersistent_handoff_ids(
+    nonpersistent_execution_ids: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """採番を検査しない handoff test で、実行・target ID の永続保存を省く。"""
+    # 永続採番は test_runtime_ids.py、実採番と target の結合は
+    # test_editor_input_handoff.py の editor 待機ケースに残す。
+    # route の保存・解決・削除と TCP lifecycle は実処理を通す。
+    monkeypatch.setattr(handoff_protocol, "new_id", runtime_logging.new_id)
+
+
+@pytest.fixture
+def cli_terminal_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_execution_ids: None,
+) -> Path:
     """表示・通知・前処理失敗に不要な外部処理と永続採番を準備しない。"""
     # 実 Git の cwd・linked worktree 境界は test_runtime_cli.py で検証する。
     # collector の TCP 受付・保存・drain は test_feedback.py に残す。
@@ -101,13 +287,10 @@ def cli_terminal_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> P
     monkeypatch.setattr(
         runtime_cli, "start_feedback_invocation", lambda *_args: (None, None)
     )
-    # 永続採番は test_runtime_ids.py、logger との結合は test_runtime_cli.py の
-    # test_subcommand_logger_keeps_one_file_per_execution に残し、ID の対応は実検査する。
-    ids = count()
+    # pending の inventory・件数・通知境界は test_feedback.py、結果の引き渡しは
+    # test_runtime_cli.py に残し、表示・report の検査で空の store を毎回検証しない。
     monkeypatch.setattr(
-        runtime_logging,
-        "new_id",
-        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+        runtime_cli, "feedback_completion_counts", lambda _root: (0, [])
     )
     return root
 
@@ -140,6 +323,57 @@ def _isolate_download_asset_cache(request, monkeypatch):
         "asset_cache_directory",
         lambda: request.getfixturevalue("tmp_path") / "asset-cache",
     )
+
+
+@pytest.fixture
+def unsynced_search_storage(monkeypatch):
+    """耐久性を判定しない検索 test では、初期化・更新時のディスク同期を省く。"""
+    # 実 sqlite-vec、ファイルへの保存、commit/rollback は維持する。
+    # 途中保存・再開・別 worktree での再利用は、この fixture を使わず検査する。
+    sqlite = runtime_document_search.sqlite3
+
+    def connect_unsynced(*args, **kwargs):
+        connection = sqlite.connect(*args, **kwargs)
+        # 索引・cache のテーブル作成も同期を伴うため、作成前の接続で設定する。
+        connection.execute("pragma synchronous = off")
+        return connection
+
+    # 他 module の採番 DB や、test が直接開く検証用 connection には適用しない。
+    monkeypatch.setattr(
+        runtime_document_search,
+        "sqlite3",
+        SimpleNamespace(**(vars(sqlite) | {"connect": connect_unsynced})),
+    )
+
+
+@pytest.fixture
+def document_repository(tmp_path, monkeypatch):
+    """Git 検査以外の検索契約に、検証済みの root・文書集合を渡す。"""
+    root = tmp_path / "repo"
+    docs = root / "oracle/doc"
+    docs.mkdir(parents=True)
+    (docs / "allowed.md").write_text("# 許可された原文\n最初の内容\n")
+
+    def repository_root(work_root):
+        assert work_root == root
+        return root
+
+    def enumerate_documents(work_root):
+        assert work_root == root
+        return sorted(docs.glob("*.md")), []
+
+    # Git 分類・root 解決・非追跡検査は実 repository の同期・再利用 test に残す。
+    # 本文・位置の再確認、索引 identity・lease・保存・検索と MCP 応答は製品経路を通す。
+    monkeypatch.setattr(runtime_document_search, "repo_root", repository_root)
+    monkeypatch.setattr(
+        runtime_document_search, "require_cmoc_ignored", lambda _root: None
+    )
+    monkeypatch.setattr(
+        runtime_document_search,
+        "enumerate_oracle_and_realization_files",
+        enumerate_documents,
+    )
+    return root
 
 
 @pytest.fixture
@@ -213,6 +447,42 @@ def _isolate_primary_report_editor(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def primary_report_review_runner(monkeypatch):
+    """一般の CLI 検査では確認の起動準備と応答を置換し、実 runner を渡す。"""
+    # 専用の review_runtime は正本 builder と実 runner を戻して、prompt・schema・
+    # 起動設定・回復・補正・取消を検査する。一般の CLI 検査では消費されない
+    # prompt の構築と Git 探索を省き、入力固定・report の組み立てと保存は実行する。
+    runner = report_review.run_codex_exec
+    monkeypatch.setattr(
+        report_review,
+        "build_primary_report_review_request",
+        lambda **_kwargs: object(),
+    )
+    monkeypatch.setattr(
+        report_review,
+        "run_codex_exec",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            output_json={"result": {"status": "no_findings", "findings": []}}
+        ),
+    )
+    return runner
+
+
+@pytest.fixture
+def primary_report_review_builder(primary_report_review_runner, monkeypatch):
+    """確認の起動引数や Git 境界を検査するケースでは正本 builder を使う。"""
+    from oracle.acp_builder.primary_report_review import (
+        build_primary_report_review_request,
+    )
+
+    monkeypatch.setattr(
+        report_review,
+        "build_primary_report_review_request",
+        build_primary_report_review_request,
+    )
+
+
+@pytest.fixture(autouse=True)
 def _isolate_document_search_materials(
     request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -278,6 +548,19 @@ def _isolate_document_search_materials(
         )
 
     monkeypatch.setattr(runtime_doctor, "DocumentSearch", doctor_search)
+
+
+@pytest.fixture
+def doctor_without_index_sync(monkeypatch: pytest.MonkeyPatch) -> None:
+    """配置先・Git 修復・停止・reporter の検査では、参照しない索引の生成を省く。"""
+    # 実同期との結合は test_doctor_cli.py の初回修復と worktree 分離に残す。
+    # 更新・削除・再利用とログ/report は
+    # test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports、
+    # 失敗・取消の進捗は test_doctor_reports_persisted_chunks_when_sync_fails で検査する。
+    # 設定・state の同期、Git index の退避・復元と修復 commit は実処理を通す。
+    monkeypatch.setattr(
+        runtime_doctor, "_synchronize_document_search_index", lambda *_args: None
+    )
 
 
 @pytest.fixture

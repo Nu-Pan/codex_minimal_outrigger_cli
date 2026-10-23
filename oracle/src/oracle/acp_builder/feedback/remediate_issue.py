@@ -13,7 +13,7 @@ from oracle.other.struct_doc import SDCodeBlock, SDHeader, render_sd_node_as_mar
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_feedback_remediate_issue_parameter(
+def build_feedback_issue_remediation_request(
     issue_json: str,
     run_worktree: Path,
 ) -> AgentCallParameter:
@@ -82,7 +82,7 @@ def build_feedback_remediate_issue_parameter(
     )
 
     return AgentCallParameter(
-        agent_call_kind=build_feedback_remediate_issue_parameter.__name__,
+        agent_call_kind="realization_edit",
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=Path(__file__).with_suffix(".json"),

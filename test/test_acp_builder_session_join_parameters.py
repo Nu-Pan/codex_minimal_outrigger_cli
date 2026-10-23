@@ -2,22 +2,19 @@
 
 対応する正本:
 - {{work-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import codex_arg_value, codex_override_config
 from oracle.acp_builder.session.join.conflict_resolution import (
-    build_session_join_conflict_resolution_parameter as build_canonical_conflict_parameter,
+    build_session_join_conflict_resolution_request,
 )
 
-import acp.builder.session.join.conflict_resolution as session_conflict_resolution_module
-from acp.builder.session.join.conflict_resolution import (
-    build_session_join_conflict_resolution_parameter,
-)
 from basic.acp import FileAccessMode
 from commons.runtime_codex_profile import build_codex_override_args
 from config.cmoc_config import CmocConfig
@@ -41,30 +38,13 @@ def home_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return home
 
 
-def test_session_join_compatibility_module_reexports_canonical_builder() -> None:
-    """公開モジュールが正本 builder だけを加工せず再公開する。"""
-
-    assert session_conflict_resolution_module.__all__ == [
-        "build_session_join_conflict_resolution_parameter"
-    ]
-    assert {
-        name
-        for name in vars(session_conflict_resolution_module)
-        if not name.startswith("_")
-    } == {"build_session_join_conflict_resolution_parameter"}
-    assert (
-        build_session_join_conflict_resolution_parameter
-        is build_canonical_conflict_parameter
-    )
-
-
 def test_session_join_conflict_resolution_preserves_prompt_and_launch_parameters(
     home_worktree: Path,
 ) -> None:
     """Git 入力を prompt のみに渡し、起動設定・編集範囲を維持する。"""
 
     source, target = "c" * 40, "d" * 40
-    parameter = build_session_join_conflict_resolution_parameter(
+    parameter = build_session_join_conflict_resolution_request(
         source, target, home_worktree
     )
 
@@ -89,18 +69,17 @@ def test_session_join_conflict_resolution_preserves_prompt_and_launch_parameters
     for heading in ("# oracle policy", "# realization policy"):
         assert heading in parameter.prompt
     assert "# realization findings policy" not in parameter.prompt
-    # prompt 契約を検査した parameter を argv の検査にも使い、再構築しない。
-    swapped_parameter = build_session_join_conflict_resolution_parameter(
-        target, source, home_worktree
+    # source/target の対応は上で検査済み。argv の prompt 非依存性には
+    # prompt の参照入力だけを変え、完全 prompt を再構築しない。
+    changed_input_parameter = replace(
+        parameter,
+        prompt=parameter.prompt.replace(source, "e" * 40).replace(target, "f" * 40),
     )
-    assert swapped_parameter.file_access_mode == FileAccessMode.REPO_WRITE
-    assert f"- source（取り込む側）: `{target}`" in swapped_parameter.prompt
-    assert f"- target（取り込み先の merge 前）: `{source}`" in swapped_parameter.prompt
     config = CmocConfig()
     args = build_codex_override_args(parameter, config)
-    swapped_args = build_codex_override_args(swapped_parameter, config)
+    changed_input_args = build_codex_override_args(changed_input_parameter, config)
 
-    assert args == swapped_args
+    assert args == changed_input_args
     assert codex_arg_value(args, "--sandbox") == "workspace-write"
     assert all(source not in arg and target not in arg for arg in args)
     parsed = codex_override_config(args)

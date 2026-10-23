@@ -15,8 +15,9 @@
 
 - ユーザーは `{{repo-root}}` をカレントとして `{{cmoc-root}}/bin/cmoc` を呼び出す
 - `cmoc oracle edit` は main worktree から呼び出され、`{{repo-root}}` を agent call の cwd とする 2 回の `codex exec` を直列に起動する
-- `cmoc realization apply fork`, `cmoc realization refactor fork` は `{{repo-root}}` を cmoc process の cwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
-- realization の各 fork が起動する編集用 `codex exec` は `{{run-root}}` を agent call の cwd とする
+- `cmoc realization apply`, `cmoc realization refactor` は `{{repo-root}}` を cmoc process の cwd として呼び出され、run の作業隔離のために `{{run-root}}` を git linked worktree として作成する
+- realization の各 workload が起動する本命の編集用 `codex exec` は `{{run-root}}` を agent call の cwd とする
+- 編集 run の自動 join と明示 join の競合解消 call は、session を統合中の run worktree を agent call の cwd とする
 - agent call の call-scoped path context は `AgentCallPathContext` を正本とする
 
 NOTE

@@ -13,7 +13,7 @@ from oracle.prompt_builder.merge_conflict_resolution import (
 )
 
 
-def build_session_join_conflict_resolution_parameter(
+def build_session_join_conflict_resolution_request(
     session_head_commit: str,
     home_head_commit: str,
     home_worktree: Path,
@@ -39,7 +39,7 @@ def build_session_join_conflict_resolution_parameter(
         path_context=path_context,
     )
     return AgentCallParameter(
-        agent_call_kind=build_session_join_conflict_resolution_parameter.__name__,
+        agent_call_kind=build_session_join_conflict_resolution_request.__name__,
         file_access_mode=FileAccessMode.REPO_WRITE,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,

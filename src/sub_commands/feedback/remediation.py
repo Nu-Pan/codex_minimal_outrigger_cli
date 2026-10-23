@@ -16,10 +16,7 @@ from pathlib import Path
 from typing import Any, NoReturn
 
 from oracle.acp_builder.feedback.remediate_issue import (
-    build_feedback_remediate_issue_parameter,
-)
-from oracle.acp_builder.run.join.conflict_resolution import (
-    build_run_join_conflict_resolution_parameter,
+    build_feedback_issue_remediation_request,
 )
 
 from cmoc_runtime import (
@@ -33,6 +30,10 @@ from cmoc_runtime import (
     run_git,
     work_root,
     write_state,
+)
+from commons.runtime_codex_recovery import (
+    check_recovery_interruption,
+    install_recovery_interruption,
 )
 from commons.runtime_feedback_intake import capture_high_watermark
 from commons.runtime_feedback_run_state import (
@@ -53,20 +54,22 @@ from commons.runtime_feedback_state import (
     recover_report_cut_checkpoint_references,
     remediation_checkpoint_path,
     validate_feedback_state,
-    write_checkpoint,
+    write_immutable_artifact,
     write_report_cut_manifest,
 )
 from commons.runtime_feedback_store import (
-    _has_symlink_component,
     canonical_json_bytes,
     rfc3339_now,
     sha256_bytes,
-    write_immutable_json,
 )
 from commons.runtime_ids import new_id
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
-from commons.runtime_paths import codex_log_dir
-from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_paths import reuse_root_queries
+from commons.runtime_primary_report import (
+    current_primary_report_fields,
+    primary_report_finalization_lock,
+    update_primary_report_fields,
+)
 from commons.runtime_primary_report_render import execution_record_markdown
 from commons.runtime_refactor import sync_refactor_state
 from commons.runtime_results import StructuredOutputValidationIssue
@@ -78,8 +81,17 @@ from commons.runtime_run import (
 )
 from commons.runtime_run_join import (
     doctor_preprocess_for_join,
+    join_editing_run,
+    join_recovery_actions,
     merge_run,
+    rollback_join_preparation,
     validate_run_join,
+)
+from commons.runtime_run_join_state import (
+    JoinRecord,
+    confirm_import,
+    join_record,
+    load_join_record,
 )
 from commons.runtime_run_lifecycle import (
     EditingRunContext,
@@ -103,7 +115,9 @@ def run_feedback_report() -> TerminalResult:
     """事前条件を検査し、同一 run の join 後 recovery または新規修復を行う。"""
     from .recovery import finish_feedback_run, recover_finalization
 
-    repository, session_worktree = repo_root(), work_root()
+    # 開始時の両 root だけを共有し、doctor や recovery へ探索結果を持ち越さない。
+    with reuse_root_queries():
+        repository, session_worktree = repo_root(), work_root()
     context: EditingRunContext | None = None
     manifest: dict[str, Any] | None = None
     manifest_path: Path | None = None
@@ -111,7 +125,8 @@ def run_feedback_report() -> TerminalResult:
     starting = False
     try:
         # doctor の修復を完了してから clean を判定する。
-        doctor_preprocess_for_join()
+        update_primary_report_fields(feedback_stage="doctor preprocess")
+        doctor_preprocess_for_join(rollback_on_interruption=True)
         branch = current_branch(session_worktree)
         update_primary_report_fields(session_branch=branch)
         if not branch.startswith("cmoc/session/"):
@@ -152,7 +167,9 @@ def run_feedback_report() -> TerminalResult:
                         else None,
                         publication_status=manifest["processing"]["status"],
                     )
-                candidate_context, _ = resolve_active_run({"error", "joinable"})
+                candidate_context, _ = resolve_active_run(
+                    {"error", "joinable"}, allow_missing_run_worktree=True
+                )
                 _validate_context(candidate_context, manifest)
                 if manifest["run"]["join_intent"] is None:
                     raise _failure(
@@ -164,7 +181,10 @@ def run_feedback_report() -> TerminalResult:
                 # 同じ run の wave loop は再開しない。join 成功を証明できる場合だけ再開する。
                 context = candidate_context
                 finalizing = True
-                with _indivisible_finalization():
+                with (
+                    primary_report_finalization_lock(repository, context.session_id),
+                    _indivisible_finalization(),
+                ):
                     if (
                         state.current is None
                         or state.current["report_cut_id"] != manifest["report_cut_id"]
@@ -186,16 +206,30 @@ def run_feedback_report() -> TerminalResult:
             manifest_path, _ = write_report_cut_manifest(repository, manifest)
             _update_progress(context, manifest, "running")
             with run_process_tracking(repository, context.session_id):
+                update_primary_report_fields(feedback_stage="intake wave loop")
                 candidates, aggregates = _wave_loop(context, manifest, state)
                 stop_tracked_codex_children(repository, context.session_id)
             # 自動 join に必要な doctor の機械更新を seal 前に確定する。
             warnings: list[str] = []
             validate_run_join(context, warnings)
-            _seal(context, manifest, candidates, aggregates)
-            set_run_state(context, "joinable")
-            _update_progress(context, manifest, "joinable")
-            with _indivisible_finalization():
+            check_recovery_interruption()
+            with (
+                primary_report_finalization_lock(repository, context.session_id),
+                _indivisible_finalization(),
+            ):
                 finalizing = True
+                update_primary_report_fields(
+                    feedback_stage="seal report cut", join_status="not_run"
+                )
+                _seal(context, manifest, candidates, aggregates)
+                set_run_state(context, "joinable")
+                _update_progress(context, manifest, "joinable")
+                record = join_record(context)
+                # merge 時点にも doctor を実行し、開始時の成功で代用しない。
+                doctor_preprocess_for_join()
+                update_primary_report_fields(
+                    feedback_stage="join preconditions", join_status="started"
+                )
                 save_run_artifact(
                     repository,
                     manifest,
@@ -211,7 +245,14 @@ def run_feedback_report() -> TerminalResult:
                     _, _, current = load_state_for_branch(
                         repository, context.session_branch
                     )
-                    validate_run_join(context, warnings)
+                    validate_run_join(
+                        context, warnings, original_run_head=record.original_run_head
+                    )
+                    update_primary_report_fields(
+                        join_preconditions="completed",
+                        join_diff_validation="completed",
+                        feedback_stage="merge and post-join",
+                    )
                     before = head_commit(context.session_worktree)
 
                     def merged(
@@ -222,6 +263,11 @@ def run_feedback_report() -> TerminalResult:
                         assert manifest is not None
                         _record_merge(context, manifest, commit, resolution)
 
+                    def verify_prepared(prepared: JoinRecord) -> None:
+                        # 取り込み前に、封印済み結果と準備完了 tree を結び付ける。
+                        assert context is not None and manifest is not None
+                        _verify_prepared_feedback(context, manifest, prepared)
+
                     merge_run(
                         context,
                         current,
@@ -230,8 +276,11 @@ def run_feedback_report() -> TerminalResult:
                         on_merged=merged,
                         feedback_report_cut_path=context.repo
                         / manifest["run"]["sealed"]["path"],
+                        verify_prepared=verify_prepared,
                     )
+                    update_primary_report_fields(feedback_stage="join verification")
                     _complete_join(context, manifest)
+                update_primary_report_fields(feedback_stage="publication")
                 result = _publish(context, manifest, manifest_path, state)
                 return finish_feedback_run(context, manifest, result)
     except KeyboardInterrupt as interruption:
@@ -367,15 +416,21 @@ def _wave_loop(
             previous_aggregates=aggregates,
             observed_at=captured_at,
         )
-        files = decision.worktree_inputs(context.run_worktree)
+        # 候補がない反復では照合する判定根拠がない。次の intake では改めて判断する。
+        files = decision.worktree_inputs(context.run_worktree) if candidates else {}
         pending = {}
         for identity, candidate in sorted(candidates.items()):
-            history = decision.issue_history(context.repo, manifest, identity)
+            history = decision.issue_history(
+                context.repo, manifest, identity, latest_only=True
+            )
             current = decision.decision_state(files, candidate)
             if history and decision.basis_is_valid(
                 history[-1][1]["audit"]["decision_basis"], current
             ):
                 continue
+            # 有効性の照合には最新だけで足りる。再確認の循環検出には全履歴を渡す。
+            if history:
+                history = decision.issue_history(context.repo, manifest, identity)
             pending[identity] = {
                 **candidate,
                 "decision_state_sha256": decision.state_hash(current),
@@ -383,7 +438,7 @@ def _wave_loop(
             }
         if manifest["run"]["waves"] and not pending:
             if not prepared:
-                doctor_preprocess_for_join()
+                doctor_preprocess_for_join(rollback_on_interruption=True)
                 validate_run_join(context, [])
                 prepared = True
                 # 機械更新と、その間の intake を最終境界の検査へ含める。
@@ -413,8 +468,7 @@ def _wave_loop(
             / str(sequence)
             / "input.json"
         )
-        write_immutable_json(wave_path, wave)
-        wave_reference = artifact_reference(context.repo, wave_path)
+        wave_reference = write_immutable_artifact(context.repo, wave_path, wave)
         manifest["run"]["waves"].append(wave_reference)
         # The wave file is durable before its high-watermark is published in
         # the manifest.  Recovery can therefore never observe a consumed
@@ -540,7 +594,7 @@ def _remediate_issue(
         for reference in manifest["inputs"]["observations"]
         if reference["observation_id"] in additional_sources
     ]
-    parameter = build_feedback_remediate_issue_parameter(
+    parameter = build_feedback_issue_remediation_request(
         json.dumps(payload, ensure_ascii=False, sort_keys=True),
         context.run_worktree,
     )
@@ -675,7 +729,7 @@ def _remediate_issue(
             f"{identity}.{int(Path(wave['path']).parent.name):08d}",
         )
         validate_remediation_checkpoint(checkpoint, path)
-        reference = write_checkpoint(context.repo, path, checkpoint)
+        reference = write_immutable_artifact(context.repo, path, checkpoint)
         checkpoint_saved = True
         logger = current_subcommand_logger()
         if logger is not None:
@@ -749,14 +803,12 @@ def _seal(
     """wave loop の自然完了後に publication 入力と merge 対象を一度だけ封印する。"""
     selected = selected_remediation_checkpoints(manifest)
     files = decision.worktree_inputs(context.run_worktree)
-    _validate_selected_basis(context, selected, candidates, files)
-    owner_execution_id = current_execution_id(context.repo)
+    checkpoints = _validate_selected_basis(context, selected, candidates, files)
     statuses = {
-        item["candidate_id"]: read_run_artifact(
-            context.repo, {key: item[key] for key in ("path", "sha256")}
-        )["structured_output"]["result"]["status"]
-        for item in selected
+        checkpoint["candidate_id"]: checkpoint["structured_output"]["result"]["status"]
+        for checkpoint in checkpoints.values()
     }
+    owner_execution_id = current_execution_id(context.repo)
     case_ids = {
         identity: candidate.get("case_id")
         or (
@@ -808,6 +860,7 @@ def _record_merge(
     resolution: dict[str, object] | None = None,
 ) -> None:
     """merge/no-op 成功を seal と結び付け、publication failure で巻き戻さない。"""
+    record = join_record(context)
     recorded_resolution = dict(
         resolution or {"agent_status": "not_needed", "initial_conflicts": []}
     )
@@ -824,7 +877,10 @@ def _record_merge(
             "report_cut_id": manifest["report_cut_id"],
             "sealed": manifest["run"]["sealed"],
             "run_join_commit": commit,
-            "session_commit": head_commit(context.session_worktree),
+            "session_commit": record.session_commit,
+            "session_tree": record.session_tree,
+            "prepared_run_head": record.prepared_run_head,
+            "baseline_session_head": record.session_head,
             "resolution": recorded_resolution,
         },
     )
@@ -833,12 +889,24 @@ def _record_merge(
 def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None:
     """最終 session tree に対する commit 到達可能性と path/hash を確認する。"""
     seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
-    require_clean_worktree(context.run_worktree)
+    record = load_join_record(context.repo, context.session_id)
+    if record is None or not confirm_import(record) or record.prepared_run_head is None:
+        raise _failure("feedback run の準備・取り込み記録を確認できません。")
+    # 共通の取り込み確認で準備済み run と session commit の tree 全体を照合済み。
+    # 同じ immutable commit の tree ID・path 差分をここで再照会しない。
+    if context.run_worktree.exists():
+        require_clean_worktree(context.run_worktree)
+        if head_commit(context.run_worktree) != record.prepared_run_head:
+            raise _failure("feedback run の準備完了成果が変更されています。")
     require_clean_worktree(context.session_worktree)
-    if head_commit(context.run_worktree) != seal["run_head"] or not _is_ancestor(
-        context, seal["run_head"]
-    ):
+    if not _is_ancestor(context, record.prepared_run_head):
         raise _failure("feedback run HEAD が join 後 session tree から到達できません。")
+    # 到達可能性はこの join 検証内で commit ごとに共有し、再実行時は取り直す。
+    reachable_commits = {record.prepared_run_head}
+    if seal["run_head"] not in reachable_commits:
+        if not _is_ancestor(context, seal["run_head"]):
+            raise _failure("封印時 run HEAD が session から到達できません。")
+        reachable_commits.add(seal["run_head"])
     files = decision.worktree_inputs(context.session_worktree)
     merged_reference = manifest["run"]["merged"]
     merged = (
@@ -847,23 +915,35 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
         else {"resolution": {"agent_status": "not_needed"}}
     )
     adjusted = _verified_merge_adjustment(context, merged)
-    if decision.state_hash(files) != seal["decision_inputs_sha256"] and not adjusted:
+    if record.resolution.get("feedback_cut") != manifest["run"][
+        "sealed"
+    ] or decision.state_hash(files) != record.resolution.get(
+        "prepared_feedback_inputs_sha256"
+    ):
         raise _failure(
             "feedback join 後の入力が検証済み run の最終状態と一致しません。"
         )
-    if not adjusted:
+    checkpoints = (
         _validate_selected_basis(
             context,
             seal["selected_checkpoints"],
             seal["candidates"],
             files,
         )
+        if not adjusted
+        else {}
+    )
     paths: set[str] = set()
     for reference in manifest["processing"]["remediation_checkpoints"]:
-        checkpoint = read_run_artifact(
-            context.repo, {key: reference[key] for key in ("path", "sha256")}
-        )
-        validate_remediation_checkpoint(checkpoint, context.repo / reference["path"])
+        # 同じ join 検証内だけ、path と hash が一致する採用結果を監査にも使う。
+        checkpoint = checkpoints.get((reference["path"], reference["sha256"]))
+        if checkpoint is None:
+            checkpoint = read_run_artifact(
+                context.repo, {key: reference[key] for key in ("path", "sha256")}
+            )
+            validate_remediation_checkpoint(
+                checkpoint, context.repo / reference["path"]
+            )
         audit = checkpoint["audit"]
         if audit["wave"] not in manifest["run"]["waves"]:
             raise _failure("feedback issue checkpoint の wave が一致しません。")
@@ -876,8 +956,11 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
             or artifact_reference(context.repo, call_path) != call_log
         ):
             raise _failure("feedback issue の call log hash が一致しません。")
+        reachable = audit["after_commit"] in reachable_commits or _is_ancestor(
+            context, audit["after_commit"]
+        )
         if (
-            not _is_ancestor(context, audit["after_commit"])
+            not reachable
             or _diff_hash(
                 context.session_worktree, audit["before_commit"], audit["after_commit"]
             )
@@ -886,25 +969,18 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
             raise _failure(
                 "feedback issue commit または net 差分 hash を確認できません。"
             )
+        reachable_commits.add(audit["after_commit"])
         paths.update(audit["changed_paths"])
-    # 後続 issue が同じ path を編集できるため、最終 run tree と session tree を比較する。
-    different = {
-        path
-        for change in tree_changes(context.session_worktree, seal["run_head"])
-        for path in change.paths
-    }
-    if paths.intersection(different) and not adjusted:
-        raise _failure(
-            "join 後の realization tree が正式な issue commit の最終 tree と一致しません。",
-            detail="\n".join(sorted(paths.intersection(different))),
-        )
     if merged_reference is None:
         raise _failure("feedback run の自動 join を確認できません。")
     completion = {
         "report_cut_id": manifest["report_cut_id"],
         "sealed": manifest["run"]["sealed"],
-        "session_commit": head_commit(context.session_worktree),
-        "run_head": seal["run_head"],
+        "session_commit": record.session_commit,
+        "session_tree": record.session_tree,
+        "run_head": record.prepared_run_head,
+        "sealed_run_head": seal["run_head"],
+        "baseline_session_head": record.session_head,
         "decision_inputs_sha256": seal["decision_inputs_sha256"],
         "checked_paths": sorted(paths),
         "merged": manifest["run"]["merged"],
@@ -939,10 +1015,33 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
         write_report_cut_manifest(context.repo, manifest)
 
 
+def _verify_prepared_feedback(
+    context: EditingRunContext, manifest: dict[str, Any], record: JoinRecord
+) -> None:
+    """封印済み採用結果を run 上で検証し、準備完了 tree と結び付ける。"""
+    seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
+    if record.original_run_head != seal["run_head"]:
+        raise _failure("封印時の成果と join の元の成果が一致しません。")
+    files = decision.worktree_inputs(context.run_worktree)
+    resolution = dict(record.resolution)
+    call_log = resolution.get("call_log")
+    if isinstance(call_log, str):
+        resolution["call_log"] = artifact_reference(context.repo, Path(call_log))
+    if not _verified_merge_adjustment(
+        context, {"resolution": resolution}, record.prepared_run_head
+    ):
+        _validate_selected_basis(
+            context, seal["selected_checkpoints"], seal["candidates"], files
+        )
+    record.resolution = resolution
+    record.resolution["prepared_feedback_inputs_sha256"] = decision.state_hash(files)
+    record.resolution["feedback_cut"] = manifest["run"]["sealed"]
+
+
 def _verified_merge_adjustment(
-    context: EditingRunContext, merged: dict[str, Any]
+    context: EditingRunContext, merged: dict[str, Any], prepared: str | None = None
 ) -> bool:
-    """agent 検証後の変更が cmoc 管理物の同期だけか確認する。"""
+    """run 側の検証記録が同期後の準備完了 tree に適用できるか確認する。"""
     resolution = merged.get("resolution", {})
     if resolution.get("agent_status") != "resolved":
         return False
@@ -953,96 +1052,18 @@ def _verified_merge_adjustment(
         or artifact_reference(context.repo, context.repo / call_log["path"]) != call_log
     ):
         return False
-    merge_commit = merged.get("run_join_commit")
-    if not isinstance(merge_commit, str):
+    verified = resolution.get("verified_run_commit")
+    if prepared is None:
+        record = load_join_record(context.repo, context.session_id)
+        prepared = record.prepared_run_head if record else None
+    if not isinstance(verified, str) or prepared is None:
         return False
-    managed = {".cmoc/gt/realization/refactor/state.json"}
-    changes = tree_changes(context.session_worktree, merge_commit)
-    return all(path in managed for change in changes for path in change.paths)
-
-
-def _recover_merge_resolution(
-    context: EditingRunContext,
-    manifest: dict[str, Any],
-    seal: dict[str, Any],
-    *,
-    required: bool,
-) -> dict[str, object] | None:
-    """commit 直後の停止時、同じ join の保存済み call だけを復元する。"""
-    expected = build_run_join_conflict_resolution_parameter(
-        seal["run_head"],
-        seal["session_head_before"],
-        context.session_worktree,
-        feedback_report_cut_path=context.repo / manifest["run"]["sealed"]["path"],
+    changes = tree_changes(context.repo, verified, prepared)
+    return all(
+        path == ".cmoc/gt/realization/refactor/state.json"
+        for change in changes
+        for path in change.paths
     )
-    log_root = (
-        codex_log_dir(context.repo) / manifest["run"]["targets"]["execution_id"]
-    ).resolve()
-
-    def log_file(value: object) -> Path | None:
-        if not isinstance(value, str):
-            return None
-        path = Path(value)
-        if (
-            not path.is_absolute()
-            or path.resolve().parent != log_root
-            or _has_symlink_component(path)
-            or not path.is_file()
-        ):
-            return None
-        return path
-
-    try:
-        invocation_log = context.repo / manifest["run"]["invocation_log"]
-        events = [
-            json.loads(line)
-            for line in invocation_log.read_text(encoding="utf-8").splitlines()
-        ]
-        matches = [
-            event
-            for event in events
-            if isinstance(event, dict)
-            and event.get("event") == "codex_call"
-            and event.get("purpose") == "run join conflict resolution"
-            and event.get("status") == "succeeded"
-            and event.get("returncode") == 0
-        ]
-        if not matches and not required:
-            return None
-        if len(matches) != 1:
-            raise ValueError("join conflict resolution call is not unique")
-        event = matches[0]
-        call_path = log_file(event.get("call_log_path"))
-        prompt_path = log_file(event.get("prompt_log_path"))
-        output_path = log_file(event.get("output_path"))
-        if call_path is None or prompt_path is None or output_path is None:
-            raise ValueError("join conflict resolution log is missing")
-        call = json.loads(call_path.read_text(encoding="utf-8"))
-        if not isinstance(call, dict) or any(
-            (
-                call.get("purpose") != "run join conflict resolution",
-                call.get("agent_call_kind") != expected.agent_call_kind,
-                call.get("file_access_mode") != expected.file_access_mode.value,
-                call.get("cwd") != str(context.session_worktree.resolve()),
-                call.get("prompt_log_path") != str(prompt_path),
-                call.get("output_path") != str(output_path),
-                prompt_path.read_text(encoding="utf-8") != expected.prompt,
-            )
-        ):
-            raise ValueError("join conflict resolution call does not match sealed run")
-        agent_report = output_path.read_text(encoding="utf-8")
-        if agent_report.splitlines()[:1] != ["merge_resolution: resolved"]:
-            raise ValueError("join conflict resolution did not verify the merge")
-    except (OSError, UnicodeError, ValueError, TypeError, KeyError) as exc:
-        raise _failure(
-            "保存済みのマージ調整と検証を一意に確認できません。", detail=str(exc)
-        ) from exc
-    return {
-        "agent_status": "resolved",
-        "agent_report": agent_report,
-        "call_log": str(call_path),
-        "recovered_from_call_log": True,
-    }
 
 
 def _is_ancestor(context: EditingRunContext, commit: str) -> bool:
@@ -1062,10 +1083,11 @@ def _validate_selected_basis(
     references: list[dict[str, Any]],
     candidates: dict[str, Any],
     files: dict[str, str],
-) -> None:
-    """封印と join の両境界で、採用結果の根拠を全分類について照合する。"""
+) -> dict[tuple[str, str], dict[str, Any]]:
+    """採用結果の根拠を照合し、path・hash ごとに検証済み checkpoint を返す。"""
     if {item["candidate_id"] for item in references} != set(candidates):
         raise _failure("feedback report cut に未処理の issue があります。")
+    checkpoints = {}
     for reference in references:
         checkpoint = read_run_artifact(
             context.repo, {key: reference[key] for key in ("path", "sha256")}
@@ -1077,70 +1099,23 @@ def _validate_selected_basis(
                 "feedback の採用結果の判定根拠が現在状態に対して有効ではありません。",
                 detail=reference["candidate_id"],
             )
+        checkpoints[reference["path"], reference["sha256"]] = checkpoint
+    return checkpoints
 
 
 def _recover_join(context: EditingRunContext, manifest: dict[str, Any]) -> None:
-    """封印済み run の join 成功だけを回復し、新しい call を開始しない。"""
-    seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
-    if manifest["run"]["merged"] is None:
-        head = head_commit(context.session_worktree)
-        parents = (
-            run_git(["show", "-s", "--format=%P", head], context.repo)
-            .stdout.strip()
-            .split()
-        )
-        if head == seal["session_head_before"] and _is_ancestor(
-            context, seal["run_head"]
-        ):
-            _record_merge(context, manifest, None)
-        elif parents == [seal["session_head_before"], seal["run_head"]]:
-            resolution = _recover_merge_resolution(
-                context,
-                manifest,
-                seal,
-                required=decision.state_hash(
-                    decision.worktree_inputs(context.session_worktree)
-                )
-                != seal["decision_inputs_sha256"],
-            )
-            _record_merge(context, manifest, head, resolution)
-        else:
-            raise _failure(
-                "feedback run の自動 join 成功を一意に確認できません。",
-                [
-                    "未 join の run は `cmoc run join` または `cmoc run abandon` で終了してください。"
-                ],
-            )
-    merged = read_run_artifact(context.repo, manifest["run"]["merged"])
-    if not _is_ancestor(context, merged["session_commit"]):
+    """取り込み済み記録を照合し、同期・merge・call を繰り返さず検証する。"""
+    record = load_join_record(context.repo, context.session_id)
+    if record is None or not confirm_import(record):
         raise _failure(
-            "feedback run の join commit が session tree から到達できません。"
+            "feedback run の自動 join 成功を一意に確認できません。",
+            [
+                "未 join の run は `cmoc run join` または `cmoc run abandon` で終了してください。"
+            ],
         )
-    if manifest["run"]["completion"] is not None:
-        completion = read_run_artifact(context.repo, manifest["run"]["completion"])
-        if head_commit(context.session_worktree) != completion["session_commit"]:
-            raise _failure(
-                "feedback publication recovery の session tree が変更されています。"
-            )
-    else:
-        # merge 後、機械的 state 同期だけが未完了の場合は Codex を使わず再実行する。
-        require_clean_worktree(context.session_worktree)
-        files = decision.worktree_inputs(context.session_worktree)
-        merged = read_run_artifact(context.repo, manifest["run"]["merged"])
-        if decision.state_hash(files) != seal[
-            "decision_inputs_sha256"
-        ] and not _verified_merge_adjustment(context, merged):
-            raise _failure(
-                "封印済み結果の根拠が変化した run は publication recovery の対象外です。"
-            )
-        if not _verified_merge_adjustment(context, merged):
-            _validate_selected_basis(
-                context, seal["selected_checkpoints"], seal["candidates"], files
-            )
-        sync_refactor_state(context.session_worktree)
-        commit_work_unit(
-            context.session_worktree, "cmoc refactor state sync after feedback join"
-        )
+    update_primary_report_fields(**record.report_fields(), join_recovery="post_join")
+    if manifest["run"]["merged"] is None:
+        _record_merge(context, manifest, record.join_commit, record.resolution)
     _complete_join(context, manifest)
 
 
@@ -1233,12 +1208,13 @@ def _complete_feedback_interruption(
         stop_tracked_codex_children(context.repo, context.session_id)
     except BaseException as cleanup_error:
         cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
-    try:
-        # issue commit は HEAD に残し、未確定の working tree だけを戻す。
-        rollback_work_unit(context.run_worktree)
-        require_clean_worktree(context.run_worktree)
-    except BaseException as cleanup_error:
-        cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
+    if not cleanup_errors:
+        try:
+            # issue commit は HEAD に残し、未確定の working tree だけを戻す。
+            rollback_work_unit(context.run_worktree)
+            require_clean_worktree(context.run_worktree)
+        except BaseException as cleanup_error:
+            cleanup_errors.append(f"rollback failed: {cleanup_error!r}")
     if cleanup_errors:
         _raise_feedback_error(
             context,
@@ -1247,15 +1223,6 @@ def _complete_feedback_interruption(
             cleanup_errors,
         )
 
-    try:
-        set_run_state(context, "joinable")
-    except BaseException as state_error:
-        _raise_feedback_error(
-            context,
-            manifest,
-            "feedback の中断処理に失敗しました。",
-            [f"state update failed: {state_error!r}"],
-        )
     if manifest is not None and manifest_path is not None:
         try:
             # checkpoint file の write と manifest reference の write の間で止まっても、
@@ -1272,7 +1239,7 @@ def _complete_feedback_interruption(
                 [f"interruption manifest update failed: {manifest_error!r}"],
             )
         try:
-            _update_progress(context, manifest, "joinable")
+            _update_progress(context, manifest, "running")
         except BaseException as progress_error:
             _raise_feedback_error(
                 context,
@@ -1282,7 +1249,7 @@ def _complete_feedback_interruption(
             )
     else:
         try:
-            _update_context_progress(context, "joinable")
+            _update_context_progress(context, "running")
         except BaseException as progress_error:
             _raise_feedback_error(
                 context,
@@ -1290,19 +1257,38 @@ def _complete_feedback_interruption(
                 "feedback の中断処理に失敗しました。",
                 [f"interruption report state failed: {progress_error!r}"],
             )
+
+    # 本命処理への停止要求とは別に、join の finalization を開始する。
+    def save_report(
+        state_after: str, terminal: report.TerminalClassification, warnings: list[str]
+    ) -> Path:
+        update_primary_report_fields(
+            state_after=state_after, publication_established=False
+        )
+        return report.save_feedback_invocation_report(
+            context.repo, terminal, TerminalResult(warnings=tuple(warnings))
+        )
+
+    restore_interruption = install_recovery_interruption()
     try:
-        return report._record_feedback_interruption(
-            manifest,
-            manifest_path,
-            retained_run_path=context.run_worktree,
-        )
-    except BaseException as report_error:
-        _raise_feedback_error(
-            context,
-            manifest,
-            "feedback の中断処理に失敗しました。",
-            [f"interruption report failed: {report_error!r}"],
-        )
+        with _indivisible_finalization():
+            joined = join_editing_run(
+                context,
+                automatic=True,
+                save_report=save_report,
+                classification="user_interruption",
+            )
+    finally:
+        restore_interruption()
+    report._record_feedback_interruption(manifest, manifest_path)
+    return replace(
+        joined,
+        primary_report_role="feedback invocation report",
+        completion_reason="user_interruption",
+        next_actions=(
+            "保持した観測と active record は、次の新しい `cmoc feedback report` で再確認してください。",
+        ),
+    )
 
 
 def _record_feedback_error(
@@ -1311,6 +1297,9 @@ def _record_feedback_error(
     error: BaseException,
 ) -> None:
     """通常の failure でも run error と invocation report の進捗を保持する。"""
+    record = load_join_record(context.repo, context.session_id)
+    if record is not None and record.context.run_branch == context.run_branch:
+        rollback_join_preparation(record)
     _set_feedback_error_state(context, manifest, error, update_processing=True)
 
 
@@ -1398,6 +1387,19 @@ def _set_feedback_error_state(
         update_primary_report_fields(
             last_confirmed_generation=current.current,
             publication_established=established,
+            failure_stage=current_primary_report_fields().get("feedback_stage"),
+        )
+        run = manifest["run"] if manifest is not None else {}
+        joined = run.get("merged") is not None
+        if not joined and run.get("join_intent") is not None:
+            record = load_join_record(context.repo, context.session_id)
+            joined = record is not None and confirm_import(record)
+        update_primary_report_fields(
+            recovery_next_actions=(
+                "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+            )
+            if joined
+            else join_recovery_actions(context)
         )
         logger = current_subcommand_logger()
         if logger is not None:
@@ -1505,11 +1507,15 @@ def _confirmed_issue_commits(
 @contextmanager
 def _indivisible_finalization() -> Iterator[None]:
     """SIGINT を finalization 中だけ保留し、merge と publication を整合した境界まで進める。"""
+    # 子 process にも mask を引き継ぎ、途中の commit を SIGINT で分断しない。
+    check_recovery_interruption()
     previous = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, lambda _signum, _frame: None)
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT})
     try:
         yield
     finally:
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
         signal.signal(signal.SIGINT, previous)
 
 

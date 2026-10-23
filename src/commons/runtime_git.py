@@ -70,6 +70,10 @@ _GIT_PATH_QUERIES: ContextVar[dict[_GitPathQueryKey, CommandResult] | None] = (
 @contextmanager
 def reuse_git_path_queries() -> Iterator[None]:
     """Git の配置と設定を変えない処理内で、path の問い合わせを再利用する。"""
+    # 入れ子の読み取り処理も外側と同じ配置を使い、外側の終了時にまとめて破棄する。
+    if _GIT_PATH_QUERIES.get() is not None:
+        yield
+        return
     # doctor が修復する index・HEAD・ignore 内容や判定結果は保存しない。
     # 設定変更を次の doctor へ持ち越さず、例外時にも必ず破棄する。
     token = _GIT_PATH_QUERIES.set({})
@@ -181,14 +185,17 @@ def _collect_snapshot_repositories(
             _collect_snapshot_repositories(work_root, path, repositories)
 
 
-def restore_worktree_snapshot(snapshot: WorktreeSnapshot) -> None:
-    """現在の作業成果物を指定 snapshot と同じ filesystem 状態へ戻す。"""
+def restore_worktree_snapshot(
+    snapshot: WorktreeSnapshot, *, current: WorktreeSnapshot | None = None
+) -> None:
+    """取得済みの現在状態があれば再利用し、snapshot と同じ状態へ戻す。"""
     # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     # Structured Output 補正 turn が変動させた path だけを初回 call 完了時へ戻す。
     frozen = dict(snapshot.entries)
     seen: set[frozenset[str]] = set()
     while True:
-        current = capture_worktree_snapshot(snapshot.root, paths=snapshot.paths)
+        if current is None:
+            current = capture_worktree_snapshot(snapshot.root, paths=snapshot.paths)
         changed = snapshot.changed_paths(current)
         if not changed:
             return
@@ -206,6 +213,8 @@ def restore_worktree_snapshot(snapshot: WorktreeSnapshot) -> None:
             artifact = frozen.get(relative)
             if artifact is not None:
                 _write_worktree_artifact(snapshot.root, Path(relative), artifact)
+        # 取得済み状態の再利用は初回だけとし、復元後は filesystem を再検査する。
+        current = None
 
 
 def _read_worktree_artifact(
@@ -415,8 +424,10 @@ def create_run_worktree(
     expected_worktree = expected_run_worktree(root, branch)
     candidate = _absolute_path(worktree)
     # expected path の祖先には managed base も含まれるため、root を再探索しない。
-    if _first_symlink_component(expected_worktree) or _first_symlink_component(
-        candidate
+    # 同じ lexical path は検査・正規化を共有し、異なる path は両方を検査する。
+    same_path = candidate == expected_worktree
+    if _first_symlink_component(expected_worktree) or (
+        not same_path and _first_symlink_component(candidate)
     ):
         raise CmocError(
             "run worktree path は symlink を含められません。",
@@ -424,7 +435,7 @@ def create_run_worktree(
             f"branch: {branch}\nworktree: {worktree}\nexpected: {expected_worktree}",
         )
     expected_worktree = expected_worktree.resolve()
-    candidate = candidate.resolve()
+    candidate = expected_worktree if same_path else candidate.resolve()
     if candidate != expected_worktree:
         raise CmocError(
             "run worktree path が cmoc 管理領域と一致しません。",
@@ -510,14 +521,13 @@ def _require_managed_worktree(root: Path, worktree: Path) -> Path:
     # work-root の削除は .cmoc/gu/worktree/{{session-id}}/{{run-id}} に限定する。
     if len(relative.parts) != 2 or not all(relative.parts):
         raise _unmanaged_worktree_error(worktree, base)
+    # ID だけで拒否できる候補には、Git の worktree 一覧を取得しない。
+    expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
+    if parse_run_branch_ids(expected_branch) is None:
+        raise _unmanaged_worktree_error(worktree, base)
     # {{work-root}}/oracle/doc/branch_model.md
     # 命名規則だけでは不十分であり、削除は対応する Git linked worktree に限定する。
-    expected_branch = f"cmoc/run/{relative.parts[0]}/{relative.parts[1]}"
-    registered_branch = _registered_worktree_branches(root).get(resolved)
-    if (
-        parse_run_branch_ids(expected_branch) is None
-        or registered_branch != expected_branch
-    ):
+    if _registered_worktree_branches(root).get(resolved) != expected_branch:
         raise _unmanaged_worktree_error(worktree, base)
     if candidate.exists() and not _has_linked_worktree_metadata(root, candidate):
         raise _unmanaged_worktree_error(worktree, base)
@@ -659,28 +669,34 @@ def _global_git_ignore_paths(root: Path) -> list[Path]:
 
 def _validate_git_ignore_sources(
     root: Path,
-    candidate: Path,
+    candidates: Collection[Path],
     *,
     strict_local: bool = False,
 ) -> None:
-    """git check-ignore が読む ignore file を非通常 file でないと確認する。"""
+    """候補の Git ignore source を、共通の親を含め一度ずつ種類検証する。"""
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
     root = root.absolute()
-    relative = candidate.absolute().relative_to(root)
     validate_local = _validate_ignore_path if strict_local else _reject_non_file_path
     validate_local(root / ".gitignore", ".gitignore")
     validate_local(_git_info_exclude_path(root), "Git info/exclude")
 
-    directory = root
-    for part in relative.parts[:-1]:
-        directory /= part
-        try:
-            mode = directory.lstat().st_mode
-        except FileNotFoundError:
-            break
-        if not stat.S_ISDIR(mode):
-            break
-        _reject_non_file_path(directory / ".gitignore", "Git nested .gitignore")
+    # 再利用はこの候補集合内に限定し、次の分類では設定と種類を取り直す。
+    validated_directories: set[Path] = {root}
+    for candidate in candidates:
+        relative = candidate.absolute().relative_to(root)
+        directory = root
+        for part in relative.parts[:-1]:
+            directory /= part
+            if directory in validated_directories:
+                continue
+            try:
+                mode = directory.lstat().st_mode
+            except FileNotFoundError:
+                break
+            if not stat.S_ISDIR(mode):
+                break
+            _reject_non_file_path(directory / ".gitignore", "Git nested .gitignore")
+            validated_directories.add(directory)
 
     for path in _global_git_ignore_paths(root):
         _validate_global_git_ignore_path(path)
@@ -728,16 +744,26 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
     # FIFO などの非通常 file を拒否してからコマンドを実行する。
     _validate_git_ignore_sources(
         root,
-        root / CMOC_IGNORE_PROBE,
+        (root / CMOC_IGNORE_PROBE,),
         strict_local=True,
     )
-    tracked = run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
-    ignored = run_git(
+    return _cmoc_tracked_paths(root), _cmoc_ignore_returncode(root)
+
+
+def _cmoc_tracked_paths(root: Path) -> str:
+    """.cmoc/gu の index 内容を取得し、修復後も取り直せるようにする。"""
+    # ignore の成否とは分けて問い合わせ、index 修復の要否を決める。
+    return run_git(["ls-files", "--", ".cmoc/gu"], root).stdout.strip()
+
+
+def _cmoc_ignore_returncode(root: Path) -> int:
+    """将来の管理 file に対する ignore probe の結果を返す。"""
+    # 修復経路では .gitignore と index を更新した後に一度だけ実行する。
+    return run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
         root,
         check=False,
-    )
-    return tracked, ignored.returncode
+    ).returncode
 
 
 def with_cmoc_ignore_pattern(content: str) -> str:
@@ -790,20 +816,22 @@ def _validate_ignore_path(path: Path, description: str) -> None:
 
 def ensure_cmoc_ignored(root: Path) -> None:
     """.gitignore と index を更新できる場面で .cmoc/gu を追跡対象外にする。"""
-    tracked, ignored_returncode = _cmoc_ignore_status(root)
+    # 更新・Git 実行の前に全 source を検証し、内容と index の修復を先に済ませる。
+    _validate_git_ignore_sources(root, (root / CMOC_IGNORE_PROBE,), strict_local=True)
+    tracked = _cmoc_tracked_paths(root)
     gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
     updated_content = with_cmoc_ignore_pattern(content)
     if updated_content != content:
         gitignore.write_text(updated_content)
 
-    if not tracked and ignored_returncode == 0:
-        return
-
     # 追跡対象がなければ、ignore 修復だけで済むため index 更新は起動しない。
     if tracked:
         run_git(["rm", "--cached", "-f", "-r", "--ignore-unmatch", ".cmoc/gu"], root)
-    tracked, ignored_returncode = _cmoc_ignore_status(root)
+        tracked = _cmoc_tracked_paths(root)
+
+    # 修復前の probe と重複した source 検証を省き、最終状態だけで完了を判定する。
+    ignored_returncode = _cmoc_ignore_returncode(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
             ".cmoc/gu を git 追跡対象外にできませんでした。",
@@ -855,7 +883,7 @@ def is_git_ignored(root: Path, path: Path) -> bool:
     if repository is None:
         return False
     rel = candidate.absolute().relative_to(repository.absolute())
-    _validate_git_ignore_sources(repository, candidate)
+    _validate_git_ignore_sources(repository, (candidate,))
     return _check_git_ignore(repository, rel, no_index=True)
 
 
@@ -875,7 +903,7 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
 def _is_untracked_git_ignored_in_repository(repository: Path, candidate: Path) -> bool:
     """検証済み owning repository で単一候補の通常 ignore 判定を行う。"""
     rel = candidate.absolute().relative_to(repository.absolute())
-    _validate_git_ignore_sources(repository, candidate)
+    _validate_git_ignore_sources(repository, (candidate,))
     return _check_git_ignore(repository, rel, no_index=False)
 
 
@@ -904,7 +932,7 @@ def enumerate_oracle_and_realization_files(
     for repository, candidates in sorted(
         candidates_by_repository.items(), key=lambda item: item[0].as_posix()
     ):
-        _validate_git_ignore_sources(repository, repository)
+        _validate_git_ignore_sources(repository, (repository,))
         ignored = _batch_untracked_git_ignored(repository, candidates)
         for candidate in candidates:
             if candidate in ignored:
@@ -1022,8 +1050,17 @@ def _is_git_worktree_root(directory: Path) -> bool:
     return bool(reported) and Path(reported).resolve() == directory.resolve()
 
 
-def _repository_context_for_path(root: Path, candidate: Path) -> Path | None:
+def _repository_context_for_path(
+    root: Path,
+    candidate: Path,
+    *,
+    worktree_checks: dict[Path, bool] | None = None,
+) -> Path | None:
     """単一 path を所有する最内側の検証済み Git working tree を返す。"""
+    # 一括分類では Git による同じ directory の確認だけを共有する。
+    # 各 path と metadata の種類は引き続き検査し、次の分類へ結果を持ち越さない。
+    if worktree_checks is None:
+        worktree_checks = {}
     work_root = root.absolute()
     absolute_candidate = candidate.absolute()
     try:
@@ -1067,7 +1104,9 @@ def _repository_context_for_path(root: Path, candidate: Path) -> Path | None:
                 metadata_path, f"Git metadata を検証できません: {exc}"
             ) from exc
         _require_inventory_entry_kind(metadata_path, mode)
-        if _is_git_worktree_root(directory):
+        if directory not in worktree_checks:
+            worktree_checks[directory] = _is_git_worktree_root(directory)
+        if worktree_checks[directory]:
             if (
                 absolute_candidate == metadata_path
                 or metadata_path in absolute_candidate.parents
@@ -1173,61 +1212,105 @@ def is_realization_file_path(
     branch: str | None = None,
     fallback_branch: str | None = None,
 ) -> bool:
-    """repository path と Git 状態から realization file か判定する。
+    """repository path と Git 状態から realization file か判定する。"""
+    # 単一 path も差分検査と同じ分類・tree fallback を使う。
+    return bool(
+        realization_file_paths(
+            root, (path,), branch=branch, fallback_branch=fallback_branch
+        )
+    )
+
+
+@reuse_git_path_queries()
+def realization_file_paths(
+    root: Path,
+    paths: Collection[Path],
+    *,
+    branch: str | None = None,
+    fallback_branch: str | None = None,
+) -> set[Path]:
+    """候補の realization file を owning repository ごとに一括判定する。
 
     apply worktree が無い復旧経路では branch の tree を追跡状態の正本にする。
-    欠落 path だけは fallback_branch も確認し、存在する path の分類は一度で済ませる。
+    欠落 path だけは fallback_branch も確認し、現在の file は index-aware に判定する。
     根拠: {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
     の「分類結果」
     """
-    candidate = path if path.is_absolute() else root / path
-    if _file_classification(root, candidate) != "realization":
-        return False
-    repository = _repository_context_for_path(root, candidate)
-    if repository is None:
-        return False
-    if branch and not _path_exists_without_following_symlinks(candidate):
-        # Gitlink は tree entry だが filesystem 上は directory なので、file 定義に
-        # 含めず regular blob entry だけを branch の fallback として採用する。
-        # {{work-root}}/oracle/doc/app_spec/oracle_and_realization_file_enumeration.md
-        # の「分類結果」
-        # branch の blob は削除された path の追跡状態を補うが、現在の directory や
-        # FIFO などの特殊 file を file として扱う根拠にはならない。
-        branch_relative = candidate.absolute().relative_to(repository.absolute())
-        # nested repository は outer worktree の branch namespace を共有しないため、
-        # outer の run branch をそのまま ls-tree へ渡さず、nested repository 自身の
-        # checked-out tree を参照する。
-        tree_references = (
-            (branch, fallback_branch) if repository == root.absolute() else ("HEAD",)
+    # path と実体の検査は省略せず、現在の regular file だけを repository 別に集める。
+    work_root = root.absolute()
+    included: set[Path] = set()
+    candidates_by_repository: dict[Path, list[Path]] = {}
+    missing_by_repository: dict[Path, list[Path]] = {}
+    worktree_checks: dict[Path, bool] = {}
+    for path in dict.fromkeys(paths):
+        candidate = (path if path.is_absolute() else root / path).absolute()
+        if _file_classification(work_root, candidate) != "realization":
+            continue
+        repository = _repository_context_for_path(
+            work_root, candidate, worktree_checks=worktree_checks
         )
-        for tree_reference in dict.fromkeys(tree_references):
-            if not tree_reference:
-                continue
-            branch_entries = run_git(
-                [
-                    "ls-tree",
-                    "-r",
-                    "-z",
-                    tree_reference,
-                    "--",
-                    literal_pathspec(branch_relative.as_posix()),
-                ],
-                repository,
-            ).stdout.split("\0")
-            for entry in branch_entries:
-                metadata, separator, entry_path = entry.partition("\t")
-                metadata_fields = metadata.split()
-                if separator and entry_path == branch_relative.as_posix():
-                    try:
-                        entry_mode = int(metadata_fields[0], 8)
-                    except (IndexError, ValueError):
-                        continue
-                    if stat.S_ISREG(entry_mode):
-                        return True
-        return False
-    if not _is_regular_file(candidate):
-        return False
-    return not _is_untracked_git_ignored_in_repository(repository, candidate)
+        if repository is None:
+            continue
+        if branch and not _path_exists_without_following_symlinks(candidate):
+            missing_by_repository.setdefault(repository, []).append(candidate)
+        elif _is_regular_file(candidate):
+            candidates_by_repository.setdefault(repository, []).append(candidate)
+
+    # repository 共通の source と各親の .gitignore を、候補間で重複検証しない。
+    for repository, candidates in candidates_by_repository.items():
+        _validate_git_ignore_sources(repository, candidates)
+
+    # rename 元・削除 path も一括判定し、nested は自身の HEAD だけを参照する。
+    for repository, candidates in missing_by_repository.items():
+        references = (branch, fallback_branch) if repository == work_root else ("HEAD",)
+        included.update(_regular_tree_files(repository, candidates, references))
+
+    # 列挙と同じ NUL framing の一括判定を使い、tracked な ignored file も保持する。
+    for repository, candidates in candidates_by_repository.items():
+        ignored = _batch_untracked_git_ignored(repository, candidates)
+        included.update(
+            candidate for candidate in candidates if candidate not in ignored
+        )
+    return included
+
+
+def _regular_tree_files(
+    repository: Path,
+    candidates: Collection[Path],
+    references: Collection[str | None],
+) -> set[Path]:
+    # 欠落 path だけを補完し、symlink や Gitlink を regular file として許可しない。
+    pending = {
+        candidate.relative_to(repository).as_posix(): candidate
+        for candidate in candidates
+    }
+    included: set[Path] = set()
+    for reference in dict.fromkeys(references):
+        if not pending:
+            break
+        if not reference:
+            continue
+        entries = run_git(
+            [
+                "ls-tree",
+                "-r",
+                "-z",
+                reference,
+                "--",
+                *(literal_pathspec(relative) for relative in pending),
+            ],
+            repository,
+        ).stdout.split("\0")
+        for entry in entries:
+            metadata, separator, entry_path = entry.partition("\t")
+            if separator and entry_path in pending:
+                try:
+                    mode = int(metadata.split()[0], 8)
+                except (IndexError, ValueError):
+                    continue
+                if stat.S_ISREG(mode):
+                    included.add(pending.pop(entry_path))
+    return included
 
 
 def is_oracle_file_path(root: Path, path: Path) -> bool:

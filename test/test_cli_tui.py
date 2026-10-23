@@ -14,8 +14,9 @@ from unittest.mock import Mock
 
 import oracle.other.path_model as path_model_module
 import pytest
-from _cli_support import runner
+from _cli_support import runner, terminal_primary_report
 from _git_support import make_repo, run_git
+from _report_support import original_report_input, report_metadata
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli_module
@@ -26,6 +27,14 @@ from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import write_config
 from config.cmoc_config import CmocConfig
 from main import app
+
+# agent 起動は全ケースでダブルを使うため、利用しない feedback transport は準備しない。
+# TCP の受付・保存・drain は test_feedback.py、doctor の検査順序は test_doctor_cli.py に残す。
+# 採番の永続性は test_runtime_ids.py、logger との結合は test_runtime_cli.py に残す。
+# 入力保存・root・起動順の検査では、採番 DB の作成・同期を省く。
+pytestmark = pytest.mark.usefixtures(
+    "feedback_without_transport", "nonpersistent_execution_ids"
+)
 
 
 @pytest.fixture
@@ -67,23 +76,34 @@ def editor_input(
 @pytest.mark.parametrize(
     "command", [["tui"], ["oracle", "investigation"], ["oracle", "edit"]]
 )
-def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
+# 空 file と空白の分類は test_prompt_editor_input.py に残す。
+# 各 CLI は空白から EmptyPromptInput を受ける経路で、中断後の終了処理を検証する。
+@pytest.mark.parametrize(
+    ("raw_input", "save_fails"),
+    [
+        pytest.param(b"recoverable input\r\n", True, id="save-failure"),
+        pytest.param(" \t\r\n\u3000\u00a0\n".encode("utf-8"), False, id="whitespace"),
+    ],
+)
+def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
     cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
     handoff_start: Mock,
     command: list[str],
+    raw_input: bytes,
+    save_fails: bool,
 ) -> None:
-    """共通の確定保存に失敗した場合、各 CLI は本文を残して agent 起動前に止まる。"""
+    """保存失敗・空入力では原文を残し、後続の構築・起動をせず終了処理を行う。"""
     root = cli_terminal_directory
     # root 解決は test_basic_runtime.py と下の main/linked 成功ケースに残す。
-    # 保存失敗の CLI 制御では root を解決済みとし、Git の準備・探索を省く。
+    # 入力中断の CLI 制御では root を解決済みとし、Git の準備・探索を省く。
     monkeypatch.setattr(
         path_model_module,
         "_resolve_git_worktree_roots",
         lambda _start_path=None: (root, root),
     )
     # doctor の実処理との結合は、下の TUI 成功ケースと test_doctor_cli.py に残す。
-    # 保存失敗の検査では呼び出しを記録し、修復 commit・索引同期を繰り返さない。
+    # 入力中断の検査では呼び出しを記録し、修復 commit・索引同期を繰り返さない。
     doctor_roots: list[Path] = []
     monkeypatch.setattr(
         runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
@@ -100,7 +120,8 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
         monkeypatch.setattr(
             module, "ensure_prompt_editor_roots_ignored", record_editor_roots_ignored
         )
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    # doctor は上で置換済みで、入力中断は load_config より前に起きる。
+    # 消費しない設定の検証・JSON 保存と directory 作成は準備しない。
 
     # TCP・guide の cleanup は専用 test と editor 失敗 test が実経路で検証する。
     # ここでは target を閉じてから確定保存へ進む CLI の制御だけを観測する。
@@ -108,10 +129,10 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
         assert doctor_roots == [root]
         assert ignored_roots == [root]
         handoff_start.return_value.close.assert_not_called()
-        Path(argv[-1]).write_bytes(b"recoverable input\r\n")
+        Path(argv[-1]).write_bytes(raw_input)
         return SimpleNamespace(returncode=0)
 
-    # editor の起動・引数は専用 test が検証する。ここでは保存失敗後の CLI 制御を扱う。
+    # editor の起動・引数は専用 test が検証する。ここでは入力中断後の CLI 制御を扱う。
     # module 内の境界だけを置換し、他の subprocess.run は実行する。
     monkeypatch.setattr(
         prompt_editor_input_module, "subprocess", SimpleNamespace(run=edit_input)
@@ -123,34 +144,86 @@ def test_editor_save_failure_preserves_input_and_prevents_agent_calls(
     real_replace = prompt_editor_input_module.os.replace
     save_destinations: list[Path] = []
 
-    def fail_input_save(source, destination):
+    def save_input(source, destination):
         if Path(destination).parent == root / ".cmoc/gu/log/editor_input":
             handoff_start.return_value.close.assert_called_once_with()
             save_destinations.append(Path(destination))
-            raise OSError("input save failed")
+            assert Path(source).read_bytes() == raw_input
+            if save_fails:
+                raise OSError("input save failed")
         return real_replace(source, destination)
 
+    # 実 builder と skeleton の結合は各 command の成功ケースに残す。
+    # 中断後の制御では本文を構築せず、placeholder の入力と handoff への受け渡しを検査する。
+    skeleton = "test skeleton {{original-prompt-here}}"
+    builders = []
+    for module, name in (
+        (tui_module, "build_tui_request"),
+        (investigation_module, "build_oracle_investigation_request"),
+        (oracle_edit_module, "build_oracle_edit_request"),
+    ):
+        builder = Mock(return_value=SimpleNamespace(prompt=skeleton))
+        builders.append(builder)
+        monkeypatch.setattr(module, name, builder)
+
     agent_call = Mock()
-    monkeypatch.setattr(prompt_editor_input_module.os, "replace", fail_input_save)
+    monkeypatch.setattr(prompt_editor_input_module.os, "replace", save_input)
     monkeypatch.setattr(tui_module, "run_codex_tui", agent_call)
     monkeypatch.setattr(investigation_module, "run_codex_tui", agent_call)
     monkeypatch.setattr(oracle_edit_module, "run_codex_exec", agent_call)
+    notify = Mock()
+    open_report = Mock()
+    monkeypatch.setattr(runtime_cli_module, "notify_terminal_result", notify)
+    monkeypatch.setattr(
+        runtime_cli_module, "open_primary_report_in_editor", open_report
+    )
 
     result = runner.invoke(app, command, catch_exceptions=False)
 
     # CLI は BaseException も終了 code へ変換するため、call の有無を外から検査する。
     agent_call.assert_not_called()
+    assert [call.args for builder in builders for call in builder.call_args_list] == [
+        (prompt_editor_input_module.ORIGINAL_PROMPT_PLACEHOLDER,)
+    ]
     assert result.exit_code == 1
     assert ignored_roots == [root]
     files = list((root / ".cmoc/gu/log/editor_input").iterdir())
     assert len(files) == 1
-    handoff_start.assert_called_once()
-    assert handoff_start.call_args.args[:2] == (root, files[0])
+    handoff_start.assert_called_once_with(root, files[0], skeleton)
     assert save_destinations == files
     assert files[0].name.endswith("_orig.md")
-    assert files[0].read_bytes() == b"recoverable input\r\n"
+    assert files[0].read_bytes() == raw_input
+
+    # 入力の中断でも、共通の終端ログ・通知と oracle edit 固有の report を保つ。
+    notify.assert_called_once_with(" ".join(command), root, "failed")
+    [log_path] = (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    finished = json.loads(log_path.read_text(encoding="utf-8").splitlines()[-1])
+    assert finished["event"] == "command_finished"
+    assert finished["classification"] == "error"
+    assert finished["returncode"] == 1
+    if not save_fails:
+        assert "プロンプトが空" in result.output
+        assert "Traceback" not in result.output
+        assert finished["failure"]["classification"] == "handled_failure"
+    if command == ["oracle", "edit"]:
+        report_path = terminal_primary_report(result)
+        open_report.assert_called_once_with(report_path)
+        assert report_path.parent == root / ".cmoc/gu/report/oracle_edit"
+        report = report_path.read_text(encoding="utf-8")
+        metadata = report_metadata(report)
+        assert metadata["terminal_classification"] == "error"
+        assert metadata["exit_code"] == 1
+        assert metadata["first_agent_call_status"] == "not_started"
+        assert metadata["second_agent_call_status"] == "not_started"
+        if not save_fails:
+            assert original_report_input(report) == ""
+    else:
+        open_report.assert_not_called()
 
 
+# 途中保存・再開は test_document_search.py に実同期を残す。
+# ここでは実 DB と索引同期ログを検査し、耐久性を判定しないディスク同期を省く。
+@pytest.mark.usefixtures("unsynced_search_storage")
 def test_tui_runs_editor_and_launches_codex_directly(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -167,8 +240,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
     readme_path.write_text("# staged change\n")
     run_git(root, "add", "README.md")
     readme_path.write_text("# unstaged change\n")
-    staged_diff_before = run_git(root, "diff", "--cached", "--", "README.md").stdout
-    unstaged_diff_before = run_git(root, "diff", "--", "README.md").stdout
+    # v2 status の HEAD・index blob ID、三段階の mode、dirty 状態と本文を比較する。
+    # staged・unstaged diff を別々に取得するための Git 起動は重ねない。
+    git_state_before = run_git(
+        root, "status", "--porcelain=v2", "--", "README.md"
+    ).stdout
     events: list[str] = []
 
     real_run_doctor_preprocess = runtime_cli_module.run_doctor_preprocess
@@ -191,7 +267,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     builder_calls: list[tuple[str, AgentCallParameter]] = []
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
-    real_build_parameter = tui_module.build_tui_launch_tui_parameter
+    real_build_parameter = tui_module.build_tui_request
 
     def record_build_parameter(
         original_prompt: str,
@@ -214,7 +290,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
         events.append("tui")
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
-        assert kwargs["notification_command_name"] == "tui"
+        assert kwargs["purpose"] == "tui codex"
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
         assert parameter is builder_calls[1][1]
@@ -226,7 +302,7 @@ def test_tui_runs_editor_and_launches_codex_directly(
     )
     monkeypatch.setattr(
         tui_module,
-        "build_tui_launch_tui_parameter",
+        "build_tui_request",
         record_build_parameter,
     )
     monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
@@ -299,12 +375,11 @@ def test_tui_runs_editor_and_launches_codex_directly(
         builder_calls[1][0]
         == "<!-- remove me -->\n# 依頼\n\nsrc を確認して必要なら直す"
     )
-    assert readme_path.read_text() == "# unstaged change\n"
+    assert readme_path.read_bytes() == b"# unstaged change\n"
     assert (
-        run_git(root, "diff", "--cached", "--", "README.md").stdout
-        == staged_diff_before
+        run_git(root, "status", "--porcelain=v2", "--", "README.md").stdout
+        == git_state_before
     )
-    assert run_git(root, "diff", "--", "README.md").stdout == unstaged_diff_before
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text()
     assert (root / ".cmoc" / "gu" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
@@ -327,13 +402,13 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
     monkeypatch.setattr(
         runtime_cli_module, "run_doctor_preprocess", doctor_roots.append
     )
-    # doctor と TUI は観測用のダブルなので、使わない collector は起動しない。
     # handoff の TCP・guide の結合は test_editor_input_handoff.py に残し、
     # linked 起動では main root への引き渡しと終了順序を観測する。
-    monkeypatch.setattr(
-        runtime_cli_module, "start_feedback_invocation", lambda *_args: (None, None)
-    )
-    write_config(linked / ".cmoc/gt/config.json", CmocConfig())
+    # 設定 I/O は test_runtime_config.py と上の main 起動で通す。
+    # ここでは linked の設定を main の設定で代用しないことを直接検査する。
+    config = CmocConfig(num_parallel=3)
+    load_config = Mock(return_value=config)
+    monkeypatch.setattr(tui_module, "load_config", load_config)
     monkeypatch.chdir(linked)
     opened_inputs = editor_input("\nlinked worktree task\n")
     tui_calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
@@ -350,10 +425,12 @@ def test_tui_saves_input_and_ignores_both_roots_from_linked_worktree(
 
     assert result.exit_code == 0, result.output
     assert doctor_roots == [linked.resolve()]
+    load_config.assert_called_once_with(linked.resolve())
     assert len(tui_calls) == 1
     parameter, tui_kwargs = tui_calls[0]
     assert tui_kwargs["root"] == root.resolve()
-    assert tui_kwargs["notification_command_name"] == "tui"
+    assert tui_kwargs["config"] is config
+    assert tui_kwargs["purpose"] == "tui codex"
     assert parameter.agent_call_cwd == root.resolve()
     [saved_input] = (root / ".cmoc" / "gu" / "log" / "editor_input").glob("*_orig.md")
     assert opened_inputs == [saved_input]

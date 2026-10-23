@@ -50,8 +50,21 @@ function chunkRanges(text, model, chunkTokens, overlapTokens) {
   let start = 0;
   while (start < chars.length) {
     let low = start + 1;
-    let high = chars.length;
+    let high = Math.min(chars.length, start + chunkTokens);
+    // 残り全文を繰り返し tokenize せず、必要な範囲だけ倍増して探す。
+    // 文字数と token 数は異なるので、上限は実際の tokenizer で判定する。
     let end = start;
+    while (true) {
+      if (tokensFor(model, chars, start, high) > chunkTokens) {
+        high--;
+        break;
+      }
+      end = high;
+      low = high + 1;
+      if (high === chars.length) break;
+      high = Math.min(chars.length, start + (high - start) * 2);
+    }
+    // 上限内と確認済みの範囲は探索せず、末尾まで収まれば二分探索も省く。
     while (low <= high) {
       const middle = Math.floor((low + high) / 2);
       if (tokensFor(model, chars, start, middle) <= chunkTokens) {
@@ -131,6 +144,8 @@ async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete
   }
   const reusable = new Set(reusableHashes);
   await withModel(modelPath, async (model) => {
+    // 同じ節の分割結果は要求内で共有し、各出現位置への変換だけを繰り返す。
+    const sectionRanges = new Map();
     let context;
     try {
       for (const [path, text] of Object.entries(documents)) {
@@ -147,10 +162,13 @@ async function forEachDocumentChunk(request, resume, onChunk, onDocumentComplete
               !Number.isInteger(boundary[0]) || !Number.isInteger(boundary[1]) ||
               boundary[0] !== previousEnd || boundary[1] <= boundary[0] ||
               boundary[1] > chars.length) fail("invalid document sections");
-          for (const range of chunkRanges(
-            chars.slice(boundary[0], boundary[1]).join(""), model,
-            config.chunk_tokens, config.chunk_overlap_tokens
-          )) {
+          const section = chars.slice(boundary[0], boundary[1]).join("");
+          let chunks = sectionRanges.get(section);
+          if (chunks === undefined) {
+            chunks = chunkRanges(section, model, config.chunk_tokens, config.chunk_overlap_tokens);
+            sectionRanges.set(section, chunks);
+          }
+          for (const range of chunks) {
             ranges.push({
               start: boundary[0] + range.start,
               end: boundary[0] + range.end,

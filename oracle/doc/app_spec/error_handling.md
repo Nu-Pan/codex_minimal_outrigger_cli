@@ -31,6 +31,8 @@ cmoc は、handled failure と internal failure のどちらの場合も、個�
 
 最外側の非対話末端サブコマンドでは、エラーまでに確定した作業内容とエラー終端結果を、個別仕様が定める primary report に保存する。その後、`error` の terminal result とサブコマンド終了イベントを確定する。
 
+エラー report の生成にも、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「重要事項確認用 call」を適用する。確認未完了と、必要な保存・終了処理の失敗との区別は、同文書の「確認結果と終了結果の分離」に従う。
+
 primary report 自体を保存できない場合は、元の失敗結果に代えて report 保存基盤の internal failure を確定する。この場合、保存を確認できない report の役割または path は表示しない。
 
 ## handled failure の表示
@@ -48,6 +50,8 @@ primary report 自体を保存できない場合は、元の失敗結果に代�
 ## エラーとして扱わない結果
 
 個別仕様が正常な処理結果として定義する状態は、internal failure として扱わない。これには、`attention` および `incomplete` を含む。
+
+primary report の重要事項確認の未完了には、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「確認結果と終了結果の分離」が定める例外を適用する。
 
 中断可能サブコマンドのユーザー中断要求は、`{{cmoc-root}}/oracle/doc/app_spec/subcommand_interruption.md` の「サブコマンドのユーザー中断」に従って正常系として扱う。ユーザー中断要求では、stdout と stderr のどちらにもスタックトレースまたはコールスタックを表示しない。
 

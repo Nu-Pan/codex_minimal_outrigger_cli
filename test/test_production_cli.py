@@ -29,7 +29,6 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-import click
 import pytest
 from _cli_support import terminal_primary_report
 from _codex_support import (
@@ -38,7 +37,7 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _git_support import current_branch, make_repo, run_git
-from typer.main import get_command
+from _report_support import report_metadata
 
 from commons.runtime_config import load_config, write_config
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
@@ -68,8 +67,8 @@ from commons.runtime_feedback_store import (
     write_immutable_json,
 )
 from commons.runtime_ids import new_id
+from commons.runtime_run_lifecycle import set_run_state, start_editing_run
 from config.cmoc_config import CmocConfig
-from main import app
 
 _WORK_ROOT = Path(__file__).resolve().parents[1]
 _CMOC_CONSOLE = Path(sys.executable).with_name("cmoc")
@@ -91,8 +90,8 @@ NONINTERACTIVE_SCENARIO_COMMANDS = {
     ("feedback", "report"),
     ("feedback", "close"),
     ("oracle", "edit"),
-    ("realization", "apply", "fork"),
-    ("realization", "refactor", "fork"),
+    ("realization", "apply"),
+    ("realization", "refactor"),
     ("run", "abandon"),
     ("run", "join"),
     ("session", "abandon"),
@@ -105,9 +104,12 @@ TUI_SCENARIOS = (
     (("oracle", "investigation"), "oracle investigation"),
 )
 
-PRODUCTION_SCENARIO_COMMANDS = NONINTERACTIVE_SCENARIO_COMMANDS | {
-    scenario[0] for scenario in TUI_SCENARIOS
-}
+RESUME_COMMAND = ("resume",)
+PRODUCTION_SCENARIO_COMMANDS = (
+    NONINTERACTIVE_SCENARIO_COMMANDS
+    | {RESUME_COMMAND}
+    | {scenario[0] for scenario in TUI_SCENARIOS}
+)
 
 EDITOR_PROMPT = """# 目的
 
@@ -141,20 +143,6 @@ plain text
 
 追加作業は不要。
 """
-
-
-def _registered_leaf_commands(
-    command: click.Command, prefix: tuple[str, ...] = ()
-) -> set[tuple[str, ...]]:
-    """Click command tree から実行可能な末端 command path を列挙する。"""
-    # 新しい公開末端の追加時に、本番経路試験の追加漏れを同じ変更で検出する。
-    commands = getattr(command, "commands", None)
-    if commands is not None:
-        leaves: set[tuple[str, ...]] = set()
-        for name, child in commands.items():
-            leaves.update(_registered_leaf_commands(child, (*prefix, name)))
-        return leaves
-    return {prefix}
 
 
 def _write_close_fixture(root: Path, decision_basis: dict[str, Any]) -> str:
@@ -267,7 +255,7 @@ def _real_path_config() -> CmocConfig:
     # の直接設定を全 agent call 種別へ適用する。
     config = CmocConfig(num_parallel=1)
     quota_saving_call = config.codex.agent_calls[
-        "build_quota_availability_probe_parameter"
+        "build_quota_availability_probe_request"
     ]
     return replace(
         config,
@@ -406,7 +394,7 @@ def _run_cmoc(
 ) -> subprocess.CompletedProcess[str]:
     """利用者向け console script を独立 process で正常完了まで実行する。"""
     # 個々の command hang は pytest 全体の timeout より早く局所化する。
-    if args == ("realization", "refactor", "fork"):
+    if args == ("realization", "refactor"):
         result = _run_refactor_until_confirmed([str(cmoc), *args], root, environment)
     else:
         result = subprocess.run(
@@ -426,7 +414,11 @@ def _run_cmoc(
 
 
 def _run_refactor_until_confirmed(
-    argv: list[str], root: Path, environment: dict[str, str]
+    argv: list[str],
+    root: Path,
+    environment: dict[str, str],
+    *,
+    poll_interval: float = 0.1,
 ) -> subprocess.CompletedProcess[str]:
     """確定実績を観測して SIGINT を送り、継続 workload の通常終了を検証する。"""
     directory = root / ".cmoc/gu/log/sub_command"
@@ -470,7 +462,7 @@ def _run_refactor_until_confirmed(
                         if interrupted:
                             break
                 try:
-                    stdout, stderr = process.communicate(timeout=0.1)
+                    stdout, stderr = process.communicate(timeout=poll_interval)
                     break
                 except subprocess.TimeoutExpired:
                     continue
@@ -487,16 +479,21 @@ def _codex_call_logs(root: Path) -> set[Path]:
     return set((root / ".cmoc" / "gu" / "log" / "codex").glob("*/*_call.json"))
 
 
-def _run_without_codex_call(
+def _run_with_report_review(
     cmoc: Path,
     root: Path,
     environment: dict[str, str],
     *args: str,
 ) -> subprocess.CompletedProcess[str]:
-    """Codex 不要の代表正常系が予期せず agent call しないことも確認する。"""
+    """本命の agent call が不要な経路も、primary report の確認は実行する。"""
     before = _codex_call_logs(root)
     result = _run_cmoc(cmoc, root, environment, *args)
-    assert _codex_call_logs(root) == before
+    calls = _codex_call_logs(root) - before
+    assert calls
+    assert {_assert_real_codex_call(path)["agent_call_kind"] for path in calls} <= {
+        "build_primary_report_review_request",
+        "build_quota_availability_probe_request",
+    }
     return result
 
 
@@ -524,26 +521,35 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     assert override["sandbox_workspace_write"] == {"exclude_slash_tmp": False}
     assert "features" not in override
     if tui:
-        if "--enable" in argv:
-            assert argv[argv.index("--enable") + 1] == "hooks"
+        assert "--enable" not in argv
+        assert payload["prompt_log_path"] is None
+        assert argv[-2:] == ["resume", payload["fixed_session_id"]]
     else:
         assert "--enable" not in argv
     assert override["model_reasoning_effort"] == call_config.reasoning_effort
     search_server = override["mcp_servers"]["cmoc_document_search"]
-    assert search_server["enabled"] is True
-    search_context = json.loads(search_server["args"][-1])
-    caller_log = path.parents[2] / "sub_command" / f"{payload['execution_id']}.jsonl"
-    caller = json.loads(caller_log.read_text().splitlines()[0])
-    assert search_context["log_context"] == {
-        "path": str(caller_log.resolve()),
-        "command": caller["command"],
-        "execution_id": payload["execution_id"],
-        "codex_call_id": payload["codex_call_id"],
-    }
-    tuning = search_context["config"]
-    assert search_server["tool_timeout_sec"] > (
-        tuning["search_request_timeout_seconds"] + tuning["shutdown_grace_seconds"]
-    )
+    if agent_call_kind in {
+        "build_primary_report_review_request",
+        "build_quota_availability_probe_request",
+    }:
+        assert search_server["enabled"] is False
+    else:
+        assert search_server["enabled"] is True
+        search_context = json.loads(search_server["args"][-1])
+        caller_log = (
+            path.parents[2] / "sub_command" / f"{payload['execution_id']}.jsonl"
+        )
+        caller = json.loads(caller_log.read_text().splitlines()[0])
+        assert search_context["log_context"] == {
+            "path": str(caller_log.resolve()),
+            "command": caller["command"],
+            "execution_id": payload["execution_id"],
+            "codex_call_id": payload["codex_call_id"],
+        }
+        tuning = search_context["config"]
+        assert search_server["tool_timeout_sec"] > (
+            tuning["search_request_timeout_seconds"] + tuning["shutdown_grace_seconds"]
+        )
     provider_id = call_config.model_provider
     assert override["model_provider"] == provider_id
     providers = override.get("model_providers", {})
@@ -554,9 +560,10 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
         )
     feedback_server = override["mcp_servers"]["cmoc_feedback"]
     feedback_reporting_enabled = agent_call_kind not in {
-        "build_feedback_normalize_issue_parameter",
-        "build_feedback_remediate_issue_parameter",
-    }
+        "build_feedback_issue_normalization_request",
+        "build_primary_report_review_request",
+        "build_quota_availability_probe_request",
+    } and not str(payload.get("purpose", "")).startswith("feedback issue remediation")
     assert feedback_server["enabled"] is feedback_reporting_enabled
     assert feedback_server["enabled_tools"] == (
         ["submit_observation"] if feedback_reporting_enabled else []
@@ -571,7 +578,10 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
         FEEDBACK_COLLECTOR_PORT_ENV,
         FEEDBACK_PROTOCOL_ENV,
     ]
-    if tui:
+    if agent_call_kind in {
+        "build_tui_request",
+        "build_oracle_investigation_request",
+    }:
         editor_input_server = override["mcp_servers"]["cmoc_editor_input"]
         assert editor_input_server["enabled_tools"] == [
             "get_handoff_guide",
@@ -583,7 +593,7 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
             EDITOR_INPUT_SOURCE_ENV,
         ]
     else:
-        assert "cmoc_editor_input" not in override["mcp_servers"]
+        assert override["mcp_servers"]["cmoc_editor_input"]["enabled"] is False
     return payload
 
 
@@ -603,27 +613,24 @@ def _load_session_state(root: Path, branch: str) -> tuple[Path, dict[str, Any]]:
     return path, state
 
 
-def _run_worktree_from_state(root: Path, state: dict[str, Any]) -> Path:
-    """共通 run branch 名から仕様上の managed worktree path を復元する。"""
-    branch = state["run"]["branch"]
-    assert isinstance(branch, str)
-    parts = branch.split("/")
-    assert len(parts) == 4 and parts[:2] == ["cmoc", "run"]
-    return root / ".cmoc" / "gu" / "worktree" / parts[2] / parts[3]
-
-
-def _completed_tui_message(
-    codex_home: Path, scanned_versions: dict[Path, tuple[int, int]]
-) -> str | None:
-    """Codex TUI session が保存した完了済み assistant response を探す。"""
-    # session file の originator で resolver の `codex exec` と TUI を区別する。
+def _completed_tui_turn(
+    codex_home: Path,
+    session_id: str,
+    scanned_versions: dict[Path, tuple[int, int]],
+    *,
+    after_turn_id: str | None = None,
+) -> tuple[str, str] | None:
+    """指定した会話から、必要なら指定 turn より後の完了 ID と応答を探す。"""
+    # exec 由来の会話を TUI resume しても session_meta.originator は変わらない。
+    # https://github.com/openai/codex/blob/092d3acd6bec3e3a14bdc7e7a2810ab628ab759d/codex-rs/rollout/src/recorder.rs#L995-L1007
     for path in codex_home.glob("sessions/**/rollout-*.jsonl"):
         stat = path.stat()
         version = (stat.st_mtime_ns, stat.st_size)
         if scanned_versions.get(path) == version:
             continue
-        originator: str | None = None
-        completed_message: str | None = None
+        recorded_session_id: str | None = None
+        after_previous_turn = after_turn_id is None
+        completed_turn: tuple[str, str] | None = None
         # TUI は polling 中にこの file を追記するため、最後の chunk が partial UTF-8
         # sequence で終わっていても、無効な session event とは限らない。
         for line in path.read_bytes().decode("utf-8", errors="ignore").splitlines():
@@ -633,19 +640,44 @@ def _completed_tui_message(
                 continue
             payload = event.get("payload")
             if event.get("type") == "session_meta" and isinstance(payload, dict):
-                value = payload.get("originator")
-                originator = value if isinstance(value, str) else None
+                recorded_session_id = payload.get("id")
             if event.get("type") != "event_msg" or not isinstance(payload, dict):
                 continue
             if payload.get("type") != "task_complete":
                 continue
+            # 現行の paginated 履歴では user_message は保存されないが、完了は残る。
+            # https://github.com/openai/codex/blob/092d3acd6bec3e3a14bdc7e7a2810ab628ab759d/codex-rs/rollout/src/policy.rs#L127-L154
+            turn_id = payload.get("turn_id")
+            if turn_id == after_turn_id:
+                after_previous_turn = True
+                completed_turn = None
+                continue
             value = payload.get("last_agent_message")
-            if isinstance(value, str) and value.strip():
-                completed_message = value
-        if originator == "codex-tui" and completed_message is not None:
-            return completed_message
+            if (
+                after_previous_turn
+                and isinstance(turn_id, str)
+                and turn_id
+                and isinstance(value, str)
+                and value.strip()
+            ):
+                completed_turn = (turn_id, value)
+        if recorded_session_id == session_id and completed_turn is not None:
+            return completed_turn
         # 完了待ちの同じ本文を poll ごとに読み直さず、追記後は全文を再確認する。
         scanned_versions[path] = version
+    return None
+
+
+def _started_tui_session_id(root: Path, previous_calls: set[Path]) -> str | None:
+    """今回生成された TUI process の call log から指定 UUID を得る。"""
+    for path in _codex_call_logs(root) - previous_calls:
+        try:
+            payload = json.loads(path.read_text())
+        except json.JSONDecodeError:
+            # process 状態を書き換えている途中の file は次の poll で確認する。
+            continue
+        if "exec" not in payload["argv"] and payload.get("process_state") == "started":
+            return payload["fixed_session_id"]
     return None
 
 
@@ -727,6 +759,7 @@ def _run_cmoc_tui(
     environment: dict[str, str],
     codex_home: Path,
     *args: str,
+    input_message: str | None = None,
 ) -> tuple[str, str]:
     """指定した cmoc TUI 経路を PTY 上で応答完了まで実行する。"""
     # Codex TUI は terminal を必須とするため、24x100 の実 PTY を渡す。
@@ -736,6 +769,11 @@ def _run_cmoc_tui(
     transcript = bytearray()
     message: str | None = None
     scanned_versions: dict[Path, tuple[int, int]] = {}
+    previous_calls = _codex_call_logs(root)
+    session_id: str | None = None
+    input_sent = False
+    previous_turn_id: str | None = None
+    composer_seen = False
     probe_buffer = b""
     answered_queries: set[bytes] = set()
     trust_confirmation_ready = False
@@ -756,7 +794,7 @@ def _run_cmoc_tui(
         )
         os.close(slave_fd)
         slave_open = False
-        # TUI session の永続 event で、stream 表示ではなく応答完了を判定する。
+        # 初回 exec の完了だけでは停止せず、同じ会話を開く TUI の描画も待つ。
         while time.monotonic() < deadline:
             received = _read_pty(master_fd, transcript)
             probe_buffer = _answer_terminal_queries(
@@ -772,9 +810,31 @@ def _run_cmoc_tui(
                     transcript,
                     trust_confirmation_ready,
                 )
-            message = _completed_tui_message(codex_home, scanned_versions)
-            if message is not None:
-                break
+            if session_id is None:
+                session_id = _started_tui_session_id(root, previous_calls)
+            if session_id is not None and composer_seen:
+                completed_turn = _completed_tui_turn(
+                    codex_home,
+                    session_id,
+                    scanned_versions,
+                    after_turn_id=previous_turn_id,
+                )
+                if completed_turn is not None:
+                    if input_message is None or input_sent:
+                        _turn_id, message = completed_turn
+                        break
+                    previous_turn_id = completed_turn[0]
+                    # bracketed paste と Enter を分け、paste burst 判定で送信を落とさない。
+                    os.write(
+                        master_fd,
+                        b"\x1b[200~" + input_message.encode() + b"\x1b[201~",
+                    )
+                    time.sleep(0.1)
+                    os.write(master_fd, b"\r")
+                    input_sent = True
+            # Codex 0.162.1 の composer footer。描画検出の次の poll から操作する。
+            # https://github.com/openai/codex/blob/092d3acd6bec3e3a14bdc7e7a2810ab628ab759d/codex-rs/tui/src/bottom_pane/footer.rs#L345-L351
+            composer_seen = b" for shortcuts" in transcript
             if process.poll() is not None:
                 break
             time.sleep(0.1)
@@ -808,7 +868,7 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
         tmp_path, isolated_cmoc_installation
     )
 
-    first = _run_without_codex_call(cmoc, root, environment, "doctor")
+    first = _run_with_report_review(cmoc, root, environment, "doctor")
     first_report_path = terminal_primary_report(first.stdout)
     first_report = first_report_path.read_text(encoding="utf-8")
     assert "照合と実モデル検証: `成功`" in first_report
@@ -823,7 +883,7 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
         str(first_report_path)
     ]
 
-    repeated = _run_without_codex_call(cmoc, root, environment, "doctor")
+    repeated = _run_with_report_review(cmoc, root, environment, "doctor")
     repeated_report = terminal_primary_report(repeated.stdout).read_text(
         encoding="utf-8"
     )
@@ -837,10 +897,9 @@ def test_doctor_prepares_real_search_materials_in_isolated_installation(
 def test_all_noninteractive_leaf_commands_use_production_process_paths(
     tmp_path: Path,
     isolated_cmoc_installation: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """非対話の全末端を独立 process の代表正常系で完了させる。"""
-    # CLI 登録と固定シナリオを比較し、新しい末端 command の追加漏れを検出する。
-    assert _registered_leaf_commands(get_command(app)) == PRODUCTION_SCENARIO_COMMANDS
     root = make_repo(tmp_path)
     _write_noninteractive_fixture_instructions(root)
     _write_real_path_config(root)
@@ -854,14 +913,14 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
         executed_commands.add(args)
         return _run_cmoc(cmoc, root, environment, *args)
 
-    def run_without_codex(*args: str) -> subprocess.CompletedProcess[str]:
-        """Codex 不要の leaf も実行済み集合へ記録する。"""
+    def run_with_report_review(*args: str) -> subprocess.CompletedProcess[str]:
+        """確認用 call だけを実行する leaf も実行済み集合へ記録する。"""
         executed_commands.add(args)
-        return _run_without_codex_call(cmoc, root, environment, *args)
+        return _run_with_report_review(cmoc, root, environment, *args)
 
     # {{work-root}}/oracle/doc/app_spec/doctor_preprocess.md
-    # doctor は provider lifecycle に触れず本番 preprocess を完了する。
-    run_without_codex("doctor")
+    # doctor は本番 preprocess を完了してから report を確認する。
+    run_with_report_review("doctor")
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert run_git(root, "ls-files", ".cmoc/gt/config.json").stdout.strip()
     assert run_git(
@@ -870,7 +929,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 
     # active session 上の各 workload を検証する。
     home_branch = current_branch(root)
-    run_without_codex("session", "fork")
+    run_with_report_review("session", "fork")
     session_branch = current_branch(root)
     assert session_branch.startswith("cmoc/session/")
 
@@ -994,7 +1053,8 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     remediation_calls = [
         payload
         for payload in remediation_calls
-        if payload.get("agent_call_kind") == "build_feedback_remediate_issue_parameter"
+        if payload.get("agent_call_kind") == "realization_edit"
+        and str(payload.get("purpose", "")).startswith("feedback issue remediation")
     ]
     assert remediation_calls
     assert len({payload["agent_call_id"] for payload in remediation_calls}) == 1
@@ -1008,7 +1068,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     close_parent = tmp_path / "close-scenario"
     close_parent.mkdir()
     close_root = make_repo(close_parent)
-    _run_without_codex_call(cmoc, close_root, environment, "doctor")
+    _run_with_report_review(cmoc, close_root, environment, "doctor")
     history = load_active_state(root).history
     basis = next(
         event["agent_result"]["decision_basis"]
@@ -1018,7 +1078,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     )
     case = _write_close_fixture(close_root, basis)
     executed_commands.add(("feedback", "close"))
-    closed = _run_without_codex_call(
+    closed = _run_with_report_review(
         cmoc,
         close_root,
         environment,
@@ -1035,49 +1095,50 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     assert case in terminal_primary_report(closed.stdout).read_text()
     assert "- result: `closed`" in closed.stdout
     # {{work-root}}/oracle/doc/app_spec/sub_command/editing_run.md
-    # 2 workload と共通 join/abandon を本番 Codex 経路で観測する。
+    # workload の正常終了は、同じ invocation での取り込みと回収まで含む。
     for command, kind in [
-        (("realization", "apply", "fork"), "realization_apply"),
-        (("realization", "refactor", "fork"), "realization_refactor"),
+        (("realization", "apply"), "realization_apply"),
+        (("realization", "refactor"), "realization_refactor"),
     ]:
         before_calls = _codex_call_logs(root)
-        run_production(*command)
+        completed = run_production(*command)
         assert _codex_call_logs(root) - before_calls
         _state_path, completed_state = _load_session_state(root, session_branch)
-        assert completed_state["run"]["state"] == "joinable"
-        assert completed_state["run"]["kind"] == kind
-        joined_worktree = _run_worktree_from_state(root, completed_state)
-        assert joined_worktree.is_dir()
-        run_without_codex("run", "join")
-        _state_path, joined_state = _load_session_state(root, session_branch)
-        assert joined_state["run"] == {
+        assert completed_state["run"] == {
             "state": "ready",
             "kind": None,
             "branch": None,
             "fork_commit": None,
         }
-        assert not joined_worktree.exists()
+        report = report_metadata(terminal_primary_report(completed.stdout).read_text())
+        assert report["run_kind"] == kind
+        assert report["state_after"] == "ready"
+        assert report["cleanup"] == "completed"
+        assert not Path(report["run_worktree"]).exists()
 
-    run_production("realization", "apply", "fork")
-    _state_path, abandoned_state = _load_session_state(root, session_branch)
-    abandoned_worktree = _run_worktree_from_state(root, abandoned_state)
-    abandon_result = run_without_codex("run", "abandon")
-    _state_path, ready_state = _load_session_state(root, session_branch)
-    assert ready_state["run"]["state"] == "ready"
-    assert not abandoned_worktree.exists()
-    assert "cleanup: `completed`" in abandon_result.stdout
+    # 復旧用の末端には停止済み run を用意し、本番 entrypoint で機械的に終了する。
+    for operation in ("join", "abandon"):
+        with monkeypatch.context() as setup:
+            setup.chdir(root)
+            context = start_editing_run("realization_apply")
+            set_run_state(context, "joinable")
+        finished = run_with_report_review("run", operation)
+        _state_path, ready_state = _load_session_state(root, session_branch)
+        assert ready_state["run"]["state"] == "ready"
+        assert not context.run_worktree.exists()
+        assert "cleanup: `completed`" in finished.stdout
 
     # 同じ home branch で join と abandon の両 session 完了経路を観測する。
     state_path, _state = _load_session_state(root, session_branch)
-    run_without_codex("session", "join")
+    run_with_report_review("session", "join")
     assert current_branch(root) == home_branch
     assert json.loads(state_path.read_text())["session"]["state"] == "joined"
     assert run_git(root, "branch", "--list", session_branch).stdout.strip() == ""
 
-    run_without_codex("session", "fork")
+    run_with_report_review("session", "fork")
     abandoned_session_branch = current_branch(root)
     abandoned_state_path, _state = _load_session_state(root, abandoned_session_branch)
-    run_without_codex("session", "abandon")
+    run_with_report_review("session", "abandon")
     assert current_branch(root) == home_branch
     assert json.loads(abandoned_state_path.read_text())["session"]["state"] == (
         "abandoned"
@@ -1094,19 +1155,19 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
 # {{work-root}}/oracle/doc/dev_rule/test_rule.md
 # TUI の実推論と外部 provider の応答時間を含める。
 @pytest.mark.timeout(_PRODUCTION_CASE_TIMEOUT)
-def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
+def test_tui_leaf_commands_and_resume_use_real_codex_response_over_production_pty(
     tmp_path: Path,
     isolated_cmoc_installation: Path,
     command: tuple[str, ...],
     tui_purpose: str,
 ) -> None:
-    """全 TUI 末端を実 Codex response 後まで本番経路で完了する。"""
+    """両 workload の新規起動と公開 resume を実応答後まで完了する。"""
     root = make_repo(tmp_path)
     _write_real_path_config(root)
     cmoc, environment, codex_home = _production_environment(
         tmp_path, isolated_cmoc_installation
     )
-    _run_without_codex_call(cmoc, root, environment, "doctor")
+    _run_with_report_review(cmoc, root, environment, "doctor")
     # component 検証と doctor 同期の期限は維持し、MCP 全体期限だけを短くする。
     config = load_config(root)
     assert config.document_search is not None
@@ -1130,7 +1191,7 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
         for path in report_root.rglob("*")
     }
 
-    # Codex の実 hook から通知 transport まで到達することを、OS 通知だけ隔離して確認する。
+    # 初回処理完了と、公開 resume 後の直接 callback を OS 通知だけ隔離して確認する。
     toast_path = tmp_path / "toast.jsonl"
     toast_bin = tmp_path / "toast-recorder"
     toast_bin.mkdir()
@@ -1200,33 +1261,51 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert len(tui_calls) == 1
     tui_payload = _assert_real_codex_call(next(iter(tui_calls)), tui=True)
     assert tui_payload["purpose"] == tui_purpose
-    assert not exec_calls
+    assert len(exec_calls) == 1
+    initial_payload = _assert_real_codex_call(next(iter(exec_calls)))
+    assert initial_payload["agent_call_kind"] == tui_payload["agent_call_kind"]
+    assert initial_payload["execution_id"] == tui_payload["execution_id"]
+    assert initial_payload["agent_call_id"] != tui_payload["agent_call_id"]
+    assert initial_payload["codex_call_id"] != tui_payload["codex_call_id"]
+    assert tui_payload["initial_session_id"] == tui_payload["fixed_session_id"]
     body = work.read_text()
     assert "CMOC_GUIDE_CONFIRMED" in body, response
-    assert tui_payload["codex_call_id"] in body
+    assert initial_payload["codex_call_id"] in body
+    # 終了済み process のログを一度だけ解析し、送信元・検索・期限の検証で共有する。
+    subcommand_events = {
+        path: [json.loads(line) for line in path.read_text().splitlines()]
+        for path in (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
+    }
     source_events = [
         (path, event)
-        for path in (root / ".cmoc/gu/log/sub_command").glob("*.jsonl")
-        for line in path.read_text().splitlines()
-        if (event := json.loads(line)).get("event") == "editor_input_handoff_source"
+        for path, events in subcommand_events.items()
+        for event in events
+        if event.get("event") == "editor_input_handoff_source"
     ]
-    assert len(source_events) == 1
-    log_path, source = source_events[0]
+    assert {event["codex_call_id"] for _path, event in source_events} == {
+        initial_payload["codex_call_id"],
+        tui_payload["codex_call_id"],
+    }
+    log_path, source = next(
+        (path, event)
+        for path, event in source_events
+        if event["codex_call_id"] == initial_payload["codex_call_id"]
+    )
     assert source["subcommand"] == " ".join(command)
-    assert source["codex_call_id"] == tui_payload["codex_call_id"]
+    assert source["codex_call_id"] == initial_payload["codex_call_id"]
     assert source["sub_command_log_path"] == str(log_path.resolve())
-    assert Path(source["call_log_path"]) == next(iter(tui_calls))
+    assert Path(source["call_log_path"]) == next(iter(exec_calls))
     assert source["execution_id"] in body
     assert str(log_path.resolve()) in body
     assert source["execution_id"] in transcript
     search_events = [
         event
-        for line in log_path.read_text().splitlines()
-        if (event := json.loads(line))["event"].startswith("document_search_request_")
+        for event in subcommand_events[log_path]
+        if event["event"].startswith("document_search_request_")
     ]
     assert len(search_events) == 3
     assert all(
-        event["codex_call_id"] == tui_payload["codex_call_id"]
+        event["codex_call_id"] == initial_payload["codex_call_id"]
         and event["execution_id"] == source["execution_id"]
         and event["command"] == " ".join(command)
         for event in search_events
@@ -1235,14 +1314,89 @@ def test_tui_leaf_commands_use_real_codex_response_over_production_pty(
     assert search_events[-1]["failure_code"] == "DEADLINE_EXCEEDED"
     deadline = next(
         event
-        for line in log_path.read_text().splitlines()
-        if (event := json.loads(line))["event"] == "document_search_deadline_exceeded"
+        for event in subcommand_events[log_path]
+        if event["event"] == "document_search_deadline_exceeded"
     )
     assert deadline["request_id"] == search_events[-1]["request_id"]
     assert deadline["deadline_kinds"] == ["search_request"]
     notifications = [json.loads(line) for line in toast_path.read_text().splitlines()]
     assert notifications == [
-        {"title": f"cmoc {' '.join(command)}", "message": f"{root.name} — 入力待ち"}
+        {"title": f"cmoc {' '.join(command)}", "message": f"{root.name} — 初回処理完了"}
     ]
+
+    # 同じ会話を公開入口から再開し、過去の完了ではなく追加入力の実応答を待つ。
+    calls_before_resume = _codex_call_logs(root)
+    editor_opened = tmp_path / "resume-editor-opened"
+    write_python_executable(
+        tmp_path / "editor-bin/code",
+        [
+            "import pathlib, sys",
+            f"pathlib.Path({str(editor_opened)!r}).touch()",
+            "sys.exit(1)",
+        ],
+    )
+    response, transcript = _run_cmoc_tui(
+        cmoc,
+        root,
+        environment,
+        codex_home,
+        *RESUME_COMMAND,
+        str(tui_payload["execution_id"]),
+        input_message=(
+            "続きの入力です。cmoc_document_search.search を query『再開後の期限確認』で"
+            "一度呼び、結果を短く報告してください。ファイルは変更しないでください。"
+        ),
+    )
+    assert response.strip()
+    assert "Shutting down" in transcript
+    assert not editor_opened.exists()
+    resumed_calls = _codex_call_logs(root) - calls_before_resume
+    assert len(resumed_calls) == 1
+    resumed_payload = _assert_real_codex_call(next(iter(resumed_calls)), tui=True)
+    assert resumed_payload["resumed_from_execution_id"] == tui_payload["execution_id"]
+    for key in ("execution_id", "agent_call_id", "codex_call_id"):
+        assert resumed_payload[key] != tui_payload[key]
+        assert resumed_payload[key] != initial_payload[key]
+    for key in (
+        "fixed_session_id",
+        "initial_session_id",
+        "agent_call_kind",
+        "file_access_mode",
+        "cwd",
+        "codex_home",
+    ):
+        assert resumed_payload[key] == tui_payload[key]
+    assert resumed_payload["subcommand"] == "resume"
+    assert resumed_payload["process_state"] == "exited"
+    assert resumed_payload["returncode"] == 0
+    resumed_log = (
+        root / ".cmoc/gu/log/sub_command" / f"{resumed_payload['execution_id']}.jsonl"
+    )
+    resumed_events = [json.loads(line) for line in resumed_log.read_text().splitlines()]
+    resumed_search_events = [
+        event
+        for event in resumed_events
+        if event["event"].startswith("document_search_request_")
+    ]
+    assert len(resumed_search_events) == 3
+    assert all(
+        event["codex_call_id"] == resumed_payload["codex_call_id"]
+        and event["execution_id"] == resumed_payload["execution_id"]
+        and event["command"] == "resume"
+        for event in resumed_search_events
+    )
+    assert resumed_search_events[-1]["failure_code"] == "DEADLINE_EXCEEDED"
+    assert [json.loads(line) for line in toast_path.read_text().splitlines()] == [
+        *notifications,
+        {"title": "cmoc resume", "message": f"{root.name} — 応答完了"},
+    ]
+    assert {
+        path: path.read_bytes() if path.is_file() else None
+        for path in report_root.rglob("*")
+    } == report_snapshot_before
+    assert not any(
+        f"# {heading}: cmoc resume" in transcript
+        for heading in ("完了", "中断完了", "失敗")
+    )
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert run_git(root, "status", "--short").stdout == status_before

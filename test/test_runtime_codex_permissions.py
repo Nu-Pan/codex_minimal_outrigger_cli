@@ -1,7 +1,7 @@
 """Codex sandbox argv が permission profile に依存しないことを検証する。
 
 根拠:
-- {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 - {{work-root}}/oracle/doc/dev_rule/test_rule.md
 """
 
@@ -20,7 +20,7 @@ from config.cmoc_config import CmocConfig
 def _parameter(mode: FileAccessMode) -> AgentCallParameter:
     """指定modeの最小AgentCallParameterを作る。"""
     return AgentCallParameter(
-        agent_call_kind="build_feedback_normalize_issue_parameter",
+        agent_call_kind="build_feedback_issue_normalization_request",
         file_access_mode=mode,
         prompt="prompt",
         structured_output_schema_path=None,

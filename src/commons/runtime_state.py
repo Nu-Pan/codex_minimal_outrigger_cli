@@ -6,7 +6,7 @@ import json
 import stat
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -69,7 +69,11 @@ class SessionState:
 
     def to_dict(self) -> dict[str, Any]:
         """JSON 保存用の正本と同形の object を返す。"""
-        return asdict(self)
+        # payload は string/null だけなので、再帰コピーせず各 part の辞書を独立させる。
+        return {
+            name: {field: getattr(part, field) for field in part.__dataclass_fields__}
+            for name, part in (("session", self.session), ("run", self.run))
+        }
 
 
 def state_path(root: Path, session_id: str) -> Path:
@@ -87,7 +91,10 @@ def _session_state_path(root: Path, session_id: str) -> Path:
 
 def _contains_unrepresentable_characters(value: str) -> bool:
     """filesystem と process 境界で扱えない文字を検出する。"""
-    return "\x00" in value or any(0xD800 <= ord(char) <= 0xDFFF for char in value)
+    # ASCII の branch 名や commit ID は NUL だけを調べ、surrogate の文字走査を省く。
+    return "\x00" in value or (
+        not value.isascii() and any(0xD800 <= ord(char) <= 0xDFFF for char in value)
+    )
 
 
 def _inspect_state_path(path: Path, *, directory: bool = False) -> int | None:
@@ -99,7 +106,8 @@ def _inspect_state_path(path: Path, *, directory: bool = False) -> int | None:
     current = leaf
     leaf_mode = None
     invalid_directory = None
-    while current != current.parent:
+    # root は name が空なので、終了判定のためだけに親 Path を生成しない。
+    while current.name:
         try:
             mode = current.lstat().st_mode
         except (OSError, ValueError) as exc:
@@ -284,17 +292,18 @@ def _read_state_data(path: Path) -> dict[str, Any]:
 def write_state(path: Path, state: SessionState) -> None:
     """session state を安定した JSON 表現で保存する。"""
     _validate_session_id(path.stem)
-    _validate_state_file_path(path)
     data = state.to_dict()
     SessionState.from_dict(data, path)
     try:
         serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     except (RecursionError, TypeError, UnicodeError, ValueError) as exc:
         raise _invalid_state(path, "state を JSON として保存できません。") from exc
+    state_exists = _validate_state_file_path(path)
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # parent の作成中に path の構成が変わっていないことを再確認する。
-        _validate_state_file_path(path)
+        if not state_exists:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # parent の作成中に path の構成が変わっていないことを再確認する。
+            _validate_state_file_path(path)
         path.write_text(serialized, encoding="utf-8")
     except (OSError, UnicodeError, ValueError) as exc:
         raise CmocError(
@@ -325,21 +334,22 @@ def _part_data(
     part_type: type[SessionPart] | type[RunPart],
     source: Path | None,
 ) -> dict[str, Any]:
-    """state part を必須 field だけの dict として検証する。"""
+    """入力を変更せず、state part が必須 field だけの dict であることを検証する。"""
+    # 正常時は field 集合だけを比べ、診断用 list と部分辞書のコピーを作らない。
     part = data.get(key)
     if not isinstance(part, dict):
         raise _invalid_state(source, f"`{key}` は object である必要があります。")
     fields = part_type.__dataclass_fields__
+    if part.keys() == fields.keys():
+        return part
     missing = [name for name in fields if name not in part]
     extra = [name for name in part if name not in fields]
-    if missing or extra:
-        details = []
-        if missing:
-            details.append(f"必須 field がありません: {', '.join(missing)}")
-        if extra:
-            details.append(f"未定義 field があります: {', '.join(extra)}")
-        raise _invalid_state(source, f"`{key}` に" + " / ".join(details))
-    return {name: part[name] for name in fields}
+    details = []
+    if missing:
+        details.append(f"必須 field がありません: {', '.join(missing)}")
+    if extra:
+        details.append(f"未定義 field があります: {', '.join(extra)}")
+    raise _invalid_state(source, f"`{key}` に" + " / ".join(details))
 
 
 def _require_top_level_fields(data: dict[str, Any], source: Path | None) -> None:
@@ -347,11 +357,12 @@ def _require_top_level_fields(data: dict[str, Any], source: Path | None) -> None
 
     根拠: {{work-root}}/oracle/doc/app_spec/session_state.md
     """
+    # 正常時の検証で、異常時だけに必要な診断情報を組み立てない。
     expected = {"session", "run"}
+    if data.keys() == expected:
+        return
     missing = [name for name in expected if name not in data]
     extra = [name for name in data if name not in expected]
-    if not missing and not extra:
-        return
     details = []
     if missing:
         details.append("必須 field がありません: " + ", ".join(sorted(missing)))

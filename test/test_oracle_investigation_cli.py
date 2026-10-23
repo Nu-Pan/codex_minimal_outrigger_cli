@@ -16,7 +16,6 @@ from _cli_support import runner
 import commons.runtime_cli as runtime_cli_module
 import sub_commands.oracle.investigation as investigation_module
 from basic.acp import AgentCallParameter, FileAccessMode
-from cmoc_runtime import write_config
 from commons.runtime_logging import current_subcommand_logger
 from config.cmoc_config import CmocConfig
 from main import app
@@ -38,7 +37,9 @@ def test_oracle_investigation_has_no_session_precondition(
     monkeypatch.setattr(
         path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
     )
-    write_config(root / ".cmoc/gt/config.json", CmocConfig())
+    config = CmocConfig(num_parallel=3)
+    instruction = "oracle の根拠を調査する"
+    later_editor_content = "確定後に人間が再編集した本文"
     input_path: Path
     editor_calls: list[tuple[Path, str]] = []
     built_parameters: list[AgentCallParameter] = []
@@ -57,14 +58,24 @@ def test_oracle_investigation_has_no_session_precondition(
         assert not (root / ".cmoc/gu/log/editor_input").exists()
         events.append("ignore")
 
-    real_build_parameter = (
-        investigation_module.build_oracle_investigation_launch_tui_parameter
-    )
+    # 設定の保存・復元は test_runtime_config.py、CLI との実結合は
+    # test_cli_tui.py の main 起動に残し、ここでは取得元と引き渡しを検査する。
+    def record_load_config(target_root: Path) -> CmocConfig:
+        """TUI へ渡す設定の取得元と順序を記録する。"""
+        assert target_root == root
+        events.append("load-config")
+        return config
+
+    real_build_parameter = investigation_module.build_oracle_investigation_request
 
     def record_build_parameter(
         user_instruction: str,
     ) -> AgentCallParameter:
         """skeleton 用と実行用の builder 呼び出しを記録する。"""
+        assert user_instruction in (
+            investigation_module.ORIGINAL_PROMPT_PLACEHOLDER,
+            instruction,
+        )
         events.append(
             "build-skeleton"
             if user_instruction == investigation_module.ORIGINAL_PROMPT_PLACEHOLDER
@@ -88,19 +99,21 @@ def test_oracle_investigation_has_no_session_precondition(
         events.append("editor")
         assert target_root == root
         editor_calls.append((work_path, complete_prompt_skeleton))
-        work_path.write_text("oracle の根拠を調査する", encoding="utf-8")
+        work_path.write_text(instruction, encoding="utf-8")
 
-    real_collect_prompt_editor_input = investigation_module.collect_prompt_editor_input
-
+    # 一回の読み取り・原文保存は test_prompt_editor_input.py、保存失敗時の
+    # CLI 停止は test_cli_tui.py に残す。ここでは保存を繰り返さず、
+    # 再編集後の file でなく確定済みの戻り値を builder に渡すことを検証する。
     def fake_collect_prompt_editor_input(
         target_root: Path,
         work_path: Path,
     ) -> str:
-        """一回の最終読み取りから抽出した入力を返す。"""
+        """確定後の人間による再編集を模し、固定した入力を返す。"""
         events.append("collect")
         assert target_root == root
         assert work_path == input_path
-        return real_collect_prompt_editor_input(target_root, work_path)
+        work_path.write_text(later_editor_content, encoding="utf-8")
+        return instruction
 
     monkeypatch.setattr(
         runtime_cli_module,
@@ -116,7 +129,7 @@ def test_oracle_investigation_has_no_session_precondition(
     )
     monkeypatch.setattr(
         investigation_module,
-        "build_oracle_investigation_launch_tui_parameter",
+        "build_oracle_investigation_request",
         record_build_parameter,
     )
     monkeypatch.setattr(
@@ -129,6 +142,7 @@ def test_oracle_investigation_has_no_session_precondition(
         "collect_prompt_editor_input",
         fake_collect_prompt_editor_input,
     )
+    monkeypatch.setattr(investigation_module, "load_config", record_load_config)
     calls: list[tuple[AgentCallParameter, dict[str, object]]] = []
 
     def fake_run_codex_tui(
@@ -159,6 +173,7 @@ def test_oracle_investigation_has_no_session_precondition(
         "editor",
         "collect",
         "build-parameter",
+        "load-config",
         "tui",
     ]
     assert len(built_parameters) == 2
@@ -186,12 +201,15 @@ def test_oracle_investigation_has_no_session_precondition(
     assert parameter.agent_call_cwd == root.resolve()
     assert parameter.enable_editor_input_handoff_mcp is True
     assert parameter.enable_document_search_mcp is True
-    assert kwargs["notification_command_name"] == "oracle investigation"
+    assert kwargs["root"] == root
+    assert kwargs["config"] is config
+    assert kwargs["purpose"] == "oracle investigation"
     complete_prompt = parameter.prompt
     assert "# oracle investigation policy" not in complete_prompt
     assert "# oracle policy" in complete_prompt
     assert "# routing policy" in complete_prompt
     assert "# editor input handoff" in complete_prompt
-    assert "oracle の根拠を調査する" in complete_prompt
-    assert input_path.read_text(encoding="utf-8") == "oracle の根拠を調査する"
+    assert instruction in complete_prompt
+    assert later_editor_content not in complete_prompt
+    assert input_path.read_text(encoding="utf-8") == later_editor_content
     assert not list(input_path.parent.glob("*_cmpl.md"))

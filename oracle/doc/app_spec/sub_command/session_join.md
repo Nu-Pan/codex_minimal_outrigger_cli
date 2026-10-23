@@ -43,7 +43,7 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/o
 
 agent は、home branch への merge が進行中の worktree を cwd として、アクセス境界内の oracle file と realization file を編集する。session join のために新しい editing run は作らない。
 
-call 固有の正確な prompt 文面、builder の引数、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_parameter` へ委譲する。共通 policy と prompt 構築の委譲先は、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent への入力と正確な定義の委譲」に従う。
+call 固有の正確な prompt 文面、builder の引数、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_request` へ委譲する。共通 policy と prompt 構築の委譲先は、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「agent への入力と正確な定義の委譲」に従う。
 
 ## その他、コマンドが想定外に失敗した場合
 
@@ -58,11 +58,11 @@ call 固有の正確な prompt 文面、builder の引数、prompt part の選�
 
 ## primary report
 
-実行 ID と共通掲載内容は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「共通掲載内容」に従う。
+実行 ID と primary report の共通表示契約は、`{{cmoc-root}}/oracle/doc/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」に従う。
 
 - `natural_completion` と `error` のすべての終了経路で、session join 実行要約を primary report として保存する。doctor preprocess または事前条件で終了した場合も対象とする。
-- report は Markdown と YAML Front Matter で構成し、`{{repo-root}}/.cmoc/gu/report/session/join/{{execution-id}}.md` に保存する。
-- front matter には、command、生成日時、repo root、terminal result の共通分類、終了コード、session branch、home branch、merge 前の両 branch の HEAD commit、作成した merge commit、および session state の実行前後の値を含める。確定できなかった値は `null` とする。
-- 本文には、事前検証、branch 切替、merge 結果、conflict path、conflict 解消用 agent call と確定した解消結果、state 遷移、session branch の cleanup、warning またはエラー、必要な次の操作、および関連する診断用サブコマンドログと Codex call log を要約する。
+- report は `{{repo-root}}/.cmoc/gu/report/session/join/{{execution-id}}.md` に保存する。
+- 実行情報には、command、生成日時、repo root、terminal result の共通分類、終了コード、session branch、home branch、merge 前の両 branch の HEAD commit、作成した merge commit、および session state の実行前後の値を含める。確定できなかった値は `null` とする。
+- 詳細結果には、事前検証、branch 切替、merge 結果、conflict path、conflict 解消用 agent call と確定した解消結果、state 遷移、session branch の cleanup、warning またはエラー、および Codex call log を含める。
 - 競合解消の内容は、`{{cmoc-root}}/oracle/doc/app_spec/merge_conflict_resolution.md` の「受理と報告」に従い、採用した判断、付随編集、検証結果、および未解消理由を含める。
 - 実行しなかった merge、conflict 解消、state 更新、または cleanup は未実行として扱う。確定していない解消結果を作ってはならない。

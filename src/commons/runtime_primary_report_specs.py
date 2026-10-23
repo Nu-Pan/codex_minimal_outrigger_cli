@@ -35,7 +35,7 @@ class PrimaryReportSpec:
     template: ReportTemplate = "summary"
 
 
-# 個別仕様が保存先と front matter を定める現行の非対話末端サブコマンドだけを
+# 個別仕様が保存先と実行情報を定める現行の非対話末端サブコマンドだけを
 # 登録する。TUI の通知境界を使う tui と oracle investigation は含めない。
 # {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
 _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
@@ -95,10 +95,10 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         ("first_agent_call_status", "second_agent_call_status"),
         "oracle_edit",
     ),
-    "realization apply fork": PrimaryReportSpec(
-        "realization/apply/fork",
-        "realization apply fork report",
-        "cmoc realization apply fork report",
+    "realization apply": PrimaryReportSpec(
+        "realization/apply",
+        "realization apply report",
+        "cmoc realization apply report",
         (
             "run_kind",
             "session_branch",
@@ -117,10 +117,10 @@ _PRIMARY_REPORT_SPECS: dict[str, PrimaryReportSpec] = {
         ),
         "apply_fork",
     ),
-    "realization refactor fork": PrimaryReportSpec(
-        "realization/refactor/fork",
-        "realization refactor fork report",
-        "cmoc realization refactor fork report",
+    "realization refactor": PrimaryReportSpec(
+        "realization/refactor",
+        "realization refactor report",
+        "cmoc realization refactor report",
         (
             "run_kind",
             "session_branch",

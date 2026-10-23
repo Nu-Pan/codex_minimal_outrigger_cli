@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from acp.builder.oracle.edit.launch_exec import (
-    build_oracle_edit_main_launch_exec_parameter,
+    build_oracle_edit_request,
 )
 from cmoc_runtime import (
     CmocError,
@@ -16,6 +16,7 @@ from cmoc_runtime import (
 )
 from commons.prompt_editor_input import (
     ORIGINAL_PROMPT_PLACEHOLDER,
+    EmptyPromptInput,
     collect_prompt_editor_input,
     edit_prompt_editor_input,
     ensure_prompt_editor_roots_ignored,
@@ -23,7 +24,10 @@ from commons.prompt_editor_input import (
 )
 from commons.runtime_git import current_branch
 from commons.runtime_paths import reuse_root_queries
-from commons.runtime_primary_report import update_primary_report_fields
+from commons.runtime_primary_report import (
+    update_primary_report_fields,
+    update_primary_report_input,
+)
 from commons.runtime_state import load_session_part_for_branch
 
 
@@ -48,9 +52,10 @@ def _cmoc_oracle_edit_body() -> None:
     # oracle 編集契約を含む完全 prompt の skeleton を handoff ガイドに使う。
     # {{work-root}}/oracle/doc/app_spec/sub_command/oracle_edit.md
     start_subcommand_step(2, "編集 prompt の skeleton を構築", "build edit skeleton")
-    complete_prompt_skeleton = build_oracle_edit_main_launch_exec_parameter(
+    complete_prompt_skeleton = build_oracle_edit_request(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
+    assert complete_prompt_skeleton is not None
     # skeleton の構築に成功した後でだけ editor input file を予約する。
     input_path = reserve_prompt_editor_input(repository)
 
@@ -62,13 +67,19 @@ def _cmoc_oracle_edit_body() -> None:
     )
 
     start_subcommand_step(4, "入力結果を保存・抽出", "save and extract input")
-    instruction = collect_prompt_editor_input(
-        repository,
-        input_path,
-    )
+    try:
+        instruction = collect_prompt_editor_input(
+            repository,
+            input_path,
+        )
+    except EmptyPromptInput:
+        # 空として確定した入力も、未確定の入力と区別して終了 report に残す。
+        update_primary_report_input("")
+        raise
+    update_primary_report_input(instruction)
 
     start_subcommand_step(5, "共用する入力と設定を確定", "prepare edit calls")
-    parameter = build_oracle_edit_main_launch_exec_parameter(instruction)
+    parameter = build_oracle_edit_request(instruction)
     # JSON から復元した設定を両回で共用し、自己編集後の定義・設定を再取得しない。
     config = load_config(current_root)
     start_subcommand_step(6, "編集起動の事前条件を確認", "validate edit launch")
@@ -109,6 +120,7 @@ def _require_oracle_edit_launch_preconditions(
             f"work_root: {current_root.resolve()}\nrepo_root: {repository.resolve()}",
         )
     branch = current_branch(current_root)
+    update_primary_report_fields(session_branch=branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError(
             "cmoc oracle edit は session branch 上で実行してください。",

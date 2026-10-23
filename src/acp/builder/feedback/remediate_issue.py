@@ -5,7 +5,7 @@
 """
 
 from oracle.acp_builder.feedback.remediate_issue import (
-    build_feedback_remediate_issue_parameter,
+    build_feedback_issue_remediation_request,
 )
 
-__all__ = ["build_feedback_remediate_issue_parameter"]
+__all__ = ["build_feedback_issue_remediation_request"]

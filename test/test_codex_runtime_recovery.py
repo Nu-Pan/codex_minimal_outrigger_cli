@@ -2,11 +2,11 @@
 
 import json
 import os
+import select
 import signal
 import subprocess
 import sys
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
 from dataclasses import replace
@@ -21,11 +21,13 @@ from _codex_support import (
     codex_parameter,
     script_codex_calls,
     setup_codex_home,
+    stub_codex_overrides,
 )
 
 from commons import runtime_codex_exec as runtime
 from commons import runtime_codex_recovery as recovery
-from commons.runtime_codex_profile import classify_codex_call
+from commons import runtime_logging
+from commons.runtime_codex_profile import classify_codex_call, codex_error_text
 from commons.runtime_errors import CmocError
 from commons.runtime_git import WorktreeSnapshot
 from commons.runtime_logging import SubcommandLogger
@@ -99,6 +101,29 @@ def test_final_cli_outcome(events, returncode, expected):
     assert classify_codex_call(jsonl(*events), returncode) == expected
 
 
+@pytest.mark.parametrize("event_type", ["error", "turn.failed"])
+@pytest.mark.parametrize(
+    ("message", "returncode", "expected"),
+    [
+        pytest.param("Selected model is at capacity", 0, "transient", id="capacity-0"),
+        pytest.param("Selected model is at capacity", 1, "transient", id="capacity-1"),
+        pytest.param("unexpected failure", 0, "failed", id="unknown-0"),
+    ],
+)
+def test_failure_diagnostic_classification(message, returncode, expected, event_type):
+    """診断形式と終了 code の分類・本文抽出を、回復や log の準備なしで検査する。"""
+    # 回復・即時失敗・終了 code の保存との結合は test_codex_runtime_retry.py に残す。
+    event = (
+        {"type": event_type, "message": message}
+        if event_type == "error"
+        else {"type": event_type, "error": {"message": message}}
+    )
+    stdout = jsonl(event)
+
+    assert classify_codex_call(stdout, returncode) == expected
+    assert message in codex_error_text(stdout, "")
+
+
 @pytest.fixture
 def recovery_case(tmp_path, monkeypatch):
     # 設定継承・回復制御は解決済みの path context で検証する。
@@ -120,24 +145,35 @@ def recovery_case(tmp_path, monkeypatch):
         "_quota_availability_probe_parameter",
         lambda base: replace(
             codex_parameter(agent_call_cwd=base.agent_call_cwd),
-            agent_call_kind="build_quota_availability_probe_parameter",
+            agent_call_kind="build_quota_availability_probe_request",
             prompt="recovery probe",
         ),
     )
-    # ID の区別・引継ぎは観測し、永続採番の検証は test_runtime_ids.py と
-    # 実採番を使う test_codex_runtime_quota_retry.py に残す。
+    # ID の区別・引継ぎとログ保存は観測し、永続採番は test_runtime_ids.py、
+    # logger の実採番との結合は test_runtime_cli.py の
+    # test_subcommand_logger_keeps_one_file_per_execution と quota_retry に残す。
     ids = count()
-    monkeypatch.setattr(
-        runtime,
-        "new_id",
-        lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
-    )
+    for id_consumer in (runtime, runtime_logging):
+        monkeypatch.setattr(
+            id_consumer,
+            "new_id",
+            lambda _root, prefix: f"{prefix}_{next(ids):06d}_2000-01-01_00-00",
+        )
     return (
         root,
         codex_parameter(agent_call_cwd=root),
         CmocConfig(),
         SubcommandLogger(root, "test"),
     )
+
+
+@pytest.fixture
+def recovery_control_case(recovery_case, monkeypatch):
+    """回復制御の検査では、設定 argv の反復生成を省く。"""
+    # 設定継承・理由変更と並列の条件照合は recovery_case の実 argv で検証する。
+    # probe・resume の制御と出力・ログ保存はここでも実処理を通す。
+    stub_codex_overrides(monkeypatch)
+    return recovery_case
 
 
 @pytest.fixture
@@ -176,15 +212,27 @@ def execute(case, **kwargs):
     )
 
 
-def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkeypatch):
+@pytest.mark.parametrize(
+    "call_kind", ["realization_edit", "build_feedback_issue_normalization_request"]
+)
+def test_reason_changes_preserve_settings_session_and_work(
+    recovery_case, monkeypatch, call_kind
+):
     root, parameter, config, logger = recovery_case
+    parameter = replace(parameter, agent_call_kind=call_kind)
+    recovery_case = (root, parameter, config, logger)
+    headers = {"X-Test": "original"}
     config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
         "custom", "work-model", "high"
     )
     config.codex.model_providers["custom"] = CodexModelProviderConfig(
-        {"base_url": "https://provider.invalid/v1", "env_key": "TEST_CREDENTIAL"}
+        {
+            "base_url": "https://provider.invalid/v1",
+            "env_key": "TEST_CREDENTIAL",
+            "http_headers": headers,
+        }
     )
-    config.codex.agent_calls["build_quota_availability_probe_parameter"] = (
+    config.codex.agent_calls["build_quota_availability_probe_request"] = (
         CodexCallConfig("openai", "probe-model", "low")
     )
     artifact = root / "result.txt"
@@ -198,6 +246,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
             config.codex.model_providers["custom"].settings["base_url"] = (
                 "https://changed.invalid"
             )
+            headers["X-Test"] = "changed"
 
     calls = script_codex_calls(
         monkeypatch,
@@ -224,6 +273,7 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
         assert overrides["model_providers"]["custom"] == {
             "base_url": "https://provider.invalid/v1",
             "env_key": "TEST_CREDENTIAL",
+            "http_headers": {"X-Test": "original"},
         }
     for index in (4, 6):
         assert codex_arg_value(calls[index]["argv"], "resume") == "original-session"
@@ -258,14 +308,19 @@ def test_reason_changes_preserve_settings_session_and_work(recovery_case, monkey
     )
 
 
-def test_quota_to_capacity_inherits_before_accepting_recovery(
-    recovery_case, monkeypatch
+@pytest.mark.parametrize(
+    "call_kind", ["realization_edit", "build_feedback_issue_normalization_request"]
+)
+def test_quota_to_capacity_inherits_only_until_resume(
+    recovery_case, monkeypatch, call_kind
 ):
-    _, parameter, config, _ = recovery_case
+    root, parameter, config, logger = recovery_case
+    parameter = replace(parameter, agent_call_kind=call_kind)
+    recovery_case = (root, parameter, config, logger)
     config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
         "openai", "work", "high"
     )
-    config.codex.agent_calls["build_quota_availability_probe_parameter"] = (
+    config.codex.agent_calls["build_quota_availability_probe_request"] = (
         CodexCallConfig("openai", "probe", "low")
     )
     calls = script_codex_calls(
@@ -273,6 +328,9 @@ def test_quota_to_capacity_inherits_before_accepting_recovery(
         [
             (1, jsonl(SESSION, QUOTA), None),
             (1, jsonl(CAPACITY), None),
+            (1, jsonl(QUOTA), None),
+            (0, jsonl(COMPLETED), "ready"),
+            # 再開後の新しい quota 待機には、probe 自身の設定を再び使う。
             (1, jsonl(QUOTA), None),
             (0, jsonl(COMPLETED), "ready"),
             (0, jsonl(COMPLETED), "done"),
@@ -288,30 +346,56 @@ def test_quota_to_capacity_inherits_before_accepting_recovery(
         subcommand_logger=logger,
         transient_poll_interval_sec=17,
     )
-    assert sleeps == [1800, 17, 1800]
+    assert sleeps == [1800, 17, 1800, 1800]
     assert [codex_arg_value(c["argv"], "--model") for c in calls] == [
         "work",
         "probe",
         "work",
         "work",
         "work",
+        "probe",
+        "work",
     ]
 
 
-@pytest.mark.parametrize("reason", [QUOTA, CAPACITY])
-def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, reason):
-    calls = script_codex_calls(
-        monkeypatch,
-        [
-            (1, jsonl(SESSION, reason), None),
-            *[(1, jsonl(reason), None)] * 10,
-            (0, jsonl(COMPLETED), "ready"),
-            (0, jsonl(COMPLETED), "done"),
-        ],
+@pytest.mark.parametrize("reason", ["quota", "transient"])
+def test_recovery_does_not_stop_at_old_retry_limits(monkeypatch, reason):
+    """回数・総待機時間による打切りを、実待機や call ごとの I/O なしで検査する。"""
+    # 分類・probe・再開・ログとの結合は reason_changes と quota_retry に残す。
+    # 同じ理由での継続だけを直接検査し、11 probe 分の出力・ログ生成を省く。
+    elapsed = 0.0
+    intervals = []
+    probes = []
+
+    def sleep(seconds):
+        nonlocal elapsed
+        intervals.append(seconds)
+        elapsed += seconds
+
+    monkeypatch.setattr(
+        recovery, "time", SimpleNamespace(perf_counter=lambda: elapsed, sleep=sleep)
     )
-    assert execute(recovery_case).output_text == "done"
-    assert len(calls) == 13
-    assert sum(c["prompt"] == "prompt" for c in calls) == 2
+
+    def probe(probe_reason, inherited, _recovery_id):
+        probes.append((probe_reason, inherited))
+        return reason if len(probes) <= 10 else "succeeded"
+
+    waited = recovery.wait_for_recovery(
+        key=(object(),),
+        reason=reason,
+        probe=probe,
+        quota_interval=1800,
+        transient_interval=17,
+        logger=None,
+        agent_call_id="agent",
+        stopped_codex_call_id="call",
+        call_log_path="call.json",
+    )
+
+    interval = 1800 if reason == "quota" else 17
+    assert intervals == [interval] * 11
+    assert probes == [(reason, reason == "transient")] * 11
+    assert waited == {"quota": 0.0, "transient": 0.0} | {reason: interval * 11}
 
 
 @pytest.mark.parametrize(
@@ -328,15 +412,15 @@ def test_recovery_does_not_stop_at_old_retry_limits(recovery_case, monkeypatch, 
     ],
 )
 def test_unconfirmed_or_unrecoverable_probe_stops(
-    recovery_case, monkeypatch, probe_reply
+    recovery_control_case, monkeypatch, probe_reply
 ):
     calls = script_codex_calls(monkeypatch, [(1, jsonl(CAPACITY), None), probe_reply])
     with pytest.raises(CmocError, match="回復確認 probe"):
-        execute(recovery_case)
+        execute(recovery_control_case)
     assert len(calls) == 2
 
 
-def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
+def test_resume_failure_never_starts_fresh_session(recovery_control_case, monkeypatch):
     calls = script_codex_calls(
         monkeypatch,
         [
@@ -346,14 +430,14 @@ def test_resume_failure_never_starts_fresh_session(recovery_case, monkeypatch):
         ],
     )
     with pytest.raises(CmocError, match="呼び出しが失敗"):
-        execute(recovery_case)
+        execute(recovery_control_case)
     assert len(calls) == 3
     assert codex_arg_value(calls[-1]["argv"], "resume") == "original-session"
 
 
 @pytest.fixture
-def structured_recovery_case(recovery_case, monkeypatch):
-    root, parameter, config, logger = recovery_case
+def structured_recovery_case(recovery_control_case, monkeypatch):
+    root, parameter, config, logger = recovery_control_case
     # 成果物の列挙・補正中の変動検出・復元は test_codex_runtime_retry.py に残す。
     # ここでは成果物が変わらない前提で、回復と補正予算・診断の結合を検証する。
     monkeypatch.setattr(
@@ -441,7 +525,9 @@ def test_probe_failure_during_correction_records_original_call(
 
 
 @pytest.mark.parametrize("point", ["wait", "probe_success"])
-def test_interruption_wins_over_probe_success(recovery_case, monkeypatch, point):
+def test_interruption_wins_over_probe_success(
+    recovery_control_case, monkeypatch, point
+):
     restore = recovery.install_recovery_interruption()
     try:
         cancellation = recovery.current_recovery_cancellation()
@@ -466,7 +552,7 @@ def test_interruption_wins_over_probe_success(recovery_case, monkeypatch, point)
             on_call=on_call,
         )
         with pytest.raises(KeyboardInterrupt):
-            execute(recovery_case)
+            execute(recovery_control_case)
         assert len(calls) == (1 if point == "wait" else 2)
     finally:
         restore()
@@ -492,8 +578,8 @@ import pathlib, subprocess, sys
 from commons.runtime_codex_recovery import defer_recovery_interruption
 try:
     with defer_recovery_interruption():
-        subprocess.run([sys.executable, '-c',
-            "import pathlib, sys; pathlib.Path('ready').touch(); "
+        subprocess.run([sys.executable, '-S', '-c',
+            "import pathlib, sys; print('ready', flush=True); "
             "sys.stdin.read(); pathlib.Path('artifact').write_text('committed')"],
             check=True)
         pathlib.Path('record').write_text('confirmed')
@@ -507,8 +593,9 @@ except KeyboardInterrupt:
             str(repository / path) for path in ("src", "oracle/src")
         ),
     }
+    # 明示した PYTHONPATH と標準ライブラリだけを使い、site の初期化を省く。
     with subprocess.Popen(
-        [sys.executable, "-c", script],
+        [sys.executable, "-S", "-c", script],
         cwd=tmp_path,
         env=environment,
         start_new_session=True,
@@ -518,11 +605,8 @@ except KeyboardInterrupt:
         stderr=subprocess.PIPE,
     ) as process:
         try:
-            deadline = time.monotonic() + 5
-            while not (tmp_path / "ready").exists():
-                assert process.poll() is None
-                assert time.monotonic() < deadline
-                time.sleep(0.01)
+            assert select.select([process.stdout], [], [], 5)[0], "child did not start"
+            assert process.stdout.readline() == "ready\n"
             os.killpg(process.pid, signal.SIGINT)
             # SIGINT を送ってから子を解放し、固定待機なしで確定中の中断を保証する。
             stdout, stderr = process.communicate(input="commit\n", timeout=5)

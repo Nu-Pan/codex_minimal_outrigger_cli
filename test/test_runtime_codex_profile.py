@@ -1,6 +1,7 @@
 """Codex argv の model、sandbox、provider 上書き契約を検証する。
 
 根拠:
+- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
 - {{work-root}}/oracle/doc/app_spec/windows_toast_notification.md
@@ -9,7 +10,6 @@
 import hashlib
 import json
 import os
-import shlex
 import subprocess
 import sys
 from dataclasses import replace
@@ -17,7 +17,13 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from _codex_support import codex_arg_value, codex_override_config, codex_parameter
+from _codex_support import (
+    codex_arg_value,
+    codex_override_config,
+    codex_parameter,
+    setup_codex_home,
+)
+from oracle.other import path_model as path_model_module
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_profile as runtime_codex_profile
@@ -28,7 +34,6 @@ from commons.runtime_codex_profile import (
     codex_subprocess_env,
     prepare_codex_override_args,
     prepare_schema,
-    read_output_json,
 )
 from commons.runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_REPOSITORY_ENV,
@@ -54,10 +59,13 @@ def test_codex_overrides_use_dedicated_sandbox_argument() -> None:
         assert codex_arg_value(args, "--sandbox") == "workspace-write", mode
 
 
-def test_prepare_codex_overrides_use_call_defaults() -> None:
-    """mode 共通の既定設定を prepare 境界から検証する。"""
+def test_prepare_codex_overrides_use_call_defaults_without_home_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """既定設定を argv だけで渡し、CODEX_HOME に設定を生成しない。"""
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
     config = CmocConfig()
-    parameter = codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd())
+    parameter = codex_parameter(FileAccessMode.READONLY, agent_call_cwd=tmp_path)
     call_config = config.codex.agent_calls[parameter.agent_call_kind]
     args = prepare_codex_override_args(parameter, config)
 
@@ -112,9 +120,13 @@ def test_prepare_codex_overrides_use_call_defaults() -> None:
         FEEDBACK_CAPABILITY_ENV: "exclude",
         FEEDBACK_COLLECTOR_PORT_ENV: "exclude",
         FEEDBACK_PROTOCOL_ENV: "exclude",
+        EDITOR_INPUT_REPOSITORY_ENV: "exclude",
+        EDITOR_INPUT_SOURCE_ENV: "exclude",
     }
     assert "--profile" not in args
     assert "-p" not in args
+    assert not (codex_home / "config.toml").exists()
+    assert not list(codex_home.glob("*.config.toml"))
 
 
 def test_codex_overrides_disable_feedback_reporter_for_selected_call() -> None:
@@ -135,6 +147,8 @@ def test_codex_overrides_disable_feedback_reporter_for_selected_call() -> None:
         FEEDBACK_CAPABILITY_ENV: "exclude",
         FEEDBACK_COLLECTOR_PORT_ENV: "exclude",
         FEEDBACK_PROTOCOL_ENV: "exclude",
+        EDITOR_INPUT_REPOSITORY_ENV: "exclude",
+        EDITOR_INPUT_SOURCE_ENV: "exclude",
     }
 
 
@@ -150,11 +164,18 @@ def test_codex_overrides_reject_unknown_file_access_mode() -> None:
 
 
 def test_search_mcp_rejects_external_transport_collision(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """user 設定の同名 URL が残った実効 MCP 設定を起動前に拒否する。"""
+    # Git discovery は test_basic_runtime.py に残し、transport の拒否判定を検査する。
+    monkeypatch.setattr(
+        path_model_module,
+        "_resolve_git_worktree_roots",
+        lambda _cwd: (tmp_path, tmp_path),
+    )
     parameter = replace(
-        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
+        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=tmp_path),
         enable_document_search_mcp=True,
     )
     argv = ["codex", *build_codex_override_args(parameter, CmocConfig())]
@@ -187,9 +208,7 @@ def test_search_mcp_rejects_external_transport_collision(
 
     monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fake_run)
     with pytest.raises(CmocError, match="実効設定が call 固定値と一致しません"):
-        runtime_codex_profile._verify_document_search_server(
-            argv, cwd=Path.cwd(), env={}
-        )
+        runtime_codex_profile._verify_document_search_server(argv, cwd=tmp_path, env={})
     assert len(calls) == 1
     assert calls[0][:2] == ["codex", "--no-daemon"]
     assert calls[0][-4:] == ["mcp", "get", "cmoc_document_search", "--json"]
@@ -285,160 +304,27 @@ def test_codex_subprocess_env_does_not_inherit_stale_call_context(
     )
 
 
-def test_codex_overrides_pair_root_capture_with_legacy_notification() -> None:
-    """root SessionStart 記録と最終 legacy callback を対で設定する。"""
+def test_codex_overrides_configure_direct_notification_callback() -> None:
+    """固定 ID と invocation context を持つ通知専用コマンドだけを渡す。"""
     notification_command = [
         "/notify python",
         "/callback.py",
         "codex-tui-callback",
         "/state",
-        "repository '; Write-Error injected",
+        "tui",
+        "repository",
+        "session-id",
     ]
-    session_start_command = [
-        "/python with space",
-        "/callback.py",
-        "codex-tui-session-start-hook",
-        "/state",
-    ]
-
     args = build_codex_override_args(
         codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
         CmocConfig(),
         notification_command=notification_command,
-        session_start_command=session_start_command,
     )
-
     parsed = codex_override_config(args)
     assert parsed["notify"] == notification_command
     assert parsed["tui"] == {"notifications": False}
-    assert "features" not in parsed
-    assert args[args.index("--enable") + 1] == "hooks"
-    hook_command = shlex.join(session_start_command)
-    hooks = parsed["hooks"]
-    assert isinstance(hooks, dict)
-    assert hooks["SessionStart"] == [
-        {
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": hook_command,
-                    "timeout": 10,
-                    "async": False,
-                }
-            ]
-        }
-    ]
-    assert "Stop" not in hooks
-    assert "SubagentStart" not in hooks
-    assert "SubagentStop" not in hooks
-    assert hooks["state"] == {
-        "/<session-flags>/config.toml:session_start:0:0": {
-            "enabled": True,
-            "trusted_hash": (
-                runtime_codex_profile._codex_session_start_hook_trusted_hash(
-                    hook_command
-                )
-            ),
-        }
-    }
-    assert "--dangerously-bypass-hook-trust" not in args
-    assert (
-        runtime_codex_profile._codex_session_start_hook_trusted_hash("echo hello")
-        == "sha256:863a01826297cdbe63da6b232502523983ae7bb9376872bf40eae001e6e226d4"
-    )
-
-
-def test_codex_overrides_disable_unpaired_notification_callback() -> None:
-    """root capture が欠ける場合は legacy callback を有効にしない。"""
-    args = build_codex_override_args(
-        codex_parameter(FileAccessMode.READONLY, agent_call_cwd=Path.cwd()),
-        CmocConfig(),
-        notification_command=["/callback.py"],
-    )
-
-    parsed = codex_override_config(args)
-    assert parsed["notify"] == []
     assert "hooks" not in parsed
     assert "--enable" not in args
-
-
-@pytest.mark.parametrize(
-    ("version_output", "returncode", "expected"),
-    [
-        (b"codex-cli 0.151.0\n", 0, True),
-        (b"codex-cli 0.153.4\n", 0, True),
-        (b"codex-cli 0.154.0\n", 0, True),
-        (b"codex-cli 0.155.1\n", 0, True),
-        (b"codex-cli 0.156.1\n", 0, True),
-        (b"codex-cli 0.157.1\n", 0, True),
-        (b"codex-cli 0.158.0\n", 0, True),
-        (b"codex-cli 0.159.2\n", 0, True),
-        (b"codex-cli 0.152.0\n", 0, False),
-        (b"codex-cli 0.153.4.1\n", 0, False),
-        (b"codex-cli 0.151.0\n", 1, False),
-    ],
-)
-def test_tui_notification_requires_exact_verified_codex_version(
-    monkeypatch: pytest.MonkeyPatch,
-    version_output: bytes,
-    returncode: int,
-    expected: bool,
-) -> None:
-    """検証済み版だけを callback 対応として扱い、他は fail-closed にする。"""
-    calls: list[tuple[list[str], dict[str, object]]] = []
-
-    def fake_run(
-        args: list[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[bytes]:
-        """version probe の有限・非対話 subprocess 境界を記録する。"""
-        calls.append((args, kwargs))
-        return subprocess.CompletedProcess(args, returncode, stdout=version_output)
-
-    monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fake_run)
-    # fake subprocess は cwd を記録するだけなので directory は作らない。
-    codex_process_cwd = Path("/test/codex-cwd")
-    environment = {"PATH": "/test/bin"}
-
-    assert (
-        runtime_codex_profile.codex_cli_supports_tui_notification_hooks(
-            codex_process_cwd,
-            environment,
-        )
-        is expected
-    )
-    assert calls == [
-        (
-            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"],
-            {
-                "cwd": codex_process_cwd,
-                "env": environment,
-                "stdin": subprocess.DEVNULL,
-                "stdout": subprocess.PIPE,
-                "stderr": subprocess.DEVNULL,
-                "timeout": 2.0,
-                "check": False,
-            },
-        )
-    ]
-
-
-def test_tui_notification_version_probe_failure_is_nonfatal(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """version probe の起動失敗や timeout は callback 無効化だけに閉じる。"""
-
-    def fail_run(*_args: object, **_kwargs: object) -> object:
-        """有限時間を超えた version probe を再現する。"""
-        raise subprocess.TimeoutExpired(
-            ["codex", "--no-daemon", "--sandbox", "read-only", "--version"], 2
-        )
-
-    monkeypatch.setattr(runtime_codex_profile.subprocess, "run", fail_run)
-
-    assert not runtime_codex_profile.codex_cli_supports_tui_notification_hooks(
-        Path("/test/codex-cwd"),
-        {"PATH": "/test/bin"},
-    )
 
 
 def test_codex_overrides_encode_selected_generic_provider() -> None:
@@ -490,7 +376,7 @@ def test_codex_overrides_encode_selected_generic_provider() -> None:
             "empty": {"array": [], "table": {}},
         }
     }
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+    # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
     # dotted override path の quoted segment は Codex CLI parser が受理しないため、
     # selected provider を inline TOML table として一度に渡す。
     assert any(
@@ -575,35 +461,15 @@ def test_codex_overrides_reject_missing_agent_call_setting() -> None:
 
 
 def test_prepare_schema_preserves_source_bytes_for_hash_store(tmp_path: Path) -> None:
-    """schema の UTF-8 本文と改行を変えず、SHA256 path に保存する。"""
+    """保存・検証で使う UTF-8 本文と改行を保ち、SHA256 path に保存する。"""
     source = tmp_path / "schema.json"
     source_bytes = '{\r\n  "type": "object",\r\n  "title": "日本語"\r\n}\r\n'.encode(
         "utf-8"
     )
     source.write_bytes(source_bytes)
 
-    stored = prepare_schema(tmp_path / "repo", source)
+    stored, schema_text = prepare_schema(tmp_path / "repo", source)
 
-    assert stored is not None
     assert stored.name == f"{hashlib.sha256(source_bytes).hexdigest()}.json"
     assert stored.read_bytes() == source_bytes
-
-
-def test_read_output_json_returns_none_for_invalid_utf8(
-    tmp_path: Path,
-) -> None:
-    """不正 encoding の schema-less output を JSON failure として扱う。"""
-    output = tmp_path / "output.json"
-    output.write_bytes(b"\xff")
-
-    assert read_output_json(output) is None
-
-
-def test_read_output_json_returns_none_for_excessively_nested_json(
-    tmp_path: Path,
-) -> None:
-    """JSON decoder の recursion failure を schema-less output failure として扱う。"""
-    output = tmp_path / "output.json"
-    output.write_text("[" * 10_000 + "0" + "]" * 10_000)
-
-    assert read_output_json(output) is None
+    assert schema_text.encode("utf-8") == source_bytes

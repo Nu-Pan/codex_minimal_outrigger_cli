@@ -27,7 +27,6 @@ from .runtime_codex_profile import (
     prepare_schema,
     process_group_has_running_member,
     process_start_time,
-    read_output_json,
     resolve_codex_home,
     run_process_id_file_lock,
     send_process_signal,
@@ -43,10 +42,7 @@ from .runtime_config import (
     sync_config,
     write_config,
 )
-from .runtime_content import (
-    file_sha256,
-    write_hashed_file,
-)
+from .runtime_content import write_hashed_file
 from .runtime_doctor import run_doctor_preprocess
 from .runtime_errors import CmocError, render_error
 from .runtime_git import (
@@ -140,7 +136,6 @@ __all__ = (
     "ensure_cmoc_ignored_in_exclude",
     "extract_resume_token",
     "file_access_to_sandbox_mode",
-    "file_sha256",
     "format_duration",
     "head_commit",
     "is_git_ignored",
@@ -157,7 +152,6 @@ __all__ = (
     "process_group_has_running_member",
     "process_start_time",
     "pushd",
-    "read_output_json",
     "remove_worktree",
     "render_error",
     "repo_root",

@@ -1,6 +1,7 @@
 """Codex exec の cwd、schema 保存先、sandbox argv を検証する。
 
 根拠:
+- {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 - {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 - {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
 """
@@ -12,10 +13,12 @@ from multiprocessing.connection import Connection
 from multiprocessing.synchronize import Barrier as BarrierType
 from pathlib import Path
 
+import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import (
     codex_override_config,
     codex_parameter,
+    script_codex_calls,
     setup_codex_home,
 )
 from _command_support import write_python_executable
@@ -23,7 +26,7 @@ from _git_support import run_git
 
 from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
-from commons.runtime_ids import is_common_id
+from commons.runtime_ids import is_common_id, new_id
 from config.cmoc_config import CmocConfig
 
 _FIXED_CODEX_TIMESTAMP = "2099-01-01_00-00-00_000"
@@ -39,51 +42,59 @@ def run_fixed_codex_exec(
         """両 process に同じ生成時刻を与えて path の独立性を確かめる。"""
         return _FIXED_CODEX_TIMESTAMP
 
-    # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-    # 発行処理を始める前に同期し、記録日時が一致しても各 log が分離されることを調べる。
-    exec_module.timestamp = timestamp_factory
+    def resolve_test_roots(agent_call_cwd: Path) -> tuple[Path, Path]:
+        assert agent_call_cwd == root
+        return root, root
+
     try:
-        barrier.wait(timeout=5)
-        result = run_codex_exec(
-            codex_parameter(agent_call_cwd=root),
-            root=root,
-            transient_poll_interval_sec=0,
-            config=CmocConfig(),
-        )
-        connection.send(
-            {
-                "call_log_path": str(result.call_log_path),
-                "prompt_log_path": str(result.prompt_log_path),
-                "stdout_log_path": str(result.stdout_log_path),
-                "stderr_log_path": str(result.stderr_log_path),
-                "output_path": str(result.output_path),
-            }
-        )
+        with pytest.MonkeyPatch.context() as monkeypatch:
+            monkeypatch.setattr(exec_module, "timestamp", timestamp_factory)
+            # Git からの導出は後続の cwd・linked worktree test に残す。
+            # 採番と log の検査では探索結果だけを固定し、実 context は使う。
+            monkeypatch.setattr(
+                path_model_module, "_resolve_git_worktree_roots", resolve_test_roots
+            )
+            # subprocess の cwd・env は後続の Fake CLI test に残す。
+            # ここでは 2 process の実採番と log 保存だけを通し、孫 process を起動しない。
+            script_codex_calls(
+                monkeypatch,
+                [(0, '{"type": "turn.completed"}\n', "done\n")] * 2,
+            )
+            # {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
+            # 発行前に同期し、記録日時が一致しても各 log が分離されることを調べる。
+            barrier.wait(timeout=5)
+            records = []
+            for _ in range(2):
+                result = run_codex_exec(
+                    codex_parameter(agent_call_cwd=root),
+                    root=root,
+                    transient_poll_interval_sec=0,
+                    config=CmocConfig(),
+                )
+                records.append(
+                    {
+                        "call_log_path": str(result.call_log_path),
+                        "prompt_log_path": str(result.prompt_log_path),
+                        "stdout_log_path": str(result.stdout_log_path),
+                        "stderr_log_path": str(result.stderr_log_path),
+                        "output_path": str(result.output_path),
+                    }
+                )
+        connection.send(records)
     except BaseException as exc:
-        connection.send({"error": f"{type(exc).__name__}: {exc}"})
+        connection.send([{"error": f"{type(exc).__name__}: {exc}"}])
     finally:
         connection.close()
 
 
 def test_codex_call_ids_are_process_safe_on_same_timestamp(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """並列 run_codex_exec が同一生成時刻でも call ID とログを共有しない。"""
-    root = cli_repository
+    """並行・連続発行とログ分離、終了・ログ削除後の通番維持を検査する。"""
+    root = tmp_path / "repo"
+    root.mkdir()
     setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setenv("PATH", "/usr/bin")
     barrier = Barrier(2)
     channels = [Pipe() for _ in range(2)]
     processes = [
@@ -102,19 +113,22 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
 
         for parent, _child in channels:
             assert parent.poll(10)
-            records.append(parent.recv())
+            records.extend(parent.recv())
         for process in started_processes:
             process.join(10)
 
         assert all(process.exitcode == 0 for process in started_processes)
         assert all("error" not in record for record in records), records
+        assert len(records) == 4
         all_log_paths = []
+        cc_sequences = []
         for record in records:
             call_path = Path(record["call_log_path"])
             call_log = json.loads(call_path.read_text())
             assert call_log["timestamp"] == _FIXED_CODEX_TIMESTAMP
             codex_call_id = call_log["codex_call_id"]
             assert is_common_id(codex_call_id, "cc")
+            cc_sequences.append(int(codex_call_id.split("_")[1], 36))
             assert is_common_id(call_log["execution_id"], "exec")
             assert call_path.parent.name == call_log["execution_id"]
             assert call_path.name == f"{codex_call_id}_call.json"
@@ -148,6 +162,11 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
             all_log_paths.extend(related_paths)
 
         assert len(all_log_paths) == len(set(all_log_paths))
+        assert sorted(cc_sequences) == list(range(4))
+        # 子の終了・実ログの削除後の非再利用を、同じ起動で検査する。
+        for path in all_log_paths:
+            path.unlink()
+        assert new_id(root, "cc").startswith("cc_000004_")
     finally:
         for process in started_processes:
             if process.is_alive():
@@ -159,28 +178,28 @@ def test_codex_call_ids_are_process_safe_on_same_timestamp(
             child.close()
 
 
-@pytest.mark.parametrize(
-    "agent_call_cwd_relative",
-    [".", "oracle"],
-    ids=["work_root", "nested_directory"],
-)
+# 実採番と log の結合は上の並行 test に残す。以下の cwd・home・schema の検査では
+# nonpersistent_codex_ids を使い、採番のたびの SQLite transaction と同期を省く。
 def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     cli_repository: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    agent_call_cwd_relative: str,
+    nonpersistent_codex_ids: None,
 ) -> None:
     """パラメータの cwd と pure-oracle read の権限境界を検証する。
 
     正本仕様:
-        {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
+        {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
         {{work-root}}/oracle/src/oracle/prompt_builder/policy/file_access.py
     """
-    # oracle の存在による cwd の自動変更を検出し、Git 履歴の準備だけを省く。
     root = cli_repository
     (root / "oracle").mkdir()
     (root / "oracle" / "spec.md").write_text("# spec\n")
-    agent_call_cwd = root / agent_call_cwd_relative
+    # 指定 cwd を親 process の cwd・Git root・oracle のすべてと区別し、
+    # どれかへの誤置換を 1 回の Fake CLI 起動で検出する。
+    monkeypatch.chdir(root)
+    agent_call_cwd = root / "agent-cwd"
+    agent_call_cwd.mkdir()
     # 相対 home の値・子の cwd 基準の解決・log 保存も同じ起動で検査する。
     home = tmp_path / "home"
     home.mkdir()
@@ -223,6 +242,7 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
     expected_cwd = agent_call_cwd.resolve()
     assert record["args"][record["args"].index("--cd") + 1] == str(expected_cwd)
     assert record["cwd"] == str(expected_cwd)
+    assert Path.cwd() == root
     assert record["codex_home"] == "relative_codex_home"
     assert Path(record["resolved_home"]) == codex_home
     assert result.codex_home == codex_home
@@ -237,11 +257,15 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
 
 
 def test_run_codex_exec_uses_linked_worktree_context(
-    committed_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    committed_repository: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    nonpersistent_codex_ids: None,
 ) -> None:
     """linked worktree の cwd・sandbox と main repository の schema 保存先を検証する。
 
     正本仕様:
+        {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
         {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
     """
     # cwd・sandbox・schema の境界には実 linked metadata と HEAD だけを用意する。
@@ -250,24 +274,12 @@ def test_run_codex_exec_uses_linked_worktree_context(
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-exec", str(linked), "HEAD")
     setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    write_python_executable(
-        bin_dir / "codex",
-        [
-            "import json, os, pathlib, sys",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
-            "    'args': args,",
-            "    'cwd': os.getcwd(),",
-            "}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-        ],
+    # 実 process の cwd・相対 HOME は上の通常・nested cwd test に残す。
+    # linked 固有の Git 導出・argv・schema 保存は実行し、子起動と記録 file を省く。
+    calls = script_codex_calls(
+        monkeypatch,
+        [(0, '{"type":"turn.completed"}\n', '{"ok": true}')],
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema_source = tmp_path / "schema.json"
     schema_source.write_text(
         json.dumps(
@@ -290,14 +302,17 @@ def test_run_codex_exec_uses_linked_worktree_context(
         config=CmocConfig(),
     )
 
-    record = json.loads(recorder.read_text())
-    schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
-    assert record["cwd"] == str(linked.resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-    assert record["args"][record["args"].index("--sandbox") + 1] == "workspace-write"
-    override_config = codex_override_config(record["args"])
+    (call,) = calls
+    argv = call["argv"]
+    schema_arg = Path(argv[argv.index("--output-schema") + 1])
+    assert call["cwd"] == linked.resolve()
+    assert argv[argv.index("--cd") + 1] == str(linked.resolve())
+    assert argv[argv.index("--sandbox") + 1] == "workspace-write"
+    override_config = codex_override_config(argv)
     assert "permissions" not in override_config
     assert "default_permissions" not in override_config
     assert result.schema_path == schema_arg
     assert schema_arg.parent == root / ".cmoc" / "gu" / "schema"
+    assert schema_arg.read_bytes() == schema_source.read_bytes()
     assert not (linked / ".cmoc" / "gu" / "schema").exists()
+    assert result.output_json == {"ok": True}

@@ -1,1 +1,1 @@
-"""`cmoc realization apply fork` 用 builder adapter。"""
+"""`cmoc realization apply` 用 builder adapter。"""

@@ -9,9 +9,8 @@ import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from io import StringIO
 from pathlib import Path
-from threading import Event
+from threading import Barrier, Event
 
 import pytest
 
@@ -26,6 +25,7 @@ _REAL_WINDOWS_TOAST_TRANSPORT = runtime_windows_toast._run_windows_toast_transpo
         ("completed", "完了"),
         ("failed", "エラー終了"),
         ("interrupted", "ユーザー中断完了"),
+        ("cancelled", "起動取消（作業未完了）"),
     ],
 )
 def test_terminal_result_uses_only_short_required_fields(
@@ -142,6 +142,7 @@ def test_completion_marker_disables_notification_initialization_and_transport(
         runtime_windows_toast.create_tui_notification_callback(
             "doctor",
             tmp_path,
+            "root-session",
         )
         is None
     )
@@ -150,11 +151,11 @@ def test_completion_marker_disables_notification_initialization_and_transport(
     assert transport_checks == []
 
 
-def test_codex_callback_notifies_only_recorded_root_turn_once(
+def test_codex_callback_notifies_only_fixed_session_turn_once(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """記録済み root の turn だけを一度通知し、本文を通知へ渡さない。"""
+    """固定した ID の turn だけを一度通知し、本文を通知へ渡さない。"""
     state_root = tmp_path / "callback-state"
     state_root.mkdir()
     calls: list[tuple[str, str]] = []
@@ -162,17 +163,6 @@ def test_codex_callback_notifies_only_recorded_root_turn_once(
         runtime_windows_toast,
         "_run_windows_toast_transport",
         lambda title, message: calls.append((title, message)) or True,
-    )
-    session_arguments = ["codex-tui-session-start-hook", str(state_root)]
-    assert (
-        runtime_windows_toast._run_codex_tui_session_start_hook(
-            session_arguments,
-            {
-                "hook_event_name": "SessionStart",
-                "session_id": "root-session",
-            },
-        )
-        == 0
     )
     payload = json.dumps(
         {
@@ -188,73 +178,47 @@ def test_codex_callback_notifies_only_recorded_root_turn_once(
         str(state_root),
         "oracle investigation",
         "repository",
+        "root-session",
         payload,
     ]
 
     child_payload = json.loads(payload)
     child_payload["thread-id"] = "child-session"
-    child_arguments = [*arguments[:4], json.dumps(child_payload)]
+    child_arguments = [*arguments[:5], json.dumps(child_payload)]
     assert runtime_windows_toast._run_codex_tui_callback(child_arguments) == 0
     assert calls == []
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = [
-            executor.submit(
-                runtime_windows_toast._run_codex_tui_callback,
-                arguments,
-            )
-            for _ in range(8)
-        ]
+    # 同じ turn を受け取る二者で競合を作り、開始を揃えて重複排除を検証する。
+    ready = Barrier(2)
+
+    def notify_same_turn():
+        ready.wait(timeout=5)
+        return runtime_windows_toast._run_codex_tui_callback(arguments)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(notify_same_turn) for _ in range(2)]
         results = [future.result() for future in futures]
 
-    assert results == [0] * 8
-    assert calls == [("cmoc oracle investigation", "repository — 入力待ち")]
+    assert results == [0, 0]
+    assert calls == [("cmoc oracle investigation", "repository — 応答完了")]
     assert "prompt secret" not in repr(calls)
     assert "assistant secret" not in repr(calls)
-
-    assert (
-        runtime_windows_toast._run_codex_tui_session_start_hook(
-            session_arguments,
-            {
-                "hook_event_name": "SubagentStart",
-                "session_id": "child-session",
-            },
-        )
-        == 0
-    )
-    assert len(calls) == 1
 
     next_payload = json.loads(payload)
     next_payload["turn-id"] = "turn-2"
     assert (
         runtime_windows_toast._run_codex_tui_callback(
-            [*arguments[:4], json.dumps(next_payload)]
+            [*arguments[:5], json.dumps(next_payload)]
         )
         == 0
     )
-    assert calls[-1] == ("cmoc oracle investigation", "repository — 入力待ち")
+    assert calls[-1] == ("cmoc oracle investigation", "repository — 応答完了")
     assert len(calls) == 2
 
-    # `/new` で同じ TUI process に増えた root session も記録対象にする。
-    assert (
-        runtime_windows_toast._run_codex_tui_session_start_hook(
-            session_arguments,
-            {
-                "hook_event_name": "SessionStart",
-                "session_id": "new-root-session",
-            },
-        )
-        == 0
-    )
-    new_root_payload = json.loads(payload)
-    new_root_payload["thread-id"] = "new-root-session"
-    assert (
-        runtime_windows_toast._run_codex_tui_callback(
-            [*arguments[:4], json.dumps(new_root_payload)]
-        )
-        == 0
-    )
-    assert len(calls) == 3
+    # 切り替え先から callback が来ても、通知対象の ID は固定したままにする。
+    switched = {**json.loads(payload), "thread-id": "new-root-session"}
+    runtime_windows_toast.main([*arguments[:5], json.dumps(switched)])
+    assert len(calls) == 2
 
 
 def test_tui_callback_state_is_invocation_local(tmp_path: Path, toast_clock) -> None:
@@ -262,22 +226,22 @@ def test_tui_callback_state_is_invocation_local(tmp_path: Path, toast_clock) -> 
     callback = runtime_windows_toast.create_tui_notification_callback(
         "tui",
         tmp_path / "repository",
+        "root-session",
     )
 
     assert callback is not None
-    assert callback.command[0] == sys.executable
-    assert Path(callback.command[1]) == Path(runtime_windows_toast.__file__).resolve()
-    assert callback.command[2] == "codex-tui-callback"
-    state_root = Path(callback.command[3])
+    launcher = callback.command[:-5]
+    assert launcher[0] == sys.executable
+    assert Path(launcher[-1]) == Path(runtime_windows_toast.__file__).resolve()
+    assert callback.command[-5] == "codex-tui-callback"
+    state_root = Path(callback.command[-4])
     assert state_root.is_dir()
-    assert callback.command[4:] == ["tui", "repository"]
-    assert callback.session_start_command == [
-        sys.executable,
-        str(Path(runtime_windows_toast.__file__).resolve()),
-        "codex-tui-session-start-hook",
-        str(state_root),
-    ]
-
+    assert callback.command[-3:] == ["tui", "repository", "root-session"]
+    # 重複排除 state や別用途の active file は callback の活動と見なさない。
+    (
+        state_root / f"{runtime_windows_toast._TUI_CALLBACK_MARKER_PREFIX}turn.seen"
+    ).touch()
+    (state_root / "unrelated.active").touch()
     started_at = toast_clock.now
     callback.close()
 
@@ -299,20 +263,10 @@ def test_tui_callback_close_drains_running_callback(
     callback = runtime_windows_toast.create_tui_notification_callback(
         "tui",
         tmp_path / "repository",
+        "root-session",
     )
     assert callback is not None
-    state_root = Path(callback.command[3])
-    session_arguments = ["codex-tui-session-start-hook", str(state_root)]
-    assert (
-        runtime_windows_toast._run_codex_tui_session_start_hook(
-            session_arguments,
-            {
-                "hook_event_name": "SessionStart",
-                "session_id": "root-session",
-            },
-        )
-        == 0
-    )
+    state_root = Path(callback.command[-4])
     payload = json.dumps(
         {
             "type": "agent-turn-complete",
@@ -325,23 +279,27 @@ def test_tui_callback_close_drains_running_callback(
         str(state_root),
         "tui",
         "repository",
+        "root-session",
         payload,
     ]
     callback_started = Event()
     release_callback = Event()
-    drain_waiting = Event()
-    release_drain = Event()
     started_at = toast_clock.now
+    finished_at = None
     advance = toast_clock.sleep
 
     def sleep_during_callback(seconds):
+        nonlocal finished_at
         advance(seconds)
         # 最初の起動猶予を過ぎても、実行中 lease が cleanup を止めることを確かめる。
-        if toast_clock.now - started_at >= (
+        if finished_at is None and toast_clock.now - started_at >= (
             2 * runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
         ):
-            drain_waiting.set()
-            assert release_drain.wait(timeout=5)
+            assert state_root.is_dir()
+            assert not callback_future.done()
+            release_callback.set()
+            assert callback_future.result(timeout=5) == 0
+            finished_at = toast_clock.now
 
     monkeypatch.setattr(toast_clock, "sleep", sleep_during_callback)
 
@@ -358,32 +316,26 @@ def test_tui_callback_close_drains_running_callback(
         block_notification,
     )
 
-    try:
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            callback_future = executor.submit(
-                runtime_windows_toast._run_codex_tui_callback,
-                arguments,
-            )
+    # drain は呼び出し元で進め、通知だけを別 thread にする。
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        callback_future = executor.submit(
+            runtime_windows_toast._run_codex_tui_callback,
+            arguments,
+        )
+        try:
             assert callback_started.wait(timeout=2)
-            close_future = executor.submit(callback.close)
-            assert drain_waiting.wait(timeout=2)
-            assert state_root.is_dir()
-            assert not close_future.done()
+            callback.close()
+            assert finished_at is not None
+            grace = runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
+            poll = runtime_windows_toast._TUI_CALLBACK_DRAIN_POLL_SEC
+            # 実 marker の削除を認識し、全 timeout ではなく完了後の猶予で戻る。
+            quiet_period = toast_clock.now - finished_at
+            assert grace - poll <= quiet_period <= grace + poll
+            assert not state_root.exists()
+        finally:
+            # assertion failure でも executor の終了待ちより先に callback を解放する。
             release_callback.set()
-            assert callback_future.result(timeout=5) == 0
-            finished_at = toast_clock.now
-            release_drain.set()
-            close_future.result(timeout=5)
-        grace = runtime_windows_toast._TUI_CALLBACK_STARTUP_GRACE_SEC
-        poll = runtime_windows_toast._TUI_CALLBACK_DRAIN_POLL_SEC
-        # 実 marker の削除を認識し、全 timeout ではなく完了後の猶予で戻る。
-        quiet_period = toast_clock.now - finished_at
-        assert grace - poll <= quiet_period <= grace + poll
-        assert not state_root.exists()
-    finally:
-        release_callback.set()
-        release_drain.set()
-        callback.close()
+            callback.close()
 
 
 @pytest.mark.parametrize("callback_finishes", [True, False], ids=["finishes", "stuck"])
@@ -419,22 +371,45 @@ def test_tui_callback_drain_handles_late_start_with_finite_wait(
         assert elapsed == pytest.approx(timeout)
 
 
+@pytest.mark.parametrize(
+    ("state_kind", "expected_active"),
+    [("missing", False), ("file", False), ("unreadable", True)],
+    ids=["missing", "file", "unreadable"],
+)
+def test_tui_callback_activity_handles_unavailable_state(
+    tmp_path, monkeypatch, state_kind, expected_active
+):
+    """消失した state は活動なしとし、走査不能な state は活動中と見なす。"""
+    # poll・猶予・期限は late-start/stuck、実 marker と cleanup は並行ケースで検証する。
+    # ここでは state の分類だけを検証し、各 poll で同じ file I/O を繰り返さない。
+    state_root = tmp_path / "callback-state"
+    with monkeypatch.context() as patch:
+        if state_kind == "file":
+            state_root.touch()
+        elif state_kind == "unreadable":
+            state_root.mkdir()
+
+            def deny_scan(_path):
+                raise PermissionError("callback state is unreadable")
+
+            patch.setattr(runtime_windows_toast.os, "scandir", deny_scan)
+        active = runtime_windows_toast._has_active_tui_callback(state_root)
+    assert active is expected_active
+
+
 def test_tui_callback_commands_run_as_standalone_scripts(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
     toast_clock,
 ) -> None:
-    """SessionStart stdin と legacy callback argv を standalone 実行する。"""
+    """stdin/argv の standalone 境界と process 間の重複排除を検証する。"""
     callback = runtime_windows_toast.create_tui_notification_callback(
         "oracle investigation",
         tmp_path / "repository",
+        "root-session",
     )
     assert callback is not None
-    session_payload = json.dumps(
-        {
-            "hook_event_name": "SessionStart",
-            "session_id": "root-session",
-        }
-    )
     turn_payload = json.dumps(
         {
             "type": "agent-turn-complete",
@@ -442,7 +417,7 @@ def test_tui_callback_commands_run_as_standalone_scripts(
             "turn-id": "turn-1",
         }
     )
-    state_root = Path(callback.command[3])
+    state_root = Path(callback.command[-4])
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorded_toast = tmp_path / "toast.jsonl"
@@ -459,12 +434,18 @@ def test_tui_callback_commands_run_as_standalone_scripts(
         **os.environ,
         "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
         "CMOC_TEST_TOAST_LOG": str(recorded_toast),
+        "PYTHONPATH": str(bin_dir),
     }
+    # 標準ライブラリだけの helper に、site 初期化や外部 package の準備は不要。
+    # 起動時に site を読み込む回帰は、二つの既存 process の stderr で検出する。
+    (bin_dir / "sitecustomize.py").write_text(
+        "raise RuntimeError('notification helper initialized site')\n",
+        encoding="utf-8",
+    )
 
     try:
         result = subprocess.run(
-            callback.session_start_command,
-            input=session_payload,
+            [*callback.command, turn_payload],
             env=environment,
             text=True,
             capture_output=True,
@@ -474,48 +455,53 @@ def test_tui_callback_commands_run_as_standalone_scripts(
         assert result.returncode == 0
         assert result.stdout == ""
         assert result.stderr == ""
-        for _ in range(2):
-            result = subprocess.run(
-                [*callback.command, turn_payload],
-                env=environment,
-                text=True,
-                capture_output=True,
-                timeout=10,
-                check=False,
-            )
-            assert result.returncode == 0
-            assert result.stdout == ""
-            assert result.stderr == ""
+
+        # 子 process が残した state を親の実入口から読み、再起動なしで重複を確かめる。
+        duplicate_notifications: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            runtime_windows_toast,
+            "_run_windows_toast_transport",
+            lambda title, message: (
+                duplicate_notifications.append((title, message)) or True
+            ),
+        )
+        assert runtime_windows_toast.main([*callback.command[-5:], turn_payload]) == 0
+        assert duplicate_notifications == []
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err == ""
         assert len(list(state_root.glob("*.seen"))) == 1
-        assert len(list(state_root.glob("root-*.session"))) == 1
         assert [
             json.loads(line) for line in recorded_toast.read_text().splitlines()
         ] == [
             {
                 "title": "cmoc oracle investigation",
-                "message": "repository — 入力待ち",
+                "message": "repository — 応答完了",
             }
         ]
     finally:
         callback.close()
 
 
-def test_tui_session_start_hook_malformed_json_is_nonfatal(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """壊れた JSON stdin では記録せず、hook の入口から非致命的に戻る。"""
-    # standalone の stdin/argv 境界は正常系に残し、JSON 例外の処理を直接検証する。
+@pytest.mark.parametrize(
+    "payload", ["{", "[]", '{"type":"other"}', '{"type":"agent-turn-complete"}']
+)
+def test_tui_callback_malformed_payload_is_nonfatal(tmp_path, capsys, payload):
     state_root = tmp_path / "callback-state"
     state_root.mkdir()
-    monkeypatch.setattr(sys, "stdin", StringIO("{"))
-
     assert (
-        runtime_windows_toast.main(["codex-tui-session-start-hook", str(state_root)])
+        runtime_windows_toast.main(
+            [
+                "codex-tui-callback",
+                str(state_root),
+                "tui",
+                "repository",
+                "root-session",
+                payload,
+            ]
+        )
         == 0
     )
+    assert not list(state_root.iterdir())
     captured = capsys.readouterr()
-    assert captured.out == ""
-    assert captured.err == ""
-    assert list(state_root.iterdir()) == []
+    assert captured.out == captured.err == ""

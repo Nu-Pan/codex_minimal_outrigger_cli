@@ -8,18 +8,53 @@ from _codex_support import (
     codex_arg_value,
     codex_override_config,
     codex_parameter,
-    script_codex_calls,
     setup_codex_home,
-    stub_codex_overrides,
 )
 from _command_support import write_python_executable
+from oracle.other import path_model as path_model_module
 from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_exec as exec_module
 from basic.acp import FileAccessMode
 from commons.runtime_codex import run_codex_exec
-from commons.runtime_codex_profile import prepare_codex_override_args
+from commons.runtime_errors import CmocError
 from config.cmoc_config import CmocConfig
+
+
+def test_schema_less_output_preserves_text_and_optional_json(tmp_path):
+    """省略可能な出力の境界値と本文・JSON の一貫性を CLI 起動なしで検証する。"""
+    # 出力 file 以外の前提は共通なので、同じ通常 file の内容だけを差し替える。
+    cases = [
+        (None, "", None),
+        (b"", "", None),
+        (b" \r\n\r", " \n\n", None),
+        (b"done\n", "done\n", None),
+        (
+            '{"text": "日本語\ufffd"}\r\n'.encode("utf-8"),
+            '{"text": "日本語\ufffd"}\n',
+            {"text": "日本語\ufffd"},
+        ),
+        (
+            b'{"text": "\xff"}\r\n',
+            '{"text": "\ufffd"}\n',
+            None,
+        ),
+        (
+            b"[" * 10_000 + b"0" + b"]" * 10_000,
+            "[" * 10_000 + "0" + "]" * 10_000,
+            None,
+        ),
+    ]
+    output = tmp_path / "output.json"
+    for output_bytes, expected_text, expected_json in cases:
+        if output_bytes is None:
+            output.unlink(missing_ok=True)
+        else:
+            output.write_bytes(output_bytes)
+        assert exec_module._read_optional_output(output) == (
+            expected_text,
+            expected_json,
+        )
 
 
 def test_setup_codex_home_isolates_home_and_codex_home(
@@ -32,6 +67,21 @@ def test_setup_codex_home_isolates_home_and_codex_home(
     assert Path(os.environ["CODEX_HOME"]) == codex_home
 
 
+def test_interactive_resume_is_rejected_before_exec_preparation(tmp_path):
+    """対話再開を非対話 exec や補正用 prompt に変換しない。"""
+    parameter = replace(
+        codex_parameter(agent_call_cwd=tmp_path),
+        prompt=None,
+        tui_resume_session_id="saved-session-id",
+    )
+
+    with pytest.raises(CmocError, match="対話 TUI の再開パラメータ"):
+        run_codex_exec(parameter, root=tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+# {{work-root}}/oracle/doc/app_spec/codex_common_rule.md
 # {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
 def _assert_codex_exec_contract(args: list[str], prompt: str) -> None:
     """Codex exec の必須 argv と prompt の stdin 渡しを検証する。"""
@@ -59,12 +109,20 @@ def _assert_no_codex_home_config(codex_home: Path) -> None:
 
 
 # {{work-root}}/oracle/doc/app_spec/codex_model_provider.md
-def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_run_codex_exec_injects_provider_overrides_and_keeps_invalid_utf8_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+    nonpersistent_codex_ids: None,
 ) -> None:
-    """provider と path policy の argv 境界および書き込み結果を検証する。"""
-    # schema-less exec は履歴を参照しない。root 探索と Fake CLI の書き込み先だけ用意する。
-    root = cli_repository
+    """provider・path policy の受け渡しと schema-less 出力の読み取りを検証する。"""
+    # Git/cwd の結合は test_codex_runtime_paths.py に残し、ここでは探索結果だけを渡す。
+    # 実 process の argv・stdin・env と log 保存は製品経路を通す。
+    root = tmp_path / "repo"
+    root.mkdir()
+    monkeypatch.setattr(
+        path_model_module, "_resolve_git_worktree_roots", lambda _cwd: (root, root)
+    )
     (root / "oracle").mkdir()
     # .agents の実在 path を権限設定へ注入しない検証も同じ REPO_WRITE の起動で行う。
     agents_file = root / ".agents" / "nested" / "instructions.md"
@@ -79,13 +137,15 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
+    # 同じ起動で不正 UTF-8 の保存・未解析・置換文字も検査し、別の log 準備を省く。
+    output_bytes = b"done\n\xff"
     write_python_executable(
         bin_dir / "codex",
         [
             "import json, os, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
+            f"output.write_bytes({output_bytes!r})",
             "pathlib.Path('oracle/created.md').write_text('created\\n')",
             "pathlib.Path('src').mkdir(exist_ok=True)",
             "pathlib.Path('src/created.py').write_text('created\\n')",
@@ -98,11 +158,12 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
             "    'stdin_fd': os.readlink('/proc/self/fd/0'),",
             "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
+            "print('private stderr', file=sys.stderr)",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     config = CmocConfig()
-    # provider 設定の受け渡しも同じ起動で検査し、CLI と Git の準備を重複させない。
+    # provider 設定の受け渡しも同じ起動で検査し、CLI の準備を重複させない。
     # 既定 provider と mode ごとの変換は test_runtime_codex_profile.py で検証する。
     config.codex.model_providers["local.provider"] = CodexModelProviderConfig(
         {
@@ -180,45 +241,14 @@ def test_run_codex_exec_injects_generic_provider_overrides_and_starts_codex(
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
     _assert_no_codex_home_config(codex_home)
-    assert result.output_text == "done\n"
-
-
-def test_run_codex_exec_keeps_invalid_utf8_output_as_unparsed_text(
-    cli_repository: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """schema-less output の不正 UTF-8 で結果構築を中断しない。"""
-    root = cli_repository
-    setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_overrides(monkeypatch)
-    # process の受け渡しは正常起動の結合テストに残し、不正 bytes の読み取りを検査する。
-    calls = script_codex_calls(
-        monkeypatch, [(0, '{"type":"turn.completed"}\n', b"\xff")]
-    )
-
-    result = run_codex_exec(
-        codex_parameter(agent_call_cwd=root),
-        root=root,
-        transient_poll_interval_sec=0,
-        config=CmocConfig(),
-    )
-
-    assert len(calls) == 1
-    assert result.output_path.read_bytes() == b"\xff"
+    assert list(result.call_log_path.parent.glob("*_call.json")) == [
+        result.call_log_path
+    ]
+    assert result.output_path.read_bytes() == output_bytes
     assert result.output_json is None
-    assert result.output_text == "\ufffd"
-
-
-# {{work-root}}/oracle/doc/app_spec/codex_exec_rule.md
-def test_prepare_codex_override_args_does_not_create_codex_home_config(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Codex override の構築時に CODEX_HOME の設定ファイルを作成しないことを検証する。"""
-    codex_home = setup_codex_home(tmp_path, monkeypatch)
-
-    override_args = prepare_codex_override_args(
-        codex_parameter(agent_call_cwd=tmp_path), CmocConfig()
-    )
-
-    assert "--profile" not in override_args
-    assert "-p" not in override_args
-    _assert_no_codex_home_config(codex_home)
+    assert result.output_text == "done\n\ufffd"
+    # 補正の検査と共用する実 process の出力捕捉を、この代表起動で保証する。
+    assert result.stdout_log_path.read_text() == '{"type": "turn.completed"}\n'
+    assert result.stderr_log_path.read_text() == "private stderr\n"
+    captured = capfd.readouterr()
+    assert captured.out == captured.err == ""

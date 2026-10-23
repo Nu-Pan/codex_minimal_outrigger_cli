@@ -9,6 +9,7 @@ import json
 import shutil
 import urllib.request
 from dataclasses import replace
+from functools import cache
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -51,12 +52,12 @@ def small_materials(monkeypatch: pytest.MonkeyPatch) -> dict[str, bytes]:
     return contents
 
 
-def _installed_runtime(base: Path) -> None:
-    """lock が要求する CPU native と本体の最小配置を作る。"""
-    native = base / "node_modules/@node-llama-cpp/linux-x64"
-    native.mkdir(parents=True)
-    (native / "binding.node").write_bytes(b"fixed native")
-    metadata = native / "bins/linux-x64/_nlcBuildMetadata.json"
+def _installed_native_metadata(base: Path) -> Path:
+    """revision 照合に必要な native directory と採用情報だけを配置する。"""
+    metadata = (
+        base
+        / "node_modules/@node-llama-cpp/linux-x64/bins/linux-x64/_nlcBuildMetadata.json"
+    )
     metadata.parent.mkdir(parents=True)
     metadata.write_text(
         json.dumps(
@@ -70,6 +71,15 @@ def _installed_runtime(base: Path) -> None:
             }
         )
     )
+    return metadata
+
+
+def _installed_runtime(base: Path) -> None:
+    """資材の lifecycle 検査には CPU native と Node 本体も配置する。"""
+    _installed_native_metadata(base)
+    (base / "node_modules/@node-llama-cpp/linux-x64/binding.node").write_bytes(
+        b"fixed native"
+    )
     node = base / "node/bin/node"
     node.parent.mkdir(parents=True)
     node.write_bytes(b"fixed node")
@@ -82,12 +92,8 @@ def _installed_runtime(base: Path) -> None:
 def test_native_llama_revision_must_match_adoption(tmp_path: Path, field: str) -> None:
     """同じ npm 版でも、付属 native が採用した llama.cpp を使うことを確認する。"""
     setup._copy_worker_source(tmp_path, "package-lock.json")
-    _installed_runtime(tmp_path)
+    path = _installed_native_metadata(tmp_path)
     worker._verify_lock(tmp_path)
-    path = (
-        tmp_path
-        / "node_modules/@node-llama-cpp/linux-x64/bins/linux-x64/_nlcBuildMetadata.json"
-    )
     metadata = json.loads(path.read_text())
     metadata["buildOptions"]["llamaCpp"][field] = "different"
     path.write_text(json.dumps(metadata))
@@ -130,10 +136,22 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
         lambda _base, _root, tuning: probes.append(tuning),
     )
     monkeypatch.setattr(worker, "_sha256", checksum)
+    # この test で変更しない sqlite-vec の実ロード・演算は初回だけ通す。
+    # 設定・モデル・Node 資材の変更後も、それぞれの照合は実行する。
+    monkeypatch.setattr(
+        worker, "_verify_vector_dependency", cache(worker._verify_vector_dependency)
+    )
     first = setup.prepare_document_search_materials(tmp_path, config)
     assert first["status"] == "built"
     assert len(npm_calls) == 1
     assert probes == [config]
+    # 固定 lock と native 採用情報の検査は初回公開で通す。
+    # 以後は不変なので再解析を省き、repo/release の不一致は専用 test に残す。
+    # 資材全体の hash 照合は続け、モデル・runtime の破損と修復を検査する。
+    monkeypatch.setattr(worker, "_verify_lock", lambda _base: None)
+    # 初回公開では実 fsync を通し、以後の状態遷移では重複する同期を省く。
+    # write・flush・原子的な置換と、失敗後の保存内容の照合は維持する。
+    monkeypatch.setattr(setup.os, "fsync", lambda _fd: None)
     assert setup.require_document_search_materials(tmp_path, config).is_dir()
 
     model_reads.clear()
@@ -193,6 +211,14 @@ def test_doctor_reuses_valid_materials_and_requires_current_validation(
     assert repaired["models"] == "reused"
     assert len(npm_calls) == 2
 
+    # JSON として読めても manifest が object でなければ再構築する。
+    (base / "manifest.json").write_text("[]")
+    repaired = setup.prepare_document_search_materials(tmp_path, config)
+    assert repaired["status"] == "repaired"
+    assert repaired["models"] == "reused"
+    assert len(npm_calls) == 3
+    assert setup.require_document_search_materials(tmp_path, config).is_dir()
+
     # 現在の条件への検証失敗は、別条件で正常な既存 component を壊さない。
     monkeypatch.setattr(
         setup,
@@ -210,16 +236,18 @@ def test_failed_real_model_probe_never_publishes_materials(
     small_materials: dict[str, bytes],
 ) -> None:
     """推論検証に失敗した隔離 build を次回起動で準備済みと扱わない。"""
-
-    def fake_version(_args: list[str], **_kwargs: Any) -> SimpleNamespace:
-        return SimpleNamespace(stdout="v" + SEARCH_MATERIALS.node_version)
-
+    # probe 失敗後は資材内容の検査に進まないため、runtime/model を作らない。
+    # 正常構築と資材検査は上の lifecycle test に残し、ここでは隔離 build の失敗を通す。
     monkeypatch.setattr(
         setup,
         "_install_node_runtime",
-        lambda _root, base, _fd: _installed_runtime(base),
+        lambda _root, _base, _fd: None,
     )
-    monkeypatch.setattr(worker.subprocess, "run", fake_version)
+    monkeypatch.setattr(
+        setup,
+        "prepare_model",
+        lambda _root, _base, _staging, _artifact: "downloaded",
+    )
     monkeypatch.setattr(setup, "_runtime_versions", lambda _base: None)
     monkeypatch.setattr(
         setup,
