@@ -84,7 +84,7 @@ def _prepare_run_session(
     # doctor と公開 CLI の session 作成は統合 test に残し、ここでは前提だけ作る。
     init_repo(root)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
-    for relative in ("spec", "reference/src", "oracle/test", "src", "test"):
+    for relative in ("spec", "reference/src", "reference/test", "src", "test"):
         (root / relative).mkdir(parents=True, exist_ok=True)
     if with_content:
         # 初期内容を session fork 後に追加する履歴は利用側の検査に不要。

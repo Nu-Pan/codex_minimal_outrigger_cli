@@ -111,7 +111,7 @@ def _fingerprint(directory: Path) -> str:
 
 
 def _check_unmapped_oracle(root: Path) -> None:
-    # oracle/test 等を暗黙に別の所有区分へ割り当てない。
+    # reference/test 等を暗黙に別の所有区分へ割り当てない。
     oracle = _path(root, "oracle")
     if not oracle.exists():
         return
@@ -197,7 +197,7 @@ def _move(root: Path) -> None:
             raise MigrationError(f"Destination appeared during move: {target}")
         target.parent.mkdir(parents=True, exist_ok=True)
         source.rename(target)
-    for relative in ("oracle/test", "oracle"):
+    for relative in ("reference/test", "oracle"):
         path = _path(root, relative)
         if path.is_dir() and not any(path.iterdir()):
             path.rmdir()

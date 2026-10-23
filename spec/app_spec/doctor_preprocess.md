@@ -47,7 +47,7 @@ cmoc が固定の作業用配置先として案内するディレクトリを、
 
 - `{{work-root}}/spec`
 - `{{work-root}}/reference/src`
-- `{{work-root}}/oracle/test`
+- `{{work-root}}/reference/test`
 - `{{work-root}}/src`
 - `{{work-root}}/test`
 

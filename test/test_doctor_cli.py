@@ -58,7 +58,7 @@ pytestmark = pytest.mark.usefixtures(
     "feedback_without_transport", "nonpersistent_execution_ids"
 )
 
-_WORK_DIRECTORIES = ("spec", "reference/src", "oracle/test", "src", "test")
+_WORK_DIRECTORIES = ("spec", "reference/src", "reference/test", "src", "test")
 
 
 @pytest.fixture(scope="module")
@@ -191,7 +191,7 @@ def test_refactor_preprocess_interruption_preserves_user_changes(
     run_git(root, "add", ".gitignore")
     ignore.write_text(ignore.read_text() + "# unstaged by user\n")
     (root / ".agents/.gitkeep").unlink()
-    for relative in ("oracle/test", "src", "test"):
+    for relative in ("reference/test", "src", "test"):
         (root / relative).rmdir()
     before = run_git(root, "diff", "--binary").stdout
     staged = run_git(root, "diff", "--cached", "--binary").stdout
@@ -209,7 +209,7 @@ def test_refactor_preprocess_interruption_preserves_user_changes(
     assert run_git(root, "diff", "--binary").stdout == before
     assert run_git(root, "diff", "--cached", "--binary").stdout == staged
     assert all(
-        not (root / relative).exists() for relative in ("oracle/test", "src", "test")
+        not (root / relative).exists() for relative in ("reference/test", "src", "test")
     )
     report = terminal_primary_report(result).read_text()
     assert 'completion_reason: "user_interruption"' in report
@@ -514,7 +514,7 @@ def test_work_directory_collisions_preserve_content_and_report_target(
 def test_work_directory_validation_does_not_repair_missing_paths(tmp_path):
     """最終検証で失われた配置先を発見し、検証だけの呼び出しでは補完しない。"""
     ensure_work_directories(tmp_path)
-    missing = tmp_path / "oracle/test"
+    missing = tmp_path / "reference/test"
     missing.rmdir()
 
     with pytest.raises(CmocError) as exc_info:
@@ -532,7 +532,7 @@ def test_preprocess_rejects_work_directory_collisions(
     """通常起動と明示 doctor は衝突を診断して終了し、Git 状態を変更しない。"""
     # 全配置先の拒否は helper のケースに残し、両入口との結合だけを実 Git で確かめる。
     root = committed_repository
-    collision = root / "oracle/test"
+    collision = root / "reference/test"
     collision.parent.mkdir(parents=True)
     collision.write_text("keep collision\n")
     head_before = run_git(root, "rev-parse", "HEAD").stdout
@@ -559,7 +559,7 @@ def test_preprocess_reports_work_directory_permission_failure(
     """作成できない配置先を具体的に診断し、必須条件の失敗を伝える。"""
     # 作成失敗は index 修復より前に発生するため、Git root だけを用意する。
     root = cli_repository
-    blocked = root / "oracle/test"
+    blocked = root / "reference/test"
     original_mkdir = Path.mkdir
 
     def deny_target(path, *args, **kwargs):
@@ -588,8 +588,8 @@ def test_doctor_rechecks_work_directories_after_repair_commit(
     hooks.mkdir()
     hook = hooks / "pre-commit"
     hook.write_text(
-        "#!/bin/sh\nset -eu\nrmdir oracle/test\n"
-        "printf 'late collision\\n' > oracle/test\n"
+        "#!/bin/sh\nset -eu\nrmdir reference/test\n"
+        "printf 'late collision\\n' > reference/test\n"
     )
     hook.chmod(0o755)
     run_git(root, "config", "core.hooksPath", str(hooks))
@@ -598,11 +598,11 @@ def test_doctor_rechecks_work_directories_after_repair_commit(
     result = runner.invoke(app, ["doctor"], catch_exceptions=False)
 
     assert result.exit_code == 1
-    assert (root / "oracle/test").read_text() == "late collision\n"
+    assert (root / "reference/test").read_text() == "late collision\n"
     report = terminal_primary_report(result).read_text()
     assert "作業用配置先" in report
     assert f"work-root: {root}" in report
-    assert f"path: {root / 'oracle/test'}" in report
+    assert f"path: {root / 'reference/test'}" in report
 
 
 def test_doctor_sync_preserves_user_changes_and_correlates_logs_and_reports(

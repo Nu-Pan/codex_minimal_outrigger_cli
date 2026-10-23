@@ -10,7 +10,7 @@ oracle file の下位概念は、正本として所有する事項で区別す�
 
 - oracle doc は `{{work-root}}/spec` に置く。対象リポジトリ固有の要求、責務、判断基準、goal、non-goal、および意味上の優先関係を定義する意味仕様を所有する。
 - oracle src は `{{work-root}}/reference/src` に置く。oracle doc から明示的に委譲された正確な algorithm、builder の選択値、prompt の構築順序・文面・rendering、および schema を所有する。
-- oracle test は `{{work-root}}/oracle/test` に置き、プログラミング言語で正本仕様を検査する。
+- oracle test は `{{work-root}}/reference/test` に置き、プログラミング言語で正本仕様を検査する。
 
 明示的に委譲された prompt literal の正確な文面は oracle src が所有し、その文面が表す意味仕様は oracle doc が所有する。builder が生成した prompt（generated prompt）は実行時生成物であり、意味仕様または prompt 文面の正本ではない。
 

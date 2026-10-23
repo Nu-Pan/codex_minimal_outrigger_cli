@@ -102,7 +102,7 @@ pytestmark = pytest.mark.usefixtures(
     "feedback_without_transport", "nonpersistent_execution_ids"
 )
 
-_WORK_DIRECTORIES = ("spec", "reference/src", "oracle/test", "src", "test")
+_WORK_DIRECTORIES = ("spec", "reference/src", "reference/test", "src", "test")
 
 
 @pytest.mark.parametrize(

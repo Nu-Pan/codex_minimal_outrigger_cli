@@ -43,7 +43,7 @@ def build_oracle_and_realization_basic(
                         - `{{work-root}}/reference/src` に配置されている
                     - oracle test
                         - oracle file のうち、プログラミング言語で記述されたテスト
-                        - `{{work-root}}/oracle/test` に配置されている
+                        - `{{work-root}}/reference/test` に配置されている
                     """,
                 ),
                 SDHeader(

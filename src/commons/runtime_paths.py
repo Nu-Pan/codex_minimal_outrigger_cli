@@ -223,7 +223,7 @@ def ensure_work_directories(root: Path, *, create_missing: bool = True) -> None:
     """
     # {{cmoc-root}}/spec/app_spec/doctor_preprocess.md の
     # 「作業用配置先の存在保証」
-    for relative in ("spec", "reference/src", "oracle/test", "src", "test"):
+    for relative in ("spec", "reference/src", "reference/test", "src", "test"):
         path = root / relative
         try:
             # 既存 directory は一度の stat で検証し、不足時だけ作成する。

@@ -295,7 +295,7 @@ def run_doctor_preprocess(
                         for path in (
                             "spec",
                             "reference/src",
-                            "oracle/test",
+                            "reference/test",
                             "src",
                             "test",
                         )

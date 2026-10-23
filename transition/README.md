@@ -180,7 +180,7 @@ Git 操作は人間が行い、スクリプトは commit、stash、branch 切替
 
 `move` は directory の rename を行う。既存の移設先を上書き・merge せず、全組合せを確認してから開始する。移設前の fingerprint を `transition/work/move.json` に保存し、内容、path、permission、空 directory の一致を確認する。移設元に含まれる通常ファイルは ignored なものも保持する。
 
-symlink、特殊ファイル、Git metadata 等の保護対象が tree にあれば停止する。`oracle/test` は空の場合だけ除去できる。内容がある場合や oracle 直下に他の材料がある場合は、人間が行き先を決め、スクリプトと手順を更新してから進める。
+symlink、特殊ファイル、Git metadata 等の保護対象が tree にあれば停止する。`reference/test` は空の場合だけ除去できる。内容がある場合や oracle 直下に他の材料がある場合は、人間が行き先を決め、スクリプトと手順を更新してから進める。
 
 `move` は一つずつ rename するため、複数 tree 全体を一括で原子的に切り替える処理ではない。中断した場合はファイルを編集せず、同じ `move` を再実行する。receipt と一致する移設済み部分を認識し、残りだけ進める。receipt の破損、両側にファイルがある状態、移設開始後の内容変更は停止理由になる。receipt を削除して無理にやり直さない。
 
@@ -193,7 +193,7 @@ symlink、特殊ファイル、Git metadata 等の保護対象が tree にあれ
 - 独立したパス接頭辞として現れる `oracle/doc` → `spec`、`oracle/src` → `reference/src`。root 相対、`./`、`{{work-root}}`・`{{cmoc-root}}`・`{{repo-root}}`、この checkout の絶対 path に対応する。本文、コメント、文字列、設定、コード例も対象になる。
 - Markdown の通常の inline link と参照定義にある相対 path。移設前の参照元から行き先を求め、移設後の参照元・先に合わせて書き換える。行き先を root 内で確認でき、現在の表記では別の既存対象へ到達しない場合に限る。query と anchor は保持する。
 
-Python package 名の `oracle`、外部 URL、別 repository の絶対 path、行き先が決まっていない `oracle/test` は一括 rename しない。`root / "oracle" / "src"` のような分割した表記、backslash 表記、解決できない相対リンクなどは確認候補として残す。動的なパス構築や特殊な Markdown 構文の全件検出は保証しない。
+Python package 名の `oracle`、外部 URL、別 repository の絶対 path、行き先が決まっていない `reference/test` は一括 rename しない。`root / "oracle" / "src"` のような分割した表記、backslash 表記、解決できない相対リンクなどは確認候補として残す。動的なパス構築や特殊な Markdown 構文の全件検出は保証しない。
 
 本文にある path が現在の参照なのか、意図的な旧入力・履歴なのかは、差分の内容確認で判断する。必要な旧表記はその確認で残し、仕様の意味や実行動作に関わる修正は工程 3 以降で行う。パス更新だけで新仕様への適合やリンク先の意味まで確認できたとは扱わない。
 

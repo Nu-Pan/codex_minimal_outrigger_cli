@@ -23,7 +23,7 @@ def repository(tmp_path: Path) -> Path:
     (package / "builder.py").chmod(0o750)
     (root / "oracle/doc").mkdir()
     (root / "oracle/doc/example.md").write_text("# 仕様\n", encoding="utf-8")
-    (root / "oracle/test").mkdir()
+    (root / "reference/test").mkdir()
     (root / "transition").mkdir()
     return root
 
@@ -75,7 +75,7 @@ def test_move_refuses_special_and_protected_entries(
     assert not (repository / "reference").exists()
 
 
-@pytest.mark.parametrize("relative", ["oracle/test/contract.py", "oracle/extra.md"])
+@pytest.mark.parametrize("relative", ["reference/test/contract.py", "oracle/extra.md"])
 def test_unmapped_sources_are_not_silently_discarded(
     repository: Path, relative: str
 ) -> None:
@@ -250,7 +250,7 @@ def test_path_rewrite_keeps_ambiguous_and_unmapped_paths_for_review(
         'root / "oracle" / "src"\n'
         'join(root, "oracle", "doc")\n'
         "oracle\\src\\file.py\n"
-        "oracle/test\n"
+        "reference/test\n"
         "myoracle/doc oracle/document oracle/src_extra\n"
         "[ambiguous](../src/oracle/builder.py)\n"
     )
