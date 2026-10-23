@@ -60,7 +60,7 @@ def packaged_sources(tmp_path_factory: pytest.TempPathFactory) -> Path:
         "src/basic",
         "src/commons",
         "src/config",
-        "referenece/src/oracle",
+        "reference/src/oracle",
     ):
         source = root / relative_path
         shutil.copytree(
@@ -90,16 +90,16 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
 
     acp の型再公開と正本 builder の完全 prompt を、basic・commons を含まない配置で
     確認する。共通の oracle import を一つの独立 process で検証する。
-    根拠: {{work-root}}/referenece/src/oracle/acp_builder/quota_probe.py
-    {{work-root}}/referenece/src/oracle/acp_builder/basic.py
+    根拠: {{work-root}}/reference/src/oracle/acp_builder/quota_probe.py
+    {{work-root}}/reference/src/oracle/acp_builder/basic.py
     {{work-root}}/spec/dev_rule/test_rule.md
     """
     root = Path(__file__).parents[1]
     pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     setuptools_config = pyproject["tool"]["setuptools"]
     assert "oracle" not in setuptools_config["py-modules"]
-    assert setuptools_config["package-dir"]["oracle"] == "referenece/src/oracle"
-    assert "referenece/src" in setuptools_config["packages"]["find"]["where"]
+    assert setuptools_config["package-dir"]["oracle"] == "reference/src/oracle"
+    assert "reference/src" in setuptools_config["packages"]["find"]["where"]
 
     target = _packaged_layout(packaged_sources, tmp_path, "acp", "oracle")
 
@@ -144,8 +144,8 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
     """oracle の builder と editor 入力境界が packaged layout で正本を参照する。
 
     根拠: {{work-root}}/spec/app_spec/prompt_editor_input.md
-    {{work-root}}/referenece/src/oracle/acp_builder/oracle/edit/launch_exec.py
-    {{work-root}}/referenece/src/oracle/acp_builder/oracle/investigation/launch_tui.py
+    {{work-root}}/reference/src/oracle/acp_builder/oracle/edit/launch_exec.py
+    {{work-root}}/reference/src/oracle/acp_builder/oracle/investigation/launch_tui.py
     """
     target = _packaged_layout(
         packaged_sources, tmp_path, "acp", "basic", "commons", "oracle"
@@ -236,7 +236,7 @@ def test_cmoc_config_reexports_only_config_definitions(
 
     `__all__` と module namespace の両方を確認し、packaged layout で内部実装が
     意図せず公開されないことを確認する。
-    根拠: {{work-root}}/referenece/src/oracle/other/cmoc_config.py
+    根拠: {{work-root}}/reference/src/oracle/other/cmoc_config.py
     {{work-root}}/spec/dev_rule/test_rule.md
     """
     target = _packaged_layout(packaged_sources, tmp_path, "config", "oracle")

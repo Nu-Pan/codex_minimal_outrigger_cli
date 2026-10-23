@@ -590,7 +590,7 @@ except KeyboardInterrupt:
     environment = {
         **os.environ,
         "PYTHONPATH": os.pathsep.join(
-            str(repository / path) for path in ("src", "referenece/src")
+            str(repository / path) for path in ("src", "reference/src")
         ),
     }
     # 明示した PYTHONPATH と標準ライブラリだけを使い、site の初期化を省く。

@@ -5,7 +5,7 @@
 root 不変条件の検証文脈が複数 file に分散するため、一つの runtime 回帰として保つ。
 
 根拠:
-- {{work-root}}/referenece/src/oracle/other/path_model.py
+- {{work-root}}/reference/src/oracle/other/path_model.py
 - {{work-root}}/spec/branch_model.md
 - {{work-root}}/spec/app_spec/run_isolation.md
 """

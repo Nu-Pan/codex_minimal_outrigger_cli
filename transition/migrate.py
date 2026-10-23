@@ -16,7 +16,8 @@ from urllib.parse import quote, unquote, urlsplit, urlunsplit
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
-_MOVES = {"referenece/src": "reference/src", "spec": "spec"}
+# receipt と旧パスの解釈に使うため、移設後も移設元の名前を保持する。
+_MOVES = {"oracle/src": "reference/src", "oracle/doc": "spec"}
 _RECEIPT = "transition/work/move.json"
 _ID = re.compile(r"\[(DECI|SPEC)-([^\]\s]+)\]")
 _HEADING_ID = re.compile(r"^\[(DECI|SPEC)-([^\]\s]+)\](?:\s|$)")

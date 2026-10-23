@@ -415,7 +415,7 @@ def _config_from_dict(
 
 def _reject_symlinked_config_path(path: Path) -> None:
     """config path の symlink 経由アクセスを拒否する。"""
-    # {{work-root}}/referenece/src/oracle/other/cmoc_config.py
+    # {{work-root}}/reference/src/oracle/other/cmoc_config.py
     # config は work-root 内の tracked file なので、link 先の設定を読み書きしない。
     current = path.absolute()
     while (parent := current.parent) != current:

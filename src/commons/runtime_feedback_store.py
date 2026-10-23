@@ -9,7 +9,7 @@ record の同一性判定が重複するため、raw observation store の境界
 
 - `{{work-root}}/spec/app_spec/feedback_observation.md`
 - `{{work-root}}/spec/app_spec/feedback_state.md`
-- `{{work-root}}/referenece/src/oracle/feedback/reporter_input.json`
+- `{{work-root}}/reference/src/oracle/feedback/reporter_input.json`
 """
 
 import errno

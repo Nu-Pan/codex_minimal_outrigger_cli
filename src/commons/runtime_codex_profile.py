@@ -816,7 +816,7 @@ def document_search_mcp_override_args(
                 "PYTHONPATH": os.pathsep.join(
                     (
                         str(Path(__file__).resolve().parents[1]),
-                        str(Path(__file__).resolve().parents[2] / "referenece/src"),
+                        str(Path(__file__).resolve().parents[2] / "reference/src"),
                     )
                 )
             },

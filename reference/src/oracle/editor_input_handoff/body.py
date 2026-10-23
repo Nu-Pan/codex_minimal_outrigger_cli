@@ -67,7 +67,7 @@ def build_editor_input_handoff_body(
         ValueError: 自由記述項目が空文字列または空白だけの場合。
 
     NOTE
-        `{{cmoc-root}}/referenece/src/oracle/editor_input_handoff/overwrite_input.json`
+        `{{cmoc-root}}/reference/src/oracle/editor_input_handoff/overwrite_input.json`
         の root schema（JSON Pointer `#`）による入力検証、参照情報の変換、
         送信元情報の取得、target の検証、および書き込みは呼び出し側が担う。
     """

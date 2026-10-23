@@ -14,8 +14,8 @@ TCP と実 fsync を繰り返さない。
 - `{{work-root}}/spec/app_spec/console_and_file_log.md`
 - `{{work-root}}/spec/app_spec/feedback_state.md`
 - `{{work-root}}/spec/app_spec/sub_command/feedback_report.md`
-- `{{work-root}}/referenece/src/oracle/acp_builder/feedback/normalize_issue.json`
-- `{{work-root}}/referenece/src/oracle/acp_builder/feedback/remediate_issue.json`
+- `{{work-root}}/reference/src/oracle/acp_builder/feedback/normalize_issue.json`
+- `{{work-root}}/reference/src/oracle/acp_builder/feedback/remediate_issue.json`
 """
 
 import errno
@@ -692,7 +692,7 @@ def test_reporter_availability_probe_checks_stdio_process_and_collector(
     monkeypatch.setenv("HOME", str(root))
     monkeypatch.setenv(
         "PYTHONPATH",
-        os.pathsep.join(str(source_root / path) for path in ("src", "referenece/src")),
+        os.pathsep.join(str(source_root / path) for path in ("src", "reference/src")),
     )
     probed_roots: list[Path] = []
 

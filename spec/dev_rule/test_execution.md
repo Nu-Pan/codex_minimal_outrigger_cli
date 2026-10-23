@@ -52,7 +52,7 @@ cd "$cmoc_work_root"
 
 - `pyproject.toml`
 - `src`
-- `referenece/src`
+- `reference/src`
 - `test`
 
 `pyproject.toml` は、現在の検査に使用する機械可読な realization 設定とする。選択した interpreter で次の command を実行する。
@@ -76,8 +76,8 @@ cd "$cmoc_work_root"
 - test helper の変更では、helper を直接検証する test と、変更した interface の主要な利用側を選ぶ。
 - test file に実経路統合テストとそれ以外の test が混在する場合は、`real_path_integration` marker で別 command に分ける。
 - 以下の pytest command で、marker だけでは Real Codex CLI を使う test を通常検証から除外できない場合は、test paths または node ID で対象を調整する。full test では、通常検証に属する test を全件含める。
-- Ruff の first-party 対象は `src`、`referenece/src`、`test` とし、変更中は変更 path に絞ってよい。
-- mypy の対象は `src` と `referenece/src` とし、`test` を追加しない。
+- Ruff の first-party 対象は `src`、`reference/src`、`test` とし、変更中は変更 path に絞ってよい。
+- mypy の対象は `src` と `reference/src` とし、`test` を追加しない。
 - 文書だけを変更した場合は、参照、用語、path、command、および project 設定との整合性を検査する。
 
 ## 選択した Python interpreter で pytest を実行する
@@ -189,17 +189,17 @@ PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
 
 - 追加検証の対象に選ばれた実経路統合テストは、本書の「実経路統合テストを実行する」に従って別 command で実行する。
 - 変更した first-party path に Ruff check と Ruff format check を実行する。
-- `src` または `referenece/src` の変更には、変更 module と主要な利用側に mypy を実行する。
+- `src` または `reference/src` の変更には、変更 module と主要な利用側に mypy を実行する。
 - failure は、実行環境、外部 executable、model provider、quota、timeout、helper、または test assertion のどこで発生したかを分類する。
 
 ## fresh な完了ゲートを実行する
 
-`src`、`referenece/src`、`test` の Python code、Ruff・mypy・pytest の設定、または開発依存関係を変更した場合は、最後の変更後に次の通常検証の全 command を現在の worktree で fresh に実行する。
+`src`、`reference/src`、`test` の Python code、Ruff・mypy・pytest の設定、または開発依存関係を変更した場合は、最後の変更後に次の通常検証の全 command を現在の worktree で fresh に実行する。
 
 ```bash
-"$cmoc_python" -m ruff check src referenece/src test
-"$cmoc_python" -m ruff format --check src referenece/src test
-"$cmoc_python" -m mypy src referenece/src
+"$cmoc_python" -m ruff check src reference/src test
+"$cmoc_python" -m ruff format --check src reference/src test
+"$cmoc_python" -m mypy src reference/src
 PYTHONDEVMODE=1 PYTHONWARNINGS="error::ResourceWarning" \
     "$cmoc_python" -m pytest \
     test -ra -m "not real_path_integration"

@@ -19,7 +19,7 @@
 - cmoc は、Model、Reasoning Effort、および model provider の組み合わせに対する互換性検査や allowlist を持たない
 - Codex CLI が設定を拒否した場合、非対話 call は `{{cmoc-root}}/spec/app_spec/codex_exec_rule.md` の「`codex exec` が失敗した場合」に従う。TUI process は `{{cmoc-root}}/spec/app_spec/codex_tui_rule.md` の「対話 resume の process」に従う
 - Structured Output の補正、retry、および回復待ち後の再開を個別の設定単位にしてはならない
-- 設定データ構造、field 名、型、および既定値の正確な詳細は、`{{cmoc-root}}/referenece/src/oracle/other/cmoc_config.py` の `CodexCallConfig`、`CodexModelProviderConfig`、および `CmocConfigCodex` へ委譲する。受理する設定キーと各 entry の既定値は `CmocConfigCodex.agent_calls` を正本とする
+- 設定データ構造、field 名、型、および既定値の正確な詳細は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CodexCallConfig`、`CodexModelProviderConfig`、および `CmocConfigCodex` へ委譲する。受理する設定キーと各 entry の既定値は `CmocConfigCodex.agent_calls` を正本とする
 - 取得した設定を Codex CLI の argv へ反映し、同じ agent call で維持する規則は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「Model provider、Model、Reasoning Effort」を正本とする
 
 ### TUI 起動での設定の確定

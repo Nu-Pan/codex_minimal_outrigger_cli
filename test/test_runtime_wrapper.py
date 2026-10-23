@@ -4,7 +4,7 @@
 - {{work-root}}/spec/dev_rule/development_environment.md
 - {{work-root}}/spec/app_spec/error_handling.md
 - {{work-root}}/spec/app_spec/cli_auto_completion.md
-- {{work-root}}/referenece/src/oracle/other/path_model.py
+- {{work-root}}/reference/src/oracle/other/path_model.py
 """
 
 import shutil

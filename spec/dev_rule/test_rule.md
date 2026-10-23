@@ -77,7 +77,7 @@ Fake Codex CLI は、Real Codex CLI の代わりに決定論的な応答を返�
 
 ### agent call の設定選択と固定
 
-設定の生成・検証は単体テスト、起動設定への反映は Fake Codex CLI を中心に、次を確認する。意味仕様は、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「回復確認 probe の設定例外」と、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「呼び出し単位と ID」「Model provider、Model、Reasoning Effort」を正本とする。設定の正確なキーと既定値は、`{{cmoc-root}}/referenece/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` を参照する。
+設定の生成・検証は単体テスト、起動設定への反映は Fake Codex CLI を中心に、次を確認する。意味仕様は、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「回復確認 probe の設定例外」と、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「呼び出し単位と ID」「Model provider、Model、Reasoning Effort」を正本とする。設定の正確なキーと既定値は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` を参照する。
 
 | 検証対象 | 確認する結果 |
 |---|---|

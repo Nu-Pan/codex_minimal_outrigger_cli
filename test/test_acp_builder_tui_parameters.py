@@ -1,6 +1,6 @@
 """TUI 起動 builder の固定 parameter と prompt を検証する。
 
-対応する正本: {{work-root}}/referenece/src/oracle/acp_builder/tui/launch_tui.py
+対応する正本: {{work-root}}/reference/src/oracle/acp_builder/tui/launch_tui.py
 """
 
 from pathlib import Path

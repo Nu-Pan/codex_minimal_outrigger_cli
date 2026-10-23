@@ -20,7 +20,7 @@ cmoc の Python 実行環境と必須依存、Git、および Codex CLI が利�
 
 cmoc 本体と doctor を起動するための Python 環境・起動用依存は事前導入の範囲とする。検索用 runtime・モデル等の未準備を、doctor 自身を起動できない理由にしてはならない。doctor は OS、Git、Codex CLI、または model provider の導入・修復を担わず、自動修復しない必須依存の不足も診断してエラーとする。
 
-保存設定は、検索設定に加え、`agent_calls` のキー集合、そこに置く共有設定と個別設定、および provider 定義の存在・構造と参照整合性を検証する。設定の正確な構造は、`{{cmoc-root}}/referenece/src/oracle/other/cmoc_config.py` の `CmocConfig` と `CmocConfigCodex`、検証の意味と限界は、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「provider 定義」に従う。
+保存設定は、検索設定に加え、`agent_calls` のキー集合、そこに置く共有設定と個別設定、および provider 定義の存在・構造と参照整合性を検証する。設定の正確な構造は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CmocConfig` と `CmocConfigCodex`、検証の意味と限界は、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」「provider 定義」に従う。
 
 検索以外の保存済み設定を自動で補完・置換せず、不備には手動修正を案内する。設定ファイル自体がない場合の生成は、本書の「検索設定の検証と補完」に従う。provider 固有の認証・疎通や Model の互換性検査を追加しない。
 
@@ -46,7 +46,7 @@ cmoc 本体と doctor を起動するための Python 環境・起動用依存�
 cmoc が固定の作業用配置先として案内するディレクトリを、空でも利用できるようにする。存在保証の対象集合は次の五つとし、配置先の意味は `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle doc と oracle src の正本責務」「realization file の責務」に従う。
 
 - `{{work-root}}/spec`
-- `{{work-root}}/referenece/src`
+- `{{work-root}}/reference/src`
 - `{{work-root}}/oracle/test`
 - `{{work-root}}/src`
 - `{{work-root}}/test`
@@ -124,7 +124,7 @@ agent が書き込めない `.agents` は、doctor preprocess があらかじめ
 
 明示的な `cmoc doctor` は、確認入力を求めず、次の不足だけを補う。
 
-- 設定ファイルがなければ、`{{cmoc-root}}/referenece/src/oracle/other/cmoc_config.py` の `CmocConfig` が定める既定状態から生成する。
+- 設定ファイルがなければ、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CmocConfig` が定める既定状態から生成する。
 - `document_search` 全体の欠落には検索設定の暫定既定値を補う。
 - 検索設定の object 内で項目が欠落していれば、その項目の暫定既定値を補う。
 

@@ -37,11 +37,11 @@
 - MCP tool の description
     - ベクトル検索の MCP tool がひどいものだったので、他もひどいに違いない
     - ベクトル検索の MCP tool と同様に、数値定義と自然言語的な説明は oracle file に引き上げたい
-- `referenece/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
-- `referenece/src/oracle/prompt_builder/policy/realization_findings.py`
+- `reference/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
+- `reference/src/oracle/prompt_builder/policy/realization_findings.py`
 - `cmoc feedback report` の動的生成プロンプト
 - git commit `c71555d608c93043e9b8ebc1071f58b999f7bcc1` でなんか変更が入っている
-- `referenece/src/oracle/acp_builder/oracle/investigation/launch_tui.py`
+- `reference/src/oracle/acp_builder/oracle/investigation/launch_tui.py`
     - 「ユーザー指示が要求する事項を調査して回答する」になってるらしいんだけど、調査とは限らないよなぁ
 
 ## primary report の内容に対する不満

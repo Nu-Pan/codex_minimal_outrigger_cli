@@ -20,13 +20,13 @@
 
 editor input handoff を含むエディタ入力は、`{{cmoc-root}}/spec/app_spec/prompt_editor_input.md` の「プロンプトのエディタ入力」が定める共通 lifecycle を使用する。editor 終了後に抽出して確定したオリジナルのユーザー指示から、両回で使用する完全 prompt と `AgentCallParameter` を一度だけ構築する。
 
-正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/referenece/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_request` へ委譲する。構築済み prompt の受け渡しは、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「prompt の構築と受け渡し」、非対話 call への保存・入力は、`{{cmoc-root}}/spec/app_spec/codex_exec_rule.md` の「prompt の保存と stdin 入力」を正本とする。
+正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/oracle/edit/launch_exec.py` の `build_oracle_edit_request` へ委譲する。構築済み prompt の受け渡しは、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「prompt の構築と受け渡し」、非対話 call への保存・入力は、`{{cmoc-root}}/spec/app_spec/codex_exec_rule.md` の「prompt の保存と stdin 入力」を正本とする。
 
 handoff を受けた場合も、入力確定後は本書の「実行順序」に従って編集へ進む。送信元 Codex process の終了や最終結果の確定を開始条件にしない。
 
 ### 両回で共用する設定
 
-完全 prompt と `AgentCallParameter` の構築時に、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」に従って、model provider、Model、Reasoning Effort、および使用する provider-local 設定の値を取得して確定する。設定キーと既定値を含む正確な定義は、`{{cmoc-root}}/referenece/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` と `CmocConfigCodex.model_providers` を参照する。
+完全 prompt と `AgentCallParameter` の構築時に、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」に従って、model provider、Model、Reasoning Effort、および使用する provider-local 設定の値を取得して確定する。設定キーと既定値を含む正確な定義は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` と `CmocConfigCodex.model_providers` を参照する。
 
 `AgentCallParameter` の全内容と、人間が調整した値を含む確定済みの設定値は、変更せず両回で使用する。そのため、1 回目が cmoc 自身の builder や設定定義を編集しても、再構築・再取得しない。
 

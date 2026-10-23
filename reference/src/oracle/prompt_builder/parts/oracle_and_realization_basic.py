@@ -40,7 +40,7 @@ def build_oracle_and_realization_basic(
                         - `{{work-root}}/spec` に配置されている
                     - oracle src
                         - oracle file のうち、プログラミング言語・設定ファイルで記述された実装
-                        - `{{work-root}}/referenece/src` に配置されている
+                        - `{{work-root}}/reference/src` に配置されている
                     - oracle test
                         - oracle file のうち、プログラミング言語で記述されたテスト
                         - `{{work-root}}/oracle/test` に配置されている

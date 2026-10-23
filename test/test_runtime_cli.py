@@ -9,7 +9,7 @@
 - {{work-root}}/spec/app_spec/codex_tui_rule.md
 - {{work-root}}/spec/app_spec/timestamp.md
 - {{work-root}}/spec/app_spec/windows_toast_notification.md
-- {{work-root}}/referenece/src/oracle/other/path_model.py
+- {{work-root}}/reference/src/oracle/other/path_model.py
 
 CLI lifecycle の error、log、preflight、completion は同じ runner、work root、
 subcommand event を共有する一つの外部契約として一箇所で検証する。

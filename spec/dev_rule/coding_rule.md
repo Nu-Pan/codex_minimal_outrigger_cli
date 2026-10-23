@@ -19,7 +19,7 @@ cwd を表す内部識別子には、cwd の主体または具体的な役割を
 
 ## 型ヒント
 
-- 型注釈は、`{{cmoc-root}}/src` と `{{cmoc-root}}/referenece/src` にある関数・メソッドの引数と戻り値に必須とする
+- 型注釈は、`{{cmoc-root}}/src` と `{{cmoc-root}}/reference/src` にある関数・メソッドの引数と戻り値に必須とする
 - `{{cmoc-root}}/test` は、型注釈の必須範囲に含めない
 - `Any` は外部境界など必要な局所範囲に限って許容し、型付け済みの値へ不必要に流出させない
 - 型エラーは実装または正確な型注釈で解消する
@@ -35,7 +35,7 @@ cwd を表す内部識別子には、cwd の主体または具体的な役割を
 
 ## docstring
 
-- docstring の機械検査対象は、`{{cmoc-root}}/src` と `{{cmoc-root}}/referenece/src` の公開 module・class・function・method とする
+- docstring の機械検査対象は、`{{cmoc-root}}/src` と `{{cmoc-root}}/reference/src` の公開 module・class・function・method とする
 - private helper と `{{cmoc-root}}/test` は、この機械検査を必須としない
 - docstring は Google style に従う
 - シグネチャや型注釈を言い換えるだけの説明は避ける。Google style を成立させるために必要な構造は、冗長とは扱わない

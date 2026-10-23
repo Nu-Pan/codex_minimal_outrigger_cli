@@ -2,7 +2,7 @@
 
 set -eu
 
-# {{work-root}}/referenece/src/oracle/other/path_model.py
+# {{work-root}}/reference/src/oracle/other/path_model.py
 # 配置先の切り出しだけで外部 process を起動しない。
 case "$0" in
     */*) cmoc_bin_dir=${0%/*}/ ;;

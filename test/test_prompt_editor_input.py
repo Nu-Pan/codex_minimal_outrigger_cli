@@ -2,7 +2,7 @@
 
 正本仕様:
 - {{work-root}}/spec/app_spec/prompt_editor_input.md
-- {{work-root}}/referenece/src/oracle/prompt_builder/editor_input.py
+- {{work-root}}/reference/src/oracle/prompt_builder/editor_input.py
 """
 
 import os

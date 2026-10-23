@@ -28,7 +28,7 @@ agent call ID と Codex call ID の書式と採番は、`{{cmoc-root}}/spec/app_
 
 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする。AgentCallParameter builder は、その oracle doc から明示的に委譲された範囲で、正確な prompt 文面と workload 固有の起動パラメータを構築する。ただし、model provider、Model、および Reasoning Effort は構築対象から除く。
 
-`AgentCallParameter` の field 名、型、既定値、および初期 prompt と対話再開の排他条件を含む正確な構造は、`{{cmoc-root}}/referenece/src/oracle/acp_builder/basic.py` の `AgentCallParameter` と `TuiResumeTarget` へ委譲する。
+`AgentCallParameter` の field 名、型、既定値、および初期 prompt と対話再開の排他条件を含む正確な構造は、`{{cmoc-root}}/reference/src/oracle/acp_builder/basic.py` の `AgentCallParameter` と `TuiResumeTarget` へ委譲する。
 
 ## Codex session ID
 
@@ -48,9 +48,9 @@ agent call の path context は、その call に設定する cwd を起点に�
 
 path context に関する正確な定義は、次の oracle src へ委譲する。
 
-- call-scoped path context、root placeholder、および Git command を含む導出処理：`{{cmoc-root}}/referenece/src/oracle/other/path_model.py` の `RootPathPlaceHolder`、`AgentCallPathContext`、`resolve_work_root`、および `resolve_repo_root`
-- prompt part との受け渡し：`{{cmoc-root}}/referenece/src/oracle/prompt_builder/basic.py` の `PlaceholderMap`
-- 完全 prompt への統合：`{{cmoc-root}}/referenece/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`
+- call-scoped path context、root placeholder、および Git command を含む導出処理：`{{cmoc-root}}/reference/src/oracle/other/path_model.py` の `RootPathPlaceHolder`、`AgentCallPathContext`、`resolve_work_root`、および `resolve_repo_root`
+- prompt part との受け渡し：`{{cmoc-root}}/reference/src/oracle/prompt_builder/basic.py` の `PlaceholderMap`
+- 完全 prompt への統合：`{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`
 
 ### `{{work-root}}` に対する仮定
 
@@ -178,9 +178,9 @@ agent による `.agents` ツリー内の編集は、file access mode にかか�
 
 #### prompt の構築と sandbox との関係
 
-`build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および各 mode の正確な prompt 文面は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する。一時作業領域の読み書きの例外は、対象の禁止と同じ file access policy 内で表現する。
+`build_file_access_policy` の結果は、共通 file access policy の有無を表す。Python 上の正確な不在値と戻り値型、および各 mode の正確な prompt 文面は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/file_access.py` の `build_file_access_policy` へ委譲する。一時作業領域の読み書きの例外は、対象の禁止と同じ file access policy 内で表現する。
 
-`build_complete_prompt` はこの結果に基づいて共通 file access policy の追加可否を決める。完全 prompt への正確な追加条件は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
+`build_complete_prompt` はこの結果に基づいて共通 file access policy の追加可否を決める。完全 prompt への正確な追加条件は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
 
 path ごとの読み書き可否などの詳細な制限を sandbox に反映しようとしてはならない。詳細なファイルアクセス制限がプロンプトだけで指示され、sandbox では強制されないことを許容する。
 
@@ -279,11 +279,11 @@ objective は、専用機構が所有する次の内容を重複させない。
 - runtime input は、caller の dynamic prompt が所有する。
 - Structured Output の構造と schema で表現できる出力要件は、`AgentCallParameter.structured_output_schema_path` が指す schema が所有する。
 
-objective の外側の block、正確な引数、項目名、構築順序、任意項目の省略条件、および rendering は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
+objective の外側の block、正確な引数、項目名、構築順序、任意項目の省略条件、および rendering は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。
 
 ### call 固有の実行時指示の優先関係
 
-`prompt > oracle file > installed skill` と表現される優先関係は、cmoc の恒常的な意味仕様ではなく、call 固有の目的、作業範囲、入力、および権限に適用する。この正確な agent-facing literal は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/policy/oracle.py` の `build_oracle_policy` へ委譲する。
+`prompt > oracle file > installed skill` と表現される優先関係は、cmoc の恒常的な意味仕様ではなく、call 固有の目的、作業範囲、入力、および権限に適用する。この正確な agent-facing literal は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/oracle.py` の `build_oracle_policy` へ委譲する。
 
 call 固有の実行時指示の優先関係は、prompt literal に cmoc の新しい意味仕様を作る権限を与えない。prompt literal と oracle doc が所有する意味仕様が食い違う場合は、prompt literal による仕様変更とは扱わず、oracle file 間の不整合として扱う。
 
@@ -291,7 +291,7 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 `SDPolicy.exception` は、同じ `SDPolicy` 内の「必須」「禁止」「許容」に優越する。他の policy、個別機能の利用条件、または workload 全体の制限を解除するものではない。
 
-カテゴリの正確な構造と agent 向け表示は、`{{cmoc-root}}/referenece/src/oracle/other/struct_doc.py` の `SDPolicy` と `_render_sd_policy_as_markdown` へ委譲する。
+カテゴリの正確な構造と agent 向け表示は、`{{cmoc-root}}/reference/src/oracle/other/struct_doc.py` の `SDPolicy` と `_render_sd_policy_as_markdown` へ委譲する。
 
 ### Git 差分の参照入力
 
@@ -307,8 +307,8 @@ call 固有の実行時指示の優先関係は、prompt literal に cmoc の新
 
 初期入力を伴う呼び出しでは、`AgentCallParameter.prompt` に完全 prompt 本文を設定する。cmoc は、builder が生成して確定した値を変更せず、初回 Codex call に渡す。realization implementation は、prompt 本文に独自の指示、注意書き、説明、整形、要約、補完、翻訳、補助文脈、モデル・reasoning effort 情報、その他の意味変更を加えてはならない。
 
-- 完全 prompt の共通構築順序は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。同関数が、prompt part、目的、および placeholder 定義を統合する正確な順序を所有する
-- prompt の共通 rendering は、`{{cmoc-root}}/referenece/src/oracle/other/struct_doc.py` の `render_sd_node_as_markdown` へ委譲する。同関数が、構造化された prompt を Markdown 文字列へ変換する正確な rendering を所有する
+- 完全 prompt の共通構築順序は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する。同関数が、prompt part、目的、および placeholder 定義を統合する正確な順序を所有する
+- prompt の共通 rendering は、`{{cmoc-root}}/reference/src/oracle/other/struct_doc.py` の `render_sd_node_as_markdown` へ委譲する。同関数が、構造化された prompt を Markdown 文字列へ変換する正確な rendering を所有する
 
 prompt の確定前後に行う処理は、次のように区別する。
 
@@ -320,8 +320,8 @@ prompt の確定前後に行う処理は、次のように区別する。
 ## feedback reporter と collector context
 
 - reporting の意味は `{{cmoc-root}}/spec/app_spec/feedback_observation.md` の「agent による報告」を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
-- `AgentCallParameter` は、reporter の提供を有効にするかを agent call 単位で保持する。正確な field 名、型、および既定値は、`{{cmoc-root}}/referenece/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
-- builder が完全 prompt を構築する場合は、reporter の提供判断と同じ値を渡す。有効な call には報告規定を注入し、無効な call には注入しない。正確な選択引数と配置は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
+- `AgentCallParameter` は、reporter の提供を有効にするかを agent call 単位で保持する。正確な field 名、型、および既定値は、`{{cmoc-root}}/reference/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
+- builder が完全 prompt を構築する場合は、reporter の提供判断と同じ値を渡す。有効な call には報告規定を注入し、無効な call には注入しない。正確な選択引数と配置は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - 提供を無効にする call は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「issue 処理 call の observation 報告」と、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「重要事項確認用 call > agent の責務と境界」に従う。対象外の builder は、reporter と報告規定をともに有効にする既定の契約を維持する
 - 初回、Structured Output の補正、retry、および回復待ち後の再開を含む同一 agent call の全 Codex call で、この提供判断を維持する
 - 提供が有効な場合、cmoc は Codex call の開始前に、`{{cmoc-root}}/spec/app_spec/feedback_observation.md` の「collector と transport」が定める call context と capability を登録し、call-scoped な local stdio MCP reporter/client を利用可能にする。無効な場合は、その call 用の reporter/client を起動せず、reporter context と capability を登録しない
@@ -339,11 +339,11 @@ prompt の確定前後に行う処理は、次のように区別する。
 
 editor input handoff の提供対象、利用条件、および agent の責務は、`{{cmoc-root}}/spec/app_spec/editor_input_handoff.md` の「概要」「agent の責務と権限」を正本とする。
 
-- `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/referenece/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
+- `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/reference/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
 - 提供対象外の builder は `enable_editor_input_handoff_mcp` の既定値を使用する
 - 有効な各 call には `cmoc_editor_input` MCP server を提供する。handoff ガイド取得と上書きの公開 tool は、`{{cmoc-root}}/spec/app_spec/editor_input_handoff.md` の「MCP interface」に従う。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
-- handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
-- handoff instruction の正確な agent 向け文面は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
+- handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
+- handoff instruction の正確な agent 向け文面は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する
 - 有効な各 Codex process について、cmoc の起動・呼び出し管理経路が、実際の送信元情報を MCP の呼び出し元コンテキストへ供給する。情報の意味、process 間の分離、および正確な構造の委譲は、`{{cmoc-root}}/spec/app_spec/editor_input_handoff.md` の「送信元情報」と「正本の分担」に従う
 - 各 process の起動前に、その process の Codex call ID の確保、MCP への送信元情報の供給、および `{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「handoff 送信元情報の記録」に従う記録と flush を完了する。ログの対応付けと MCP への供給には同じ実際の値を使い、別の call の ID を代用せず、当該 process の起動時に別の ID を再発行しない
 
@@ -351,13 +351,13 @@ editor input handoff の提供対象、利用条件、および agent の責務�
 
 検索の対象、信頼境界、同期、結果、失敗、および資源管理は、`{{cmoc-root}}/spec/app_spec/document_search.md` の「cmoc 専用文書検索」を正本とする。本節は call と MCP 接続の責務を所有する。
 
-- 検索 MCP の有効化を呼び出し単位で指定する。正確な field・型・既定値は、`{{cmoc-root}}/referenece/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。builder が完全 prompt を構築する場合は、その検索有効状態を起動パラメータと一致させる。
+- 検索 MCP の有効化を呼び出し単位で指定する。正確な field・型・既定値は、`{{cmoc-root}}/reference/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。builder が完全 prompt を構築する場合は、その検索有効状態を起動パラメータと一致させる。
 - oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の所見調査・修正、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。短い応答だけで可用性を確認する回復 probe と、固定した report 本文だけを読む重要事項確認用 call では検索を無効にする。
 - 各 call では検索要求時の自動同期を使う。起動時の検索設定・検索用コンポーネントの検査と索引同期は、`{{cmoc-root}}/spec/app_spec/doctor_preprocess.md` の「実行手順」「検索索引の同期」に従う。Structured Output の補正・retry・再開でも検索の有効状態と work-root を維持する。
 - 有効な各 Codex process に local stdio MCP 接続を設ける。検索 server の cwd、実行ファイル、引数、許可 tool、approval behavior、起動・tool 期限、および信頼された context の供給を、呼び出し単位の argv override で管理する。設定の符号化には本書の「Codex CLI 引数による設定上書き」を使う。
 - 起動管理側は、内側の検索要求の全体上限に停止・回収・返送の余裕を加えて、外側の MCP tool 期限を設定する。有効な設定変更時も、実行途中の動的延長に依存せずこの関係を保つ。内側の期限と停止は、`{{cmoc-root}}/spec/app_spec/document_search.md` の「排他、期限、終了」に従う。余裕の具体値は実装に委ね、同文書の「製品受入条件」で連携を検証する。
 - 起動管理側は、検索の診断記録を呼出し元のサブコマンドログへ届け、実行 ID・Codex call・対象 work-root と対応付ける信頼された context を供給する。context は MCP 引数や agent の申告から決めない。記録と相関の要件は、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従う。
-- server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/referenece/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・work-root への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
+- server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/reference/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・work-root への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
 - 通常の検索 tool は human approval、auto-review、command escalation を要求せず利用できるよう設定する。これは sandbox、permission profile、network access、file access mode の拡張を意味しない。
 - `$CODEX_HOME/config.toml` を書き換えない。既存 feedback/handoff MCP の設定と接続を保持して共存させ、検索設定の注入で上書き・無効化しない。
 - Codex process の終了時は起動管理側が接続を閉じ、検索側の子 process 回収まで確認する。TUI と `codex exec` のどちらにも同じ接続境界を適用する。

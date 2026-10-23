@@ -3,7 +3,7 @@
 根拠:
 - {{work-root}}/spec/app_spec/codex_common_rule.md
 - {{work-root}}/spec/app_spec/codex_exec_rule.md
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/file_access.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/file_access.py
 """
 
 import json
@@ -190,7 +190,7 @@ def test_run_codex_exec_uses_agent_call_cwd_independent_of_pure_oracle_read(
 
     正本仕様:
         {{work-root}}/spec/app_spec/codex_common_rule.md
-        {{work-root}}/referenece/src/oracle/prompt_builder/policy/file_access.py
+        {{work-root}}/reference/src/oracle/prompt_builder/policy/file_access.py
     """
     root = cli_repository
     (root / "oracle").mkdir()

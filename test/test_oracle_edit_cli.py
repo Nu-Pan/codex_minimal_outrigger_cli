@@ -1,7 +1,7 @@
 """`cmoc oracle edit` の main-worktree exec 制御を検証する。
 
 根拠: {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
-{{work-root}}/referenece/src/oracle/acp_builder/oracle/edit/launch_exec.py
+{{work-root}}/reference/src/oracle/acp_builder/oracle/edit/launch_exec.py
 
 変更あり・なしの成功時と各回の失敗時で、editor、Git 差分、session state、通知境界を比較する。
 分割すると同じ invocation の前提と不変条件が重複するため、一つの制御テストに保つ。

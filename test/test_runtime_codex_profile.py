@@ -182,7 +182,7 @@ def test_search_mcp_rejects_external_transport_collision(
     server = codex_override_config(argv)["mcp_servers"]["cmoc_document_search"]
     assert server["env"]["PYTHONPATH"].split(os.pathsep) == [
         str(Path(__file__).resolve().parents[1] / "src"),
-        str(Path(__file__).resolve().parents[1] / "referenece/src"),
+        str(Path(__file__).resolve().parents[1] / "reference/src"),
     ]
     calls: list[list[str]] = []
 

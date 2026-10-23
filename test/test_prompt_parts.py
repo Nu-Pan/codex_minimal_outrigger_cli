@@ -11,18 +11,18 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/spec/app_spec/oracle_and_realization.md
 - {{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md
 - {{work-root}}/spec/app_spec/sub_command/session_join.md
-- {{work-root}}/referenece/src/oracle/other/struct_doc.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/basic.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/complete_prompt.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/conflict_resolution.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/editor_input_handoff.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/feedback_reporting.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/file_access.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/oracle.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/realization_findings.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/realization.py
-- {{work-root}}/referenece/src/oracle/prompt_builder/policy/routing.py
+- {{work-root}}/reference/src/oracle/other/struct_doc.py
+- {{work-root}}/reference/src/oracle/prompt_builder/basic.py
+- {{work-root}}/reference/src/oracle/prompt_builder/complete_prompt.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/conflict_resolution.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/editor_input_handoff.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/feedback_reporting.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/file_access.py
+- {{work-root}}/reference/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/oracle.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/realization_findings.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/realization.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/routing.py
 """
 
 from pathlib import Path

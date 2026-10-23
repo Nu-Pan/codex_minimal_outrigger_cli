@@ -16,7 +16,7 @@ lock・CLI/config・Git index はテスト観点としては分かれるが、�
 - `{{work-root}}/spec/app_spec/oracle_and_realization_file_enumeration.md`
 - `{{work-root}}/spec/app_spec/sub_command/doctor.md`
 - `{{work-root}}/spec/app_spec/sub_command/realization_refactor.md`
-- `{{work-root}}/referenece/src/oracle/other/cmoc_config.py`
+- `{{work-root}}/reference/src/oracle/other/cmoc_config.py`
 """
 
 import json
@@ -58,7 +58,7 @@ pytestmark = pytest.mark.usefixtures(
     "feedback_without_transport", "nonpersistent_execution_ids"
 )
 
-_WORK_DIRECTORIES = ("spec", "referenece/src", "oracle/test", "src", "test")
+_WORK_DIRECTORIES = ("spec", "reference/src", "oracle/test", "src", "test")
 
 
 @pytest.fixture(scope="module")

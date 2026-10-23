@@ -28,7 +28,7 @@
 この手順書は、cmoc 自身を新しい所有区分と開発フローへ移すための作業記録・実行手順である。製品仕様の正本にはしない。最終的な人間の決定は `decision`、人間が保守する資料・コードは `reference`、生成する仕様は `spec` に置く。
 
 - メモ `transition/rethinking_oracle_and_realization.md` の方向に沿い、人間が `decision`・`reference`、エージェントが `spec`・`realization` を編集する。
-- **`referenece/src` は全体を `reference/src` に移す。** プロンプトに埋め込む文言、その組合せを示すプログラム、schema、設定等を仕分けして realization へ移さない。
+- **`oracle/src` は全体を `reference/src` に移す。** プロンプトに埋め込む文言、その組合せを示すプログラム、schema、設定等を仕分けして realization へ移さない。
 - 人間がプロンプト文言と構築方法を保守する。reference のコードを直接利用し、realization 側に同内容を複製しない。
 - `cmoc decision plan` は調査・プラン提示、`cmoc decision apply` は spec 同期と realization 追従を担う。既存の `oracle investigation`、`oracle edit`、`realization apply` を置き換える。
 - 移行専用のプログラム、検査、作業記録は `transition` に集める。cmoc 本体には移行サブコマンド、旧配置への fallback、移行中だけの分岐を追加しない。製品コードには新仕様の通常動作を実装する。
@@ -175,8 +175,8 @@ Git 操作は人間が行い、スクリプトは commit、stash、branch 切替
 
 | 移設元 | 移設先 | 本文のパス更新前の状態 |
 |---|---|---|
-| `spec/**` | `spec/**` | 内容・相対構成・permission を変えずに移設する。decision 抽出前の初期材料であり、新仕様への同期は後で行う |
-| `referenece/src/**` | `reference/src/**` | 全体を内容・相対構成・permission を変えずに移設する |
+| `oracle/doc/**` | `spec/**` | 内容・相対構成・permission を変えずに移設する。decision 抽出前の初期材料であり、新仕様への同期は後で行う |
+| `oracle/src/**` | `reference/src/**` | 全体を内容・相対構成・permission を変えずに移設する |
 
 `move` は directory の rename を行う。既存の移設先を上書き・merge せず、全組合せを確認してから開始する。移設前の fingerprint を `transition/work/move.json` に保存し、内容、path、permission、空 directory の一致を確認する。移設元に含まれる通常ファイルは ignored なものも保持する。
 
@@ -190,7 +190,7 @@ symlink、特殊ファイル、Git metadata 等の保護対象が tree にあれ
 
 自動更新するのは次の範囲である。
 
-- 独立したパス接頭辞として現れる `spec` → `spec`、`referenece/src` → `reference/src`。root 相対、`./`、`{{work-root}}`・`{{cmoc-root}}`・`{{repo-root}}`、この checkout の絶対 path に対応する。本文、コメント、文字列、設定、コード例も対象になる。
+- 独立したパス接頭辞として現れる `oracle/doc` → `spec`、`oracle/src` → `reference/src`。root 相対、`./`、`{{work-root}}`・`{{cmoc-root}}`・`{{repo-root}}`、この checkout の絶対 path に対応する。本文、コメント、文字列、設定、コード例も対象になる。
 - Markdown の通常の inline link と参照定義にある相対 path。移設前の参照元から行き先を求め、移設後の参照元・先に合わせて書き換える。行き先を root 内で確認でき、現在の表記では別の既存対象へ到達しない場合に限る。query と anchor は保持する。
 
 Python package 名の `oracle`、外部 URL、別 repository の絶対 path、行き先が決まっていない `oracle/test` は一括 rename しない。`root / "oracle" / "src"` のような分割した表記、backslash 表記、解決できない相対リンクなどは確認候補として残す。動的なパス構築や特殊な Markdown 構文の全件検出は保証しない。
@@ -198,6 +198,8 @@ Python package 名の `oracle`、外部 URL、別 repository の絶対 path、�
 本文にある path が現在の参照なのか、意図的な旧入力・履歴なのかは、差分の内容確認で判断する。必要な旧表記はその確認で残し、仕様の意味や実行動作に関わる修正は工程 3 以降で行う。パス更新だけで新仕様への適合やリンク先の意味まで確認できたとは扱わない。
 
 パス更新はファイルごとに原子的に置換する。途中で失敗した場合は人手による後続編集を始めず、同じ `rewrite-paths` を再実行する。更新済みのパスは重ねて変換しない。移設の receipt を書き換えたり、`verify-move` を通すために変更を戻したりしない。
+
+`transition` 内の移設元 mapping、テストの移設前入力、手順書の旧パスは、移設後もそのまま保持する。エディタ等でこれらまで一括置換すると receipt の検証や旧パスの解釈が壊れるため、パス更新の対象に含めない。
 
 この時点から工程 6 の完了までは、旧 import path 等により cmoc が動作しない期間があり得る。配置移設成功を、製品の新仕様対応完了として記録しない。
 

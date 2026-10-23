@@ -2,7 +2,7 @@
 
 正本仕様:
 - {{work-root}}/spec/app_spec/editor_input_handoff.md
-- {{work-root}}/referenece/src/oracle/editor_input_handoff/overwrite_input.json
+- {{work-root}}/reference/src/oracle/editor_input_handoff/overwrite_input.json
 """
 
 import json

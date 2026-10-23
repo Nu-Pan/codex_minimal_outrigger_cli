@@ -7,7 +7,7 @@
 受理条件と永続化結果が複数 file に分散するため、一つの config 回帰として保つ。
 
 根拠:
-- {{work-root}}/referenece/src/oracle/other/cmoc_config.py
+- {{work-root}}/reference/src/oracle/other/cmoc_config.py
 - {{work-root}}/spec/app_spec/codex_model_provider.md
 - {{work-root}}/spec/app_spec/error_handling.md
 """

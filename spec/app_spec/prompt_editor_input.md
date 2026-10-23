@@ -8,7 +8,7 @@ editor の待機中は、人間の直接入力に加え、共通の editor input
 
 ## 構築定義の参照
 
-- 人間が直接記入する場合に向けた console 案内は、入力する内容を示す、長くても数行程度の簡単な説明とする。正確な文面は、`{{cmoc-root}}/referenece/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_console_guidance` へ委譲する。
+- 人間が直接記入する場合に向けた console 案内は、入力する内容を示す、長くても数行程度の簡単な説明とする。正確な文面は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/editor_input.py` の `build_prompt_editor_input_console_guidance` へ委譲する。
 - editor input handoff の target lifecycle、handoff ガイドの生成・保持・取得、および上書きは、`{{cmoc-root}}/spec/app_spec/editor_input_handoff.md` の「handoff target」「handoff ガイド」「MCP interface」、失敗時の責務は同文書の「agent の責務と権限」を正本とする。
 - 完全 prompt skeleton と入力確定後の完全 prompt は、各 agent call の正確な構築を所有する builder で構築する。oracle src への委譲は、`{{cmoc-root}}/spec/app_spec/sub_command/tui.md` の「全バックエンド共通」、`{{cmoc-root}}/spec/app_spec/sub_command/oracle_investigation.md` の「TUI 起動パラメータ」、および `{{cmoc-root}}/spec/app_spec/sub_command/oracle_edit.md` の「ユーザー指示と prompt の構築」を正本とする。
 - 生成済み editor input、handoff ガイド、および skeleton は実行時生成物であり、editor lifecycle または prompt 文面の正本ではない。

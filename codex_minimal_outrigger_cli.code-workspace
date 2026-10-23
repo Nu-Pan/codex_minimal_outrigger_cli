@@ -24,11 +24,11 @@
         "python.testing.pytestArgs": ["test", "-ra", "-m", "not real_path_integration"],
         "python.analysis.extraPaths": [
             "./src",
-            "./referenece/src"
+            "./reference/src"
         ],
         "python.analysis.include": [
             "src",
-            "referenece/src",
+            "reference/src",
             "test"
         ],
 		"[markdown]": {

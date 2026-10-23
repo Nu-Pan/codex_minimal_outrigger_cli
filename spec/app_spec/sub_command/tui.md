@@ -31,7 +31,7 @@ cmoc は、ユーザーから与えられたプロンプトへ cmoc 固有の契
 ### 全バックエンド共通
 
 - `build_tui_request` が返したパラメータを変更せずに使う。具体的な起動経路はバックエンドの規約に従う
-- 汎用 TUI の意味上の責務と新規起動条件は本書を正本とする。正確な prompt part の選択、文面、および workload 固有の新規起動・再開パラメータの構築は、`{{cmoc-root}}/referenece/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_request` へ委譲する
+- 汎用 TUI の意味上の責務と新規起動条件は本書を正本とする。正確な prompt part の選択、文面、および workload 固有の新規起動・再開パラメータの構築は、`{{cmoc-root}}/reference/src/oracle/acp_builder/tui/launch_tui.py` の `build_tui_request` へ委譲する
 - cmoc の基本規定は、各規定が明示する適用条件に該当する場合だけ、オリジナルプロンプトの作業へ適用する
 - TUI へ注入する基本規定の意味仕様は、次の文書を正本とする
     - oracle file と realization file の責務: `{{cmoc-root}}/spec/app_spec/oracle_and_realization.md` の「oracle file と realization file の責務」

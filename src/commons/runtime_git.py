@@ -27,7 +27,7 @@ from .runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/gu/"
-# {{work-root}}/referenece/src/oracle/other/cmoc_config.py
+# {{work-root}}/reference/src/oracle/other/cmoc_config.py
 # 他の child には広い user .cmoc/ rule を効かせつつ、追跡対象の repository config を
 # 到達可能にし、その他の `.cmoc` data は ignore されたままにする。
 CMOC_CONFIG_IGNORE_EXCEPTIONS = (
@@ -572,7 +572,7 @@ def _registered_worktree_branches(root: Path) -> dict[Path, str]:
 
 def _has_linked_worktree_metadata(root: Path, worktree: Path) -> bool:
     """worktree path と Git linked worktree metadata の相互参照を検証する。"""
-    # {{work-root}}/referenece/src/oracle/other/path_model.py
+    # {{work-root}}/reference/src/oracle/other/path_model.py
     # linked worktree の root は直下に .git file を持つ。Git の登録だけでは、
     # worktree directory が置換された stale entry と区別できないため、metadata の
     # 相互参照まで確認して fallback の再帰削除を許可する。

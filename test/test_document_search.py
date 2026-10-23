@@ -270,7 +270,7 @@ def test_search_only_reads_oracle_doc_markdown(
     for relative in (
         "spec/AGENTS.md",
         "spec/note.txt",
-        "referenece/src/code.md",
+        "reference/src/code.md",
         "specument/other.md",
         "realization.md",
     ):
@@ -1735,7 +1735,7 @@ def test_stdio_mcp_discovers_only_search_and_reports_not_ready(
     environment = {
         **os.environ,
         "PYTHONPATH": os.pathsep.join(
-            (str(project / "src"), str(project / "referenece/src"))
+            (str(project / "src"), str(project / "reference/src"))
         ),
     }
     with subprocess.Popen(
