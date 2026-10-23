@@ -371,7 +371,7 @@ def _production_environment(
         "PYTHONPATH": os.pathsep.join(
             [
                 str(installation / "src"),
-                str(installation / "oracle" / "src"),
+                str(installation / "reference" / "src"),
                 *([os.environ["PYTHONPATH"]] if os.environ.get("PYTHONPATH") else []),
             ]
         ),
