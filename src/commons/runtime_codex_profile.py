@@ -556,10 +556,10 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     match mode:
         case (
             FileAccessMode.READONLY
-            | FileAccessMode.PURE_ORACLE_READ
-            | FileAccessMode.REALIZATION_WRITE
-            | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
+            | FileAccessMode.DECISION_PLAN
+            | FileAccessMode.SPEC_WRITE
+            | FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.NO_POLICY
         ):
             return "workspace-write"
