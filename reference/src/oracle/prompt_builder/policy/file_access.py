@@ -22,58 +22,57 @@ def build_file_access_policy(
         「ファイルアクセス制限」を参照。
         sandbox の設定は non-goal である。
     """
-    if mode is FileAccessMode.NO_POLICY:
-        # NOTE
-        #   NO_POLICY は有効な mode であり、
-        #   共通 file access policy が空であることが正しい。
-        return None
-
     # mode 別の禁止事項
     match mode:
         case FileAccessMode.READONLY:
             # NOTE
             #   リポジトリ全体の **cmoc 上の論理的な意味での** 読み取り専用
-            #   主要な編集対象である oracle file, realization file を読み取り専用にする
+            #   `cmoc_basic_instruction` で定義されている各編集対象を読み取り専用にする
             #   一時作業領域は共通規定に従って利用できる
             #   調査系タスク、cmoc が書き込みを代行するケースで使われる想定
             mode_prohibit = [
-                "oracle file は書き込み禁止",
-                "realization file は書き込み禁止",
-            ]
-        case FileAccessMode.PURE_ORACLE_READ:
-            # NOTE
-            #   READONLY + realization file アクセス禁止
-            #   realization file に釣られずに oracle file から判断してほしい系のタスクで使われる想定
-            mode_prohibit = [
-                "oracle file は書き込み禁止",
-                "realization file は読み書き禁止",
+                "decision, reference, spec, realization は書き込み禁止",
             ]
         case FileAccessMode.REPO_WRITE:
             # NOTE
             #   リポジトリ書き込み可能
-            #   `cmoc tui` で微妙なタスクを渡された時に使われる想定
+            #   `cmoc tui` みたいな、何の仮定も置けないタスクで使われる想定
             mode_prohibit = [
-                # oracle file は書き込み許可
-                # realization file は書き込み許可
+                "decision, reference は書き込み禁止"
+                # decision, reference, spec, realization (つまり全部) が読み書き許可
             ]
-        case FileAccessMode.PURE_ORACLE_WRITE:
+        case FileAccessMode.DECISION_PLAN:
             # NOTE
-            #   REPO_WRITE + realization file アクセス禁止
-            #   realization file に釣られずに oracle file の修正作業をしてほしい時に使われる想定
+            #   `cmoc decision plan` 専用
             mode_prohibit = [
-                # oracle file は書き込み許可
-                "realization file は読み書き禁止",
+                "decision, reference, spec は書き込み禁止",
+                "realization は読み書き禁止",
+            ]
+        case FileAccessMode.SPEC_WRITE:
+            # NOTE
+            #   spec に対する編集操作用
+            #   `cmoc decision apply` (to spec) で使う想定
+            mode_prohibit = [
+                "decision, reference は書き込み禁止",
+                # spec は読み書き許可
+                "realization は読み書き禁止",
             ]
         case FileAccessMode.REALIZATION_WRITE:
             # NOTE
-            #   REPO_WRITE + oracle file 書き込み禁止
-            #   realization file を oracle file に追従させる作業で使われる想定
+            #   realization に対する編集操作用
+            #   `cmoc decision apply` (to realization) で使う想定
             mode_prohibit = [
-                "oracle file は書き込み禁止",
-                # realization file は書き込み許可
+                "decision, reference, spec は書き込み禁止",
+                # realization は読み書き許可
             ]
+        case FileAccessMode.NO_POLICY:
+            # NOTE
+            #   NO_POLICY は有効な mode であり、
+            #   共通 file access policy が空であることが正しい。
+            return None
         case _:
             raise ValueError(f"Invalid mode (mode={mode})")
+    # 規定全体を構築して返す
     return (
         path_context.root_placeholder_definitions(),
         SDHeader(
@@ -82,6 +81,8 @@ def build_file_access_policy(
                 what_is_this="エージェントによる直接ファイルアクセスが満たすべき規定を以下に示す",
                 require=(),
                 prohibit=(
+                    # NOTE
+                    #   Codex の repo-write サンドボックスのアクセス制限をここで明言
                     "`{{work-root}}` ツリー外は書き込み禁止",
                     "`{{work-root}}/.git` ツリー内は書き込み禁止",
                     "Git metadata は配置先によらず変更禁止",
@@ -102,7 +103,7 @@ def build_file_access_policy(
                     "Structured Output を受け取った外部ツールによるファイル書き込みは、この policy の書き込み制限の対象外とする",
                 ),
                 supplemental=(
-                    "この policy は deny list で記述しており、禁止されていない読み書きは暗に許容される",
+                    "この policy は deny list で記述しており、禁止されていない読み書きは暗黙に許容される",
                 ),
             ),
         ),

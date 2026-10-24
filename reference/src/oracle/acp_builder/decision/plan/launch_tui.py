@@ -57,7 +57,7 @@ def build_decision_plan_request(
             - ユーザー指示が要求する調査結果がユーザーへ回答されていること
             - 調査結果の根拠となる oracle file を回答から特定できること
             """,
-            file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+            file_access_mode=FileAccessMode.DECISION_PLAN,
             path_context=path_context,
             enable_document_search_mcp=True,
             aux_dynamic_prompt=[
@@ -83,7 +83,7 @@ def build_decision_plan_request(
     # 正常終了
     return AgentCallParameter(
         agent_call_kind=build_decision_plan_request.__name__,
-        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        file_access_mode=FileAccessMode.DECISION_PLAN,
         prompt=prompt,
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,

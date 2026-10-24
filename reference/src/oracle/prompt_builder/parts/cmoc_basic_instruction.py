@@ -21,7 +21,6 @@ def build_cmoc_basic_instruction(
                     "説明",
                     """
                     - decision は人間意図であり、人間が判断を下した決定事項であり、正本仕様断片である
-                    - decision は 100% 人間が所有し、agent は決して編集をしてはいけない
                     - GitHub Flavored Markdown で記述する
                     """,
                 ),
@@ -51,7 +50,6 @@ def build_cmoc_basic_instruction(
                     "説明",
                     """
                     - reference は decision から参照される補足資料である
-                    - reference は 100% 人間が所有し、agent は決して編集をしてはいけない
                     """,
                 ),
                 SDHeader(
@@ -73,7 +71,6 @@ def build_cmoc_basic_instruction(
                     "説明",
                     """
                     - spec は decision, reference を正本として AI エージェントが生成する仕様文章である
-                    - spec は AI エージェントが 100% 所有し、人間は決して編集をしない
                     - GitHub Flavored Markdown で記述する
                     """,
                 ),
@@ -103,7 +100,6 @@ def build_cmoc_basic_instruction(
                     "役割",
                     """
                     - realization は decision, reference, spec を正本として AI エージェントが生成する実体 (実装、テスト、補助ファイル) である
-                    - realization の主な所有者は AI エージェントだが、それ以外（人間、ツール）が変更を加えることもある
                     """,
                 ),
                 SDHeader(
@@ -126,7 +122,6 @@ def build_cmoc_basic_instruction(
                     "役割",
                     """
                     - memo は人間専用のメモである
-                    - memo は人間が所有し、AI エージェントは読み書きしてはいけない
                     """,
                 ),
                 SDHeader(
