@@ -137,21 +137,19 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
     assert result.returncode == 0, result.stderr
 
 
-def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
+def test_decision_builders_and_prompt_editor_import_from_packaged_layout(
     tmp_path: Path,
     packaged_sources: Path,
 ) -> None:
-    """oracle の builder と editor 入力境界が packaged layout で正本を参照する。
+    """decision の builder と editor 入力境界が packaged layout で正本を参照する。
 
     根拠: {{work-root}}/spec/app_spec/prompt_editor_input.md
-    {{work-root}}/reference/src/oracle/acp_builder/oracle/edit/launch_exec.py
-    {{work-root}}/reference/src/oracle/acp_builder/oracle/investigation/launch_tui.py
+    {{work-root}}/reference/src/oracle/acp_builder/decision/apply/launch_exec.py
+    {{work-root}}/reference/src/oracle/acp_builder/decision/plan/launch_tui.py
     """
-    target = _packaged_layout(
-        packaged_sources, tmp_path, "acp", "basic", "commons", "oracle"
-    )
+    target = _packaged_layout(packaged_sources, tmp_path, "basic", "commons", "oracle")
 
-    # root 探索の実 Git 境界は test_basic_runtime.py と oracle edit の結合 test に残す。
+    # root 探索の実 Git 境界は test_basic_runtime.py と調査 TUI の結合 test に残す。
     # builder・正本 schema・editor input・handoff guide は packaged module の実経路を通す。
     # submission のない TCP 起動は省き、登録・取得・上書き・drain は
     # test_editor_input_handoff.py、editor と target の結合は test_prompt_editor_input.py に残す。
@@ -162,7 +160,6 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
         (
             "import commons.prompt_editor_input as editor_input; "
             "import commons.runtime_editor_input_handoff_mcp as handoff_mcp; "
-            "import acp.builder.oracle.edit.launch_exec as edit_module; "
             "from pathlib import Path; "
             "from types import SimpleNamespace; "
             "from oracle.editor_input_handoff.guide import "
@@ -170,20 +167,19 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "import oracle.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
-            "from acp.builder.oracle.edit.launch_exec import "
-            "build_oracle_edit_request as build_main; "
-            "from oracle.acp_builder.oracle.investigation.launch_tui import "
-            "build_decision_plan_request as build_investigation; "
-            "investigation = build_investigation('investigate oracle'); "
+            "from oracle.acp_builder.decision.apply.launch_exec import "
+            "build_decision_apply_spec_request_impl, "
+            "build_decision_apply_realization_request_impl; "
+            "assert callable(build_decision_apply_spec_request_impl); "
+            "assert callable(build_decision_apply_realization_request_impl); "
+            "from oracle.acp_builder.decision.plan.launch_tui import "
+            "build_decision_plan_request as build_plan; "
+            "investigation = build_plan('investigate decision'); "
             "assert investigation.file_access_mode.value == 'pure_oracle_read'; "
             "assert investigation.agent_call_cwd == Path.cwd(); "
             "assert investigation.enable_document_search_mcp is True; "
             "assert investigation.enable_editor_input_handoff_mcp is True; "
-            "assert 'investigate oracle' in investigation.prompt; "
-            "assert edit_module.__all__ == "
-            "['build_oracle_edit_request']; "
-            "assert sorted(n for n in vars(edit_module) if not n.startswith('_')) "
-            "== sorted(edit_module.__all__); "
+            "assert 'investigate decision' in investigation.prompt; "
             "listed = handoff_mcp._response({"
             "'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list', 'params': {}}); "
             "assert [tool['name'] for tool in listed['result']['tools']] "
@@ -195,7 +191,7 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "lambda root: 'exec_000000_2000-01-01_00-00'; "
             "input_path = "
             "editor_input.reserve_prompt_editor_input(Path.cwd()); "
-            "skeleton = build_main("
+            "skeleton = build_plan("
             "editor_input.ORIGINAL_PROMPT_PLACEHOLDER).prompt; "
             "assert skeleton in build_editor_input_handoff_guide(skeleton); "
             "editor_input.start_editor_input_handoff = "
@@ -204,7 +200,7 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "editor_input._select_editor = lambda: ['fake-editor']; "
             "real_subprocess_run = editor_input.subprocess.run; "
             "editor_input.subprocess.run = lambda argv: "
-            "(Path(argv[-1]).write_text('oracle \\u3092\\u7de8\\u96c6\\u3059\\u308b', "
+            "(Path(argv[-1]).write_text('decision を調査する', "
             "encoding='utf-8'), "
             "SimpleNamespace(returncode=0))[1]; "
             "editor_input.edit_prompt_editor_input("
@@ -212,14 +208,18 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "editor_input.subprocess.run = real_subprocess_run; "
             "original = editor_input.collect_prompt_editor_input("
             "Path.cwd(), input_path); "
-            "p = build_main(original); "
+            "p = build_plan(original); "
             "assert input_path.read_text(encoding='utf-8') == "
-            "'oracle \\u3092\\u7de8\\u96c6\\u3059\\u308b'; "
+            "'decision を調査する'; "
             "assert p.structured_output_schema_path is None; "
-            "assert p.file_access_mode.value == 'pure_oracle_write'; "
+            "assert p.file_access_mode.value == 'pure_oracle_read'; "
             "assert p.enable_document_search_mcp is True; "
-            "assert 'oracle \\u3092\\u7de8\\u96c6\\u3059\\u308b' in p.prompt; "
-            "assert editor_input.ORIGINAL_PROMPT_PLACEHOLDER not in p.prompt; "
+            "original_instruction = p.prompt.split("
+            "'<cmoc_block id=\"original_user_instruction\">', 1)[1].split("
+            "'</cmoc_block>', 1)[0]; "
+            "assert 'decision を調査する' in original_instruction; "
+            "assert editor_input.ORIGINAL_PROMPT_PLACEHOLDER "
+            "not in original_instruction; "
             "assert not list(input_path.parent.glob('*_cmpl.md')); "
             "assert p.agent_call_cwd == Path.cwd(); "
         ),

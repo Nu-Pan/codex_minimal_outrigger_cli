@@ -1,7 +1,7 @@
-"""editing run workload の canonical builder adapter を検証する。
+"""editing run workload の正本 builder と残る adapter を検証する。
 
 対応する oracle file:
-- `{{work-root}}/reference/src/oracle/acp_builder/realization/apply/fork/launch_exec.py`
+- `{{work-root}}/reference/src/oracle/acp_builder/decision/apply/launch_exec.py`
 - `{{work-root}}/reference/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
 - `{{work-root}}/reference/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json`
 """
@@ -12,16 +12,13 @@ from pathlib import Path
 import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
-from oracle.acp_builder.realization.apply.fork.launch_exec import (
-    build_decision_apply_request as build_canonical_apply_parameter,
+from oracle.acp_builder.decision.apply.launch_exec import (
+    build_decision_apply_realization_request_impl,
 )
 from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_request as build_canonical_review_parameter,
 )
 
-from acp.builder.realization.apply.fork.launch_exec import (
-    build_decision_apply_request,
-)
 from acp.builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_request,
 )
@@ -58,9 +55,8 @@ def editing_run_paths(
     return root, run_worktree
 
 
-def test_editing_run_compatibility_builders_reexport_canonical_functions() -> None:
+def test_refactor_compatibility_builder_reexports_canonical_function() -> None:
     """互換 import 経路が prompt を加工せず正本 builder を再公開する。"""
-    assert build_decision_apply_request is build_canonical_apply_parameter
     assert build_realization_refactor_request is build_canonical_review_parameter
 
 
@@ -69,7 +65,7 @@ def test_decision_apply_builder_passes_commit_references(
 ) -> None:
     """apply builder が commit 参照と取得条件を prompt に含める。"""
     root, run_worktree = editing_run_paths
-    parameter = build_decision_apply_request(
+    parameter = build_decision_apply_realization_request_impl(
         "base-commit",
         "fork-commit",
         run_worktree,
@@ -84,16 +80,21 @@ def test_decision_apply_builder_passes_commit_references(
     assert "base-commit" in parameter.prompt
     assert "fork-commit" in parameter.prompt
     assert "diff --git" not in parameter.prompt
-    assert "両端のいずれかで oracle file だった path" in parameter.prompt
-    assert "oracle 内外の移動" in parameter.prompt
+    assert (
+        "始点・終点のいずれかで decision, reference, spec だったファイル"
+        in parameter.prompt
+    )
     assert "差分を取得できない場合は失敗として報告" in parameter.prompt
     objective = _objective_section(parameter.prompt)
     assert "# task" in objective
-    assert "oracle file の変更を、`{{work-root}}` リポジトリ全体" in objective
+    assert "decision, reference, spec の変更を realization に反映" in objective
     assert "# scope" in objective
-    assert "関連する oracle file と realization file をリポジトリ全体" in objective
+    assert "修正対象は `{{work-root}}` ツリー内の realization すべて" in objective
     assert "# completion criteria" in objective
-    assert "oracle file と realization file の間に齟齬がない" in objective
+    assert (
+        "終点の decision, reference, spec と作業結果の realization との間に齟齬がない"
+        in objective
+    )
     for heading in ("# realization policy", "# realization findings policy"):
         assert heading in parameter.prompt
     assert "# oracle policy" not in parameter.prompt

@@ -4,7 +4,7 @@
 - {{work-root}}/spec/app_spec/sub_command/decision_plan.md
 - {{work-root}}/spec/app_spec/document_search.md
 - {{work-root}}/spec/app_spec/prompt_editor_input.md
-- {{work-root}}/reference/src/oracle/acp_builder/oracle/investigation/launch_tui.py
+- {{work-root}}/reference/src/oracle/acp_builder/decision/plan/launch_tui.py
 """
 
 from pathlib import Path

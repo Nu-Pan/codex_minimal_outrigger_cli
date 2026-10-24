@@ -23,7 +23,7 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _handoff_support import handoff_input
-from oracle.acp_builder.oracle.investigation.launch_tui import (
+from oracle.acp_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
 )
 from oracle.acp_builder.tui.launch_tui import build_tui_request
@@ -403,9 +403,9 @@ def test_initial_and_transition_share_start_time_settings(directory, monkeypatch
         config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
             "openai", "changed-model", "high"
         )
-        config.codex.model_providers["openai"].settings[
-            "base_url"
-        ] = "https://changed.invalid"
+        config.codex.model_providers["openai"].settings["base_url"] = (
+            "https://changed.invalid"
+        )
         write_config(directory / ".cmoc/gt/config.json", config)
 
     calls = fake_initial(monkeypatch, on_call=change_config)

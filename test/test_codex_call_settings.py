@@ -15,6 +15,12 @@ from _codex_support import (
     script_codex_calls,
     setup_codex_home,
 )
+from oracle.acp_builder.decision.apply.launch_exec import (
+    build_decision_apply_realization_request_impl,
+)
+from oracle.acp_builder.decision.plan.launch_tui import (
+    build_decision_plan_request,
+)
 from oracle.acp_builder.feedback.normalize_issue import (
     build_feedback_issue_normalization_request,
 )
@@ -24,16 +30,10 @@ from oracle.acp_builder.feedback.remediate_issue import (
 from oracle.acp_builder.oracle.edit.launch_exec import (
     build_oracle_edit_request,
 )
-from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_decision_plan_request,
-)
 from oracle.acp_builder.primary_report_review import (
     build_primary_report_review_request,
 )
 from oracle.acp_builder.quota_probe import build_quota_availability_probe_request
-from oracle.acp_builder.realization.apply.fork.launch_exec import (
-    build_decision_apply_request,
-)
 from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_request,
 )
@@ -122,7 +122,7 @@ def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
 ):
     root = settings_root
     parameters = [
-        build_decision_apply_request("base", "head", root),
+        build_decision_apply_realization_request_impl("base", "head", root),
         build_realization_refactor_request(root / "src.py", root),
         build_feedback_issue_remediation_request('{"issue_id":"issue"}', root),
         build_run_join_conflict_resolution_request("run", "session", root),
@@ -197,9 +197,9 @@ def test_shared_settings_remain_fixed_across_output_corrections(
             config.codex.agent_calls["realization_edit"] = CodexCallConfig(
                 "openai", "changed", "low"
             )
-            config.codex.model_providers["provider_0"].settings[
-                "base_url"
-            ] = "https://changed.invalid"
+            config.codex.model_providers["provider_0"].settings["base_url"] = (
+                "https://changed.invalid"
+            )
 
     accepted = {
         "findings": [],
@@ -228,7 +228,7 @@ def test_invalid_saved_settings_fail_before_codex_launch(
     settings_root, monkeypatch, invalid
 ):
     root = settings_root
-    parameter = build_decision_apply_request("base", "head", root)
+    parameter = build_decision_apply_realization_request_impl("base", "head", root)
     data = config_to_dict(CmocConfig())
     if invalid == "missing_shared":
         del data["codex"]["agent_calls"]["realization_edit"]

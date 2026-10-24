@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from oracle.acp_builder.oracle.investigation.launch_tui import (
+from oracle.acp_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
 )
 from oracle.acp_builder.tui.launch_tui import build_tui_request

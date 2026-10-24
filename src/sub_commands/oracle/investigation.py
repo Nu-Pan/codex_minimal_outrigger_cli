@@ -16,7 +16,7 @@ from commons.prompt_editor_input import (
     reserve_prompt_editor_input,
 )
 from commons.runtime_paths import reuse_root_queries
-from oracle.acp_builder.oracle.investigation.launch_tui import (
+from oracle.acp_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
 )
 
