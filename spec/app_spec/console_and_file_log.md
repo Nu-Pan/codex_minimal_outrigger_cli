@@ -114,7 +114,7 @@ editor input の掲載元は、`{{cmoc-root}}/spec/app_spec/prompt_editor_input.
 
 実行の成否と問題の有無は分ける。終了コード 0 を問題なしと読み替えず、未確認を確認済みとして扱わない。サブコマンド固有の結果分類と、その結果に応じた注意事項・次の操作は個別仕様に従う。
 
-冒頭の要約は既存の確定情報から cmoc が機械的に作成する。本文に記された重要事項を補う専用 call は、本書の「重要事項確認用 call」で定め、機械的な要約の置換や一般的な変更要約には使わない。realization apply と realization refactor の変更要約の可否・生成方法は、それぞれ `{{cmoc-root}}/spec/app_spec/sub_command/realization_apply.md` の「report と終了コード」と `{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md` の「変更要約」に従う。oracle edit の差分と成果の帰属は、`{{cmoc-root}}/spec/app_spec/sub_command/oracle_edit.md` の「終了と差分」に従う。
+冒頭の要約は既存の確定情報から cmoc が機械的に作成する。本文に記された重要事項を補う専用 call は、本書の「重要事項確認用 call」で定め、機械的な要約の置換や一般的な変更要約には使わない。realization apply と realization refactor の変更要約の可否・生成方法は、それぞれ `{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「report と終了コード」と `{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md` の「変更要約」に従う。oracle edit の差分と成果の帰属は、`{{cmoc-root}}/spec/app_spec/sub_command/oracle_edit.md` の「終了と差分」に従う。
 
 #### 重要事項の確認結果
 

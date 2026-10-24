@@ -172,7 +172,7 @@ def test_ready_session_is_independent_of_seed(
 def nonpersistent_run_ids(nonpersistent_execution_ids, monkeypatch):
     """開始順序・失敗・終了・復旧の検査では、run ID の保存と同期待ちを省く。"""
     # 採番の順序・永続性は test_runtime_ids.py と test_codex_runtime_paths.py、
-    # run との実結合は test_realization_apply_automatically_joins_changes_and_noop と
+    # run との実結合は test_decision_apply_automatically_joins_changes_and_noop と
     # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
     # branch・worktree・state の作成と、発行した ID の引継ぎは実処理を通す。
     monkeypatch.setattr(lifecycle_module, "new_id", logging_module.new_id)
@@ -182,7 +182,7 @@ def nonpersistent_run_ids(nonpersistent_execution_ids, monkeypatch):
 def automatic_join_after_preprocess(monkeypatch):
     """制御 test の自動 join では、開始時と同じ doctor の準備を重ねない。"""
     # doctor の修復・失敗は test_doctor_cli.py、自動 join との結合は
-    # test_realization_apply_automatically_joins_changes_and_noop と
+    # test_decision_apply_automatically_joins_changes_and_noop と
     # test_refactor_fork_commits_mixed_results_until_user_interruption に残す。
     # join 時の再検査・復旧判定、merge 前の state 同期と保存は実処理を通す。
     preprocess = Mock()
@@ -201,7 +201,7 @@ def apply_after_preprocess(
     """apply の終了・復旧検査では、doctor と prompt の準備を繰り返さない。"""
     # 必要な設定・配置先は ready_*_session が用意する。
     # doctor の修復・失敗は test_doctor_cli.py、apply との実結合は
-    # test_realization_apply_automatically_joins_changes_and_noop に残す。
+    # test_decision_apply_automatically_joins_changes_and_noop に残す。
     preprocess = Mock()
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
     # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を省く。
@@ -209,7 +209,7 @@ def apply_after_preprocess(
     # 実 builder との結合は上記の fork→join test に残す。
     monkeypatch.setattr(
         apply_module,
-        "build_realization_apply_request",
+        "build_decision_apply_request",
         lambda _base, _fork, run_worktree: SimpleNamespace(agent_call_cwd=run_worktree),
     )
     yield
@@ -221,7 +221,7 @@ def apply_after_preprocess(
 def join_after_preprocess(ready_join_session, monkeypatch):
     """差分検査と復旧の検査は、修復済み session から join 本処理を実行する。"""
     # doctor の修復・索引同期は test_doctor_cli.py、join との結合は
-    # test_realization_apply_fork_and_run_join_use_common_state と
+    # test_decision_apply_fork_and_run_join_use_common_state と
     # test_run_join_from_run_worktree_* に残す。merge 後の state 同期は実行する。
     preprocess = Mock(return_value={})
     monkeypatch.setattr(run_join_module, "doctor_preprocess_for_join", preprocess)
@@ -268,7 +268,7 @@ def real_refactor_builder(monkeypatch):
 def _prepare_run(
     session: tuple[Path, str, Path],
     *,
-    kind: str = "realization_apply",
+    kind: str = "decision_apply",
     run_state: str = "joinable",
 ) -> EditingRunContext:
     """状態・復旧の検査用に実 Git の資源と保存済み active run state を用意する。"""
@@ -440,7 +440,7 @@ def test_run_reports_keep_execution_ids_generated_time_and_content(
         state_path=tmp_path / "state.json",
         session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path,
@@ -632,7 +632,7 @@ def test_apply_rejects_agent_commit_and_rolls_back_unit(
 @pytest.mark.parametrize(
     ("kind", "expected_sync"),
     [
-        ("realization_apply", False),
+        ("decision_apply", False),
         ("realization_refactor", False),
         ("feedback_report", False),
     ],
@@ -750,7 +750,7 @@ def test_refactor_change_summary_preserves_special_changed_paths(path, display):
         assert report_text(rendered) == expected
 
 
-def test_realization_apply_automatically_joins_changes_and_noop(
+def test_decision_apply_automatically_joins_changes_and_noop(
     ready_content_session: tuple[Path, str, Path],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -760,7 +760,7 @@ def test_realization_apply_automatically_joins_changes_and_noop(
     (root / "oracle/reference_only.md").write_text("oracle payload\n" * 1000)
     run_git(root, "add", "oracle/reference_only.md")
     run_git(root, "commit", "-m", "oracle change")
-    original_builder = apply_module.build_realization_apply_request
+    original_builder = apply_module.build_decision_apply_request
     built: list[AgentCallParameter] = []
     calls: list[tuple[Path, str]] = []
     notifications = []
@@ -786,7 +786,7 @@ def test_realization_apply_automatically_joins_changes_and_noop(
 
     monkeypatch.setattr(
         apply_module,
-        "build_realization_apply_request",
+        "build_decision_apply_request",
         capture_builder,
     )
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
@@ -830,7 +830,7 @@ def test_realization_apply_automatically_joins_changes_and_noop(
 
 @pytest.mark.parametrize("run_state", ["joinable", "error"])
 @pytest.mark.parametrize("has_previous_apply", [False, True], ids=["initial", "later"])
-@pytest.mark.parametrize("stored_running_run", ["realization_apply"], indirect=True)
+@pytest.mark.parametrize("stored_running_run", ["decision_apply"], indirect=True)
 def test_apply_join_hook_selects_diff_base(
     stored_running_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
@@ -1216,7 +1216,7 @@ def abandon_cleanup_context(tmp_path: Path) -> EditingRunContext:
         state_path=tmp_path / "state.json",
         session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
@@ -1950,7 +1950,7 @@ def test_refactor_report_failure_after_joinable_publication_sets_error_state(
     assert 'state_after: "error"' in report.read_text()
 
 
-@pytest.mark.parametrize("stored_running_run", ["realization_apply"], indirect=True)
+@pytest.mark.parametrize("stored_running_run", ["decision_apply"], indirect=True)
 def test_apply_error_preserves_unreadable_process_tracking(
     stored_running_run: EditingRunContext,
     monkeypatch: pytest.MonkeyPatch,
@@ -2042,7 +2042,7 @@ def test_apply_error_cleanup_rejects_delayed_agent_commit_when_inspection_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """中断後に child を停止して遅延 commit を戻し、差分検査失敗も report する。"""
-    # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+    # {{work-root}}/spec/app_spec/sub_command/decision_apply.md
     # child 停止→rollback と、その後の差分取得失敗は同じ cleanup で検証する。
     # 中断・遅延 commit 除去・report 保存に個別の session/run を準備しない。
     root, _session_branch, state_path = ready_content_session
@@ -2141,7 +2141,7 @@ def test_apply_start_failure_after_run_publish_is_reported(
 ) -> None:
     """run state 公開後の初期化失敗でも apply fork report を残す。
 
-    根拠: {{work-root}}/spec/app_spec/sub_command/realization_apply.md。
+    根拠: {{work-root}}/spec/app_spec/sub_command/decision_apply.md。
     """
 
     root, _session_branch, state_path = ready_run_session
@@ -2246,7 +2246,7 @@ def test_start_run_rechecks_session_branch_under_lock(
     )
 
     with pytest.raises(CmocError, match="current branch が lock 内で変更"):
-        start_editing_run("realization_apply")
+        start_editing_run("decision_apply")
 
     assert state_path.read_bytes() == state_before
     assert current_branch(root) == changed_branch
@@ -2618,7 +2618,7 @@ def test_resolve_active_run_rejects_run_branch_from_another_session(
     state = _state(state_path)
     state["run"] = {
         "state": "running",
-        "kind": "realization_apply",
+        "kind": "decision_apply",
         "branch": f"cmoc/run/sess_000001_2026-09-29_15-04/{RUN_ID}",
         "fork_commit": state["session"]["session_fork_commit"],
     }
@@ -2633,7 +2633,7 @@ def test_set_run_state_rejects_overwriting_terminal_state(
 ) -> None:
     """公開済み terminal state を遅延 cleanup が別 state へ変更しない。"""
     context = replace(
-        stored_running_run, kind="realization_apply", state_before="joinable"
+        stored_running_run, kind="decision_apply", state_before="joinable"
     )
     state = SessionState.from_dict(_state(context.state_path))
     state.run.state = "joinable"
@@ -2734,7 +2734,7 @@ def test_run_join_cleanup_preserves_worktree_when_removal_leaves_path(
         state_path=tmp_path / "state.json",
         session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=run_worktree,
@@ -2777,7 +2777,7 @@ def test_run_join_cleanup_warns_when_worktree_removal_raises(
         state_path=tmp_path / "state.json",
         session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
@@ -2826,7 +2826,7 @@ def test_run_join_cleanup_checks_branch_deletion_postcondition(
         state_path=tmp_path / "state.json",
         session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=run_worktree,
@@ -2992,7 +2992,7 @@ def test_run_join_conflict_launch_uses_shared_settings(
     """自動・明示 join で、保存した共有設定を競合解消の argv まで渡す。"""
     root, _, state_path = join_after_preprocess
     # doctor の修復・索引同期は test_doctor_cli.py、apply・join との結合は
-    # test_realization_apply_automatically_joins_changes_and_noop と
+    # test_decision_apply_automatically_joins_changes_and_noop と
     # test_run_join_from_run_worktree_tracks_main_doctor_repairs に残す。
     # 設定の保存・読込、実 builder、Git 競合と call log は本処理を通す。
     preprocess = Mock()
@@ -3207,7 +3207,7 @@ def test_run_join_preserves_active_state_when_cleanup_fails(
     state = _state(state_path)
     assert state["run"] == {
         "state": "error",
-        "kind": "realization_apply",
+        "kind": "decision_apply",
         "branch": context.run_branch,
         "fork_commit": context.run_fork_commit,
     }
@@ -3409,7 +3409,7 @@ def test_refactor_interrupt_after_run_publish_is_joinable(
 
 @pytest.mark.usefixtures("nonpersistent_run_ids")
 @pytest.mark.parametrize(
-    "kind", ["realization_apply", "realization_refactor", "feedback_report"]
+    "kind", ["decision_apply", "realization_refactor", "feedback_report"]
 )
 def test_start_run_prepares_work_directories_before_publishing_state(
     ready_run_session, monkeypatch, kind
@@ -3483,7 +3483,7 @@ def test_start_run_directory_conflict_cleans_unpublished_resources(
     monkeypatch.setattr(lifecycle_module, "new_run_target", record_target)
 
     # 各失敗で ready state と衝突内容が保たれることを確認し、session 準備を共用する。
-    for kind in ("realization_apply", "realization_refactor", "feedback_report"):
+    for kind in ("decision_apply", "realization_refactor", "feedback_report"):
         targets.clear()
         with pytest.raises(CmocError) as exc_info:
             start_editing_run(kind)
@@ -4214,7 +4214,7 @@ def test_join_cleanup_defers_when_a_required_guard_is_unconfirmed(
         state_path=tmp_path / "state.json",
         session_branch=SESSION_BRANCH,
         session_fork_commit="session-fork",
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch=RUN_BRANCH,
         run_fork_commit="run-fork",
         run_worktree=tmp_path / "run",
@@ -4259,7 +4259,7 @@ def test_join_cleanup_defers_when_a_required_guard_is_unconfirmed(
 
 @pytest.mark.parametrize(
     ("kind", "failure"),
-    [("realization_apply", "cancel"), ("realization_refactor", "call")],
+    [("decision_apply", "cancel"), ("realization_refactor", "call")],
 )
 def test_review_failure_preserves_completed_join_state_and_artifacts(
     join_after_preprocess, monkeypatch, kind, failure
@@ -4291,7 +4291,7 @@ def test_review_failure_preserves_completed_join_state_and_artifacts(
     state = _state(state_path)
     assert state["run"] == SessionState().to_dict()["run"]
     assert state["session"]["last_joined_apply_fork_commit"] == (
-        context.run_fork_commit if kind == "realization_apply" else None
+        context.run_fork_commit if kind == "decision_apply" else None
     )
     assert (root / "README.md").read_text() == "joined\n"
     assert not context.run_worktree.exists()
@@ -4846,7 +4846,7 @@ def test_refactor_interrupted_agent_commit_rolls_back_remaining_untracked_files(
 
 
 @pytest.mark.parametrize(
-    "kind", ["realization_apply", "realization_refactor", "feedback_report"]
+    "kind", ["decision_apply", "realization_refactor", "feedback_report"]
 )
 def test_join_prepares_and_syncs_run_before_import(
     join_after_preprocess, monkeypatch, kind

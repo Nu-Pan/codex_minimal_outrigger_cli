@@ -6,7 +6,7 @@
 
 | workload 固有コマンド | `run.kind` | 正常時の終了方法 |
 |---|---|---|
-| `cmoc realization apply` | `realization_apply` | 追従作業の確定後、同一 invocation 内で自動 join |
+| `cmoc realization apply` | `decision_apply` | 追従作業の確定後、同一 invocation 内で自動 join |
 | `cmoc realization refactor` | `realization_refactor` | 正常なユーザー中断の整合化後、同一 invocation 内で自動 join |
 | `cmoc feedback report` | `feedback_report` | 同一 invocation 内の自動 join |
 
@@ -151,7 +151,7 @@ merge commit の確定、または no-op 成立の記録を、取り込み前後
 
 #### 後処理
 
-1. active workload が定める join 後 hook を実行する。apply の比較始点は、`{{cmoc-root}}/spec/app_spec/sub_command/realization_apply.md` の「join 後 hook」に従う。
+1. active workload が定める join 後 hook を実行する。apply の比較始点は、`{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「join 後 hook」に従う。
 2. workload 固有の取り込み後処理を完了する。feedback の自然完了では join 後検査・publication・入力と work artifact の cleanup、中断後または明示 join では publication 未実施の記録を行う。
 3. 準備、取り込み、hook、および workload 固有処理の結果と、run identity を含む report を保存する。その後 `run.state=ready` とし、active run 情報を初期化する。
 4. 本書の「使用済み branch と worktree の cleanup」に従い隔離資源を回収する。state 更新と cleanup の実際の結果を同じ invocation の primary report の機械生成版に反映する。その後、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従って確認結果と確認自身の記録を加え、primary report を保存してから terminal result を確定する。report に後続処理の成功を先取りして記載しない。
@@ -184,7 +184,7 @@ join の事前検査で停止した場合は、取り込みを開始せず、既
 
 この確認は、`ready` 初期化後の失敗・取消・停止で active run 情報が消えている場合にも行う。復旧情報から未完了の必須処理を特定したら、保存した run identity に対応する active run 情報を復元して `error` とする。結果を保存して cleanup の保留を確定した正常終了と、処理途中の停止を区別する。後処理だけの復旧では、必要な記録を検証して削除済み資源と残存資源を区別し、削除済みの run 資源の再作成や取り込み前の事前条件の再成立を要求しない。session 状態に関する workload 固有の再開条件は維持する。
 
-未取り込みなら、上記の復旧と事前条件を満たした後、元の成果に対して差分検査を行い、最新の session HEAD を基準に準備し直す。取り込み済みなら、初回 no-op として処理し直さず、再同期・再 merge を行わずに未完了の後処理だけを進める。元の取り込み commit または成立済み no-op の記録を保持する。apply の hook は、`{{cmoc-root}}/spec/app_spec/sub_command/realization_apply.md` の「join 後 hook」が定める今回の開始時 state による資格判定を維持する。
+未取り込みなら、上記の復旧と事前条件を満たした後、元の成果に対して差分検査を行い、最新の session HEAD を基準に準備し直す。取り込み済みなら、初回 no-op として処理し直さず、再同期・再 merge を行わずに未完了の後処理だけを進める。元の取り込み commit または成立済み no-op の記録を保持する。apply の hook は、`{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「join 後 hook」が定める今回の開始時 state による資格判定を維持する。
 
 `cmoc run abandon` は残る隔離資源を破棄できるが、session branch に取り込み済みの commit は取り消さない。部分 cleanup 等により必要な資源が欠ける場合は、可能な後処理の再開と資源を要する取り込み再試行を区別し、実行不能な join を案内しない。
 

@@ -424,12 +424,12 @@ def unexpected_agent_paths(
 ) -> list[str]:
     """agent call が realization file 以外へ生じさせた差分を返す。
 
-    根拠: {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+    根拠: {{work-root}}/spec/app_spec/sub_command/decision_apply.md
     {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
     """
     # 同じ検査の候補を一括判定し、child 停止後の再検査へ判定結果を持ち越さない。
     if context.kind not in {
-        "realization_apply",
+        "decision_apply",
         "realization_refactor",
         "feedback_report",
     }:

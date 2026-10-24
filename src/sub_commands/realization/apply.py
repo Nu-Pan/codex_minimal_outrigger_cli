@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from acp.builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_request,
+    build_decision_apply_request,
 )
 from cmoc_runtime import (
     CmocError,
@@ -39,17 +39,17 @@ from commons.runtime_run_lifecycle import (
 from commons.runtime_run_report import write_workload_report
 
 
-def cmoc_realization_apply_impl() -> None:
+def cmoc_decision_apply_impl() -> None:
     """CLI runtime を通して realization apply を実行する。"""
     run_cli_subcommand(
-        _cmoc_realization_apply_body,
+        _cmoc_decision_apply_body,
         command_name="realization apply",
         command_argv=["cmoc", "realization", "apply"],
         total_steps=7,
     )
 
 
-def _cmoc_realization_apply_body() -> TerminalResult:
+def _cmoc_decision_apply_body() -> TerminalResult:
     """realization apply agent を実行し、差分を joinable run として公開する。"""
     context: EditingRunContext | None = None
     codex_returncode: int | None = None
@@ -63,7 +63,7 @@ def _cmoc_realization_apply_body() -> TerminalResult:
         start_subcommand_step(2, "realization apply run を作成", "create editing run")
         start_was_ready = session_run_was_ready()
         start_attempted = True
-        context = start_editing_run("realization_apply")
+        context = start_editing_run("decision_apply")
         update_primary_report_fields(
             run_kind=context.kind,
             session_branch=context.session_branch,
@@ -94,7 +94,7 @@ def _cmoc_realization_apply_body() -> TerminalResult:
             context.run_worktree,
         ).stdout.strip()
         update_primary_report_fields(diff_base_commit=diff_base_commit)
-        parameter = build_realization_apply_request(
+        parameter = build_decision_apply_request(
             diff_base_commit,
             context.run_fork_commit,
             context.run_worktree,
@@ -137,7 +137,7 @@ def _cmoc_realization_apply_body() -> TerminalResult:
             start_subcommand_step(
                 5, "realization 差分を検査して commit", "commit changes"
             )
-            # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+            # {{work-root}}/spec/app_spec/sub_command/decision_apply.md
             # {{work-root}}/spec/app_spec/run_isolation.md
             # tracked Codex child を停止し、agent 終了後の遅延書き込みを防ぐ。
             cleanup_warnings.extend(
@@ -188,7 +188,7 @@ def _cmoc_realization_apply_body() -> TerminalResult:
                     if isinstance(published_context, EditingRunContext):
                         context = published_context
                 else:
-                    context = recover_started_run("realization_apply")
+                    context = recover_started_run("decision_apply")
             if context is None:
                 raise
         # agent 終了時の HEAD 検査は tracking scope 内で済ませている。
@@ -270,7 +270,7 @@ def _ensure_agent_did_not_commit(worktree: Path, before_head: str) -> None:
     if after_head == before_head:
         return
     try:
-        # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+        # {{work-root}}/spec/app_spec/sub_command/decision_apply.md
         # agent の変更は cmoc が差分検査後に処理単位として commit するため、agent
         # が先に履歴を進めた場合は本命 call 前の run tree へ戻して error cleanup へ渡す。
         run_git(["reset", "--hard", before_head], worktree)
@@ -307,7 +307,7 @@ def _record_error(
         cleanup_errors.append(f"Codex child stop failed: {cleanup_error!r}")
     if agent_head is not None:
         try:
-            # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+            # {{work-root}}/spec/app_spec/sub_command/decision_apply.md
             # 初回検査後に遅延 child が作った commit も、停止完了後に検出して
             # agent boundary の HEAD へ戻し、error run へ混入させない。
             _ensure_agent_did_not_commit(context.run_worktree, agent_head)
@@ -333,7 +333,7 @@ def _record_error(
                 f"primary report state update failed: {report_state_error!r}"
             )
     # 最終 git inspection が失敗しても error report を保存できるようにする。
-    # 根拠: {{work-root}}/spec/app_spec/sub_command/realization_apply.md。
+    # 根拠: {{work-root}}/spec/app_spec/sub_command/decision_apply.md。
     try:
         changed_paths: list[str] | None = flattened_change_paths(
             tree_changes(context.run_worktree, context.run_fork_commit)
@@ -388,7 +388,7 @@ def _cleanup_warning_lines(warnings: list[str]) -> list[str]:
 def _apply_report_fields(diff_base_commit: str | None) -> dict[str, object]:
     """apply 固有の diff 始点と accepted feedback 参照を返す。"""
     observations = accepted_feedback_observations()
-    # {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+    # {{work-root}}/spec/app_spec/sub_command/decision_apply.md
     # 通常 report の保存失敗後に共通 fallback が再試行しても、同じ invocation
     # で受理した observation を失わないよう先に report context へ反映する。
     update_primary_report_fields(

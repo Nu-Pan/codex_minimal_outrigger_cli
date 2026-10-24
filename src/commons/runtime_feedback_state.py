@@ -413,7 +413,7 @@ def _validate_observation_context(context: _JsonObject) -> list[str]:
             errors.append(f"/context/{name}: expected string or null")
     if context.get("run_kind") not in {
         None,
-        "realization_apply",
+        "decision_apply",
         "realization_refactor",
         "feedback_report",
     }:

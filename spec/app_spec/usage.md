@@ -45,7 +45,7 @@
 
 各 workload の目的と境界は、次の仕様を正本とする。
 
-- realization apply: `{{cmoc-root}}/spec/app_spec/sub_command/realization_apply.md` の「目的」
+- realization apply: `{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「目的」
 - realization refactor: `{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md` の「目的」
 - oracle edit: `{{cmoc-root}}/spec/app_spec/sub_command/oracle_edit.md` の「目的」
 - feedback report: `{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の `cmoc feedback report`

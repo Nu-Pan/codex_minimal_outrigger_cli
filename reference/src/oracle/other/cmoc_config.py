@@ -138,7 +138,7 @@ class CmocConfigCodex:
             # NOTE
             #   oracle file に影響を与えるので品質が至上命題
             #   TUI で人間とターンを回すので品質が至上命題
-            "build_oracle_investigation_request": CodexCallConfig(
+            "build_decision_plan_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",

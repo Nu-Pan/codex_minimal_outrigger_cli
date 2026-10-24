@@ -4,8 +4,8 @@
 - {{work-root}}/spec/app_spec/sub_command/doctor.md
 - {{work-root}}/spec/app_spec/sub_command/tui.md
 - {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
-- {{work-root}}/spec/app_spec/sub_command/oracle_investigation.md
-- {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+- {{work-root}}/spec/app_spec/sub_command/decision_plan.md
+- {{work-root}}/spec/app_spec/sub_command/decision_apply.md
 - {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
 - {{work-root}}/spec/app_spec/sub_command/editing_run.md
 - {{work-root}}/spec/app_spec/sub_command/session_fork.md

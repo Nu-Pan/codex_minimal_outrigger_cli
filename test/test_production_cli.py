@@ -578,7 +578,7 @@ def _assert_real_codex_call(path: Path, *, tui: bool = False) -> dict[str, objec
     ]
     if agent_call_kind in {
         "build_tui_request",
-        "build_oracle_investigation_request",
+        "build_decision_plan_request",
     }:
         editor_input_server = override["mcp_servers"]["cmoc_editor_input"]
         assert editor_input_server["enabled_tools"] == [
@@ -1095,7 +1095,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     # {{work-root}}/spec/app_spec/sub_command/editing_run.md
     # workload の正常終了は、同じ invocation での取り込みと回収まで含む。
     for command, kind in [
-        (("realization", "apply"), "realization_apply"),
+        (("realization", "apply"), "decision_apply"),
         (("realization", "refactor"), "realization_refactor"),
     ]:
         before_calls = _codex_call_logs(root)
@@ -1118,7 +1118,7 @@ def test_all_noninteractive_leaf_commands_use_production_process_paths(
     for operation in ("join", "abandon"):
         with monkeypatch.context() as setup:
             setup.chdir(root)
-            context = start_editing_run("realization_apply")
+            context = start_editing_run("decision_apply")
             set_run_state(context, "joinable")
         finished = run_with_report_review("run", operation)
         _state_path, ready_state = _load_session_state(root, session_branch)

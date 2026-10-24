@@ -33,7 +33,7 @@ def imported_record(committed_repository):
         state_path=root / "state.json",
         session_branch=SESSION_BRANCH,
         session_fork_commit=baseline,
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch=RUN_BRANCH,
         run_fork_commit=baseline,
         run_worktree=root / "removed-run",

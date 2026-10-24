@@ -11,7 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_request,
+    build_decision_plan_request,
 )
 from oracle.acp_builder.tui.launch_tui import build_tui_request
 from oracle.editor_input_handoff.body import EditorInputHandoffSource
@@ -53,7 +53,7 @@ from .runtime_windows_toast import (
 
 _BUILDERS = {
     "tui": build_tui_request,
-    "oracle_investigation": build_oracle_investigation_request,
+    "decision_plan": build_decision_plan_request,
 }
 
 
@@ -676,8 +676,7 @@ def _validated_resume_record(
         command = record.get("subcommand")
         if command not in {"tui", "oracle investigation", "resume"} or (
             command != "resume"
-            and kind
-            != {"tui": "tui", "oracle investigation": "oracle_investigation"}[command]
+            and kind != {"tui": "tui", "oracle investigation": "decision_plan"}[command]
         ):
             raise ValueError("subcommand and workload are inconsistent")
         if (

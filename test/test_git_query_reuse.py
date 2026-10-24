@@ -393,7 +393,7 @@ def test_run_path_inspection_reuses_queries_and_refreshes_after_changes(
         state_path=root / "state.json",
         session_branch="session",
         session_fork_commit="fork",
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch="run",
         run_fork_commit="fork",
         run_worktree=root,
@@ -563,9 +563,8 @@ def test_run_path_inspection_batches_each_owning_repository(
             assert worktree_queries == {nested: 1, ordinary: 1}
 
     # 明示対象外は run 検査だけに適用し、他の想定外 path は維持する。
-    assert (
-        unexpected_run_paths(context, changes, ignored_paths=["oracle/spec.md"])
-        == (rejected[:-1])
+    assert unexpected_run_paths(context, changes, ignored_paths=["oracle/spec.md"]) == (
+        rejected[:-1]
     )
 
     # 一括判定の前にも nested の ignore source を検証し、特殊 file を読み込まない。
@@ -622,7 +621,7 @@ def test_run_path_inspection_batches_missing_files_and_tree_fallback(
         state_path=root / "state.json",
         session_branch="session",
         session_fork_commit="outer-base",
-        kind="realization_apply",
+        kind="decision_apply",
         run_branch="outer-run",
         run_fork_commit="outer-base",
         run_worktree=root,

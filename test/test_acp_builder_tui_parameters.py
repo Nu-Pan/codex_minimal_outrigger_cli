@@ -8,7 +8,7 @@ from pathlib import Path
 import oracle.other.path_model as path_model_module
 import pytest
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_request,
+    build_decision_plan_request,
 )
 from oracle.acp_builder.tui.launch_tui import build_tui_request
 
@@ -100,7 +100,7 @@ def test_tui_launch_builder_uses_fixed_parameter_and_policies(
 
 @pytest.mark.parametrize(
     "builder",
-    [build_tui_request, build_oracle_investigation_request],
+    [build_tui_request, build_decision_plan_request],
 )
 def test_resume_builder_keeps_workload_without_initial_input(
     tui_builder_directory, tmp_path, monkeypatch, builder
@@ -108,7 +108,7 @@ def test_resume_builder_keeps_workload_without_initial_input(
     """現在の cwd や過去の prompt を使わず、保存 cwd と元の workload を保つ。"""
     # 保存 cwd を現在 cwd と区別できるよう、初回構築後に別 directory へ移る。
     root = tui_builder_directory
-    # 完全本文は上の新規起動 test と test_oracle_investigation_cli.py で検査する。
+    # 完全本文は上の新規起動 test と test_decision_plan_cli.py で検査する。
     # ここでは設定だけを比較するため、参照しない本文の構築を省く。
     # 再開側は置換を戻し、実 builder が prompt を返さないことを確かめる。
     with monkeypatch.context() as patch:

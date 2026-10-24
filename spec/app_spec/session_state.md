@@ -24,7 +24,7 @@ join の段階と基準 HEAD の意味・記録時点は、`{{cmoc-root}}/spec/a
 
 既存の管理記録を活用し、Git から確実に復元できる情報を重複保存しない。保存形式、配置、field 名、および Git との分担は固定しないが、process のメモリや削除予定の資源だけに復旧を依存させない。`ready` 初期化後と部分 cleanup 後も、未完了の後処理を判別し、必要なら同じ run の `kind`、`branch`、`fork_commit` を復元できるようにする。
 
-これらは join の復旧情報であり、`run.state` の値を増やさない。apply の資格判定は、`{{cmoc-root}}/spec/app_spec/sub_command/realization_apply.md` の「join 後 hook」に従う。feedback の封印済み入力と検証記録の対応は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「report cut」「publication completion record」に従い、その正本を本 file へ複製しない。
+これらは join の復旧情報であり、`run.state` の値を増やさない。apply の資格判定は、`{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「join 後 hook」に従う。feedback の封印済み入力と検証記録の対応は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「report cut」「publication completion record」に従い、その正本を本 file へ複製しない。
 
 ## active session context と編集 run 開始・session 終了の共通事前条件
 
@@ -59,7 +59,7 @@ active session context を必要とするサブコマンドは、次の条件を
   },
   "run": {
     "state": "ready | running | joinable | error",
-    "kind": "realization_apply | realization_refactor | feedback_report | null",
+    "kind": "decision_apply | realization_refactor | feedback_report | null",
     "branch": "... | null",
     "fork_commit": "... | null"
   }
@@ -82,7 +82,7 @@ session の fork 元 branch であり、join 先でもある。`cmoc session for
 
 ### `session.last_joined_apply_fork_commit`
 
-その session の apply の追従対象差分の始点として保持する commit であり、session 新規作成直後の初期値は `null` とする。更新条件と保存する commit は、`{{cmoc-root}}/spec/app_spec/sub_command/realization_apply.md` の「join 後 hook」を正本とする。
+その session の apply の追従対象差分の始点として保持する commit であり、session 新規作成直後の初期値は `null` とする。更新条件と保存する commit は、`{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「join 後 hook」を正本とする。
 
 ## run field
 

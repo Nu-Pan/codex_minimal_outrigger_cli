@@ -60,7 +60,7 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
         "realization_edit",
         "build_session_join_conflict_resolution_request",
         "build_tui_request",
-        "build_oracle_investigation_request",
+        "build_decision_plan_request",
         "build_oracle_edit_request",
         "build_feedback_issue_normalization_request",
         "build_primary_report_review_request",
@@ -262,7 +262,7 @@ def test_saved_config_rejects_missing_call_without_doctor_completion(
 @pytest.mark.parametrize(
     "kind",
     [
-        "build_realization_apply_request",
+        "build_decision_apply_request",
         "build_realization_refactor_request",
         "build_feedback_issue_remediation_request",
         "build_run_join_conflict_resolution_request",

@@ -24,7 +24,7 @@ from _codex_support import (
 from _command_support import write_python_executable
 from _handoff_support import handoff_input
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_request,
+    build_decision_plan_request,
 )
 from oracle.acp_builder.tui.launch_tui import build_tui_request
 from oracle.other.cmoc_config import CodexCallConfig
@@ -62,7 +62,7 @@ SUCCESS = (
 BUILDERS = [
     pytest.param(build_tui_request, "tui", id="tui"),
     pytest.param(
-        build_oracle_investigation_request,
+        build_decision_plan_request,
         "oracle investigation",
         id="investigation",
     ),
@@ -403,9 +403,9 @@ def test_initial_and_transition_share_start_time_settings(directory, monkeypatch
         config.codex.agent_calls[parameter.agent_call_kind] = CodexCallConfig(
             "openai", "changed-model", "high"
         )
-        config.codex.model_providers["openai"].settings["base_url"] = (
-            "https://changed.invalid"
-        )
+        config.codex.model_providers["openai"].settings[
+            "base_url"
+        ] = "https://changed.invalid"
         write_config(directory / ".cmoc/gt/config.json", config)
 
     calls = fake_initial(monkeypatch, on_call=change_config)
@@ -644,7 +644,7 @@ def test_public_resume_rejects_ineligible_source(directory, monkeypatch, tmp_pat
             elif condition == "unknown_session":
                 record["fixed_session_id"] = None
             elif condition == "inconsistent_kind":
-                record["tui_kind"] = "oracle_investigation"
+                record["tui_kind"] = "decision_plan"
             elif condition == "missing_output":
                 path = Path(record["initial_output_path"])
                 restore_files.callback(path.write_bytes, path.read_bytes())
@@ -869,7 +869,7 @@ def test_concurrent_initial_handoffs_keep_process_sources(directory, monkeypatch
                 [
                     (build_tui_request, "tui"),
                     (
-                        build_oracle_investigation_request,
+                        build_decision_plan_request,
                         "oracle investigation",
                     ),
                 ],

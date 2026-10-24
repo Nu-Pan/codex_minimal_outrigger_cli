@@ -11,20 +11,26 @@ from oracle.other.struct_doc import SDHeader, SDTagBlock, render_sd_node_as_mark
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
 
-def build_oracle_investigation_request(
+def build_decision_plan_request(
     user_instruction: str | None = None,
     *,
     resume: TuiResumeTarget | None = None,
 ) -> AgentCallParameter:
-    """初回 exec 用の新規入力か、検査済みの再開先の一方を受け取る。
+    """`cmoc decision plan` 用の agent call リクエストを構築する
+
+    1 ターン目の exec リクエストと、2 ターン目移行用の TUI resume リクエスト両方をこの関数で構築する。
 
     Args:
-        user_instruction: ユーザーがエディタ入力した、oracle file に関する調査指示。
-            前後空白の strip は呼び出し側で完了している想定。handoff ガイドへ提示する
-            完全プロンプトの skeleton を構築する場合は、
+        user_instruction:
+            ユーザーがエディタから入力した指示。
+            ユーザーの「ああしたい、こうしたい」が渡される。
+            前後空白の strip は呼び出し側で完了している想定。
+            handoff ガイドへ提示する完全プロンプトの skeleton を構築する場合は、
             `{{original-prompt-here}}` を渡す。再開時は指定しない。
-        resume: 起動管理側が内部の自動移行または公開 `cmoc resume` の条件で
-            検査した会話 ID と保存済み cwd。新規入力と同時には指定しない。
+            `resume` とは排他。
+        resume:
+            起動管理側が内部の自動移行または公開 `cmoc resume` の条件で検査した会話 ID と保存済み cwd。
+            `user_instruction` とは排他。
 
     Returns:
         同じ workload の制約を持つ、初回 exec または prompt 不在の対話再開の
@@ -33,15 +39,13 @@ def build_oracle_investigation_request(
     Raises:
         ValueError: 新規入力と再開先の両方、またはどちらも指定されていない。
     """
+    # 必要なパラメータを初期化
+    # NOTE
+    #   「新規セッション」「既存セッション再開」で必要な処理が異なる
     if (user_instruction is None) == (resume is None):
         raise ValueError("specify exactly one of user_instruction and resume")
-    path_context = AgentCallPathContext(
-        agent_call_cwd=(
-            resolve_repo_root() if resume is None else resume.agent_call_cwd
-        )
-    )
-    prompt = None
-    if user_instruction is not None:
+    elif user_instruction is not None:
+        path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
         complete_prompt = build_complete_prompt(
             task="""
             - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する事項を調査し、結果を回答すること
@@ -71,8 +75,14 @@ def build_oracle_investigation_request(
             editor_input_handoff_policy=True,
         )
         prompt = render_sd_node_as_markdown(*complete_prompt)
+    elif resume is not None:
+        path_context = AgentCallPathContext(agent_call_cwd=resume.agent_call_cwd)
+        prompt = None
+    else:
+        raise RuntimeError("Unexpected control path")
+    # 正常終了
     return AgentCallParameter(
-        agent_call_kind=build_oracle_investigation_request.__name__,
+        agent_call_kind=build_decision_plan_request.__name__,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         prompt=prompt,
         structured_output_schema_path=None,

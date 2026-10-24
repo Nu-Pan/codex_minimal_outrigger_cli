@@ -159,7 +159,7 @@ def test_editor_input_abort_preserves_input_and_finalizes_without_workload(
     builders = []
     for module, name in (
         (tui_module, "build_tui_request"),
-        (investigation_module, "build_oracle_investigation_request"),
+        (investigation_module, "build_decision_plan_request"),
         (oracle_edit_module, "build_oracle_edit_request"),
     ):
         builder = Mock(return_value=SimpleNamespace(prompt=skeleton))

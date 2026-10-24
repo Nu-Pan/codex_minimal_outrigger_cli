@@ -13,14 +13,14 @@ import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
 from oracle.acp_builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_request as build_canonical_apply_parameter,
+    build_decision_apply_request as build_canonical_apply_parameter,
 )
 from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_request as build_canonical_review_parameter,
 )
 
 from acp.builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_request,
+    build_decision_apply_request,
 )
 from acp.builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_request,
@@ -60,16 +60,16 @@ def editing_run_paths(
 
 def test_editing_run_compatibility_builders_reexport_canonical_functions() -> None:
     """互換 import 経路が prompt を加工せず正本 builder を再公開する。"""
-    assert build_realization_apply_request is build_canonical_apply_parameter
+    assert build_decision_apply_request is build_canonical_apply_parameter
     assert build_realization_refactor_request is build_canonical_review_parameter
 
 
-def test_realization_apply_builder_passes_commit_references(
+def test_decision_apply_builder_passes_commit_references(
     editing_run_paths: tuple[Path, Path],
 ) -> None:
     """apply builder が commit 参照と取得条件を prompt に含める。"""
     root, run_worktree = editing_run_paths
-    parameter = build_realization_apply_request(
+    parameter = build_decision_apply_request(
         "base-commit",
         "fork-commit",
         run_worktree,

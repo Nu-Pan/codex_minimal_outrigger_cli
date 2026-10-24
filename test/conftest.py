@@ -88,7 +88,7 @@ def _prepare_run_session(
         (root / relative).mkdir(parents=True, exist_ok=True)
     if with_content:
         # 初期内容を session fork 後に追加する履歴は利用側の検査に不要。
-        # apply の比較範囲は test_realization_apply_fork_and_run_join_use_common_state で検査する。
+        # apply の比較範囲は test_decision_apply_fork_and_run_join_use_common_state で検査する。
         (root / "README.md").write_text("# repo\n")
         (root / "oracle/spec.md").write_text("# spec\n")
     # CLI preflight が必要とする設定を正規の型で用意し、doctor 修復は本処理に残す。

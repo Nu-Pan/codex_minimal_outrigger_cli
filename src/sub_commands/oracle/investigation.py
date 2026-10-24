@@ -17,14 +17,14 @@ from commons.prompt_editor_input import (
 )
 from commons.runtime_paths import reuse_root_queries
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_request,
+    build_decision_plan_request,
 )
 
 
-def cmoc_oracle_investigation_impl() -> None:
+def cmoc_decision_plan_impl() -> None:
     """CLI runtime を通して oracle investigation を実行する。"""
     run_cli_subcommand(
-        _cmoc_oracle_investigation_body,
+        _cmoc_decision_plan_body,
         pre_log_check=ensure_prompt_editor_roots_ignored,
         command_name="oracle investigation",
         command_argv=["cmoc", "oracle", "investigation"],
@@ -33,7 +33,7 @@ def cmoc_oracle_investigation_impl() -> None:
     )
 
 
-def _cmoc_oracle_investigation_body() -> None:
+def _cmoc_decision_plan_body() -> None:
     """入力された oracle 調査指示から Codex TUI を起動する。"""
     # 両 root だけを同じ探索から導出し、editor・agent 呼び出しへ結果を持ち越さない。
     with reuse_root_queries():
@@ -41,12 +41,12 @@ def _cmoc_oracle_investigation_body() -> None:
         current_root = work_root()
 
     # oracle 調査契約を含む完全 prompt の skeleton を handoff ガイドに使う。
-    # {{work-root}}/spec/app_spec/sub_command/oracle_investigation.md
+    # {{work-root}}/spec/app_spec/sub_command/decision_plan.md
     start_subcommand_step(
         2, "完全プロンプトの skeleton を構築", "build prompt skeleton"
     )
     input_path = reserve_prompt_editor_input(root)
-    complete_prompt_skeleton = build_oracle_investigation_request(
+    complete_prompt_skeleton = build_decision_plan_request(
         ORIGINAL_PROMPT_PLACEHOLDER,
     ).prompt
     assert complete_prompt_skeleton is not None
@@ -63,7 +63,7 @@ def _cmoc_oracle_investigation_body() -> None:
     )
 
     start_subcommand_step(4, "TUI 起動パラメータを構築", "build TUI parameter")
-    parameter = build_oracle_investigation_request(instruction)
+    parameter = build_decision_plan_request(instruction)
     start_subcommand_step(
         5, "初回 exec と対話再開を起動", "launch initial exec and resume"
     )

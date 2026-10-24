@@ -176,7 +176,7 @@ doctor preprocess の後に作成する run worktree の初回同期にも、同
 
 本節は、全編集 workload の同一 invocation 内の自動 join、明示的な `cmoc run join`、および取り込み済み run の後処理の復旧に適用する。run 開始前や通常の doctor による同期は維持する。開始前の doctor preprocess が成功したことだけで、join 時点の検証を省略しない。
 
-join 前の doctor preprocess は、refactor state の追跡状態と schema を検証し、entry 集合の同期を run 側での準備へ遅延する。`realization_apply` もこの対象に含む。session と run の独立した同期更新を避け、統合後の tree に一度集約するためである。
+join 前の doctor preprocess は、refactor state の追跡状態と schema を検証し、entry 集合の同期を run 側での準備へ遅延する。`decision_apply` もこの対象に含む。session と run の独立した同期更新を避け、統合後の tree に一度集約するためである。
 
 同期・commit の順序、初回 no-op、および取り込み済みの復旧で再同期しない境界は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「merge と post-join」「join の失敗と復旧」を正本とする。後処理だけを復旧する起動を通常同期の経路と誤認しないよう、同期に先立って対象 run の復旧情報を確認する。
 

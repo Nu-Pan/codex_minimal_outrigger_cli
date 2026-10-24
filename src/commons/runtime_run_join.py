@@ -447,7 +447,7 @@ def merge_run(
         last_apply = state.session.last_joined_apply_fork_commit
         if record.hook is None:
             record.hook = "none"
-            if context.kind == "realization_apply":
+            if context.kind == "decision_apply":
                 record.hook = "session.last_joined_apply_fork_commit preserved"
                 if context.state_before == "joinable":
                     last_apply = context.run_fork_commit
@@ -984,12 +984,20 @@ def join_editing_run(
                 list(actions),
                 repr(exc),
                 terminal_result=TerminalResult(
-                    primary_report=report
-                    if report is not None and report.is_file() and report.stat().st_size
-                    else None,
-                    primary_report_role=report_role
-                    if report is not None and report.is_file() and report.stat().st_size
-                    else None,
+                    primary_report=(
+                        report
+                        if report is not None
+                        and report.is_file()
+                        and report.stat().st_size
+                        else None
+                    ),
+                    primary_report_role=(
+                        report_role
+                        if report is not None
+                        and report.is_file()
+                        and report.stat().st_size
+                        else None
+                    ),
                     completion_reason="error",
                     details=tuple(details.items()),
                     next_actions=actions,

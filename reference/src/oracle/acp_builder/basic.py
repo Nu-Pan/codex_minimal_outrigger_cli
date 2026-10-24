@@ -48,7 +48,7 @@ class TuiResumeTarget:
 @dataclass(frozen=True)
 class AgentCallParameter:
     """
-    AI コーディングエージェント (e.g. Codex CLI) の呼び出しパラメータをまとめたクラス
+    AI コーディングエージェント (e.g. Codex CLI) の呼び出し要求 1 件を表現するクラス
     """
 
     # 呼び出し種別の正確な値は各 builder が指定する。

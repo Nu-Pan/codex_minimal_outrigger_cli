@@ -173,7 +173,7 @@ def test_oracle_edit_runs_two_exec_calls_and_preserves_changes(
         monkeypatch.setattr(oracle_edit_module, "current_branch", session_branch)
     active_run = RunPart(
         "running",
-        "realization_apply",
+        "decision_apply",
         RUN_BRANCH,
         "abc",
     )

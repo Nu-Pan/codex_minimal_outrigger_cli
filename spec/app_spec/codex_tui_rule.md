@@ -2,7 +2,7 @@
 
 本書は、汎用 TUI と oracle 調査 TUI の新規起動、自動移行先の TUI、および後日の公開 `cmoc resume` の対話起動を対象とする。各段階には、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「Codex CLI 共通呼び出し規約」を適用する。
 
-公開 resume の入口・適格性・workload の保持は、`{{cmoc-root}}/spec/app_spec/sub_command/resume.md` の「目的と公開入口」「対象の適格性と会話選択」「workload と起動環境の保持」を正本とする。各 workload の目的と権限は、`{{cmoc-root}}/spec/app_spec/sub_command/tui.md` の「全バックエンド共通」と、`{{cmoc-root}}/spec/app_spec/sub_command/oracle_investigation.md` の「TUI 起動パラメータ」「調査結果と変更の扱い」に従う。
+公開 resume の入口・適格性・workload の保持は、`{{cmoc-root}}/spec/app_spec/sub_command/resume.md` の「目的と公開入口」「対象の適格性と会話選択」「workload と起動環境の保持」を正本とする。各 workload の目的と権限は、`{{cmoc-root}}/spec/app_spec/sub_command/tui.md` の「全バックエンド共通」と、`{{cmoc-root}}/spec/app_spec/sub_command/decision_plan.md` の「TUI 起動パラメータ」「調査結果と変更の扱い」に従う。
 
 ## TUI の新規起動と対話 resume
 

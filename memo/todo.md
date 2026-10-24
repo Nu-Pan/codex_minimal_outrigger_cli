@@ -4,8 +4,9 @@
 - `memo/rethinking_cmoc_basic_instruction.md`
 - 移行開始前の最後の git commit は `36dfd0cfe6c672de2fd770f9e15706205e840ca1`
 - 移行関係の諸々は全て `{{work-root}}/transition` に押し込む
-- 「3. 人間が reference のコード・文言を改訂する」の TODO
+- 後回しにしている TODO
     - `reference/src/oracle` の oracle はリネームしたい (旧仕様と紛らわしい)
+    - `launch_exec`, `launch_tui` じゃなくて `build_request` に統一したい
 
 ## サンドボックスシステムを考え直す
 

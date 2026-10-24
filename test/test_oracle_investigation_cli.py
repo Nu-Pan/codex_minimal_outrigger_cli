@@ -1,7 +1,7 @@
 """`cmoc oracle investigation` の CLI 起動条件を検証する。
 
 根拠:
-- {{work-root}}/spec/app_spec/sub_command/oracle_investigation.md
+- {{work-root}}/spec/app_spec/sub_command/decision_plan.md
 - {{work-root}}/spec/app_spec/document_search.md
 - {{work-root}}/spec/app_spec/prompt_editor_input.md
 - {{work-root}}/reference/src/oracle/acp_builder/oracle/investigation/launch_tui.py
@@ -21,7 +21,7 @@ from config.cmoc_config import CmocConfig
 from main import app
 
 
-def test_oracle_investigation_has_no_session_precondition(
+def test_decision_plan_has_no_session_precondition(
     cli_terminal_directory: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -66,7 +66,7 @@ def test_oracle_investigation_has_no_session_precondition(
         events.append("load-config")
         return config
 
-    real_build_parameter = investigation_module.build_oracle_investigation_request
+    real_build_parameter = investigation_module.build_decision_plan_request
 
     def record_build_parameter(
         user_instruction: str,
@@ -129,7 +129,7 @@ def test_oracle_investigation_has_no_session_precondition(
     )
     monkeypatch.setattr(
         investigation_module,
-        "build_oracle_investigation_request",
+        "build_decision_plan_request",
         record_build_parameter,
     )
     monkeypatch.setattr(

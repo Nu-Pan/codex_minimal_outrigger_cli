@@ -9,7 +9,7 @@
 - {{work-root}}/spec/app_spec/sub_command/session_join.md
 - {{work-root}}/spec/app_spec/sub_command/session_abandon.md
 - {{work-root}}/spec/app_spec/sub_command/oracle_edit.md
-- {{work-root}}/spec/app_spec/sub_command/realization_apply.md
+- {{work-root}}/spec/app_spec/sub_command/decision_apply.md
 - {{work-root}}/spec/app_spec/sub_command/realization_refactor.md
 - {{work-root}}/spec/app_spec/sub_command/editing_run.md
 - {{work-root}}/spec/app_spec/sub_command/feedback_report.md

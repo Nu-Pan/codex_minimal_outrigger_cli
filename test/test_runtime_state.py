@@ -104,7 +104,7 @@ def test_load_state_for_run_branch_uses_session_component(tmp_path: Path) -> Non
     path = state_path(tmp_path, SESSION_ID)
     assert active_session_for_home(tmp_path, "main") is None
     state = _valid_state()
-    state.run = RunPart("joinable", "realization_apply", RUN_BRANCH, "abc")
+    state.run = RunPart("joinable", "decision_apply", RUN_BRANCH, "abc")
     write_state(path, state)
 
     session_id, loaded_path, loaded = load_state_for_branch(tmp_path, RUN_BRANCH)
@@ -250,7 +250,7 @@ def test_session_state_rejects_non_string_payload(
 def test_ready_run_requires_null_payload() -> None:
     """ready run が active run payload を持つ state を拒否する。"""
     data = _valid_state().to_dict()
-    data["run"]["kind"] = "realization_apply"
+    data["run"]["kind"] = "decision_apply"
 
     with pytest.raises(CmocError, match="session state file"):
         SessionState.from_dict(data)
@@ -534,7 +534,7 @@ def test_active_run_rejects_noncanonical_branch(branch: str) -> None:
     data = _valid_state().to_dict()
     data["run"] = {
         "state": "running",
-        "kind": "realization_apply",
+        "kind": "decision_apply",
         "branch": branch,
         "fork_commit": "abc",
     }

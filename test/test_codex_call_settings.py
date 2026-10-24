@@ -25,14 +25,14 @@ from oracle.acp_builder.oracle.edit.launch_exec import (
     build_oracle_edit_request,
 )
 from oracle.acp_builder.oracle.investigation.launch_tui import (
-    build_oracle_investigation_request,
+    build_decision_plan_request,
 )
 from oracle.acp_builder.primary_report_review import (
     build_primary_report_review_request,
 )
 from oracle.acp_builder.quota_probe import build_quota_availability_probe_request
 from oracle.acp_builder.realization.apply.fork.launch_exec import (
-    build_realization_apply_request,
+    build_decision_apply_request,
 )
 from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_request,
@@ -122,7 +122,7 @@ def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
 ):
     root = settings_root
     parameters = [
-        build_realization_apply_request("base", "head", root),
+        build_decision_apply_request("base", "head", root),
         build_realization_refactor_request(root / "src.py", root),
         build_feedback_issue_remediation_request('{"issue_id":"issue"}', root),
         build_run_join_conflict_resolution_request("run", "session", root),
@@ -162,7 +162,7 @@ def test_individual_builders_select_their_own_entries(settings_root, monkeypatch
     builders_and_args = [
         (build_session_join_conflict_resolution_request, ("session", "home", root)),
         (build_tui_request, ("task",)),
-        (build_oracle_investigation_request, ("question",)),
+        (build_decision_plan_request, ("question",)),
         (build_oracle_edit_request, ("edit",)),
         (build_feedback_issue_normalization_request, ("{}", "[]", root)),
         (build_primary_report_review_request, (root / "report.md", root)),
@@ -228,7 +228,7 @@ def test_invalid_saved_settings_fail_before_codex_launch(
     settings_root, monkeypatch, invalid
 ):
     root = settings_root
-    parameter = build_realization_apply_request("base", "head", root)
+    parameter = build_decision_apply_request("base", "head", root)
     data = config_to_dict(CmocConfig())
     if invalid == "missing_shared":
         del data["codex"]["agent_calls"]["realization_edit"]

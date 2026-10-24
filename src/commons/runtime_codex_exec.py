@@ -68,7 +68,7 @@ _MAX_OUTPUT_CORRECTIONS = 2
 _TUI_AGENT_CALL_KINDS = frozenset(
     {
         "build_tui_request",
-        "build_oracle_investigation_request",
+        "build_decision_plan_request",
     }
 )
 

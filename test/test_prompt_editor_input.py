@@ -31,7 +31,7 @@ def test_editor_input_reuses_saved_path_and_preserves_existing_data(
 ) -> None:
     """同じ本文 path を保存まで使い、別実行と旧データの変更を避ける。"""
     # 採番の順序・永続化は test_runtime_ids.py、logger の ID 引き継ぎは
-    # test_oracle_edit_cli.py と test_oracle_investigation_cli.py に残す。
+    # test_oracle_edit_cli.py と test_decision_plan_cli.py に残す。
     execution_ids = (
         "exec_00000z_2000-01-01_00-00",
         "exec_000010_2000-01-01_00-00",

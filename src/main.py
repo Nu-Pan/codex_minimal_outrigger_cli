@@ -249,19 +249,19 @@ def oracle_edit() -> None:
 
 
 @oracle_app.command("investigation")
-def oracle_investigation() -> None:
+def decision_plan() -> None:
     """oracle file の read-only 調査 TUI を起動する CLI 入口。"""
-    from sub_commands.oracle.investigation import cmoc_oracle_investigation_impl
+    from sub_commands.oracle.investigation import cmoc_decision_plan_impl
 
-    cmoc_oracle_investigation_impl()
+    cmoc_decision_plan_impl()
 
 
 @realization_app.command("apply")
-def realization_apply() -> None:
+def decision_apply() -> None:
     """oracle 差分へ追従する realization run を開始する CLI 入口。"""
-    from sub_commands.realization.apply import cmoc_realization_apply_impl
+    from sub_commands.realization.apply import cmoc_decision_apply_impl
 
-    cmoc_realization_apply_impl()
+    cmoc_decision_apply_impl()
 
 
 @realization_app.command("refactor")

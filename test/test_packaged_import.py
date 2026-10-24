@@ -173,7 +173,7 @@ def test_oracle_builders_and_prompt_editor_import_from_packaged_layout(
             "from acp.builder.oracle.edit.launch_exec import "
             "build_oracle_edit_request as build_main; "
             "from oracle.acp_builder.oracle.investigation.launch_tui import "
-            "build_oracle_investigation_request as build_investigation; "
+            "build_decision_plan_request as build_investigation; "
             "investigation = build_investigation('investigate oracle'); "
             "assert investigation.file_access_mode.value == 'pure_oracle_read'; "
             "assert investigation.agent_call_cwd == Path.cwd(); "
