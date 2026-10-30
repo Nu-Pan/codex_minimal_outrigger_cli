@@ -36,7 +36,7 @@
     "changed_path": {
       "type": "string",
       "pattern": "^[\\s\\S]{1,1024}$",
-      "description": "realization file の net 差分を表す正規化済み `{{work-root}}` 相対 path。"
+      "description": "spec file・realization file の net 差分を表す正規化済み `{{work-root}}` 相対 path。"
     },
     "changed_paths_required": {
       "type": "array",
@@ -45,7 +45,7 @@
       "items": {
         "$ref": "#/$defs/changed_path"
       },
-      "description": "この issue の処理による 1 件以上の realization file の net 差分。"
+      "description": "この issue の処理による、spec file・realization file の 1 件以上の net 差分。"
     },
     "changed_paths_empty": {
       "type": "array",
@@ -53,7 +53,7 @@
       "items": {
         "$ref": "#/$defs/changed_path"
       },
-      "description": "realization file の net 差分がないことを表す空配列。"
+      "description": "spec file・realization file の net 差分がないことを表す空配列。"
     },
     "changed_paths_optional": {
       "type": "array",
@@ -201,7 +201,7 @@
     },
     "fixed_result": {
       "type": "object",
-      "description": "realization file の修正と検証を完了した結果。",
+      "description": "spec file または realization file の修正と検証を完了した結果。",
       "additionalProperties": false,
       "required": [
         "issue_id",
@@ -321,7 +321,7 @@
     },
     "human_required_result": {
       "type": "object",
-      "description": "realization file の編集だけでは満たせない対応が必要な結果。",
+      "description": "spec file・realization file の編集だけでは満たせない対応が必要な結果。",
       "additionalProperties": false,
       "required": [
         "issue_id",

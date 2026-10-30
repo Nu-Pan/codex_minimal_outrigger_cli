@@ -17,13 +17,13 @@ def build_feedback_issue_remediation_request(
     issue_json: str,
     run_worktree: Path,
 ) -> AgentCallParameter:
-    """正規化済み issue 1 件を確認し、安全な realization 修正と検証を行う。"""
+    """正規化済み issue 1 件を確認し、安全な spec・realization 修正と検証を行う。"""
     # 入力 issue の処理結果は維持し、追加報告の MCP と prompt をともに無効にする。
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
     prompt = build_complete_prompt(
         task="""
         - 入力された 1 件の feedback issue が現在の run tree に存在するか確認すること
-        - 編集が許されたファイルの修正で解決できる場合は、この agent call 内で修正すること
+        - 編集が許されたファイルの修正で安全に解決できる場合は、この agent call 内で修正し、必要な検証を完了すること
         - Structured Output schema に従って作業結果を報告すること
         """,
         scope="""
@@ -41,7 +41,7 @@ def build_feedback_issue_remediation_request(
                 - decision, reference で明示された仕様どおりの制約は報告対象の問題に含めない
                 - 報告対象の問題は、後続の対応で再発防止、反復的な浪費の削減、または外部挙動を左右する人間意図の確定が可能になるものに限る
                 - この call で追加 observation を報告できないことを、入力 issue の結果分類の理由にしない
-                - `human_required` は、問題が現在も存在し、realization file の編集だけでは満たせない具体的な対応を確認できた場合だけ使用する
+                - `human_required` は、問題が現在も存在し、spec file・realization file の編集だけでは満たせない具体的な対応を確認できた場合だけ使用する
                 - 許可された情報では判定できない場合、または再確認・再修正が同じ状態を往復して収束できないことが確認された場合は `inconclusive` とし、`human_required` へ変換しない
                 - agent call、tool、validation、または作業の失敗だけを理由に `human_required` としてはならない
                 """,
@@ -50,11 +50,11 @@ def build_feedback_issue_remediation_request(
                 "Structured Output の決定論的事後条件",
                 """
                 - `result.issue_id` は入力 issue ID と完全一致させる
-                - 論理 agent call の開始時点から正式な終了時点までに残る realization file の net 差分の path 集合を、実際の変更 path 集合とする
+                - 論理 agent call の開始時点から正式な終了時点までに残る spec file・realization file の net 差分の path 集合を、実際の変更 path 集合とする
                 - `result.changed_paths` に重複を含めず、実際の変更 path 集合と一致させる
                 - path は正規化済みの `{{work-root}}` 相対 path とする。追加と変更は終了時点、削除は開始時点、rename は rename 前後の path で表す
                 - `fixed` の verification は実際に成功した修正後の検証だけを表す
-                - `already_resolved | not_actionable | inconclusive` では、実際の realization file の net 差分を残さない
+                - `already_resolved | not_actionable | inconclusive` では、実際の spec file・realization file の net 差分を残さない
                 - `human_required` で差分を残す場合は、安全で独立して検証済みの部分修正だけとする
                 """,
             ),
