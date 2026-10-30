@@ -52,7 +52,7 @@ def build_tui_request(
             task=f"""
             - {original_prompt_block.ref_tag} の要求を満たすこと
             """,
-            file_access_mode=FileAccessMode.REPO_WRITE,
+            file_access_mode=FileAccessMode.SPEC_AND_REALIZATION_WRITE,
             path_context=path_context,
             enable_document_search_mcp=True,
             aux_dynamic_prompt=[original_prompt_block],
@@ -68,7 +68,7 @@ def build_tui_request(
         prompt = None
     return AgentCallParameter(
         agent_call_kind=build_tui_request.__name__,
-        file_access_mode=FileAccessMode.REPO_WRITE,
+        file_access_mode=FileAccessMode.SPEC_AND_REALIZATION_WRITE,
         prompt=prompt,
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
