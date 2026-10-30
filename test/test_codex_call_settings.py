@@ -16,7 +16,7 @@ from _codex_support import (
     setup_codex_home,
 )
 from oracle.acp_builder.decision.apply.launch_exec import (
-    build_decision_apply_realization_request_impl,
+    build_decision_apply_realization_request,
 )
 from oracle.acp_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
@@ -122,7 +122,7 @@ def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
 ):
     root = settings_root
     parameters = [
-        build_decision_apply_realization_request_impl("base", "head", root),
+        build_decision_apply_realization_request("base", "head", root),
         build_realization_refactor_request(root / "src.py", root),
         build_feedback_issue_remediation_request('{"issue_id":"issue"}', root),
         build_run_join_conflict_resolution_request("run", "session", root),
@@ -197,9 +197,9 @@ def test_shared_settings_remain_fixed_across_output_corrections(
             config.codex.agent_calls["realization_edit"] = CodexCallConfig(
                 "openai", "changed", "low"
             )
-            config.codex.model_providers["provider_0"].settings["base_url"] = (
-                "https://changed.invalid"
-            )
+            config.codex.model_providers["provider_0"].settings[
+                "base_url"
+            ] = "https://changed.invalid"
 
     accepted = {
         "findings": [],
@@ -228,7 +228,7 @@ def test_invalid_saved_settings_fail_before_codex_launch(
     settings_root, monkeypatch, invalid
 ):
     root = settings_root
-    parameter = build_decision_apply_realization_request_impl("base", "head", root)
+    parameter = build_decision_apply_realization_request("base", "head", root)
     data = config_to_dict(CmocConfig())
     if invalid == "missing_shared":
         del data["codex"]["agent_calls"]["realization_edit"]

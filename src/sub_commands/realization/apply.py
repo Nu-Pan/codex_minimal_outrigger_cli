@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from oracle.acp_builder.decision.apply.launch_exec import (
-    build_decision_apply_realization_request_impl,
+    build_decision_apply_realization_request,
 )
 
 from cmoc_runtime import (
@@ -95,7 +95,7 @@ def _cmoc_decision_apply_body() -> TerminalResult:
             context.run_worktree,
         ).stdout.strip()
         update_primary_report_fields(diff_base_commit=diff_base_commit)
-        parameter = build_decision_apply_realization_request_impl(
+        parameter = build_decision_apply_realization_request(
             diff_base_commit,
             context.run_fork_commit,
             context.run_worktree,

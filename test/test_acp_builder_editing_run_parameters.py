@@ -13,7 +13,7 @@ import oracle.other.path_model as path_model_module
 import pytest
 from _acp_builder_support import oracle_schema_path
 from oracle.acp_builder.decision.apply.launch_exec import (
-    build_decision_apply_realization_request_impl,
+    build_decision_apply_realization_request,
 )
 from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
     build_realization_refactor_request as build_canonical_review_parameter,
@@ -65,7 +65,7 @@ def test_decision_apply_builder_passes_commit_references(
 ) -> None:
     """apply builder が commit 参照と取得条件を prompt に含める。"""
     root, run_worktree = editing_run_paths
-    parameter = build_decision_apply_realization_request_impl(
+    parameter = build_decision_apply_realization_request(
         "base-commit",
         "fork-commit",
         run_worktree,

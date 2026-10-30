@@ -262,7 +262,7 @@ def test_saved_config_rejects_missing_call_without_doctor_completion(
 @pytest.mark.parametrize(
     "kind",
     [
-        "build_decision_apply_realization_request_impl",
+        "build_decision_apply_realization_request",
         "build_realization_refactor_request",
         "build_feedback_issue_remediation_request",
         "build_run_join_conflict_resolution_request",

@@ -209,7 +209,7 @@ def apply_after_preprocess(
     # 実 builder との結合は上記の fork→join test に残す。
     monkeypatch.setattr(
         apply_module,
-        "build_decision_apply_realization_request_impl",
+        "build_decision_apply_realization_request",
         lambda _base, _fork, run_worktree: SimpleNamespace(agent_call_cwd=run_worktree),
     )
     yield
@@ -760,7 +760,7 @@ def test_decision_apply_automatically_joins_changes_and_noop(
     (root / "oracle/reference_only.md").write_text("oracle payload\n" * 1000)
     run_git(root, "add", "oracle/reference_only.md")
     run_git(root, "commit", "-m", "oracle change")
-    original_builder = apply_module.build_decision_apply_realization_request_impl
+    original_builder = apply_module.build_decision_apply_realization_request
     built: list[AgentCallParameter] = []
     calls: list[tuple[Path, str]] = []
     notifications = []
@@ -786,7 +786,7 @@ def test_decision_apply_automatically_joins_changes_and_noop(
 
     monkeypatch.setattr(
         apply_module,
-        "build_decision_apply_realization_request_impl",
+        "build_decision_apply_realization_request",
         capture_builder,
     )
     monkeypatch.setattr(apply_module, "run_codex_exec", fake_apply)
