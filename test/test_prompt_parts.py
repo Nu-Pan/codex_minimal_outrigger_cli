@@ -18,7 +18,7 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/editor_input_handoff.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/feedback_reporting.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/file_access.py
-- {{work-root}}/reference/src/oracle/prompt_builder/parts/cmoc_basic_instruction.py
+- {{work-root}}/reference/src/oracle/prompt_builder/policy/cmoc_basic.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/oracle.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/realization_findings.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/realization.py

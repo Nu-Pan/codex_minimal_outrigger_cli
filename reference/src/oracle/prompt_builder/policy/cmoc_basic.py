@@ -6,7 +6,7 @@ from oracle.other.struct_doc import SDHeader
 from oracle.prompt_builder.basic import PlaceholderMap
 
 
-def build_cmoc_basic_instruction(
+def build_cmoc_basic_policy(
     path_context: AgentCallPathContext,
 ) -> tuple[PlaceholderMap, SDHeader]:
     """cmoc が仮定するワークフローについての基本知識の説明文章を構築する。"""

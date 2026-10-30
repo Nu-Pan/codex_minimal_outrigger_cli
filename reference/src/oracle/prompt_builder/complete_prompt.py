@@ -7,7 +7,7 @@ from oracle.request_builder.basic import FileAccessMode
 from .basic import PlaceholderMap
 
 # local
-from .parts.cmoc_basic_instruction import build_cmoc_basic_instruction
+from .policy.cmoc_basic import build_cmoc_basic_policy
 from .policy.conflict_resolution import build_conflict_resolution_policy
 from .policy.editor_input_handoff import build_editor_input_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
@@ -141,7 +141,7 @@ def build_complete_prompt(
     if cmoc_basic_instruction:
         _append(
             fundamental_policy_prompt,
-            build_cmoc_basic_instruction(path_context),
+            build_cmoc_basic_policy(path_context),
         )
     full_prompt.append(SDTagBlock("fundamental_policy", *fundamental_policy_prompt))
 
