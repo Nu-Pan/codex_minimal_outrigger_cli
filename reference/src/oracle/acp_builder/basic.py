@@ -27,8 +27,7 @@ class FileAccessMode(StrEnum):
 class TuiResumeTarget:
     """内部の自動移行と公開 resume に共用する検査済みの対話再開入力。
 
-    呼び出し管理側が、`{{cmoc-root}}/spec/app_spec/codex_tui_rule.md`
-    の「検査済みの再開入力」に従って、経路ごとの適格性と環境を構築前に照合する。
+    呼び出し管理側が、経路ごとの再開適格性と保存済み cwd・実行環境を構築前に照合する。
     この型は検査結果を保持する入力であり、ログや process の検査は行わない。
     """
 
@@ -50,7 +49,7 @@ class AgentCallParameter:
     """
 
     # 呼び出し種別の正確な値は各 builder が指定する。
-    # 意味と用途は `{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「呼び出し単位と ID」に従う。
+    # 呼び出し設定の取得と、ログ・feedback の分類に使う。
     agent_call_kind: str
 
     # ファイルアクセスモード
@@ -72,18 +71,14 @@ class AgentCallParameter:
     enable_editor_input_handoff_mcp: bool = False
 
     # cmoc_document_search MCP server を呼び出し単位で有効化する。
-    # `{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「文書検索 MCP」を参照。
+    # 完全 prompt を構築する場合も同じ有効化状態を渡す。
     enable_document_search_mcp: bool = False
 
     # feedback reporter の提供判断。完全 prompt を構築する場合も同じ値を渡す。
-    # `{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の
-    # 「feedback reporter と collector context」を参照。
     enable_feedback_reporting: bool = True
 
     # 内部の自動移行と公開 resume の対話起動で使う外部 session ID。
     # 非対話 call の補正・回復には使用しない。
-    # 意味は `{{cmoc-root}}/spec/app_spec/codex_tui_rule.md` の
-    # 「TUI の新規起動と対話 resume」を正本とする。
     tui_resume_session_id: str | None = None
 
     def __post_init__(self) -> None:
