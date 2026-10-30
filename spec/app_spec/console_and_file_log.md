@@ -193,8 +193,8 @@ agent は、全文に記された目標未達、未完了、未検証、未解�
 
 正確な詳細は次へ委譲する。受信 agent が cmoc の内部仕様を読まなくても実行できる、自己完結した指示にする。
 
-- `{{cmoc-root}}/reference/src/oracle/acp_builder/primary_report_review.py` の `build_primary_report_review_request`：prompt 文面、固定した入力ファイルの受け渡し、call 種別、file access mode、および MCP の選択を含む起動パラメータ。
-- `{{cmoc-root}}/reference/src/oracle/acp_builder/primary_report_review.json` の root schema（JSON Pointer `#`）：Structured Output の構造、確認状態の固定値、重要事項・根拠・未完了理由の field と組み合わせ。構造と schema で表せる出力要件は prompt に重複させない。
+- `{{cmoc-root}}/reference/src/oracle/acp_builder/common/primary_report_review.py` の `build_primary_report_review_request`：prompt 文面、固定した入力ファイルの受け渡し、call 種別、file access mode、および MCP の選択を含む起動パラメータ。
+- `{{cmoc-root}}/reference/src/oracle/acp_builder/common/primary_report_review.json` の root schema（JSON Pointer `#`）：Structured Output の構造、確認状態の固定値、重要事項・根拠・未完了理由の field と組み合わせ。構造と schema で表せる出力要件は prompt に重複させない。
 - `{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls["build_primary_report_review_request"]`：重要事項確認用 call の個別設定の既定値。
 
 設定取得と出力検証には、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」と `{{cmoc-root}}/spec/app_spec/codex_exec_rule.md` の「Structured Output」を適用する。schema にない意味的品質を機械的な受理条件へ追加しない。
@@ -203,7 +203,7 @@ agent は、全文に記された目標未達、未完了、未検証、未解�
 
 確認用 call にも、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「preflight validation」と、`{{cmoc-root}}/spec/app_spec/codex_exec_rule.md` の「Structured Output」「`codex exec` が失敗した場合」を適用する。回復待ち・probe・再開、補正の条件と回数、同じ session の使用、補正上限の維持、および不受理出力の保持は、後者の exec 規約に従う。回復待ち中というだけで確認未完了として保存へ進まず、その待機・再開条件に従う。確認用 call 固有の時間上限や retry 方式は設けない。
 
-`{{cmoc-root}}/reference/src/oracle/acp_builder/primary_report_review.json` の `#/$defs/incomplete_result` に従う全文確認不能の応答を正式に受理した場合は、確認未完了として記録・保存へ進む。その status 自体を出力補正や再試行の理由にしない。
+`{{cmoc-root}}/reference/src/oracle/acp_builder/common/primary_report_review.json` の `#/$defs/incomplete_result` に従う全文確認不能の応答を正式に受理した場合は、確認未完了として記録・保存へ進む。その status 自体を出力補正や再試行の理由にしない。
 
 これらの呼び出し規約で確認を続行できない場合の保存と最外側の終了結果には、次の「確認の停止・失敗と保存」「確認結果と終了結果の分離」を適用する。
 

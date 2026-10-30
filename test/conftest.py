@@ -471,7 +471,7 @@ def primary_report_review_runner(monkeypatch):
 @pytest.fixture
 def primary_report_review_builder(primary_report_review_runner, monkeypatch):
     """確認の起動引数や Git 境界を検査するケースでは正本 builder を使う。"""
-    from oracle.acp_builder.primary_report_review import (
+    from oracle.acp_builder.common.primary_report_review import (
         build_primary_report_review_request,
     )
 

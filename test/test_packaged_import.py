@@ -90,7 +90,7 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
 
     acp の型再公開と正本 builder の完全 prompt を、basic・commons を含まない配置で
     確認する。共通の oracle import を一つの独立 process で検証する。
-    根拠: {{work-root}}/reference/src/oracle/acp_builder/quota_probe.py
+    根拠: {{work-root}}/reference/src/oracle/acp_builder/common/quota_probe.py
     {{work-root}}/reference/src/oracle/acp_builder/basic.py
     {{work-root}}/spec/dev_rule/test_rule.md
     """
@@ -123,7 +123,7 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
             "import oracle.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
-            "from oracle.acp_builder.quota_probe import "
+            "from oracle.acp_builder.common.quota_probe import "
             "build_quota_availability_probe_request as build_probe; "
             "probe = build_probe(Path.cwd()); "
             "assert probe.agent_call_cwd == Path.cwd(); "

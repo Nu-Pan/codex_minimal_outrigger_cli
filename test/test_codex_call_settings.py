@@ -15,6 +15,10 @@ from _codex_support import (
     script_codex_calls,
     setup_codex_home,
 )
+from oracle.acp_builder.common.primary_report_review import (
+    build_primary_report_review_request,
+)
+from oracle.acp_builder.common.quota_probe import build_quota_availability_probe_request
 from oracle.acp_builder.decision.apply.launch_exec import (
     build_decision_apply_realization_request,
 )
@@ -30,10 +34,6 @@ from oracle.acp_builder.feedback.report.remediate_issue import (
 from oracle.acp_builder.oracle.edit.launch_exec import (
     build_oracle_edit_request,
 )
-from oracle.acp_builder.primary_report_review import (
-    build_primary_report_review_request,
-)
-from oracle.acp_builder.quota_probe import build_quota_availability_probe_request
 from oracle.acp_builder.realization.refactor.file_review_and_fix import (
     build_realization_refactor_request,
 )

@@ -17,7 +17,7 @@ from _codex_support import (
     setup_codex_home,
     stub_codex_overrides,
 )
-from oracle.acp_builder.quota_probe import (
+from oracle.acp_builder.common.quota_probe import (
     build_quota_availability_probe_request as build_canonical_quota_probe_parameter,
 )
 
@@ -370,7 +370,7 @@ def test_quota_probe_uses_canonical_complete_prompt(
     # 正本の生成結果を一度だけ作り、runtime が cwd を渡してそのまま返すことを確かめる。
     builder = Mock(return_value=build_canonical_quota_probe_parameter(root))
     monkeypatch.setattr(
-        "oracle.acp_builder.quota_probe.build_quota_availability_probe_request",
+        "oracle.acp_builder.common.quota_probe.build_quota_availability_probe_request",
         builder,
     )
     probe = runtime_codex_exec._quota_availability_probe_parameter(base)
