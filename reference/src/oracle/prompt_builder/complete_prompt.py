@@ -12,7 +12,7 @@ from .policy.conflict_resolution import build_conflict_resolution_policy
 from .policy.editor_input_handoff import build_editor_input_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
 from .policy.file_access import build_file_access_policy
-from .policy.oracle import build_oracle_policy
+from .policy.spec import build_spec_policy
 from .policy.realization import build_realization_policy
 from .policy.realization_findings import build_realization_findings_policy
 from .policy.routing import build_routing_policy
@@ -49,7 +49,7 @@ def build_complete_prompt(
     aux_dynamic_prompt: list[SDHeader | SDTagBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
     cmoc_basic_instruction: bool = False,
-    oracle_policy: bool = False,
+    spec_policy: bool = True,
     realization_policy: bool = False,
     realization_findings_policy: bool = False,
     conflict_resolution_policy: bool = False,
@@ -151,10 +151,10 @@ def build_complete_prompt(
     # NOTE
     #   指定された通りに規定の有効・無効を反映する。
     #   依存先規定の自動注入みたいな余計なことはしない
-    if oracle_policy:
+    if spec_policy:
         _append(
             full_prompt,
-            build_oracle_policy(),
+            build_spec_policy(),
         )
     if realization_policy:
         _append(

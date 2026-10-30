@@ -65,6 +65,15 @@ def build_file_access_policy(
                 "decision, reference, spec は書き込み禁止",
                 # realization は読み書き許可
             ]
+        case FileAccessMode.SPEC_AND_REALIZATION_WRITE:
+            # NOTE
+            #   spec, realization に対する編集操作用
+            #   feedback issue に基づく自動修正で使う想定
+            mode_prohibit = [
+                "decision, reference, は書き込み禁止",
+                # spec, realization は読み書き許可
+            ]
+
         case FileAccessMode.NO_POLICY:
             # NOTE
             #   NO_POLICY は有効な mode であり、

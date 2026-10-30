@@ -7,6 +7,8 @@
 - 後回しにしている TODO
     - `reference/src/oracle` の oracle はリネームしたい (旧仕様と紛らわしい)
     - `launch_exec`, `launch_tui` じゃなくて `build_request` に統一したい
+    - `build_complete_prompt` の引数 `task` は `goal` の方が適切かも
+    - feedback remediation は、structured output で操作を返すのではなく、stdin MCP server として issue に対するを公開する方式にしたい
 
 ## サンドボックスシステムを考え直す
 

@@ -19,6 +19,7 @@ class FileAccessMode(StrEnum):
     DECISION_PLAN = auto()
     SPEC_WRITE = auto()
     REALIZATION_WRITE = auto()
+    SPEC_AND_REALIZATION_WRITE = auto()
     NO_POLICY = auto()
 
 

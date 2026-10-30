@@ -70,7 +70,6 @@ def build_decision_plan_request(
                 )
             ],
             cmoc_basic_instruction=True,
-            oracle_policy=True,
             routing_policy=True,
             editor_input_handoff_policy=True,
         )

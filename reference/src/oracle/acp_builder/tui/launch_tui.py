@@ -40,36 +40,32 @@ def build_tui_request(
             resolve_repo_root() if resume is None else resume.agent_call_cwd
         )
     )
-    prompt = None
     if original_prompt is not None:
-        original_prompt_ref = '<cmoc_ref target="original_prompt"/>'
+        original_prompt_block = SDTagBlock(
+            "original_prompt",
+            SDHeader(
+                "オリジナルプロンプト",
+                original_prompt,
+            ),
+        )
         complete_prompt = build_complete_prompt(
             task=f"""
-            - オリジナルプロンプト {original_prompt_ref} が要求する作業を実行すること
-            """,
-            completion_criteria=f"""
-            - オリジナルプロンプト {original_prompt_ref} が要求する成果と完了条件を満たしていること
+            - {original_prompt_block.ref_tag} の要求を満たすこと
             """,
             file_access_mode=FileAccessMode.REPO_WRITE,
             path_context=path_context,
             enable_document_search_mcp=True,
-            aux_dynamic_prompt=[
-                SDTagBlock(
-                    "original_prompt",
-                    SDHeader(
-                        "オリジナルプロンプト",
-                        original_prompt,
-                    ),
-                )
-            ],
+            aux_dynamic_prompt=[original_prompt_block],
             cmoc_basic_instruction=True,
-            oracle_policy=True,
+            spec_policy=True,
             realization_policy=True,
             realization_findings_policy=True,
             routing_policy=True,
             editor_input_handoff_policy=True,
         )
         prompt = render_sd_node_as_markdown(*complete_prompt)
+    else:
+        prompt = None
     return AgentCallParameter(
         agent_call_kind=build_tui_request.__name__,
         file_access_mode=FileAccessMode.REPO_WRITE,

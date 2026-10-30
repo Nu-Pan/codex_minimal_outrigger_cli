@@ -119,7 +119,7 @@ def customized_prompt_markdown(path_context: AgentCallPathContext) -> str:
         aux_dynamic_prompt=[SDHeader("caller dynamic", "- dynamic")],
         aux_placeholder_def={"work-root": path_context.work_root},
         cmoc_basic_instruction=True,
-        oracle_policy=True,
+        spec_policy=True,
         realization_policy=True,
         realization_findings_policy=True,
         conflict_resolution_policy=True,
