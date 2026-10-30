@@ -10,7 +10,7 @@ realization refactor は、仕様への適合と必要な回帰検出能力を�
 
 ## agent call への委譲
 
-所見調査・修正 call の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/realization/refactor/file_review_and_fix.py` の `build_realization_refactor_request` へ委譲する。所見、対応結果、および処理単位全体の検証結果を返す Structured Output の構造と field の意味は、`{{cmoc-root}}/reference/src/oracle/acp_builder/realization/refactor/file_review_and_fix.json` のルート object へ委譲する。
+所見調査・修正 call の正確な prompt 文面、prompt part の選択、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/request_builder/realization/refactor/file_review_and_fix.py` の `build_realization_refactor_request` へ委譲する。所見、対応結果、および処理単位全体の検証結果を返す Structured Output の構造と field の意味は、`{{cmoc-root}}/reference/src/oracle/request_builder/realization/refactor/file_review_and_fix.json` のルート object へ委譲する。
 
 fork、join、abandon の共通 lifecycle は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「編集 run の共通仕様」を正本とする。
 

@@ -5,14 +5,14 @@ def oracle_schema_path(*parts: str) -> Path:
     """正本 schema の参照 path を返す。
 
     Args:
-        *parts: `acp_builder` からの schema 相対 path。
+        *parts: `request_builder` からの schema 相対 path。
 
     Returns:
         指定した oracle schema の path。
     """
-    # 正本 schema をテストへ複製せず、{{work-root}}/reference/src/oracle/acp_builder/ を参照する。
+    # 正本 schema をテストへ複製せず、{{work-root}}/reference/src/oracle/request_builder/ を参照する。
     return (
         Path(__file__)
         .parents[1]
-        .joinpath("reference", "src", "oracle", "acp_builder", *parts)
+        .joinpath("reference", "src", "oracle", "request_builder", *parts)
     )

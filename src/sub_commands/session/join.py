@@ -6,7 +6,7 @@ from functools import partial
 from pathlib import Path
 from typing import Callable
 
-from oracle.acp_builder.session.join.conflict_resolution import (
+from oracle.request_builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_request,
 )
 

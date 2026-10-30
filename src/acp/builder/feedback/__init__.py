@@ -2,6 +2,6 @@
 
 対応する oracle file:
 
-- `{{work-root}}/reference/src/oracle/acp_builder/feedback/report/normalize_issue.py`
-- `{{work-root}}/reference/src/oracle/acp_builder/feedback/report/remediate_issue.py`
+- `{{work-root}}/reference/src/oracle/request_builder/feedback/report/normalize_issue.py`
+- `{{work-root}}/reference/src/oracle/request_builder/feedback/report/remediate_issue.py`
 """

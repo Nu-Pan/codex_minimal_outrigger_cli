@@ -354,7 +354,7 @@ def merge_run(
                 "initial_conflicts": [],
             }
             if merge.returncode != 0:
-                from oracle.acp_builder.run.join.conflict_resolution import (
+                from oracle.request_builder.run.join.conflict_resolution import (
                     build_run_join_conflict_resolution_request,
                 )
 

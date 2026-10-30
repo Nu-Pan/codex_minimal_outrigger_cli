@@ -1,16 +1,16 @@
 """TUI 起動 builder の固定 parameter と prompt を検証する。
 
-対応する正本: {{work-root}}/reference/src/oracle/acp_builder/tui/launch_tui.py
+対応する正本: {{work-root}}/reference/src/oracle/request_builder/tui/launch_tui.py
 """
 
 from pathlib import Path
 
 import oracle.other.path_model as path_model_module
 import pytest
-from oracle.acp_builder.decision.plan.launch_tui import (
+from oracle.request_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
 )
-from oracle.acp_builder.tui.launch_tui import build_tui_request
+from oracle.request_builder.tui.launch_tui import build_tui_request
 
 from basic.acp import FileAccessMode, TuiResumeTarget
 

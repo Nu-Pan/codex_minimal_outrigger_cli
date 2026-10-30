@@ -28,7 +28,7 @@ agent call ID と Codex call ID の書式と採番は、`{{cmoc-root}}/spec/app_
 
 個別 agent call の意味上の責務と判断基準は、対応する oracle doc を正本とする。AgentCallParameter builder は、その oracle doc から明示的に委譲された範囲で、正確な prompt 文面と workload 固有の起動パラメータを構築する。ただし、model provider、Model、および Reasoning Effort は構築対象から除く。
 
-`AgentCallParameter` の field 名、型、既定値、および初期 prompt と対話再開の排他条件を含む正確な構造は、`{{cmoc-root}}/reference/src/oracle/acp_builder/basic.py` の `AgentCallParameter` と `TuiResumeTarget` へ委譲する。
+`AgentCallParameter` の field 名、型、既定値、および初期 prompt と対話再開の排他条件を含む正確な構造は、`{{cmoc-root}}/reference/src/oracle/request_builder/basic.py` の `AgentCallParameter` と `TuiResumeTarget` へ委譲する。
 
 ## Codex session ID
 
@@ -320,7 +320,7 @@ prompt の確定前後に行う処理は、次のように区別する。
 ## feedback reporter と collector context
 
 - reporting の意味は `{{cmoc-root}}/spec/app_spec/feedback_observation.md` の「agent による報告」を正本とする。正確な agent 向け文面と完全 prompt への配置は、同文書が参照する oracle src を正本とする
-- `AgentCallParameter` は、reporter の提供を有効にするかを agent call 単位で保持する。正確な field 名、型、および既定値は、`{{cmoc-root}}/reference/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
+- `AgentCallParameter` は、reporter の提供を有効にするかを agent call 単位で保持する。正確な field 名、型、および既定値は、`{{cmoc-root}}/reference/src/oracle/request_builder/basic.py` の `AgentCallParameter` へ委譲する
 - builder が完全 prompt を構築する場合は、reporter の提供判断と同じ値を渡す。有効な call には報告規定を注入し、無効な call には注入しない。正確な選択引数と配置は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
 - 提供を無効にする call は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「issue 処理 call の observation 報告」と、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「重要事項確認用 call > agent の責務と境界」に従う。対象外の builder は、reporter と報告規定をともに有効にする既定の契約を維持する
 - 初回、Structured Output の補正、retry、および回復待ち後の再開を含む同一 agent call の全 Codex call で、この提供判断を維持する
@@ -339,7 +339,7 @@ prompt の確定前後に行う処理は、次のように区別する。
 
 editor input handoff の提供対象、利用条件、および agent の責務は、`{{cmoc-root}}/spec/app_spec/editor_input_handoff.md` の「概要」「agent の責務と権限」を正本とする。
 
-- `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/reference/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する
+- `AgentCallParameter.enable_editor_input_handoff_mcp` は、`cmoc_editor_input` MCP server の有効化を呼び出し単位で指定する。field の正確な型と既定値は、`{{cmoc-root}}/reference/src/oracle/request_builder/basic.py` の `AgentCallParameter` へ委譲する
 - 提供対象外の builder は `enable_editor_input_handoff_mcp` の既定値を使用する
 - 有効な各 call には `cmoc_editor_input` MCP server を提供する。handoff ガイド取得と上書きの公開 tool は、`{{cmoc-root}}/spec/app_spec/editor_input_handoff.md` の「MCP interface」に従う。MCP の提供によって、sandbox、network access、file access mode、または agent call の成功条件を変更してはならない
 - handoff instruction は MCP の有効化とは別に `build_complete_prompt` の `editor_input_handoff_policy` で選択する。正確な定義と配置は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt` へ委譲する
@@ -351,7 +351,7 @@ editor input handoff の提供対象、利用条件、および agent の責務�
 
 検索の対象、信頼境界、同期、結果、失敗、および資源管理は、`{{cmoc-root}}/spec/app_spec/document_search.md` の「cmoc 専用文書検索」を正本とする。本節は call と MCP 接続の責務を所有する。
 
-- 検索 MCP の有効化を呼び出し単位で指定する。正確な field・型・既定値は、`{{cmoc-root}}/reference/src/oracle/acp_builder/basic.py` の `AgentCallParameter` へ委譲する。builder が完全 prompt を構築する場合は、その検索有効状態を起動パラメータと一致させる。
+- 検索 MCP の有効化を呼び出し単位で指定する。正確な field・型・既定値は、`{{cmoc-root}}/reference/src/oracle/request_builder/basic.py` の `AgentCallParameter` へ委譲する。builder が完全 prompt を構築する場合は、その検索有効状態を起動パラメータと一致させる。
 - oracle edit、oracle investigation、汎用 TUI、realization apply、refactor の所見調査・修正、feedback の normalization・remediation、および run/session join の競合解消では、関連原文への到達のため検索を提供する。短い応答だけで可用性を確認する回復 probe と、固定した report 本文だけを読む重要事項確認用 call では検索を無効にする。
 - 各 call では検索要求時の自動同期を使う。起動時の検索設定・検索用コンポーネントの検査と索引同期は、`{{cmoc-root}}/spec/app_spec/doctor_preprocess.md` の「実行手順」「検索索引の同期」に従う。Structured Output の補正・retry・再開でも検索の有効状態と work-root を維持する。
 - 有効な各 Codex process に local stdio MCP 接続を設ける。検索 server の cwd、実行ファイル、引数、許可 tool、approval behavior、起動・tool 期限、および信頼された context の供給を、呼び出し単位の argv override で管理する。設定の符号化には本書の「Codex CLI 引数による設定上書き」を使う。

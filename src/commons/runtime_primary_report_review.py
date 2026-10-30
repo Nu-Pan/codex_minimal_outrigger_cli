@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from oracle.acp_builder.common.primary_report_review import (
+from oracle.request_builder.common.primary_report_review import (
     build_primary_report_review_request,
 )
 

@@ -4,11 +4,12 @@
 import json
 from pathlib import Path
 
-# cmoc
-from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDCodeBlock, SDHeader, render_sd_node_as_markdown
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
+
+# cmoc
+from oracle.request_builder.basic import AgentCallParameter, FileAccessMode
 
 
 def build_primary_report_review_request(

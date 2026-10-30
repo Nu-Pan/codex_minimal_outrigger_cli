@@ -271,7 +271,7 @@ def _quota_availability_probe_parameter(
 ) -> AgentCallParameter:
     """quota判定用のprobe parameterをcanonical builderから作る。"""
     try:
-        from oracle.acp_builder.common.quota_probe import (
+        from oracle.request_builder.common.quota_probe import (
             build_quota_availability_probe_request,
         )
 

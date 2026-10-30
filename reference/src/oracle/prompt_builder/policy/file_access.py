@@ -1,10 +1,10 @@
 """FileAccessMode に応じたファイルアクセス制限規定文面の構築定義。"""
 
 # cmoc
-from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDPolicy
 from oracle.prompt_builder.basic import PlaceholderMap
+from oracle.request_builder.basic import FileAccessMode
 
 
 def build_file_access_policy(

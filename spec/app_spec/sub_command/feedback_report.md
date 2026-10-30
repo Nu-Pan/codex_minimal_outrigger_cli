@@ -84,7 +84,7 @@ agent が入力した deduplication hint は、候補検索にだけ使用する
 
 normalization agent は、入力した observation が既存 candidate と同じ issue か、新しい issue かだけを返す。normalization は issue identity を確定する責務であり、issue remediation call には数えない。
 
-正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/report/normalize_issue.py` の `build_feedback_issue_normalization_request` へ委譲する。Structured Output schema は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/report/normalize_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
+正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/request_builder/feedback/report/normalize_issue.py` の `build_feedback_issue_normalization_request` へ委譲する。Structured Output schema は、`{{cmoc-root}}/reference/src/oracle/request_builder/feedback/report/normalize_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
 cmoc が normalization agent に渡す比較用の入力は、次の 2 つとする。
 
@@ -127,7 +127,7 @@ issue remediation agent call は、1 issue について次の処理を同じ cal
 
 収束不能を理由に `inconclusive` と判定した issue について、cmoc は、その診断根拠が変わらないまま同じ状態を往復する再試行を続けてはならない。
 
-正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/report/remediate_issue.py` の `build_feedback_issue_remediation_request` へ委譲する。Structured Output schema は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/report/remediate_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
+正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/request_builder/feedback/report/remediate_issue.py` の `build_feedback_issue_remediation_request` へ委譲する。Structured Output schema は、`{{cmoc-root}}/reference/src/oracle/request_builder/feedback/report/remediate_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
 call の境界を次に示す。
 
@@ -228,7 +228,7 @@ quiet period、directory の列挙タイミング、または一定時間 observ
 
 競合解消 agent は、封印済みの採用結果を維持するために、session を統合中の run worktree の merge 結果を調整してよい。内容が封印時と異なっても、両側の変更意図と採用結果を維持できる調整を認める。影響を受ける判定を全結果分類から特定し、run 側の merge commit 前に必要な検証を行う。issue 処理をやり直すための新しい wave や、別の remediation・レビュー call は開始しない。
 
-cmoc は、merge 対象 commit の参照に加えて、封印済み report cut の path を agent へ渡す。agent は、そこから採用結果、対応する checkpoint、および判定根拠を読み取り専用で参照し、調整と検証の結果を報告する。封印済み artifact や issue commit は書き換えず、受理した調整を cmoc が run の後続履歴に残す。封印時 run HEAD と準備完了 run HEAD の対応は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「report cut」「publication completion record」に従う。正確な入力と指示文は、`{{cmoc-root}}/reference/src/oracle/acp_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_request` へ委譲する。
+cmoc は、merge 対象 commit の参照に加えて、封印済み report cut の path を agent へ渡す。agent は、そこから採用結果、対応する checkpoint、および判定根拠を読み取り専用で参照し、調整と検証の結果を報告する。封印済み artifact や issue commit は書き換えず、受理した調整を cmoc が run の後続履歴に残す。封印時 run HEAD と準備完了 run HEAD の対応は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「report cut」「publication completion record」に従う。正確な入力と指示文は、`{{cmoc-root}}/reference/src/oracle/request_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_request` へ委譲する。
 
 結果分類そのものの変更が必要な場合、または必要な検証で封印済み結果の維持を確認できない場合は、調整を確定せず、session への取り込みと publication を停止する。この停止を新しい issue result、`human_required`、または `incomplete` へ変換しない。run 側の統合・同期 commit がすでに作成されていても、session への取り込み前なら、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「join の失敗と復旧」に従って準備変更を取り消す。
 

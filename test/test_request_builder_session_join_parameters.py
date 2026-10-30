@@ -1,7 +1,7 @@
 """session join conflict resolution builder の契約を検証する。
 
 対応する正本:
-- {{work-root}}/reference/src/oracle/acp_builder/session/join/conflict_resolution.py
+- {{work-root}}/reference/src/oracle/request_builder/session/join/conflict_resolution.py
 - {{work-root}}/spec/app_spec/codex_common_rule.md
 """
 
@@ -11,7 +11,7 @@ from pathlib import Path
 import oracle.other.path_model as path_model_module
 import pytest
 from _codex_support import codex_arg_value, codex_override_config
-from oracle.acp_builder.session.join.conflict_resolution import (
+from oracle.request_builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_request,
 )
 

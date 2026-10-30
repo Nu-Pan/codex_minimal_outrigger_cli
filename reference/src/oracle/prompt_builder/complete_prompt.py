@@ -1,8 +1,8 @@
 """完全 prompt の構築定義。"""
 
-from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDTagBlock
+from oracle.request_builder.basic import FileAccessMode
 
 from .basic import PlaceholderMap
 
@@ -12,10 +12,10 @@ from .policy.conflict_resolution import build_conflict_resolution_policy
 from .policy.editor_input_handoff import build_editor_input_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
 from .policy.file_access import build_file_access_policy
-from .policy.spec import build_spec_policy
 from .policy.realization import build_realization_policy
 from .policy.realization_findings import build_realization_findings_policy
 from .policy.routing import build_routing_policy
+from .policy.spec import build_spec_policy
 
 
 def _merge_placeholder_definitions(

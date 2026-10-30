@@ -1,8 +1,8 @@
 """run join と session join に共通する競合解消 prompt の構築定義。"""
 
-from oracle.acp_builder.basic import FileAccessMode
 from oracle.other.path_model import AgentCallPathContext
 from oracle.other.struct_doc import SDHeader, SDTagBlock
+from oracle.request_builder.basic import FileAccessMode
 
 from .complete_prompt import build_complete_prompt
 

@@ -90,8 +90,8 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
 
     acp の型再公開と正本 builder の完全 prompt を、basic・commons を含まない配置で
     確認する。共通の oracle import を一つの独立 process で検証する。
-    根拠: {{work-root}}/reference/src/oracle/acp_builder/common/quota_probe.py
-    {{work-root}}/reference/src/oracle/acp_builder/basic.py
+    根拠: {{work-root}}/reference/src/oracle/request_builder/common/quota_probe.py
+    {{work-root}}/reference/src/oracle/request_builder/basic.py
     {{work-root}}/spec/dev_rule/test_rule.md
     """
     root = Path(__file__).parents[1]
@@ -114,7 +114,7 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
             "assert str(Path.cwd()) not in sys.path; "
             "import acp.builder; "
             "from acp.builder.basic import AgentCallParameter, FileAccessMode; "
-            "from oracle.acp_builder.basic import AgentCallParameter as Canonical; "
+            "from oracle.request_builder.basic import AgentCallParameter as Canonical; "
             "assert acp.builder.__all__ == ['basic']; "
             "assert sorted(n for n in vars(acp.builder) if not n.startswith('_')) == ['basic']; "
             "assert acp.builder.basic.AgentCallParameter is Canonical; "
@@ -123,7 +123,7 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
             "import oracle.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
-            "from oracle.acp_builder.common.quota_probe import "
+            "from oracle.request_builder.common.quota_probe import "
             "build_quota_availability_probe_request as build_probe; "
             "probe = build_probe(Path.cwd()); "
             "assert probe.agent_call_cwd == Path.cwd(); "
@@ -144,8 +144,8 @@ def test_decision_builders_and_prompt_editor_import_from_packaged_layout(
     """decision の builder と editor 入力境界が packaged layout で正本を参照する。
 
     根拠: {{work-root}}/spec/app_spec/prompt_editor_input.md
-    {{work-root}}/reference/src/oracle/acp_builder/decision/apply/launch_exec.py
-    {{work-root}}/reference/src/oracle/acp_builder/decision/plan/launch_tui.py
+    {{work-root}}/reference/src/oracle/request_builder/decision/apply/launch_exec.py
+    {{work-root}}/reference/src/oracle/request_builder/decision/plan/launch_tui.py
     """
     target = _packaged_layout(packaged_sources, tmp_path, "basic", "commons", "oracle")
 
@@ -167,12 +167,12 @@ def test_decision_builders_and_prompt_editor_import_from_packaged_layout(
             "import oracle.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
-            "from oracle.acp_builder.decision.apply.launch_exec import "
+            "from oracle.request_builder.decision.apply.launch_exec import "
             "build_decision_apply_spec_request, "
             "build_decision_apply_realization_request; "
             "assert callable(build_decision_apply_spec_request); "
             "assert callable(build_decision_apply_realization_request); "
-            "from oracle.acp_builder.decision.plan.launch_tui import "
+            "from oracle.request_builder.decision.plan.launch_tui import "
             "build_decision_plan_request as build_plan; "
             "investigation = build_plan('investigate decision'); "
             "assert investigation.file_access_mode.value == 'pure_oracle_read'; "

@@ -7,7 +7,6 @@ from unittest.mock import Mock
 
 import oracle.other.path_model as path_model_module
 import pytest
-from _acp_builder_support import oracle_schema_path
 from _codex_support import (
     codex_override_config,
     script_codex_calls,
@@ -15,6 +14,7 @@ from _codex_support import (
     stub_codex_overrides,
 )
 from _git_support import init_repo, run_git
+from _request_builder_support import oracle_schema_path
 from oracle.other.cmoc_config import DocumentSearchConfig
 
 import cmoc_runtime

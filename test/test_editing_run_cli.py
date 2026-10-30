@@ -205,7 +205,7 @@ def apply_after_preprocess(
     preprocess = Mock()
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
     # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を省く。
-    # builder の選択値・文面は test_acp_builder_editing_run_parameters.py、
+    # builder の選択値・文面は test_request_builder_editing_run_parameters.py、
     # 実 builder との結合は上記の fork→join test に残す。
     monkeypatch.setattr(
         apply_module,
@@ -254,7 +254,7 @@ def refactor_after_preprocess(
 def real_refactor_builder(monkeypatch):
     """制御 test の prompt 準備を省き、結合 test 用に実 builder を返す。"""
     # fake agent が読む cwd だけを渡し、Git root 探索と完全 prompt 構築を繰り返さない。
-    # builder の選択値・文面は test_acp_builder_editing_run_parameters.py、
+    # builder の選択値・文面は test_request_builder_editing_run_parameters.py、
     # 実 worktree と call の結合は mixed_results_until_user_interruption に残す。
     builder = refactor_module.build_realization_refactor_request
     monkeypatch.setattr(
@@ -4948,7 +4948,7 @@ def test_join_merges_committed_timestamps_before_sync(
         lambda *_args, **_kwargs: pytest.fail("managed state needs no agent call"),
     )
     monkeypatch.setattr(
-        "oracle.acp_builder.run.join.conflict_resolution.build_run_join_conflict_resolution_request",
+        "oracle.request_builder.run.join.conflict_resolution.build_run_join_conflict_resolution_request",
         lambda *_args, **_kwargs: pytest.fail("managed state needs no agent parameter"),
     )
 

@@ -1007,7 +1007,7 @@ def session_conflict_parameter(
     session_conflict_repository: tuple[Path, str], monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[AgentCallParameter]:
     """失敗後の状態検査には、完全 prompt を構築せず parameter を渡す。"""
-    # 文面と起動値は test_acp_builder_session_join_parameters.py、実 builder と
+    # 文面と起動値は test_request_builder_session_join_parameters.py、実 builder と
     # linked worktree の結合は merges_conflict_and_incidental_changes に残す。
     parameter = AgentCallParameter(
         agent_call_kind="build_session_join_conflict_resolution_request",

@@ -2,10 +2,6 @@
 
 from pathlib import Path
 
-from oracle.acp_builder.basic import (
-    AgentCallParameter,
-    FileAccessMode,
-)
 from oracle.other.path_model import AgentCallPathContext, resolve_real_path
 from oracle.other.struct_doc import (
     SDCodeBlock,
@@ -15,6 +11,10 @@ from oracle.other.struct_doc import (
 )
 from oracle.prompt_builder.merge_conflict_resolution import (
     build_merge_conflict_resolution_prompt,
+)
+from oracle.request_builder.basic import (
+    AgentCallParameter,
+    FileAccessMode,
 )
 
 

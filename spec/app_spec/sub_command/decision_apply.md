@@ -30,7 +30,7 @@ realization apply は、直近の git commit 群から読み取れる oracle fil
 本節の call 数と補完禁止は run 内の本命の追従作業に適用する。同じ invocation の自動 join または復旧用の手動 join に必要な競合解消 call は別に扱い、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「競合解消」に従う。join を、失敗した追従作業を補完して追従完了へ変更する処理にはしない。primary report の重要事項確認用 call は、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従う共通生成工程とする。
 
 - 追従要否と適合性の判断基準は、`{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction.md` の「oracle file に対する realization file の適合性」を正本とする。
-- 正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/decision/apply/launch_exec.py` の `build_decision_apply_realization_request` へ委譲する。
+- 正確な prompt 文面、prompt part の選択、builder の引数、起動パラメータの構築方法と選択理由は、`{{cmoc-root}}/reference/src/oracle/request_builder/decision/apply/launch_exec.py` の `build_decision_apply_realization_request` へ委譲する。
 - `{{cmoc-run-worktree}}` を agent call の cwd とする `codex exec` を 1 回だけ本命 agent call として実行する。Codex CLI の TUI は起動しない。
 - 本命の追従作業を複数の agent call に分割してはいけない。
 - 収束判定のために同じ作業を反復してはいけない。

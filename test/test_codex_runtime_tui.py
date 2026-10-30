@@ -23,12 +23,12 @@ from _codex_support import (
 )
 from _command_support import write_python_executable
 from _handoff_support import handoff_input
-from oracle.acp_builder.decision.plan.launch_tui import (
-    build_decision_plan_request,
-)
-from oracle.acp_builder.tui.launch_tui import build_tui_request
 from oracle.other.cmoc_config import CodexCallConfig
 from oracle.other.struct_doc import SDHeader
+from oracle.request_builder.decision.plan.launch_tui import (
+    build_decision_plan_request,
+)
+from oracle.request_builder.tui.launch_tui import build_tui_request
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_codex_exec as exec_module
@@ -105,7 +105,7 @@ def initial_request(directory, monkeypatch):
     # 置換は初回構築中だけに限定し、起動管理側の再開 builder は実処理を通す。
     with monkeypatch.context() as patch:
         patch.setattr(
-            "oracle.acp_builder.tui.launch_tui.build_complete_prompt",
+            "oracle.request_builder.tui.launch_tui.build_complete_prompt",
             lambda **_kwargs: [SDHeader("task", "request")],
         )
         return build_tui_request("request")
@@ -695,7 +695,7 @@ def test_public_resume_rejects_non_tui_and_invalid_id(directory):
 
 def test_completion_probe_prepares_no_calls(tmp_path, monkeypatch, capsys):
     """補完は通常起動の環境を要求せず、資源・出力・process を作らない。"""
-    # builder の本文は test_acp_builder_tui_parameters.py で検査する。
+    # builder の本文は test_request_builder_tui_parameters.py で検査する。
     # この早期終了に不要な通常起動 fixture と完全 prompt の構築は行わない。
     parameter = AgentCallParameter(
         agent_call_kind=build_tui_request.__name__,

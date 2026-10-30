@@ -9,8 +9,8 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from _acp_builder_support import oracle_schema_path
 from _git_support import SESSION_BRANCH, SESSION_ID, current_branch, init_repo, run_git
+from _request_builder_support import oracle_schema_path
 from oracle.mcp.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.prompt_editor_input as prompt_editor_input_module
@@ -471,7 +471,7 @@ def primary_report_review_runner(monkeypatch):
 @pytest.fixture
 def primary_report_review_builder(primary_report_review_runner, monkeypatch):
     """確認の起動引数や Git 境界を検査するケースでは正本 builder を使う。"""
-    from oracle.acp_builder.common.primary_report_review import (
+    from oracle.request_builder.common.primary_report_review import (
         build_primary_report_review_request,
     )
 

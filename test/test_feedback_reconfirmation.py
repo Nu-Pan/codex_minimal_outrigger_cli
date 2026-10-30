@@ -12,8 +12,8 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from _acp_builder_support import oracle_schema_path
 from _git_support import RUN_BRANCH, SESSION_BRANCH, SESSION_ID
+from _request_builder_support import oracle_schema_path
 from test_feedback import (
     _assert_hash_verified_state_snapshot,
     _context,
@@ -753,7 +753,7 @@ def test_remediation_state_validation_rechecks_schema_and_value(
         "files",
         lambda package: (
             schema_directory
-            if package == "oracle.acp_builder.feedback.report.remediate_issue"
+            if package == "oracle.request_builder.feedback.report.remediate_issue"
             else original_files(package)
         ),
     )
