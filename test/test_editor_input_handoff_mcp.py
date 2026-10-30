@@ -2,7 +2,7 @@
 
 正本仕様:
 - {{work-root}}/spec/app_spec/editor_input_handoff.md
-- {{work-root}}/reference/src/oracle/editor_input_handoff/overwrite_input.json
+- {{work-root}}/reference/src/oracle/mcp/editor_input_handoff/overwrite_input.json
 """
 
 import json
@@ -16,7 +16,7 @@ from unittest.mock import Mock
 import pytest
 from _handoff_support import handoff_body, handoff_input
 from jsonschema.validators import Draft202012Validator
-from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
+from oracle.mcp.editor_input_handoff.guide import build_editor_input_handoff_guide
 
 import commons.runtime_editor_input_handoff_mcp as handoff_mcp
 from commons.runtime_editor_input_handoff import start_editor_input_handoff
@@ -59,7 +59,7 @@ def get_guide_result():
     """正本 schema を一度読み、各取得結果と MCP 表現を検査する。"""
     # MCP 実装とは独立に、不変の正本 resource から validator を用意する。
     schema = json.loads(
-        resources.files("oracle.editor_input_handoff")
+        resources.files("oracle.mcp.editor_input_handoff")
         .joinpath("get_handoff_guide_result.json")
         .read_text(encoding="utf-8")
     )
@@ -222,13 +222,13 @@ def test_handoff_mcp_exposes_only_guide_and_overwrite_with_canonical_schemas() -
     assert [tool["name"] for tool in tools] == ["get_handoff_guide", "overwrite"]
     for tool in tools:
         expected_schema = json.loads(
-            resources.files("oracle.editor_input_handoff")
+            resources.files("oracle.mcp.editor_input_handoff")
             .joinpath(f"{tool['name']}_input.json")
             .read_text(encoding="utf-8")
         )
         assert tool["inputSchema"] == expected_schema
     assert tools[0]["outputSchema"] == json.loads(
-        resources.files("oracle.editor_input_handoff")
+        resources.files("oracle.mcp.editor_input_handoff")
         .joinpath("get_handoff_guide_result.json")
         .read_text(encoding="utf-8")
     )
@@ -555,7 +555,7 @@ def test_handoff_uses_canonical_body_and_typed_references(
     tmp_path, handoff_transport, handoff_source
 ):
     """本文・参照の構築を送信境界で検証し、実書き込みは lifecycle test に委ねる。"""
-    from oracle.editor_input_handoff.body import build_editor_input_handoff_body
+    from oracle.mcp.editor_input_handoff.body import build_editor_input_handoff_body
     from oracle.other.doc_ref_model import DocRef
 
     target_id, connection = handoff_transport

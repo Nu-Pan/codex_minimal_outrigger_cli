@@ -14,7 +14,7 @@ from oracle.acp_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
 )
 from oracle.acp_builder.tui.launch_tui import build_tui_request
-from oracle.editor_input_handoff.body import EditorInputHandoffSource
+from oracle.mcp.editor_input_handoff.body import EditorInputHandoffSource
 
 from basic.acp import AgentCallParameter, TuiResumeTarget
 from basic.path_model import AgentCallPathContext

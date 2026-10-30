@@ -12,8 +12,8 @@ from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
 
+from oracle.mcp.document_search import EMBEDDING_QUERY_TEMPLATE
 from oracle.other.cmoc_config import DocumentSearchConfig
-from oracle.other.document_search import EMBEDDING_QUERY_TEMPLATE
 
 from .runtime_document_search import SearchError, _file_lock, _safe_directory
 from .runtime_document_search_assets import (

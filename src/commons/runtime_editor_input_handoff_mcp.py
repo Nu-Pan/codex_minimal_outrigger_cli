@@ -6,7 +6,7 @@ import socket
 import sys
 from pathlib import Path
 
-from oracle.editor_input_handoff.body import build_editor_input_handoff_body
+from oracle.mcp.editor_input_handoff.body import build_editor_input_handoff_body
 from oracle.other.doc_ref_model import DocRef
 
 from .runtime_editor_input_handoff_protocol import (

@@ -29,7 +29,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Any
 
-from oracle.other.document_search import SEARCH_MCP_SERVER, SEARCH_TOOL_NAME
+from oracle.mcp.document_search import SEARCH_MCP_SERVER, SEARCH_TOOL_NAME
 
 from basic.acp import AgentCallParameter, FileAccessMode
 from basic.path_model import AgentCallPathContext

@@ -11,7 +11,7 @@ from unittest.mock import Mock
 import pytest
 from _acp_builder_support import oracle_schema_path
 from _git_support import SESSION_BRANCH, SESSION_ID, current_branch, init_repo, run_git
-from oracle.editor_input_handoff.body import EditorInputHandoffSource
+from oracle.mcp.editor_input_handoff.body import EditorInputHandoffSource
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_cli as runtime_cli

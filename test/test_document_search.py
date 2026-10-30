@@ -23,13 +23,13 @@ from typing import get_args
 import pytest
 from _git_support import init_repo, run_git
 from jsonschema.validators import Draft202012Validator
-from oracle.other.cmoc_config import DocumentSearchConfig
-from oracle.other.document_search import (
+from oracle.mcp.document_search import (
     SEARCH_TOOL_INPUT_SCHEMA,
     SEARCH_TOOL_OUTPUT_SCHEMA,
     SearchErrorCode,
     build_search_tool_description,
 )
+from oracle.other.cmoc_config import DocumentSearchConfig
 
 from cmoc_runtime import write_config
 from commons.runtime_document_search import (

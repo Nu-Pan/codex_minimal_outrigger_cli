@@ -162,7 +162,7 @@ def test_decision_builders_and_prompt_editor_import_from_packaged_layout(
             "import commons.runtime_editor_input_handoff_mcp as handoff_mcp; "
             "from pathlib import Path; "
             "from types import SimpleNamespace; "
-            "from oracle.editor_input_handoff.guide import "
+            "from oracle.mcp.editor_input_handoff.guide import "
             "build_editor_input_handoff_guide; "
             "import oracle.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "

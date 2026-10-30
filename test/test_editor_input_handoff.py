@@ -2,7 +2,7 @@
 
 正本仕様:
 - {{work-root}}/spec/app_spec/editor_input_handoff.md
-- {{work-root}}/reference/src/oracle/editor_input_handoff/overwrite_input.json
+- {{work-root}}/reference/src/oracle/mcp/editor_input_handoff/overwrite_input.json
 """
 
 import json
@@ -14,7 +14,7 @@ from unittest.mock import Mock
 
 import pytest
 from _handoff_support import handoff_body, handoff_input
-from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
+from oracle.mcp.editor_input_handoff.guide import build_editor_input_handoff_guide
 
 import commons.prompt_editor_input as prompt_editor_input_module
 import commons.runtime_editor_input_handoff as handoff_module

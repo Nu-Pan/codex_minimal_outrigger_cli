@@ -12,7 +12,7 @@ from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from oracle.editor_input_handoff.body import EditorInputHandoffSource
+from oracle.mcp.editor_input_handoff.body import EditorInputHandoffSource
 
 from .runtime_ids import is_common_id, new_id
 from .runtime_logging import current_execution_id
@@ -40,7 +40,7 @@ def handoff_schema(name: str) -> dict[str, Any]:
     """oracle package resource から handoff の入出力 schema を読む。"""
     # 呼び出し側が指定する正本 resource を共用する。
     schema_text = (
-        resources.files("oracle.editor_input_handoff")
+        resources.files("oracle.mcp.editor_input_handoff")
         .joinpath(f"{name}.json")
         .read_text(encoding="utf-8")
     )

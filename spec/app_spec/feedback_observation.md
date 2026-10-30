@@ -36,7 +36,7 @@ agent は、次の条件をすべて満たす問題だけを報告する。
 
 reporter の提供が有効な call の agent-facing interface は、Codex call ごとに起動する local stdio MCP reporter/client とする。MCP namespace は `cmoc_feedback` とし、`submit_observation` だけを公開する。MCP resource、prompt、任意の file access、command execution、または collector 管理機能を公開してはならない。
 
-新しい submission の input は、`{{cmoc-root}}/reference/src/oracle/feedback/reporter_input.json` の root schema（JSON Pointer `#`）に適合する JSON object とする。同 schema を tool discovery と受け入れ検査の両方に使用する。repository、call ID、保存先、または capability を agent input に追加してはならない。
+新しい submission の input は、`{{cmoc-root}}/reference/src/oracle/mcp/feedback/reporter_input.json` の root schema（JSON Pointer `#`）に適合する JSON object とする。同 schema を tool discovery と受け入れ検査の両方に使用する。repository、call ID、保存先、または capability を agent input に追加してはならない。
 
 同 schema の version は 2 とする。version 2 の `workload_limitation` は、現在の workload の規定範囲内で問題を解消できない理由を表し、`human_required` の判定を表さない。
 

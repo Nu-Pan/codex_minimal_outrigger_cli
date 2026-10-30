@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Callable
 
 from markdown_it import MarkdownIt
+from oracle.mcp.document_search import EMBEDDING_QUERY_TEMPLATE
 from oracle.other.cmoc_config import DocumentSearchConfig
-from oracle.other.document_search import EMBEDDING_QUERY_TEMPLATE
 
 from .runtime_document_search import SearchError
 from .runtime_document_search_observation import inference_config

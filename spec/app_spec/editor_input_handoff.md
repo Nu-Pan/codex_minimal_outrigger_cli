@@ -23,7 +23,7 @@ editor input handoff は、汎用 TUI と oracle 調査 TUI の初回 exec ま�
 
 ### ガイドと instruction
 
-handoff ガイドの正確な文面と完全 prompt skeleton の配置は、`{{cmoc-root}}/reference/src/oracle/editor_input_handoff/guide.py` の `build_editor_input_handoff_guide` へ委譲する。
+handoff ガイドの正確な文面と完全 prompt skeleton の配置は、`{{cmoc-root}}/reference/src/oracle/mcp/editor_input_handoff/guide.py` の `build_editor_input_handoff_guide` へ委譲する。
 
 handoff instruction は、利用条件、ガイド取得から送信までの手順、成果責務、および項目別入力から受信先の完全 prompt までの関係を伝える。正確な文面は、`{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/editor_input_handoff.py` の `build_editor_input_handoff_policy` へ委譲する。
 
@@ -31,14 +31,14 @@ handoff instruction は、利用条件、ガイド取得から送信までの手
 
 ### MCP の入出力
 
-`cmoc_editor_input.get_handoff_guide` の正確な入力 field 名、型、および受理条件は、`{{cmoc-root}}/reference/src/oracle/editor_input_handoff/get_handoff_guide_input.json` の root schema（JSON Pointer `#`）へ委譲する。成功・失敗時に tool result として返す JSON object の正確な形式は、`{{cmoc-root}}/reference/src/oracle/editor_input_handoff/get_handoff_guide_result.json` の root schema（JSON Pointer `#`）へ委譲する。
+`cmoc_editor_input.get_handoff_guide` の正確な入力 field 名、型、および受理条件は、`{{cmoc-root}}/reference/src/oracle/mcp/editor_input_handoff/get_handoff_guide_input.json` の root schema（JSON Pointer `#`）へ委譲する。成功・失敗時に tool result として返す JSON object の正確な形式は、`{{cmoc-root}}/reference/src/oracle/mcp/editor_input_handoff/get_handoff_guide_result.json` の root schema（JSON Pointer `#`）へ委譲する。
 
-`cmoc_editor_input.overwrite` の正確な field 名、型、必須・非空条件、参照の指定形式、および各項目の意味と記入条件を伝える agent 向け説明は、`{{cmoc-root}}/reference/src/oracle/editor_input_handoff/overwrite_input.json` の root schema（JSON Pointer `#`）へ委譲する。該当なし・未確認の扱いと、参照内容・参照理由の記載先も同スキーマへ集約する。
+`cmoc_editor_input.overwrite` の正確な field 名、型、必須・非空条件、参照の指定形式、および各項目の意味と記入条件を伝える agent 向け説明は、`{{cmoc-root}}/reference/src/oracle/mcp/editor_input_handoff/overwrite_input.json` の root schema（JSON Pointer `#`）へ委譲する。該当なし・未確認の扱いと、参照内容・参照理由の記載先も同スキーマへ集約する。
 
 ### 本文と参照の構築
 
-- 送信元情報の正確なデータ構造と値の検査は、`{{cmoc-root}}/reference/src/oracle/editor_input_handoff/body.py` の `EditorInputHandoffSource` へ委譲する。
-- handoff 本文の正確な見出し、順序、項目の表記、空項目の扱い、および送信元情報の配置は、`{{cmoc-root}}/reference/src/oracle/editor_input_handoff/body.py` の `build_editor_input_handoff_body` へ委譲する。
+- 送信元情報の正確なデータ構造と値の検査は、`{{cmoc-root}}/reference/src/oracle/mcp/editor_input_handoff/body.py` の `EditorInputHandoffSource` へ委譲する。
+- handoff 本文の正確な見出し、順序、項目の表記、空項目の扱い、および送信元情報の配置は、`{{cmoc-root}}/reference/src/oracle/mcp/editor_input_handoff/body.py` の `build_editor_input_handoff_body` へ委譲する。
 - 文書参照の Python データ構造と値の検査、単一参照のインライン表記、および複数参照の一覧表記は、`{{cmoc-root}}/reference/src/oracle/other/doc_ref_model.py` の `DocRef`、`render_doc_ref_as_inline_md`、および `render_doc_ref_as_multiline_md` へ委譲する。意味は本書の「参照情報」で定める。
 
 ## handoff target

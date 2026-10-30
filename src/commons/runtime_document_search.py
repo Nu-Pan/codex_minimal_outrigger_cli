@@ -20,12 +20,12 @@ from importlib import resources
 from pathlib import Path
 from typing import Callable, Protocol
 
-from oracle.other.cmoc_config import DocumentSearchConfig
-from oracle.other.document_search import (
+from oracle.mcp.document_search import (
     EMBEDDING_QUERY_TEMPLATE,
     SEARCH_CANDIDATE_COUNT_MAX,
     SEARCH_CANDIDATE_COUNT_MIN,
 )
+from oracle.other.cmoc_config import DocumentSearchConfig
 
 from .runtime_config import _document_search_config, load_config
 from .runtime_document_search_observation import (

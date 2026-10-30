@@ -32,7 +32,7 @@ class DocumentSearchConfig:
         int の項目は JSON 整数、float の項目は有限の JSON 数値とする。
         bool を数値として受理しない。chunk_overlap_tokens 以外は正数、
         chunk_overlap_tokens は 0 以上 chunk_tokens 未満。
-        candidate_count は `{{cmoc-root}}/reference/src/oracle/other/document_search.py` の
+        candidate_count は `{{cmoc-root}}/reference/src/oracle/mcp/document_search.py` の
         SEARCH_CANDIDATE_COUNT_MIN 以上 SEARCH_CANDIDATE_COUNT_MAX 以下。
         chunk_tokens は embedding_context_tokens より小さくし、
         本文以外の入力の余地を残す。この大小関係だけで入力全体の収容を保証せず、

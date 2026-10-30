@@ -444,7 +444,7 @@ def test_reporter_discovery_supports_editable_namespace_package(
     original_files = feedback_protocol_module.resources.files
 
     def raise_namespace_resource_error(package: str):
-        if package == "oracle.feedback":
+        if package == "oracle.mcp.feedback":
             raise NotADirectoryError(package)
         return original_files(package)
 

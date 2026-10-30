@@ -10,7 +10,7 @@ from typing import Any
 
 from jsonschema import SchemaError
 from jsonschema.protocols import Validator
-from oracle.editor_input_handoff.body import EditorInputHandoffSource
+from oracle.mcp.editor_input_handoff.body import EditorInputHandoffSource
 
 from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext

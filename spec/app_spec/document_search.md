@@ -56,7 +56,7 @@ agent の検索・原文確認・判断規則を伝える routing policy の正�
 
 通常起動・通常検索・明示 doctor は採用済みの版を使い、最新版の探索や自動更新を行わない。一時コードや取得元のローカル path は製品の依存にしない。
 
-モデルの正確な識別情報・pooling・埋め込み次元数は、`{{cmoc-root}}/reference/src/oracle/other/document_search.py` の `EMBEDDING_MODEL` へ委譲する。query template と文書入力・special-token interpretation の条件は、同ファイルの `EMBEDDING_QUERY_TEMPLATE` とその直前コメントへ委譲する。モデル・量子化の自動更新は対象に含めない。検索用コンポーネントとモデル入力条件を repository 設定や MCP 引数で差し替えない。
+モデルの正確な識別情報・pooling・埋め込み次元数は、`{{cmoc-root}}/reference/src/oracle/mcp/document_search.py` の `EMBEDDING_MODEL` へ委譲する。query template と文書入力・special-token interpretation の条件は、同ファイルの `EMBEDDING_QUERY_TEMPLATE` とその直前コメントへ委譲する。モデル・量子化の自動更新は対象に含めない。検索用コンポーネントとモデル入力条件を repository 設定や MCP 引数で差し替えない。
 
 モデル入力・推論結果と類似度が検索に利用できることを検証する。非数値・非有限値・値域外の類似度は推論失敗（`MODEL_FAILURE`）とする。入力の切捨て、不正な推論結果や類似度、推論処理の失敗を、成功ゼロ件や旧結果による成功へ変換しない。
 
@@ -121,7 +121,7 @@ doctor preprocess の索引同期には、初回構築や大量の差分を処�
 
 公開 tool は検索だけとし、query と任意の候補数上限 `limit` を受け取る。`tools/list` の公開定義では、説明文が検索機能の概要を、入出力 schema が引数・結果の構造や値の意味を伝える。agent の検索・原文確認・判断規則は、本書の「検索と routing」に従う。
 
-公開定義の正確な詳細は、`{{cmoc-root}}/reference/src/oracle/other/document_search.py` の次の定義へ委譲する。
+公開定義の正確な詳細は、`{{cmoc-root}}/reference/src/oracle/mcp/document_search.py` の次の定義へ委譲する。
 
 | 委譲先 | 所有する詳細 |
 | --- | --- |
@@ -138,7 +138,7 @@ doctor preprocess の索引同期には、初回構築や大量の差分を処�
 
 ## 設定と未確定事項
 
-tuning 設定の field・型・数値制約・項目間制約・暫定既定値は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `DocumentSearchConfig`、新規生成時の検索設定は同ファイルの `CmocConfig.document_search` へ委譲する。`candidate_count` と `limit` に共通する指定範囲は、`{{cmoc-root}}/reference/src/oracle/other/document_search.py` の `SEARCH_CANDIDATE_COUNT_MIN` と `SEARCH_CANDIDATE_COUNT_MAX` へ委譲する。検索設定と call ごとの有効化は区別する。
+tuning 設定の field・型・数値制約・項目間制約・暫定既定値は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `DocumentSearchConfig`、新規生成時の検索設定は同ファイルの `CmocConfig.document_search` へ委譲する。`candidate_count` と `limit` に共通する指定範囲は、`{{cmoc-root}}/reference/src/oracle/mcp/document_search.py` の `SEARCH_CANDIDATE_COUNT_MIN` と `SEARCH_CANDIDATE_COUNT_MAX` へ委譲する。検索設定と call ごとの有効化は区別する。
 
 設定の保存・検証・不足補完は、`{{cmoc-root}}/spec/app_spec/doctor_preprocess.md` の「検索設定の検証と補完」に従う。検索・索引同期でも使用する保存済み設定を検証し、起動後の不足や不正を暗黙に補完せず、検索未準備として理由と修復方法を返す。
 

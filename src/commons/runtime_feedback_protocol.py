@@ -24,14 +24,14 @@ def load_reporter_input_schema() -> dict[str, Any]:
     # schema field を realization へ複製しない。
     try:
         schema_text = (
-            resources.files("oracle.feedback")
+            resources.files("oracle.mcp.feedback")
             .joinpath("reporter_input.json")
             .read_text(encoding="utf-8")
         )
     except NotADirectoryError:
         # source/editable の namespace package を resources が表現できない場合は、
         # package の具体的な検索先から同じ正本 resource を読み取る。
-        spec = importlib.util.find_spec("oracle.feedback")
+        spec = importlib.util.find_spec("oracle.mcp.feedback")
         locations = (
             spec.submodule_search_locations
             if spec is not None and spec.submodule_search_locations is not None

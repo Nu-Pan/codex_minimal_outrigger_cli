@@ -1,6 +1,6 @@
 """検索と現在原文の確認による routing 規定文面の構築定義。"""
 
-from oracle.other.document_search import (
+from oracle.mcp.document_search import (
     SEARCH_MCP_SERVER,
     SEARCH_TOOL_NAME,
 )

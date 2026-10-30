@@ -8,7 +8,7 @@ import stat
 import threading
 from pathlib import Path
 
-from oracle.editor_input_handoff.guide import build_editor_input_handoff_guide
+from oracle.mcp.editor_input_handoff.guide import build_editor_input_handoff_guide
 
 from .runtime_editor_input_handoff_protocol import (
     EDITOR_INPUT_HANDOFF_AUTHENTICATED_TIMEOUT_SECONDS,

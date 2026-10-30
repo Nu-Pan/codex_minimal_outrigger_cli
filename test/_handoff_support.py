@@ -1,6 +1,6 @@
 """handoff の項目別入力と、正本 builder による期待本文を共有する。"""
 
-from oracle.editor_input_handoff.body import build_editor_input_handoff_body
+from oracle.mcp.editor_input_handoff.body import build_editor_input_handoff_body
 
 
 def handoff_input(target_id, instructions):

@@ -357,7 +357,7 @@ editor input handoff の提供対象、利用条件、および agent の責務�
 - 有効な各 Codex process に local stdio MCP 接続を設ける。検索 server の cwd、実行ファイル、引数、許可 tool、approval behavior、起動・tool 期限、および信頼された context の供給を、呼び出し単位の argv override で管理する。設定の符号化には本書の「Codex CLI 引数による設定上書き」を使う。
 - 起動管理側は、内側の検索要求の全体上限に停止・回収・返送の余裕を加えて、外側の MCP tool 期限を設定する。有効な設定変更時も、実行途中の動的延長に依存せずこの関係を保つ。内側の期限と停止は、`{{cmoc-root}}/spec/app_spec/document_search.md` の「排他、期限、終了」に従う。余裕の具体値は実装に委ね、同文書の「製品受入条件」で連携を検証する。
 - 起動管理側は、検索の診断記録を呼出し元のサブコマンドログへ届け、実行 ID・Codex call・対象 work-root と対応付ける信頼された context を供給する。context は MCP 引数や agent の申告から決めない。記録と相関の要件は、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「索引同期の診断記録」に従う。
-- server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/reference/src/oracle/other/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・work-root への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
+- server namespace と公開 tool の正確な名前は、`{{cmoc-root}}/reference/src/oracle/mcp/document_search.py` の `SEARCH_MCP_SERVER` と `SEARCH_TOOL_NAME` を使う。この namespace の user/project 設定に依存せず、別 server・tool・work-root への差替えを許さない。無効な call では同名の外部設定を残して検索を提供してはならない。
 - 通常の検索 tool は human approval、auto-review、command escalation を要求せず利用できるよう設定する。これは sandbox、permission profile、network access、file access mode の拡張を意味しない。
 - `$CODEX_HOME/config.toml` を書き換えない。既存 feedback/handoff MCP の設定と接続を保持して共存させ、検索設定の注入で上書き・無効化しない。
 - Codex process の終了時は起動管理側が接続を閉じ、検索側の子 process 回収まで確認する。TUI と `codex exec` のどちらにも同じ接続境界を適用する。

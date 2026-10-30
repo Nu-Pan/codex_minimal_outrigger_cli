@@ -7,15 +7,15 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, NoReturn
 
+from oracle.mcp.document_search import (
+    SEARCH_CANDIDATE_COUNT_MAX,
+    SEARCH_CANDIDATE_COUNT_MIN,
+)
 from oracle.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
     DocumentSearchConfig,
     JsonTomlValue,
-)
-from oracle.other.document_search import (
-    SEARCH_CANDIDATE_COUNT_MAX,
-    SEARCH_CANDIDATE_COUNT_MIN,
 )
 
 from config.cmoc_config import (
