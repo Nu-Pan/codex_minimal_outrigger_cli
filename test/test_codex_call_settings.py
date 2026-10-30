@@ -34,7 +34,7 @@ from oracle.acp_builder.primary_report_review import (
     build_primary_report_review_request,
 )
 from oracle.acp_builder.quota_probe import build_quota_availability_probe_request
-from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
+from oracle.acp_builder.realization.refactor.file_review_and_fix import (
     build_realization_refactor_request,
 )
 from oracle.acp_builder.run.join.conflict_resolution import (

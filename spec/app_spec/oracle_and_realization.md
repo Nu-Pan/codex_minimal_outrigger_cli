@@ -101,4 +101,4 @@ realization refactor では、適合する実装にも、テストと実装の�
 
 根拠のある改善が見つからなければ変更なしを認める。好みや一般論による変更、無関係な機能の再設計、将来用の汎用化、数値目標のための検証能力低下は目的に含めない。期待する効果と実測した効果は区別し、計測の契約は `{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md` の「改善の計測」に従う。
 
-この改善基準の agent 向け文面は、`{{cmoc-root}}/reference/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py` の `build_realization_refactor_request` へ委譲する。
+この改善基準の agent 向け文面は、`{{cmoc-root}}/reference/src/oracle/acp_builder/realization/refactor/file_review_and_fix.py` の `build_realization_refactor_request` へ委譲する。

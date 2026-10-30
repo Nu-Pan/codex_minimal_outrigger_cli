@@ -915,7 +915,7 @@ def _changed_path_postcondition(
     artifact_changed_paths: frozenset[str],
 ) -> tuple[StructuredOutputValidationIssue, ...]:
     """refactor prompt が宣言する changed_paths 照合結果を返す。"""
-    # {{work-root}}/reference/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py
+    # {{work-root}}/reference/src/oracle/acp_builder/realization/refactor/file_review_and_fix.py
     assert isinstance(output, dict)
     findings = output["findings"]
     unexpected = set(unexpected_agent_paths(context, artifact_changed_paths))

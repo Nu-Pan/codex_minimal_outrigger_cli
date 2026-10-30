@@ -2,8 +2,8 @@
 
 対応する oracle file:
 - `{{work-root}}/reference/src/oracle/acp_builder/decision/apply/launch_exec.py`
-- `{{work-root}}/reference/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
-- `{{work-root}}/reference/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.json`
+- `{{work-root}}/reference/src/oracle/acp_builder/realization/refactor/file_review_and_fix.py`
+- `{{work-root}}/reference/src/oracle/acp_builder/realization/refactor/file_review_and_fix.json`
 """
 
 import json
@@ -15,7 +15,7 @@ from _acp_builder_support import oracle_schema_path
 from oracle.acp_builder.decision.apply.launch_exec import (
     build_decision_apply_realization_request,
 )
-from oracle.acp_builder.realization.refactor.fork.file_review_and_fix import (
+from oracle.acp_builder.realization.refactor.file_review_and_fix import (
     build_realization_refactor_request as build_canonical_review_parameter,
 )
 
@@ -114,7 +114,7 @@ def test_refactor_builders_use_canonical_structured_output_schemas(
     assert review.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert review.structured_output_schema_path is not None
     review_schema_path = oracle_schema_path(
-        "realization", "refactor", "fork", "file_review_and_fix.json"
+        "realization", "refactor", "file_review_and_fix.json"
     )
     assert (
         review.structured_output_schema_path.resolve() == review_schema_path.resolve()

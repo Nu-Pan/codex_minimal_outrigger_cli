@@ -10,7 +10,6 @@
     - `build_complete_prompt` の引数 `task` は `goal` の方が適切かも
     - feedback remediation は、structured output で操作を返すのではなく、stdin MCP server として issue に対するを公開する方式にしたい
     - `build_*_request` にリネームしたので `acp_builder` は `arb` とか `agent_request_builder` とかにリネームすべきか
-    - `reference/src/oracle/acp_builder/realization/refactor/fork` --> `reference/src/oracle/acp_builder/realization/refactor`
     - `build_realization_refactor_request` で Strcutured Output を返す意味はもうない (`codex resume 01a18e12-9b7a-7370-9cdc-c647b4ac0c55`)
 
 ## サンドボックスシステムを考え直す
@@ -45,7 +44,7 @@
 - MCP tool の description
     - ベクトル検索の MCP tool がひどいものだったので、他もひどいに違いない
     - ベクトル検索の MCP tool と同様に、数値定義と自然言語的な説明は oracle file に引き上げたい
-- `reference/src/oracle/acp_builder/realization/refactor/fork/file_review_and_fix.py`
+- `reference/src/oracle/acp_builder/realization/refactor/file_review_and_fix.py`
 - `reference/src/oracle/prompt_builder/policy/realization_findings.py`
 - `cmoc feedback report` の動的生成プロンプト
 - git commit `c71555d608c93043e9b8ebc1071f58b999f7bcc1` でなんか変更が入っている
