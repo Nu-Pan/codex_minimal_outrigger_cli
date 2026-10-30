@@ -38,7 +38,8 @@ def build_run_join_conflict_resolution_request(
         意味仕様は `{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の
         「競合解消」と、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の
         「封印後のマージ調整」「join 後の検証と記録」を参照。
-        元の workload と同様に oracle は変更せず、REALIZATION_WRITE を使う。
+        decision・reference は変更せず、spec・realization の統合に
+        SPEC_AND_REALIZATION_WRITE を使う。
     """
     # merge target の run を起点に、呼び出し全体のアクセス境界をそろえる。
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
@@ -62,7 +63,7 @@ def build_run_join_conflict_resolution_request(
                 - 入力の report cut は、維持すべき採用結果と、その根拠を記録した checkpoint への参照を示す
                 - `fixed` は修正と必要な検証が完了した結果、`already_resolved` は処理時点ですでに問題が存在しなかった結果を表す
                 - `not_actionable` は具体的な根拠のある報告対象の問題に該当しなかった結果を表す
-                - `human_required` は問題が現在も存在し、oracle の変更、人間意図の確定、外部状態の変更など、realization file の編集だけでは満たせない具体的な対応を必要とする結果を表す
+                - `human_required` は問題が現在も存在し、decision・reference の変更、人間意図の確定、外部状態の変更など、spec file・realization file の編集だけでは満たせない具体的な対応を必要とする結果を表す
                 - `inconclusive` は許可された情報では判定できない、または再確認・再修正が同じ状態を往復して収束できないことが確認された結果を表す
                 - 判定根拠には対象ファイルだけでなく、依存設定、検査の条件と結果なども含む。ファイル内容の変化だけで旧判定の誤りや問題の解消を断定しないこと
                 """,
@@ -94,14 +95,14 @@ def build_run_join_conflict_resolution_request(
     prompt = build_merge_conflict_resolution_prompt(
         source_commit=session_head_commit,
         target_commit=run_head_commit,
-        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        file_access_mode=FileAccessMode.SPEC_AND_REALIZATION_WRITE,
         path_context=path_context,
         aux_static_prompt=static_prompt,
         aux_dynamic_prompt=dynamic_prompt,
     )
     return AgentCallParameter(
         agent_call_kind="realization_edit",
-        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        file_access_mode=FileAccessMode.SPEC_AND_REALIZATION_WRITE,
         prompt=render_sd_node_as_markdown(*prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
