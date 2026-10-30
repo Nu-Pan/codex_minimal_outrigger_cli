@@ -617,9 +617,9 @@ def test_run_codex_exec_rechecks_schema_source_and_each_output(
     snapshot = Mock(side_effect=AssertionError("no artifact snapshot is needed"))
     monkeypatch.setattr(runtime_codex_exec, "capture_worktree_snapshot", snapshot)
     schema = tmp_path / "schema.json"
-    schema_text = oracle_schema_path("feedback", "normalize_issue.json").read_text(
-        encoding="utf-8"
-    )
+    schema_text = oracle_schema_path(
+        "feedback", "report", "normalize_issue.json"
+    ).read_text(encoding="utf-8")
     schema.write_text(schema_text, encoding="utf-8")
     valid = {"result": {"decision": "new", "existing_issue_id": None}}
     invalid = {"result": {"decision": "existing", "existing_issue_id": None}}

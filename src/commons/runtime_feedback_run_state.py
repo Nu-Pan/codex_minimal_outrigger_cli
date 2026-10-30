@@ -165,9 +165,9 @@ def selected_remediation_checkpoints(manifest: dict[str, Any]) -> list[dict[str,
 def _remediation_schema_resource() -> Traversable:
     """正本 schema の所在だけを共有し、本文の再読込は呼出側で行う。"""
     # namespace 全体の列挙を避け、schema を所有する module を起点にする。
-    return resources.files("oracle.acp_builder.feedback.remediate_issue").joinpath(
-        "remediate_issue.json"
-    )
+    return resources.files(
+        "oracle.acp_builder.feedback.report.remediate_issue"
+    ).joinpath("remediate_issue.json")
 
 
 @lru_cache(maxsize=4)

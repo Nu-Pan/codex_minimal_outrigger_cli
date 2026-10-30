@@ -2385,15 +2385,15 @@ def _normalization_validator() -> Validator:
     # schema と validator を一緒に再利用し、checkpoint ごとの再構築を避ける。
     try:
         schema_text = (
-            resources.files("oracle.acp_builder.feedback")
+            resources.files("oracle.acp_builder.feedback.report")
             .joinpath("normalize_issue.json")
             .read_text(encoding="utf-8")
         )
     except NotADirectoryError:
-        # `oracle.acp_builder.feedback` is a namespace package in editable
+        # `oracle.acp_builder.feedback.report` is a namespace package in editable
         # installations, where importlib.resources cannot merge duplicate
         # package search locations into one resource directory.
-        spec = importlib.util.find_spec("oracle.acp_builder.feedback")
+        spec = importlib.util.find_spec("oracle.acp_builder.feedback.report")
         locations = (
             spec.submodule_search_locations
             if spec is not None and spec.submodule_search_locations is not None

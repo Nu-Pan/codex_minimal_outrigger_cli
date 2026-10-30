@@ -14,8 +14,8 @@ TCP と実 fsync を繰り返さない。
 - `{{work-root}}/spec/app_spec/console_and_file_log.md`
 - `{{work-root}}/spec/app_spec/feedback_state.md`
 - `{{work-root}}/spec/app_spec/sub_command/feedback_report.md`
-- `{{work-root}}/reference/src/oracle/acp_builder/feedback/normalize_issue.json`
-- `{{work-root}}/reference/src/oracle/acp_builder/feedback/remediate_issue.json`
+- `{{work-root}}/reference/src/oracle/acp_builder/feedback/report/normalize_issue.json`
+- `{{work-root}}/reference/src/oracle/acp_builder/feedback/report/remediate_issue.json`
 """
 
 import errno
@@ -39,10 +39,10 @@ from _acp_builder_support import oracle_schema_path
 from _cli_support import runner, seed_search_config, terminal_primary_report
 from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from _report_support import assert_report_layout, report_metadata, report_section
-from oracle.acp_builder.feedback.normalize_issue import (
+from oracle.acp_builder.feedback.report.normalize_issue import (
     build_feedback_issue_normalization_request as _build_canonical_normalize_parameter,
 )
-from oracle.acp_builder.feedback.remediate_issue import (
+from oracle.acp_builder.feedback.report.remediate_issue import (
     build_feedback_issue_remediation_request as _build_canonical_remediate_parameter,
 )
 
@@ -2900,9 +2900,9 @@ def test_feedback_output_validation_uses_current_schema_file(
     tmp_path: Path, schema_name: str
 ) -> None:
     """再利用時も各 output と現在の schema を検査し、更新・破損・消失を拒否する。"""
-    schema_text = oracle_schema_path("feedback", f"{schema_name}.json").read_text(
-        encoding="utf-8"
-    )
+    schema_text = oracle_schema_path(
+        "feedback", "report", f"{schema_name}.json"
+    ).read_text(encoding="utf-8")
     schema_path = tmp_path / f"{schema_name}.json"
     schema_path.write_text(schema_text, encoding="utf-8")
     output = (
@@ -2942,7 +2942,7 @@ def test_normalization_schema_supports_editable_namespace_package(
     original_files = feedback_state_module.resources.files
 
     def raise_namespace_resource_error(package: str):
-        if package == "oracle.acp_builder.feedback":
+        if package == "oracle.acp_builder.feedback.report":
             raise NotADirectoryError(package)
         return original_files(package)
 

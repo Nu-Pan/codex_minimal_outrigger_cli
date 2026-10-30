@@ -744,16 +744,16 @@ def test_remediation_state_validation_rechecks_schema_and_value(
     schema_directory = tmp_path / "schema"
     schema_directory.mkdir()
     schema_path = schema_directory / "remediate_issue.json"
-    schema_text = oracle_schema_path("feedback", "remediate_issue.json").read_text(
-        encoding="utf-8"
-    )
+    schema_text = oracle_schema_path(
+        "feedback", "report", "remediate_issue.json"
+    ).read_text(encoding="utf-8")
     original_files = run_state.resources.files
     monkeypatch.setattr(
         run_state.resources,
         "files",
         lambda package: (
             schema_directory
-            if package == "oracle.acp_builder.feedback.remediate_issue"
+            if package == "oracle.acp_builder.feedback.report.remediate_issue"
             else original_files(package)
         ),
     )

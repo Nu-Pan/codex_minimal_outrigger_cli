@@ -32,16 +32,16 @@
   "reference/src/oracle/acp_builder/decision/plan/launch_tui.py": {
     "last_investigated_at": null
   },
-  "reference/src/oracle/acp_builder/feedback/normalize_issue.json": {
+  "reference/src/oracle/acp_builder/feedback/report/normalize_issue.json": {
     "last_investigated_at": null
   },
-  "reference/src/oracle/acp_builder/feedback/normalize_issue.py": {
+  "reference/src/oracle/acp_builder/feedback/report/normalize_issue.py": {
     "last_investigated_at": null
   },
-  "reference/src/oracle/acp_builder/feedback/remediate_issue.json": {
+  "reference/src/oracle/acp_builder/feedback/report/remediate_issue.json": {
     "last_investigated_at": null
   },
-  "reference/src/oracle/acp_builder/feedback/remediate_issue.py": {
+  "reference/src/oracle/acp_builder/feedback/report/remediate_issue.py": {
     "last_investigated_at": null
   },
   "reference/src/oracle/acp_builder/primary_report_review.json": {

@@ -21,10 +21,10 @@ from oracle.acp_builder.decision.apply.launch_exec import (
 from oracle.acp_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
 )
-from oracle.acp_builder.feedback.normalize_issue import (
+from oracle.acp_builder.feedback.report.normalize_issue import (
     build_feedback_issue_normalization_request,
 )
-from oracle.acp_builder.feedback.remediate_issue import (
+from oracle.acp_builder.feedback.report.remediate_issue import (
     build_feedback_issue_remediation_request,
 )
 from oracle.acp_builder.oracle.edit.launch_exec import (

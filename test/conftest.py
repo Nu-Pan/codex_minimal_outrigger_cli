@@ -184,7 +184,7 @@ def feedback_remediation_request_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     """fake 応答の state 検査には、issue 入力・cwd・正本 schema だけを渡す。"""
     # prompt と起動設定は test_feedback.py の builder 専用ケース、実 Git と
     # remediation 呼び出しの結合は後続 wave test に残す。応答は正本 schema で検査する。
-    schema = oracle_schema_path("feedback", "remediate_issue.json")
+    schema = oracle_schema_path("feedback", "report", "remediate_issue.json")
     monkeypatch.setattr(
         remediation_module,
         "build_feedback_issue_remediation_request",

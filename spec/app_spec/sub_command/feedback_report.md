@@ -84,7 +84,7 @@ agent が入力した deduplication hint は、候補検索にだけ使用する
 
 normalization agent は、入力した observation が既存 candidate と同じ issue か、新しい issue かだけを返す。normalization は issue identity を確定する責務であり、issue remediation call には数えない。
 
-正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/normalize_issue.py` の `build_feedback_issue_normalization_request` へ委譲する。Structured Output schema は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/normalize_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
+正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/report/normalize_issue.py` の `build_feedback_issue_normalization_request` へ委譲する。Structured Output schema は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/report/normalize_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
 cmoc が normalization agent に渡す比較用の入力は、次の 2 つとする。
 
@@ -127,7 +127,7 @@ issue remediation agent call は、1 issue について次の処理を同じ cal
 
 収束不能を理由に `inconclusive` と判定した issue について、cmoc は、その診断根拠が変わらないまま同じ状態を往復する再試行を続けてはならない。
 
-正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/remediate_issue.py` の `build_feedback_issue_remediation_request` へ委譲する。Structured Output schema は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/remediate_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
+正確な prompt part、文面、workload 固有の起動パラメータ、およびその選択理由は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/report/remediate_issue.py` の `build_feedback_issue_remediation_request` へ委譲する。Structured Output schema は、`{{cmoc-root}}/reference/src/oracle/acp_builder/feedback/report/remediate_issue.json` の root schema（JSON Pointer `#`）へ委譲する。
 
 call の境界を次に示す。
 
