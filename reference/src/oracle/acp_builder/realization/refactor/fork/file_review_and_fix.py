@@ -32,10 +32,10 @@ def build_realization_refactor_request(
     path_context = AgentCallPathContext(agent_call_cwd=run_worktree)
     prompt = build_complete_prompt(
         task="""
-        - oracle file または realization file である `{{target-path}}` を起点に、仕様への適合と必要な回帰検出能力を保ちながら、テストと実装のムダを調査・削減し、テスト実行時間の短縮につながる realization file の改善を行うこと
+        - decision file、reference file、spec file または realization file である `{{target-path}}` を起点に、仕様への適合と必要な回帰検出能力を保ちながら、テストと実装のムダを調査・削減し、テスト実行時間の短縮につながる realization file の改善を行うこと
         """,
         scope="""
-        - `{{target-path}}` と、関連する oracle file および realization file を調べ、変更と検証を一体として扱える小さなまとまりを選ぶこと。関連する複数 file の変更を含めてよい
+        - `{{target-path}}` と、関連する decision file、reference file、spec file および realization file を調べ、変更と検証を一体として扱える小さなまとまりを選ぶこと。関連する複数の realization file の変更を含めてよい
         """,
         completion_criteria="""
         - 今回の関連範囲を調査し、残す変更について、この agent call 内で修正後の再調査と所定の検証を終えていること。根拠のある改善が見つからない場合は、変更なしで完了してよい

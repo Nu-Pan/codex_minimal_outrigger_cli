@@ -18,7 +18,7 @@
           "title",
           "evidences",
           "changed_paths",
-          "oracle_requirement",
+          "requirement",
           "observed_implementation",
           "reason",
           "resolution"
@@ -76,9 +76,9 @@
               "description": "agent call 開始時点を基準として終了時点に残る net 差分の、正規化済み `{{work-root}}` 相対 path。追加と変更は終了時点の path、削除は開始時点の path、rename は rename 前後の path で表す。"
             }
           },
-          "oracle_requirement": {
+          "requirement": {
             "type": "string",
-            "description": "維持・回復すべき oracle file の要求。対応する明示要求がない場合はその旨を示す。適合する実装への改善を、仕様不適合と偽って説明しない。"
+            "description": "維持・回復すべき仕様上の要求と、その根拠となる decision・reference・spec の記述。対応する明示要求がない場合はその旨を示す。適合する実装への改善を、仕様不適合と偽って説明しない。"
           },
           "observed_implementation": {
             "type": "string",

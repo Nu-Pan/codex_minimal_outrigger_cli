@@ -10,6 +10,8 @@
     - `build_complete_prompt` の引数 `task` は `goal` の方が適切かも
     - feedback remediation は、structured output で操作を返すのではなく、stdin MCP server として issue に対するを公開する方式にしたい
     - `build_*_request` にリネームしたので `acp_builder` は `arb` とか `agent_request_builder` とかにリネームすべきか
+    - `reference/src/oracle/acp_builder/realization/refactor/fork` --> `reference/src/oracle/acp_builder/realization/refactor`
+    - `build_realization_refactor_request` で Strcutured Output を返す意味はもうない (`codex resume 01a18e12-9b7a-7370-9cdc-c647b4ac0c55`)
 
 ## サンドボックスシステムを考え直す
 
