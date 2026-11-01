@@ -176,11 +176,17 @@ def run_doctor_preprocess(
     explicit_doctor: bool = False,
     sync_refactor_entries: bool = True,
     rollback_on_interruption: bool = False,
+    session_join_preparation: bool = False,
 ) -> None:
     """current と main worktree の共通修復を排他実行し、修復差分だけを commit する。"""
     root = root.resolve()
+    if not session_join_preparation:
+        from .runtime_session_join import require_no_pending_session_join
+
+        require_no_pending_session_join(repo_root(root), root)
     # 停止した join の後処理を、通常同期で上書きしない。
-    from .runtime_run_join_state import confirm_import, restore_pending_join
+    from .runtime_join import confirm_import
+    from .runtime_run_join_state import restore_pending_join
 
     branch = run_git(
         ["symbolic-ref", "-q", "--short", "HEAD"], root, check=False

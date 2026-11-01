@@ -398,6 +398,15 @@ def ensure_primary_report(
         write_reserved_primary_report(
             target, review_primary_report(repository, content, logger)
         )
+        # 新規生成した report でも、保存後に join の終了記録を確定する。
+        reserved = False
+        if (
+            classification != "error"
+            and context is not None
+            and context.completion_handler is not None
+        ):
+            context.completion_handler()
+            context.completion_handler = None
     except BaseException as exc:
         if reserved and target is not None:
             try:

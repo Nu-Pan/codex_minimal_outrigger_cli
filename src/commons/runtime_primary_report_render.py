@@ -652,7 +652,9 @@ def _session_fork_body(
     branch_status = (
         "completed"
         if state_after == "active"
-        else "未確認" if session_branch is not None else "未実行"
+        else "未確認"
+        if session_branch is not None
+        else "未実行"
     )
     state_status = "completed" if state_after is not None else "未実行"
     return [
@@ -777,7 +779,9 @@ def _session_join_body(
             )
         ]
     conflict_call_status = fields.get("conflict_resolution_status")
-    if conflict_call_status is None:
+    if conflict_call_status == "not_needed":
+        conflict_call = "未実行（内容競合なし）"
+    elif conflict_call_status is None:
         conflict_call = (
             "未実行（conflict なし）"
             if fields.get("merge_status") == "completed"
@@ -812,12 +816,21 @@ def _session_join_body(
         f"- home branch: `{_field_status(fields.get('home_branch'))}`",
         "- branch 切替: "
         f"`{_operation_status(fields.get('branch_switch_status'), classification)}`",
-        "- merge 前の session branch HEAD: "
+        "- 準備前の session branch HEAD: "
         f"`{_field_status(fields.get('session_branch_head_before_merge'))}`",
-        "- merge 前の home branch HEAD: "
+        "- 基準 home branch HEAD: "
         f"`{_field_status(fields.get('home_branch_head_before_merge'))}`",
+        "- 準備完了 session HEAD: "
+        f"`{_field_status(fields.get('prepared_session_head'))}`",
         f"- merge 結果: `{merge_status}`",
         f"- 作成した merge commit: `{_field_status(fields.get('merge_commit'))}`",
+        "- 取り込み成立の home commit: "
+        f"`{_field_status(fields.get('imported_home_commit'))}`",
+        f"- 取り込み成立の tree: `{_field_status(fields.get('imported_home_tree'))}`",
+        "- session 側の準備: "
+        f"`{_operation_status(fields.get('session_preparation'), classification)}`",
+        "- 準備の取消: "
+        f"`{_operation_status(fields.get('merge_rollback'), classification)}`",
         "## conflict 解消",
         "- conflict path:",
         *conflict_lines,

@@ -46,6 +46,9 @@ def _cmoc_session_fork_body() -> TerminalResult:
         root = repo_root()
         work = work_root()
     with session_fork_lock(root):
+        from commons.runtime_session_join import require_no_pending_session_join
+
+        require_no_pending_session_join(root, work)
         start_subcommand_step(2, "現在の local branch を取得", "get current branch")
         branch = current_branch(work)
         update_primary_report_fields(

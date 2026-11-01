@@ -62,7 +62,9 @@ cmoc は、人間が作業する session と、そこから隔離して成果物
 
 ### `{{cmoc-session-join-commit}}`
 
-- `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge した commit である。
+- 準備完了の `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ `--no-ff` で取り込んだ commit である。準備中に home を session へ統合した commit や、session 上の同期 commit とは区別する。
+
+no-op join ではこの commit は存在せず、state または report では `null` とする。成立条件は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「共通の準備・取り込み・復旧」に従う。
 
 ### `{{cmoc-run-fork-commit}}`
 

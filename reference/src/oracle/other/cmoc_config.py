@@ -130,7 +130,7 @@ class CmocConfigCodex:
             # NOTE
             #   ここでミスるとブランチ上の作業結果がぶち壊しになる
             #   リスクを鑑みて、品質が至上命題
-            "build_session_join_conflict_resolution_request": CodexCallConfig(
+            "build_merge_conflict_resolution_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",
                 reasoning_effort="max",

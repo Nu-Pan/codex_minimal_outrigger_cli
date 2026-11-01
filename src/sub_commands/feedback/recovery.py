@@ -33,6 +33,7 @@ from commons.runtime_feedback_state import (
 )
 from commons.runtime_feedback_store import feedback_root, write_immutable_json
 from commons.runtime_ids import is_common_id
+from commons.runtime_join import confirm_import
 from commons.runtime_logging import current_subcommand_logger
 from commons.runtime_primary_report import (
     current_primary_report_fields,
@@ -51,7 +52,7 @@ from commons.runtime_run_join import (
     remaining_run_resources,
     restore_run_error,
 )
-from commons.runtime_run_join_state import confirm_import, join_record, load_join_record
+from commons.runtime_run_join_state import join_record, load_join_record
 from commons.runtime_run_lifecycle import EditingRunContext
 
 

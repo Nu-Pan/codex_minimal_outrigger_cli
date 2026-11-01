@@ -42,6 +42,9 @@ def _cmoc_session_abandon_body() -> TerminalResult:
     # session join/fork と state の事前検証・branch cleanup が競合しないよう、
     # session lifecycle 全体を同じ repository lock で直列化する。
     with session_fork_lock(repo):
+        from commons.runtime_session_join import require_no_pending_session_join
+
+        require_no_pending_session_join(repo, work)
         branch = current_branch(work)
         update_primary_report_fields(
             session_branch=branch,

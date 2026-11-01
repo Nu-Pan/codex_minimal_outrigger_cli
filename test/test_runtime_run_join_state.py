@@ -7,10 +7,11 @@ import pytest
 from _git_support import RUN_BRANCH, SESSION_BRANCH, SESSION_ID, run_git
 
 import commons.runtime_git as git_module
+import commons.runtime_join as merge_module
 import commons.runtime_run_join as run_join
 import commons.runtime_run_join_state as join_state
 from commons.runtime_errors import CmocError
-from commons.runtime_git import head_commit
+from commons.runtime_git import current_branch, head_commit
 from commons.runtime_run_lifecycle import EditingRunContext, commit_work_unit
 
 
@@ -20,7 +21,7 @@ def imported_record(committed_repository):
     baseline = head_commit(root)
     (root / "result.txt").write_text("prepared result\n")
     prepared = commit_work_unit(root, "prepared result")
-    tree = join_state.tree_id(root, prepared)
+    tree = merge_module.tree_id(root, prepared)
     imported = run_git(
         root, "commit-tree", tree, "-p", baseline, "-p", prepared, "-m", "import"
     ).stdout.strip()
@@ -40,13 +41,13 @@ def imported_record(committed_repository):
     )
     return join_state.JoinRecord(
         context,
-        prepared,
-        session_head=baseline,
-        prepared_run_head=prepared,
+        original_source_head=prepared,
+        target_head=baseline,
+        prepared_head=prepared,
         imported=True,
         join_commit=imported,
-        session_commit=imported,
-        session_tree=tree,
+        target_commit=imported,
+        target_tree=tree,
     )
 
 
@@ -60,44 +61,44 @@ def test_import_confirmation_batches_metadata_and_rechecks_reachability(
         record,
         replace(
             record,
-            session_commit=record.prepared_run_head,
-            session_head=record.prepared_run_head,
+            target_commit=record.prepared_head,
+            target_head=record.prepared_head,
             join_commit=None,
         ),
     )
-    queries = Mock(wraps=join_state.run_git)
-    monkeypatch.setattr(join_state, "run_git", queries)
+    queries = Mock(wraps=merge_module.run_git)
+    monkeypatch.setattr(merge_module, "run_git", queries)
 
     for receipt in records:
         queries.reset_mock()
-        assert join_state.confirm_import(receipt)
+        assert merge_module.confirm_import(receipt)
         assert 0 < queries.call_count <= 2
     # 成功済みの判定を持ち越さず、session ref の変更を次回の照合で拒否する。
     run_git(root, "update-ref", SESSION_BRANCH, record.context.run_fork_commit)
     for receipt in records:
         with pytest.raises(CmocError, match="取り込み成果を確認できません"):
-            join_state.confirm_import(receipt)
+            merge_module.confirm_import(receipt)
 
 
 def test_import_confirmation_rejects_inconsistent_receipt(imported_record, monkeypatch):
     record = imported_record
     baseline = record.context.run_fork_commit
     mismatches = [
-        {"session_tree": join_state.tree_id(record.context.repo, baseline)},
-        {"prepared_run_head": baseline},
-        {"session_head": record.prepared_run_head},
+        {"target_tree": merge_module.tree_id(record.context.repo, baseline)},
+        {"prepared_head": baseline},
+        {"target_head": record.prepared_head},
         {"join_commit": baseline},
         {"join_commit": None},
-        {"session_commit": None},
-        {"session_commit": record.session_tree},
-        {"prepared_run_head": record.session_tree},
+        {"target_commit": None},
+        {"target_commit": record.target_tree},
+        {"prepared_head": record.target_tree},
     ]
-    queries = Mock(wraps=join_state.run_git)
-    monkeypatch.setattr(join_state, "run_git", queries)
+    queries = Mock(wraps=merge_module.run_git)
+    monkeypatch.setattr(merge_module, "run_git", queries)
     for mismatch in mismatches:
         queries.reset_mock()
         with pytest.raises(CmocError):
-            join_state.confirm_import(replace(record, **mismatch))
+            merge_module.confirm_import(replace(record, **mismatch))
         # 不完全な記録は即座に、履歴・tree の不整合は metadata の照会だけで拒否する。
         assert queries.call_count <= 1, mismatch
 
@@ -107,16 +108,16 @@ def test_missing_receipt_checks_candidate_tree_and_parents(
 ):
     root = imported_record.context.repo
     imported = imported_record.join_commit
-    queries = Mock(wraps=join_state.run_git)
-    monkeypatch.setattr(join_state, "run_git", queries)
+    queries = Mock(wraps=merge_module.run_git)
+    monkeypatch.setattr(merge_module, "run_git", queries)
 
     # 各候補は同じ基準から分岐させ、復旧で書き換わる記録は毎回作り直す。
     for mismatch in (None, "tree", "parent_order"):
         if mismatch is not None:
-            tree = imported_record.session_tree
-            parents = [imported_record.session_head, imported_record.prepared_run_head]
+            tree = imported_record.target_tree
+            parents = [imported_record.target_head, imported_record.prepared_head]
             if mismatch == "tree":
-                tree = join_state.tree_id(root, imported_record.session_head)
+                tree = merge_module.tree_id(root, imported_record.target_head)
             else:
                 parents.reverse()
             candidate = run_git(
@@ -135,28 +136,25 @@ def test_missing_receipt_checks_candidate_tree_and_parents(
             imported_record,
             imported=False,
             join_commit=None,
-            session_commit=None,
-            session_tree=None,
+            target_commit=None,
+            target_tree=None,
         )
         # durable 保存と CLI の復旧は test_editing_run_cli.py に残す。
         save = Mock()
         monkeypatch.setattr(record, "save", save)
         queries.reset_mock()
 
-        assert join_state.confirm_import(record) is (mismatch is None), mismatch
+        assert merge_module.confirm_import(record) is (mismatch is None), mismatch
         assert 0 < queries.call_count <= 2, mismatch
         if mismatch is None:
             assert record.imported
-            assert record.join_commit == record.session_commit == imported
-            assert record.session_tree == imported_record.session_tree
+            assert record.join_commit == record.target_commit == imported
+            assert record.target_tree == imported_record.target_tree
             save.assert_called_once_with()
         else:
             assert not record.imported
             assert (
-                record.join_commit
-                is record.session_commit
-                is record.session_tree
-                is None
+                record.join_commit is record.target_commit is record.target_tree is None
             )
             save.assert_not_called()
 
@@ -169,7 +167,7 @@ def test_cleanup_rechecks_resources_without_repeating_branch_query(
     root = record.context.repo
     context = replace(record.context, run_worktree=root)
     branch_ref = f"refs/heads/{context.run_branch}"
-    run_git(root, "branch", context.run_branch, record.prepared_run_head)
+    run_git(root, "branch", context.run_branch, record.prepared_head)
     queries = Mock(wraps=git_module.subprocess.run)
     monkeypatch.setattr(git_module.subprocess, "run", queries)
 
@@ -186,13 +184,13 @@ def test_cleanup_rechecks_resources_without_repeating_branch_query(
     inspect(True)
     run_git(root, "update-ref", branch_ref, context.run_fork_commit)
     inspect(False)
-    run_git(root, "update-ref", branch_ref, record.prepared_run_head)
+    run_git(root, "update-ref", branch_ref, record.prepared_head)
     inspect(True)
 
     # branch が一致しても、残存 worktree の別 HEAD・未確定差分は削除しない。
     run_git(root, "switch", "--detach", context.run_fork_commit)
     inspect(False)
-    run_git(root, "switch", "--detach", record.prepared_run_head)
+    run_git(root, "switch", "--detach", record.prepared_head)
     dirty = root / "untracked.txt"
     dirty.write_text("keep this change\n")
     inspect(False)
@@ -207,3 +205,35 @@ def test_cleanup_rechecks_resources_without_repeating_branch_query(
     inspect(True, record.context)
     # Git 自体の照会失敗は、branch 不在と区別して削除を止める。
     inspect(False, replace(record.context, repo=root.parent))
+
+
+def test_rollback_does_not_restore_tracked_runtime_data(imported_record):
+    """doctor が追跡を外した管理 file を reset で古い内容へ戻さない。"""
+    root = imported_record.context.repo
+    evidence = root / ".cmoc/gu/evidence.txt"
+    evidence.parent.mkdir(parents=True)
+    evidence.write_text("old tracked data\n")
+    original = commit_work_unit(root, "incorrectly tracked runtime data")
+    run_git(root, "rm", "--cached", ".cmoc/gu/evidence.txt")
+    (root / ".gitignore").write_text("/.cmoc/gu/\n")
+    prepared = commit_work_unit(root, "untrack runtime data")
+    evidence.write_text("new diagnosis and recovery evidence\n")
+    context = replace(
+        imported_record.context,
+        run_branch=current_branch(root),
+        run_worktree=root,
+        session_worktree=root,
+    )
+    record = join_state.JoinRecord(
+        context,
+        original_source_head=original,
+        owned_source_head=prepared,
+        preparation_started=True,
+    )
+
+    with pytest.raises(CmocError, match="管理領域を再追跡"):
+        merge_module.rollback_join_preparation(record)
+
+    assert head_commit(root) == prepared
+    assert evidence.read_text() == "new diagnosis and recovery evidence\n"
+    assert run_git(root, "ls-files", "--", ".cmoc/gu").stdout == ""

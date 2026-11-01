@@ -234,16 +234,15 @@ def test_build_realization_findings_policy_renders_core_review_aspects() -> None
 
 
 def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
-    """conflict 解消結果の保持・報告・変更境界を伝える。"""
+    """policy は統合結果の規定を持ち、作業と報告は request builder が担う。"""
     builder_result = _build_conflict_resolution_policy()
-    rendered_doc = _render_policy(
-        builder_result, ("**必須**", "**禁止**"), policy_count=3
-    )
-    assert "両 branch の変更を整合したマージ結果" in rendered_doc
-    assert "両 branch の両立する意図と挙動" in rendered_doc
-    assert "新しい人間意図の選択が必要な場合" in rendered_doc
-    assert "適用される規定に違反する解消結果" in rendered_doc
-    assert "初期の競合一覧にない関連ファイル" in rendered_doc
+    rendered_doc = _render_policy(builder_result, ("**必須**", "**禁止**", "**許容**"))
+    assert "両 branch の両立可能な変更" in rendered_doc
+    assert "妥当な解決方法が複数ある場合" in rendered_doc
+    assert "規定に違反する解消結果" in rendered_doc
+    assert "初期の競合一覧にないファイル" in rendered_doc
+    assert "解決不能な場合、未解消のままで良い" in rendered_doc
+    assert "merge_resolution:" not in rendered_doc
 
 
 @pytest.mark.parametrize("enable_document_search_mcp", [False, True])

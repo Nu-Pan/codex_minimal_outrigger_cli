@@ -16,13 +16,15 @@
 
 ### join の復旧情報
 
-join の段階と基準 HEAD の意味・記録時点は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「merge と post-join」を正本とする。再試行で元の workload の成果と準備変更を混同せず、取り込み前の rollback と取り込み後の後処理を選べるよう、次の情報を run identity と結び付けて durable に保持する。
+join の段階と基準 HEAD の意味・記録時点は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「共通の準備・取り込み・復旧」を正本とする。再試行で元の成果と準備変更を混同せず、取り込み前の rollback と取り込み後の後処理を選べるよう、次の情報を対象 session、run join ではさらに run identity と結び付けて durable に保持する。
 
-- 統合前 run HEAD、各試行の基準 session HEAD、および準備完了 run HEAD。まだ成立していない基準や成果は作らない。
-- 準備変更の帰属、検証・同期の完了結果、および session への取り込み成立を判別する情報。途中の commit 作成や取り込み直後に停止しても、履歴・tree と照合できるようにする。
-- 成立した取り込み commit または no-op とその session commit、確定済みの後処理、未完了処理、および残存資源への対応。
+- 取り込み元の元の成果、各試行の取り込み先の基準 HEAD、および準備完了 HEAD。まだ成立していない基準や成果は作らない。
+- 準備変更の帰属、検証・同期の完了結果、および取り込み成立を判別する情報。途中の commit 作成や取り込み直後に停止しても、履歴・tree と照合できるようにする。
+- 成立した取り込み commit または no-op とその取り込み先 commit、確定済みの後処理、未完了処理、および残存資源への対応。
 
 既存の管理記録を活用し、Git から確実に復元できる情報を重複保存しない。保存形式、配置、field 名、および Git との分担は固定しないが、process のメモリや削除予定の資源だけに復旧を依存させない。`ready` 初期化後と部分 cleanup 後も、未完了の後処理を判別し、必要なら同じ run の `kind`、`branch`、`fork_commit` を復元できるようにする。
+
+session join では、session branch 削除後も home と worktree の対応から未完了の処理を特定できるようにする。失敗した準備を安全に取り消せた場合と、取り込み後の必須処理を終えた場合は、その試行の終了を記録する。終了済みの記録を未完了の join として通常の編集を妨げる理由にしない。
 
 これらは join の復旧情報であり、`run.state` の値を増やさない。apply の資格判定は、`{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「join 後 hook」に従う。feedback の封印済み入力と検証記録の対応は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「report cut」「publication completion record」に従い、その正本を本 file へ複製しない。
 
@@ -44,6 +46,8 @@ active session context を必要とするサブコマンドは、次の条件を
 - `{{cmoc-session-branch}}` 側の worktree に git 未コミット差分がない。
 
 `ready` 初期化後の実行中または停止した invocation の扱いは、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「同時実行の境界」「join の失敗と復旧」に従い、復旧情報も確認する。
+
+未完了の session join がある場合は、同じ worktree の通常の編集や session の開始・破棄より復旧を優先する。session join 自体の再開には、`{{cmoc-root}}/spec/app_spec/sub_command/session_join.md` の「事前条件」「その他、コマンドが想定外に失敗した場合」を適用する。
 
 ## スキーマ定義
 

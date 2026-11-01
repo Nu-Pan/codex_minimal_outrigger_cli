@@ -100,9 +100,9 @@ def feedback_run(tmp_path, monkeypatch, feedback_remediation_request_stub):
     )
     state = load_active_state(repo)
     manifest = remediation._new_manifest(context, state)
-    manifest["run"][
-        "invocation_log"
-    ] = ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
+    manifest["run"]["invocation_log"] = (
+        ".cmoc/gu/log/sub_command/exec_000000_2026-09-29_15-04.jsonl"
+    )
     invocation_log = repo / manifest["run"]["invocation_log"]
     invocation_log.parent.mkdir(parents=True)
     invocation_log.write_text("")
@@ -197,16 +197,16 @@ def feedback_run(tmp_path, monkeypatch, feedback_remediation_request_stub):
     )
     monkeypatch.setattr(report, "run_codex_exec", call)
     # 共通 join と実 Git の照合は CLI test に任せ、封印時の準備済み境界を渡す。
-    record = JoinRecord(context, harness.head)
+    record = JoinRecord(context, original_source_head=harness.head)
     harness.join = record
     monkeypatch.setattr(record, "save", lambda: None)
     original_seal = remediation._seal
 
     def seal(*args):
         original_seal(*args)
-        record.original_run_head = record.prepared_run_head = harness.head
-        record.session_head = record.session_commit = harness.head
-        record.session_tree = "a" * 40
+        record.original_source_head = record.prepared_head = harness.head
+        record.target_head = record.target_commit = harness.head
+        record.target_tree = "a" * 40
         record.imported = True
         record.resolution = {
             "agent_status": "not_needed",
@@ -463,7 +463,7 @@ def report_cut_inputs(feedback_run):
     normalization = normalization_checkpoint_path(
         repo, h.manifest["report_cut_id"], observation_id
     )
-    output = {"result": {"decision": "new", "existing_issue_id": None}}
+    output = {"existing_issue_id": None}
     write_immutable_json(
         normalization,
         {
@@ -655,7 +655,7 @@ def test_report_cut_manifest_cleanup_relaxes_only_input_existence(report_cut_inp
 def test_normalization_checkpoint_rejects_schema_invalid_output(tmp_path):
     """normalization checkpoint は output hash だけで正式結果にならない。"""
     output = {
-        "result": {"decision": "new", "existing_issue_id": None},
+        "existing_issue_id": None,
         "unexpected": True,
     }
     checkpoint = {
@@ -1259,7 +1259,7 @@ def test_verified_merge_adjustment_keeps_sealed_result_without_run_tree_equality
         "agent_status": "resolved",
         "agent_report": "merge_resolution: resolved\n検証: 採用結果を維持。",
         "call_log": str(log_path),
-        "verified_run_commit": h.head,
+        "verified_commit": h.head,
         "initial_conflicts": ["dependency.conf"],
     }
     monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
@@ -1289,8 +1289,8 @@ def test_recovery_uses_prepared_join_record_without_new_calls(
     remediation._seal(h.context, h.manifest, h.candidates, {})
     for source in h.context.run_worktree.iterdir():
         (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
-    h.join.prepared_run_head = "b" * 40
-    h.join.session_commit = h.join.join_commit = "c" * 40
+    h.join.prepared_head = "b" * 40
+    h.join.target_commit = h.join.join_commit = "c" * 40
     monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
     monkeypatch.setattr(remediation, "head_commit", lambda _root: "b" * 40)
     monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
@@ -1299,7 +1299,7 @@ def test_recovery_uses_prepared_join_record_without_new_calls(
     merged = read_json_object(h.context.repo / h.manifest["run"]["merged"]["path"])
     assert merged["run_join_commit"] == "c" * 40
     assert merged["prepared_run_head"] == "b" * 40
-    assert h.join.original_run_head == "a" * 40
+    assert h.join.original_source_head == "a" * 40
     assert len(h.calls) == calls_before
 
 

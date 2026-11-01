@@ -134,20 +134,16 @@ workload または join の停止失敗後は、書き込み得る process の�
 
 #### run 側での準備
 
-1. 既存の復旧情報から前回の取り込み成立の有無を確認し、本書の「join の失敗と復旧」に従って停止確認と残存処理の整合化を行う。取り込み済みなら、doctor preprocess に後述の復旧時の扱いを適用し、準備を繰り返さず後処理へ進む。
-2. 未取り込みの run では、元の確定済み成果を統合前 run HEAD として記録する。join 前の doctor preprocess が run に管理更新を加える場合も、その更新より先に記録し、管理更新を元の workload の成果へ混入させない。再試行では前回の統合前 run HEAD を保持する。
-3. doctor preprocess と事前条件を検査し、対象 run と今回の join 開始時の state を確定する。基準 session HEAD を記録してから「差分検査」を行い、`--force-resolve` があれば取消の確定まで終える。doctor の遅延対象と復旧時の扱いは、`{{cmoc-root}}/spec/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」に従う。
-4. run worktree で、基準 session HEAD を run branch へ merge する。競合は本書の「競合解消」に従って解消し、必要な検証を行う。元の workload の commit は書き換えず、統合の変更を後続の履歴として扱う。元の run 成果が session から到達可能な場合も、その session tree に対して同期要否を確認できるよう run を整えるが、記録だけの merge commit は作らない。
-5. session の統合と競合解消の完了後、cmoc が run tree の refactor state を同期し、tracked 差分があれば run branch に commit する。両 branch の値の統合と同期内容は、`{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md` の「join での統合」「entry 集合の同期」に従う。準備完了の tree に必要な検証を完了し、先行する検証記録を使う場合もその tree に適用できることを確認する。run worktree と staging area を clean にし、準備完了 run HEAD と検証・同期の結果を、session への取り込みを始める前に記録する。
+準備・取り込み・復旧の共通処理は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「共通の準備・取り込み・復旧」に従う。run join は取り込み元を run、取り込み先を session とする。
+
+1. 既存の復旧情報を照合し、取り込み済みなら準備を繰り返さず後処理へ進む。未取り込みなら残る準備を安全に復旧する。
+2. 元の確定済み成果を統合前 run HEAD として記録する。join 前の doctor が run に管理更新を加える場合も、その更新より先に記録し、再試行では前回の統合前 run HEAD を保持する。
+3. doctor preprocess と事前条件を検査し、対象 run と今回の開始時の state を確定する。基準 session HEAD を記録し、「差分検査」と必要な `--force-resolve` の取消を終える。doctor の同期境界は、`{{cmoc-root}}/spec/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」に従う。
+4. 共通処理で session を run へ統合し、必要な競合解消、検証、および refactor state の同期を完了する。準備完了 run HEAD とその検証結果を保存する。
 
 #### session への取り込み
 
-記録した準備完了 run HEAD と clean な run worktree を保ち、session HEAD が基準 session HEAD と一致し、session worktree と staging area が clean である場合だけ取り込む。確認から取り込み成立までこの条件を保つ。session が途中で更新されていれば、その回は停止し、最新の session の取り込み直しは再試行で行う。進んだ session にそのまま merge して新たな競合解消を行わない。
-
-- 準備完了 run HEAD に未取り込み commit がある場合は、`{{cmoc-session-branch}}` 上で `git merge --no-ff {{cmoc-run-branch}}` を実行し、準備完了時と同じ tree を持つ取り込み commit を確定する。これを `{{cmoc-run-join-commit}}` とする。
-- 同期差分も未取り込み commit もなければ no-op join とする。基準 session HEAD と準備完了 run HEAD の対応と、no-op の成立を記録する。この記録だけを目的とする空 commit や競合解消 call は作らない。
-
-merge commit の確定、または no-op 成立の記録を、取り込み前後の失敗境界とする。取り込み commit とその tree、または no-op の session commit を、準備完了成果と対応付ける。初回の到達可能性だけで準備を省略することと、取り込み済みの復旧とを混同しない。
+共通の取り込み条件を満たす場合だけ、準備完了 run HEAD を session へ取り込む。その取り込み commit を `{{cmoc-run-join-commit}}` とし、no-op の場合は `null` とする。session の更新を検出した場合は同じ試行で取り込み直さず、共通の復旧と再試行に従う。
 
 #### 後処理
 
@@ -164,9 +160,9 @@ refactor state の同期保証は、取り込み成立時の tree に対する�
 
 判断基準、agent と cmoc の責務、受理、および報告は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」に従う。
 
-競合解消 agent は、session を source、run を target とする準備中の run worktree で作業する。oracle を判断根拠として読み、realization file を統合に必要な範囲で編集する。oracle file は変更しない。元の workload の commit や feedback の issue commit を書き換えず、進行中の merge 結果へ調整を加える。refactor state の競合解消と同期は cmoc が担当する。
+競合解消 agent は、session を source、run を target とする準備中の run worktree で作業する。decision・reference を判断根拠として読み、spec file と realization file を統合に必要な範囲で編集する。decision・reference は変更しない。元の workload の commit や feedback の issue commit を書き換えず、進行中の merge 結果へ調整を加える。refactor state の競合解消と同期は cmoc が担当する。
 
-call 固有の正確な prompt 文面、builder の引数、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/reference/src/oracle/request_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_request` へ委譲する。すべての自動 join と明示 join で同じ call を使用する。feedback の封印後の入力・調整範囲は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。
+run 固有の入力対応は、`{{cmoc-root}}/reference/src/oracle/request_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_request` へ委譲する。この builder は「join の競合解消」で定める共通 request builder を呼び出す。すべての自動 join と明示 join で同じ call を使用する。feedback の封印後の入力・調整範囲は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。
 
 ### join の失敗と復旧
 
@@ -174,17 +170,13 @@ call 固有の正確な prompt 文面、builder の引数、prompt part の選�
 
 join の事前検査で停止した場合は、取り込みを開始せず、既存の差分と run を保持する。その invocation の対象となる停止済み run を特定できる場合は `run.state=error` とする。対象がない場合は存在しない run や state を作らず、別の実行中 invocation を妨げる state 変更も行わない。失敗・取消を本命処理の正常終了や正常なユーザー中断へ変換しない。
 
-取り込み前の失敗・取消では、書き込み得る process の停止を確認してから、cmoc が進行中の merge を中止し、join 準備が導入した変更だけを取り消す。`--force-resolve` の取消、session の統合、競合解消の付随編集、および refactor state 同期を含め、準備中に作成済みの commit と未確定差分を区別して復旧し、run branch・worktree・staging area を統合前 run HEAD の clean な状態へ戻す。元の workload の確定済み成果と session 側の既存変更は保持する。session への取り込み操作が残した未確定差分があれば、その操作が導入したものだけを取り消し、途中で追加された session commit や人間の未コミット差分を戻さない。
+取り込み前の取消、変更の帰属確認、取り込み成立の照合、および取り込み後に rollback しない境界は、共通の「失敗と再試行」に従う。復旧を完了した場合も `run.state=error` とし、元の成果を持つ run branch と run worktree を保持する。復旧を完了できない場合は残存資源を削除せず、必要な次の操作を示す。
 
-取り込み前の復旧後は `run.state=error` とし、run branch と run worktree を保持する。report とログ、および repository-local feedback state はこの作業差分の rollback 対象にせず、それぞれの保持契約に従う。停止または変更の帰属を確認できない場合は rollback しない。復旧を完了できない場合も cleanup せず `error` とし、残存資源・差分と必要な次の操作を示す。
-
-取り込み成立後は、この rollback を適用しない。確定した session commit を保持し、`run.state=error` として、未完了の hook、report、publication、state 更新、または cleanup と診断を残す。状態保存自体に失敗した場合は、成功と表示せず、確認できた state と復旧に必要な記録を残す。
-
-復旧は、準備途中、準備完了後で未取り込み、取り込み済みで後処理未完了を、保存記録と Git から区別する。取り込み直後で結果の保存前に停止した場合も、準備完了 run HEAD と session の履歴・tree の対応から成立を確認する。到達可能性だけを過去の join 成功の証拠にせず、一意に確認できなければ rollback・再 merge・cleanup を行わない。
+取り込み成立後の失敗も `run.state=error` として、未完了の hook、report、publication、state 更新、または cleanup を記録する。状態保存自体に失敗した場合は成功と表示せず、確認できた state と復旧に必要な記録を残す。
 
 この確認は、`ready` 初期化後の失敗・取消・停止で active run 情報が消えている場合にも行う。復旧情報から未完了の必須処理を特定したら、保存した run identity に対応する active run 情報を復元して `error` とする。結果を保存して cleanup の保留を確定した正常終了と、処理途中の停止を区別する。後処理だけの復旧では、必要な記録を検証して削除済み資源と残存資源を区別し、削除済みの run 資源の再作成や取り込み前の事前条件の再成立を要求しない。session 状態に関する workload 固有の再開条件は維持する。
 
-未取り込みなら、上記の復旧と事前条件を満たした後、元の成果に対して差分検査を行い、最新の session HEAD を基準に準備し直す。取り込み済みなら、初回 no-op として処理し直さず、再同期・再 merge を行わずに未完了の後処理だけを進める。元の取り込み commit または成立済み no-op の記録を保持する。apply の hook は、`{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「join 後 hook」が定める今回の開始時 state による資格判定を維持する。
+未取り込みの再試行では、元の成果に対して差分検査をやり直す。取り込み済みの場合は共通処理で元の取り込み結果を確認し、未完了の後処理だけを進める。apply の hook は、`{{cmoc-root}}/spec/app_spec/sub_command/decision_apply.md` の「join 後 hook」が定める今回の開始時 state による資格判定を維持する。
 
 `cmoc run abandon` は残る隔離資源を破棄できるが、session branch に取り込み済みの commit は取り消さない。部分 cleanup 等により必要な資源が欠ける場合は、可能な後処理の再開と資源を要する取り込み再試行を区別し、実行不能な join を案内しない。
 

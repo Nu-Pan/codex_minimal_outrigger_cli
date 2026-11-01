@@ -58,7 +58,7 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
     assert config.codex.model_providers == {"openai": CodexModelProviderConfig()}
     assert set(config.codex.agent_calls) == {
         "realization_edit",
-        "build_session_join_conflict_resolution_request",
+        "build_merge_conflict_resolution_request",
         "build_tui_request",
         "build_decision_plan_request",
         "build_oracle_edit_request",

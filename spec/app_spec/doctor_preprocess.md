@@ -176,9 +176,11 @@ doctor preprocess の後に作成する run worktree の初回同期にも、同
 
 本節は、全編集 workload の同一 invocation 内の自動 join、明示的な `cmoc run join`、および取り込み済み run の後処理の復旧に適用する。run 開始前や通常の doctor による同期は維持する。開始前の doctor preprocess が成功したことだけで、join 時点の検証を省略しない。
 
+`cmoc session join` にも同じ同期境界を適用し、entry 集合の同期は home を session 側で統合した後に行う。取り込み済みの session join の再開では doctor・同期を繰り返さない。未完了の session join がある worktree の通常の doctor は、保存した準備や確定済み成果を上書きせず、先に session join の復旧を求める。
+
 join 前の doctor preprocess は、refactor state の追跡状態と schema を検証し、entry 集合の同期を run 側での準備へ遅延する。`decision_apply` もこの対象に含む。session と run の独立した同期更新を避け、統合後の tree に一度集約するためである。
 
-同期・commit の順序、初回 no-op、および取り込み済みの復旧で再同期しない境界は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「merge と post-join」「join の失敗と復旧」を正本とする。後処理だけを復旧する起動を通常同期の経路と誤認しないよう、同期に先立って対象 run の復旧情報を確認する。
+同期・commit の順序、初回 no-op、および取り込み済みの復旧で再同期しない境界は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「共通の準備・取り込み・復旧」を正本とする。後処理だけを復旧する起動を通常同期の経路と誤認しないよう、同期に先立って対象 join の復旧情報を確認する。
 
 準備途中の停止による merge や未確定差分は、同文書の復旧処理で整合させてから追跡状態と schema を検証する。merge 進行中に doctor preprocess 全体を再実行して修復・同期・commit を割り込ませない。競合中の管理物の扱いは、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「agent と cmoc の責務」に従う。
 

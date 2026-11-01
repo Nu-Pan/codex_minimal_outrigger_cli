@@ -560,6 +560,7 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             | FileAccessMode.DECISION_PLAN
             | FileAccessMode.SPEC_WRITE
             | FileAccessMode.REALIZATION_WRITE
+            | FileAccessMode.SPEC_AND_REALIZATION_WRITE
             | FileAccessMode.NO_POLICY
         ):
             return "workspace-write"

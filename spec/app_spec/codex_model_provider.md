@@ -9,8 +9,9 @@
 
 通常の agent call は、builder が指定した `AgentCallParameter.agent_call_kind` をそのまま設定取得キーとし、`CmocConfigCodex.agent_calls` の対応する一つの entry から設定を直接取得する。種別と builder 関数名の関係は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「呼び出し単位と ID」に従う。設定取得の例外は、本書の「回復確認 probe の設定例外」に限定する。取得した設定を二つの agent call で共用する TUI の経路は、本節の「TUI 起動での設定の確定」に従う。
 
-- realization apply の本命 call、realization refactor の所見調査・修正 call、feedback の issue remediation call、および run join の競合解消 call は、各 builder で realization 編集用の共有専用キーを `agent_call_kind` に直接指定し、設定を共有する。run join は、workload の自動 join と明示的な `cmoc run join` の両方を含む
-- session join、汎用 TUI、oracle 調査、oracle 編集、feedback normalization、primary report の重要事項確認、および quota availability probe は、それぞれ独立した個別設定を持つ
+- realization apply の本命 call、realization refactor の所見調査・修正 call、および feedback の issue remediation call は、各 builder で realization 編集用の共有専用キーを `agent_call_kind` に直接指定し、設定を共有する
+- run join と session join の競合解消 call は、共通 request builder が指定する一つの `agent_call_kind` で設定を共有する。run join は workload の自動 join と明示的な `cmoc run join` の両方を含む。共通 builder は `{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「agent への入力と正確な定義の委譲」に従う
+- 汎用 TUI、oracle 調査、oracle 編集、feedback normalization、primary report の重要事項確認、および quota availability probe は、それぞれ独立した個別設定を持つ
 - `agent_calls` に受理するキーは、委譲先が定める `agent_call_kind` の集合に限る。共有対象の builder 関数名をキーとする個別 entry や、共有設定への call ごとの個別上書きは受理しない
 - 共有設定と各個別設定は、model provider ID、Model 名、および Reasoning Effort 名を必須の直接文字列として持つ
 - 共有設定、必要な個別設定、または provider 定義が欠落しているか、定められた構造・型・値の制約・参照整合性を満たさない場合は、値を推測せず Codex CLI の起動前にエラーとする。対応する entry が欠落しても、`agent_call_kind` と異なるキーを使う設定取得へ fallback してはならない
@@ -60,6 +61,6 @@
 ## non-goal
 
 - model provider の設定や設定の共有を理由に、各 workload の意味・権限・prompt・call 数、sandbox、file access policy、network access、または通知設定を変更することは目的としない
-- session join と汎用 TUI は oracle も扱うため、これらの経路で行う realization 編集までモデル設定を完全に統一することは目的としない
+- join の競合解消と汎用 TUI は spec も扱うため、これらの経路の設定を realization 編集用の共有設定へ統一することは目的としない
 - 汎用 profile 機構は設けない
 - 旧設定との互換対応、移行、旧形式の読み込み、または旧 key 専用の検出・診断・案内は行わず、現行の設定構造だけを生成・検証する

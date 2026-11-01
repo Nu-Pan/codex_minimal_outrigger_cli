@@ -38,6 +38,7 @@ def resolve_merge_conflicts(
     purpose: str,
     initial_conflicts: list[str] | None = None,
     before_commit: Callable[[], None] | None = None,
+    record_result: Callable[[dict[str, Any]], None] | None = None,
     sync_managed_entries: bool = True,
 ) -> dict[str, Any]:
     """内容を agent に委ね、refactor state と全変更を merge commit に収める。"""
@@ -52,12 +53,14 @@ def resolve_merge_conflicts(
     result: dict[str, Any] = {
         "initial_conflicts": conflicts,
         "content_conflicts": content_conflicts,
-        "agent_status": "not_needed",
+        "agent_status": "not_confirmed" if content_conflicts else "not_needed",
         "agent_report": None,
         "call_log": None,
         "incidental_paths": [],
     }
     update_primary_report_fields(conflict_resolution=result)
+    if record_result is not None:
+        record_result(result)
     if content_conflicts:
         # 管理物だけの競合では、使わない prompt と path context を構築しない。
         parameter = build_parameter()
@@ -76,6 +79,8 @@ def resolve_merge_conflicts(
             if report.splitlines()[:1] == ["merge_resolution: resolved"]
             else "unresolved"
         )
+        if record_result is not None:
+            record_result(result)
         update_primary_report_fields(
             conflict_resolution_status=result["agent_status"],
             conflict_agent_report=report,
@@ -96,6 +101,8 @@ def resolve_merge_conflicts(
         # 付随編集の観測は report 用。受理条件は下記正本の検証境界に従う。
         # {{work-root}}/spec/app_spec/codex_common_rule.md の「agent call の差分検証」
         result["incidental_paths"] = sorted(changed)
+        if record_result is not None:
+            record_result(result)
     if refactor_relative in managed:
         merge_refactor_states(
             root, ("HEAD", "MERGE_HEAD"), sync_entries=sync_managed_entries

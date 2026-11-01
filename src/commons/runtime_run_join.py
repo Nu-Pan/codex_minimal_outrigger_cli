@@ -19,7 +19,12 @@ from .runtime_git import (
     require_clean_worktree,
     run_git,
 )
-from .runtime_merge_conflict import resolve_merge_conflicts
+from .runtime_join import (
+    confirm_import,
+    prepare_and_import,
+    require_preparation_ownership,
+    rollback_join_preparation,
+)
 from .runtime_paths import repo_root, reuse_root_queries, work_root
 from .runtime_primary_report import (
     current_primary_report_fields,
@@ -29,22 +34,17 @@ from .runtime_primary_report import (
     update_primary_report_fields,
 )
 from .runtime_primary_report_specs import TerminalClassification
-from .runtime_refactor import merge_refactor_states
 from .runtime_results import TerminalResult
 from .runtime_run import (
     delete_run_process_id,
     run_lifecycle_lock,
-    run_process_tracking,
     stop_error_run_process,
     stop_tracked_codex_children,
-    write_run_process_id,
 )
 from .runtime_run_join_state import (
     JoinRecord,
-    confirm_import,
     join_record,
     load_join_record,
-    tree_id,
 )
 from .runtime_run_lifecycle import (
     EditingRunContext,
@@ -53,7 +53,6 @@ from .runtime_run_lifecycle import (
     resolve_active_run,
     tree_changes,
     unexpected_run_paths,
-    worktree_change_paths,
 )
 from .runtime_run_report import write_lifecycle_report
 from .runtime_state import RunPart, SessionState, load_state_for_branch, write_state
@@ -104,7 +103,7 @@ def _run_join_doctor(
     else:
         run_doctor_preprocess(root, sync_refactor_entries=sync_refactor_entries)
     if record is not None and not record.finished:
-        record.owned_run_head = _require_preparation_ownership(record)
+        record.owned_source_head = require_preparation_ownership(record)
         record.pending_action = None
         record.save()
 
@@ -153,7 +152,7 @@ def validate_run_join(
         )
         record.save()
         _revert_unexpected_run_paths(context, run_changes, run_unexpected)
-        record.owned_run_head = _require_preparation_ownership(record)
+        record.owned_source_head = require_preparation_ownership(record)
         record.pending_action = None
         record.force_paths = []
         record.save()
@@ -179,141 +178,6 @@ def validate_run_join(
             )
 
 
-def rollback_join_preparation(record: JoinRecord) -> None:
-    """停止確認後、run の準備だけを元の成果へ戻す。"""
-    # 取り込み済みなら、run の履歴も session の成果も巻き戻さない。
-    if confirm_import(record) or not record.preparation_started:
-        return
-    context = record.context
-    stop_tracked_codex_children(context.repo, context.session_id)
-    _require_preparation_ownership(record)
-    # 最終 merge の未確定結果だけを中止し、人間の差分があれば保持する。
-    merge_head = run_git(
-        ["rev-parse", "-q", "--verify", "MERGE_HEAD"],
-        context.session_worktree,
-        check=False,
-    )
-    if merge_head.returncode == 0:
-        if (
-            merge_head.stdout.strip() != record.prepared_run_head
-            or head_commit(context.session_worktree) != record.session_head
-            or run_git(["write-tree"], context.session_worktree).stdout.strip()
-            != tree_id(context.repo, record.prepared_run_head or "")
-            or run_git(
-                ["diff", "--quiet"], context.session_worktree, check=False
-            ).returncode
-            or run_git(
-                ["ls-files", "--others", "--exclude-standard"], context.session_worktree
-            ).stdout
-        ):
-            raise CmocError("session の未確定差分の帰属を確認できません。", [], "")
-        run_git(["merge", "--abort"], context.session_worktree)
-    run_git(["merge", "--abort"], context.run_worktree, check=False)
-    run_git(["reset", "--hard", record.original_run_head], context.run_worktree)
-    run_git(["clean", "-fd"], context.run_worktree)
-    record.attempts.append(
-        {
-            "session_head": record.session_head,
-            "prepared_run_head": record.prepared_run_head,
-            "sync_commit": record.sync_commit,
-            "resolution": record.resolution,
-        }
-    )
-    record.session_head = record.prepared_run_head = record.sync_commit = None
-    record.resolution = {}
-    record.preparation_started = False
-    record.owned_run_head = record.original_run_head
-    record.pending_action = None
-    record.force_paths = []
-    record.save()
-    update_primary_report_fields(merge_rollback="completed", process_stop="confirmed")
-
-
-def _require_preparation_ownership(record: JoinRecord) -> str:
-    # commit 作成と記録保存の間に停止した場合だけ、保留した操作と履歴を照合する。
-    # 確認した HEAD を直後の記録にも使い、次の操作後は改めて検査する。
-    context = record.context
-    head = head_commit(context.run_worktree)
-    pending_paths = set(
-        worktree_change_paths(context.run_worktree, include_rename_sources=True)
-    )
-    if not _preparation_paths_match(record, pending_paths):
-        raise CmocError(
-            "run の未確定差分の帰属を確認できません。",
-            [],
-            "\n".join(sorted(pending_paths)),
-        )
-    if head == record.owned_run_head:
-        if record.pending_action is None:
-            require_clean_worktree(context.run_worktree)
-        return head
-    parents = run_git(["show", "-s", "--format=%P", head], context.repo).stdout.split()
-    expected = [record.owned_run_head]
-    allowed = False
-    if record.pending_action == "merge":
-        allowed = parents == [record.owned_run_head, record.session_head] or (
-            head == record.session_head
-            and run_git(
-                ["merge-base", "--is-ancestor", record.owned_run_head or "", head],
-                context.repo,
-                check=False,
-            ).returncode
-            == 0
-        )
-    elif parents == expected and record.pending_action in {"doctor", "force", "sync"}:
-        paths = {
-            path
-            for change in tree_changes(context.repo, record.owned_run_head or "", head)
-            for path in change.paths
-        }
-        if record.pending_action in {"sync", "doctor"}:
-            allowed = _preparation_paths_match(record, paths)
-        else:
-            allowed = (
-                paths <= set(record.force_paths)
-                and run_git(
-                    [
-                        "diff",
-                        "--quiet",
-                        head,
-                        context.run_fork_commit,
-                        "--",
-                        *[literal_pathspec(path) for path in record.force_paths],
-                    ],
-                    context.repo,
-                    check=False,
-                ).returncode
-                == 0
-            )
-    if not allowed:
-        raise CmocError(
-            "run の準備変更の帰属を確認できません。",
-            ["残存する run の履歴と差分を確認してください。"],
-            head,
-        )
-    return head
-
-
-def _preparation_paths_match(record: JoinRecord, paths: set[str]) -> bool:
-    # 管理更新の保留中に、無関係な差分を巻き込んで戻さない。
-    if record.pending_action == "force":
-        return paths <= set(record.force_paths)
-    if record.pending_action == "sync":
-        return paths <= {".cmoc/gt/realization/refactor/state.json"}
-    if record.pending_action == "doctor":
-        return all(
-            path
-            in {
-                ".gitignore",
-                ".cmoc/gt/config.json",
-                ".cmoc/gt/realization/refactor/state.json",
-            }
-            or path.startswith(".agents/")
-            for path in paths
-        )
-    return record.pending_action == "merge" or not paths
-
-
 def merge_run(
     context: EditingRunContext,
     state: SessionState,
@@ -325,167 +189,56 @@ def merge_run(
     verify_prepared: Callable[[JoinRecord], None] | None = None,
 ) -> tuple[str | None, str, str | None, str | None, dict[str, object]]:
     """run 側で準備を確定してから同じ tree を取り込み、後処理を行う。"""
-    record = join_record(context)
-    try:
-        recovered = confirm_import(record)
-        update_primary_report_fields(
-            join_recovery="post_join" if recovered else "initial"
-        )
-        if not recovered:
-            require_clean_worktree(context.session_worktree)
-            require_clean_worktree(context.run_worktree)
-            record.session_head = session_head_before_join
-            record.preparation_started = True
-            run_head = head_commit(context.run_worktree)
-            record.owned_run_head = run_head
-            record.pending_action = "merge"
-            record.save()
-            update_primary_report_fields(
-                join_phase="run preparation", **record.report_fields()
-            )
-            start_subcommand_step(3, "session を run へ統合", "prepare run join")
-            merge = run_git(
-                ["merge", "--ff", "--no-edit", record.session_head],
-                context.run_worktree,
-                check=False,
-            )
-            resolution: dict[str, object] = {
-                "agent_status": "not_needed",
-                "initial_conflicts": [],
-            }
-            if merge.returncode != 0:
-                from oracle.request_builder.run.join.conflict_resolution import (
-                    build_run_join_conflict_resolution_request,
-                )
+    # branch の統合と復旧は session join と同じ engine に委ねる。
+    from oracle.request_builder.run.join.conflict_resolution import (
+        build_run_join_conflict_resolution_request,
+    )
 
-                write_run_process_id(context.repo, context.session_id, os.getpid())
-                with run_process_tracking(context.repo, context.session_id):
-                    resolution = resolve_merge_conflicts(
-                        context.run_worktree,
-                        partial(
-                            build_run_join_conflict_resolution_request,
-                            run_head,
-                            record.session_head,
-                            context.run_worktree,
-                            feedback_report_cut_path=feedback_report_cut_path,
+    record = join_record(context)
+    if not confirm_import(record):
+        record.target_head = session_head_before_join
+    prepare_and_import(
+        record,
+        partial(
+            build_run_join_conflict_resolution_request,
+            feedback_report_cut_path=feedback_report_cut_path,
+        ),
+        warnings=warnings,
+        verify_prepared=(lambda: verify_prepared(record))
+        if verify_prepared is not None
+        else None,
+    )
+    update_primary_report_fields(**record.report_fields())
+    if on_merged is not None:
+        on_merged(record.join_commit, record.resolution)
+    # apply の資格は今回の開始時 state だけから判断する。
+    update_primary_report_fields(join_phase="post-join hook")
+    last_apply = state.session.last_joined_apply_fork_commit
+    if record.hook is None:
+        record.hook = "none"
+        if context.kind == "decision_apply":
+            record.hook = "session.last_joined_apply_fork_commit preserved"
+            if context.state_before == "joinable":
+                last_apply = context.run_fork_commit
+                record.hook = "session.last_joined_apply_fork_commit updated"
+                write_state(
+                    context.state_path,
+                    replace(
+                        state,
+                        session=replace(
+                            state.session, last_joined_apply_fork_commit=last_apply
                         ),
-                        purpose="run join conflict resolution",
-                        before_commit=lambda: warnings.extend(
-                            stop_tracked_codex_children(
-                                context.repo, context.session_id
-                            )
-                            or []
-                        ),
-                        sync_managed_entries=False,
-                    )
-            merged_run_head = _require_preparation_ownership(record)
-            # 検証記録は同期前の tree と結び付け、同期後にも適用可能性を検査する。
-            record.resolution = {
-                **resolution,
-                "verified_run_commit": merged_run_head,
-            }
-            record.owned_run_head = merged_run_head
-            record.pending_action = "sync"
-            record.save()
-            update_primary_report_fields(join_phase="refactor state sync")
-            merge_refactor_states(context.run_worktree, (run_head, record.session_head))
-            record.sync_commit = commit_work_unit(
-                context.run_worktree, "cmoc refactor state sync before run join"
-            )
-            prepared_run_head = _require_preparation_ownership(record)
-            require_clean_worktree(context.run_worktree)
-            record.prepared_run_head = prepared_run_head
-            record.owned_run_head = record.prepared_run_head
-            record.pending_action = None
-            if verify_prepared is not None:
-                verify_prepared(record)
-            record.save()
-            update_primary_report_fields(
-                join_phase="session import", **record.report_fields()
-            )
-            # 準備中に session が進んだ場合は、次回の準備に委ねる。
-            require_clean_worktree(context.session_worktree)
-            require_clean_worktree(context.run_worktree)
-            if (
-                head_commit(context.session_worktree) != record.session_head
-                or head_commit(context.run_worktree) != record.prepared_run_head
-            ):
-                raise CmocError(
-                    "準備中に session または run HEAD が変更されました。", [], ""
+                    ),
                 )
-            if record.prepared_run_head == record.session_head:
-                record.session_commit = record.session_head
-                record.session_tree = tree_id(context.repo, record.session_commit)
-                record.imported = True
-                record.save()
-            else:
-                # commit 前にも基準 HEAD と準備済み tree を照合する。
-                run_git(
-                    ["merge", "--no-ff", "--no-commit", record.prepared_run_head],
-                    context.session_worktree,
-                )
-                if (
-                    head_commit(context.session_worktree) != record.session_head
-                    or run_git(["write-tree"], context.session_worktree).stdout.strip()
-                    != tree_id(context.repo, record.prepared_run_head)
-                    or run_git(
-                        ["diff", "--quiet"], context.session_worktree, check=False
-                    ).returncode
-                ):
-                    raise CmocError("session の取り込み条件が変更されました。", [], "")
-                run_git(["commit", "--no-edit"], context.session_worktree)
-                # 取り込み直後の人間の commit を、取り込み commit と誤認しない。
-                if not confirm_import(record):
-                    raise CmocError(
-                        "session への取り込み成立を確認できません。", [], ""
-                    )
-        update_primary_report_fields(**record.report_fields())
-        if on_merged is not None:
-            on_merged(record.join_commit, record.resolution)
-        # apply の資格は今回の開始時 state だけから判断する。
-        update_primary_report_fields(join_phase="post-join hook")
-        last_apply = state.session.last_joined_apply_fork_commit
-        if record.hook is None:
-            record.hook = "none"
-            if context.kind == "decision_apply":
-                record.hook = "session.last_joined_apply_fork_commit preserved"
-                if context.state_before == "joinable":
-                    last_apply = context.run_fork_commit
-                    record.hook = "session.last_joined_apply_fork_commit updated"
-                    write_state(
-                        context.state_path,
-                        replace(
-                            state,
-                            session=replace(
-                                state.session, last_joined_apply_fork_commit=last_apply
-                            ),
-                        ),
-                    )
-            record.save()
-        update_primary_report_fields(post_join_hook=record.hook)
-        return (
-            record.join_commit,
-            record.hook,
-            record.sync_commit,
-            last_apply,
-            record.resolution,
-        )
-    except BaseException as exc:
-        try:
-            warnings.extend(
-                stop_tracked_codex_children(context.repo, context.session_id) or []
-            )
-            record = join_record(context)
-            rollback_join_preparation(record)
-        except BaseException as recovery_error:
-            update_primary_report_fields(
-                merge_rollback="failed", rollback_error=repr(recovery_error)
-            )
-            raise CmocError(
-                "join の準備を復旧できませんでした。", [], repr(recovery_error)
-            ) from exc
-        update_primary_report_fields(**record.report_fields())
-        raise
+        record.save()
+    update_primary_report_fields(post_join_hook=record.hook)
+    return (
+        record.join_commit,
+        record.hook,
+        record.sync_commit,
+        last_apply,
+        record.resolution,
+    )
 
 
 def _revert_unexpected_run_paths(
@@ -557,7 +310,7 @@ def cleanup_joined_run(
                 [
                     "merge-base",
                     "--is-ancestor",
-                    record.prepared_run_head or "",
+                    record.prepared_head or "",
                     context.session_branch,
                 ],
                 context.session_worktree,
@@ -634,12 +387,12 @@ def _cleanup_run_matches_prepared(
             check=False,
         )
         if branch.returncode not in {0, 1} or (
-            branch.returncode == 0 and branch.stdout.strip() != record.prepared_run_head
+            branch.returncode == 0 and branch.stdout.strip() != record.prepared_head
         ):
             return False
         if context.run_worktree.exists():
             require_clean_worktree(context.run_worktree)
-            return head_commit(context.run_worktree) == record.prepared_run_head
+            return head_commit(context.run_worktree) == record.prepared_head
         return True
     except Exception:
         return False
@@ -829,14 +582,14 @@ def join_editing_run(
             details["join_preconditions"] = "completed"
             phase = "join diff validation"
             if not recovered_import:
-                record.session_head = head_commit(active.session_worktree)
+                record.target_head = head_commit(active.session_worktree)
                 record.preparation_started = True
                 record.save()
                 validate_run_join(
                     active,
                     warnings,
                     force_resolve=force_resolve,
-                    original_run_head=record.original_run_head,
+                    original_run_head=record.original_source_head,
                 )
             details["join_diff_validation"] = (
                 "reused" if recovered_import else "completed"

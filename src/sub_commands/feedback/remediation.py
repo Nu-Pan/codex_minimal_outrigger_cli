@@ -63,6 +63,7 @@ from commons.runtime_feedback_store import (
     sha256_bytes,
 )
 from commons.runtime_ids import new_id
+from commons.runtime_join import confirm_import, rollback_join_preparation
 from commons.runtime_logging import current_execution_id, current_subcommand_logger
 from commons.runtime_paths import reuse_root_queries
 from commons.runtime_primary_report import (
@@ -84,12 +85,10 @@ from commons.runtime_run_join import (
     join_editing_run,
     join_recovery_actions,
     merge_run,
-    rollback_join_preparation,
     validate_run_join,
 )
 from commons.runtime_run_join_state import (
     JoinRecord,
-    confirm_import,
     join_record,
     load_join_record,
 )
@@ -248,7 +247,7 @@ def run_feedback_report() -> TerminalResult:
                         repository, context.session_branch
                     )
                     validate_run_join(
-                        context, warnings, original_run_head=record.original_run_head
+                        context, warnings, original_run_head=record.original_source_head
                     )
                     update_primary_report_fields(
                         join_preconditions="completed",
@@ -879,10 +878,10 @@ def _record_merge(
             "report_cut_id": manifest["report_cut_id"],
             "sealed": manifest["run"]["sealed"],
             "run_join_commit": commit,
-            "session_commit": record.session_commit,
-            "session_tree": record.session_tree,
-            "prepared_run_head": record.prepared_run_head,
-            "baseline_session_head": record.session_head,
+            "session_commit": record.target_commit,
+            "session_tree": record.target_tree,
+            "prepared_run_head": record.prepared_head,
+            "baseline_session_head": record.target_head,
             "resolution": recorded_resolution,
         },
     )
@@ -892,19 +891,19 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
     """最終 session tree に対する commit 到達可能性と path/hash を確認する。"""
     seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
     record = load_join_record(context.repo, context.session_id)
-    if record is None or not confirm_import(record) or record.prepared_run_head is None:
+    if record is None or not confirm_import(record) or record.prepared_head is None:
         raise _failure("feedback run の準備・取り込み記録を確認できません。")
     # 共通の取り込み確認で準備済み run と session commit の tree 全体を照合済み。
     # 同じ immutable commit の tree ID・path 差分をここで再照会しない。
     if context.run_worktree.exists():
         require_clean_worktree(context.run_worktree)
-        if head_commit(context.run_worktree) != record.prepared_run_head:
+        if head_commit(context.run_worktree) != record.prepared_head:
             raise _failure("feedback run の準備完了成果が変更されています。")
     require_clean_worktree(context.session_worktree)
-    if not _is_ancestor(context, record.prepared_run_head):
+    if not _is_ancestor(context, record.prepared_head):
         raise _failure("feedback run HEAD が join 後 session tree から到達できません。")
     # 到達可能性はこの join 検証内で commit ごとに共有し、再実行時は取り直す。
-    reachable_commits = {record.prepared_run_head}
+    reachable_commits = {record.prepared_head}
     if seal["run_head"] not in reachable_commits:
         if not _is_ancestor(context, seal["run_head"]):
             raise _failure("封印時 run HEAD が session から到達できません。")
@@ -978,11 +977,11 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
     completion = {
         "report_cut_id": manifest["report_cut_id"],
         "sealed": manifest["run"]["sealed"],
-        "session_commit": record.session_commit,
-        "session_tree": record.session_tree,
-        "run_head": record.prepared_run_head,
+        "session_commit": record.target_commit,
+        "session_tree": record.target_tree,
+        "run_head": record.prepared_head,
         "sealed_run_head": seal["run_head"],
-        "baseline_session_head": record.session_head,
+        "baseline_session_head": record.target_head,
         "decision_inputs_sha256": seal["decision_inputs_sha256"],
         "checked_paths": sorted(paths),
         "merged": manifest["run"]["merged"],
@@ -1022,7 +1021,7 @@ def _verify_prepared_feedback(
 ) -> None:
     """封印済み採用結果を run 上で検証し、準備完了 tree と結び付ける。"""
     seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
-    if record.original_run_head != seal["run_head"]:
+    if record.original_source_head != seal["run_head"]:
         raise _failure("封印時の成果と join の元の成果が一致しません。")
     files = decision.worktree_inputs(context.run_worktree)
     resolution = dict(record.resolution)
@@ -1030,7 +1029,7 @@ def _verify_prepared_feedback(
     if isinstance(call_log, str):
         resolution["call_log"] = artifact_reference(context.repo, Path(call_log))
     if not _verified_merge_adjustment(
-        context, {"resolution": resolution}, record.prepared_run_head
+        context, {"resolution": resolution}, record.prepared_head
     ):
         _validate_selected_basis(
             context, seal["selected_checkpoints"], seal["candidates"], files
@@ -1054,10 +1053,10 @@ def _verified_merge_adjustment(
         or artifact_reference(context.repo, context.repo / call_log["path"]) != call_log
     ):
         return False
-    verified = resolution.get("verified_run_commit")
+    verified = resolution.get("verified_commit")
     if prepared is None:
         record = load_join_record(context.repo, context.session_id)
-        prepared = record.prepared_run_head if record else None
+        prepared = record.prepared_head if record else None
     if not isinstance(verified, str) or prepared is None:
         return False
     changes = tree_changes(context.repo, verified, prepared)

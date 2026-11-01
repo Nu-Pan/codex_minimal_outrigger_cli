@@ -89,6 +89,9 @@ def require_ready_session() -> tuple[Path, Path, str, Path, SessionState, str]:
     # 同じ起点の両 root を共有し、branch・state・未確定差分は呼び出すたび検査する。
     repository = repo_root()
     session_worktree = work_root()
+    from .runtime_session_join import require_no_pending_session_join
+
+    require_no_pending_session_join(repository, session_worktree)
     branch = current_branch(session_worktree)
     if not branch.startswith("cmoc/session/"):
         raise CmocError(

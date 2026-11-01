@@ -2,7 +2,7 @@
 
 ## 概要
 
-`cmoc session join` は、現在 checkout している `{{cmoc-session-branch}}` を `{{cmoc-session-home-branch}}` へ merge し、session を完了して home branch へ戻すコマンドである。通常の git branch 同士の汎用 merge wrapper としては使用しない。
+`cmoc session join` は、`{{cmoc-session-branch}}` で home の変更を統合・検証し、その結果を `{{cmoc-session-home-branch}}` へ取り込んで session を完了するコマンドである。通常の実行は現在 checkout している session を対象とし、取り込み後の復旧は同じ worktree の home からも行える。通常の git branch 同士の汎用 merge wrapper としては使用しない。
 
 merge source、merge target、および `{{repository-default-branch}}` の扱いは、`{{cmoc-root}}/spec/branch_model.md` の「git branch」と「git commit」を正本とする。
 
@@ -12,22 +12,24 @@ merge source、merge target、および `{{repository-default-branch}}` の扱�
 
 ## 事前条件
 
-`{{cmoc-root}}/spec/app_spec/session_state.md` の「active session context と編集 run 開始・session 終了の共通事前条件」を満たす。
+新しい join は、`{{cmoc-root}}/spec/app_spec/session_state.md` の「active session context と編集 run 開始・session 終了の共通事前条件」を満たす。未完了の join がある場合は、同じ session と worktree の復旧情報を先に照合する。未取り込みなら安全に準備を戻してから条件を確認し、取り込み済みなら削除済み session branch や `active` state の再成立を要求しない。復旧対象が一意に定まらない場合は停止する。
 
-対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定できない場合は、エラー終了する。
+対応する `{{cmoc-session-state-file}}` から `{{cmoc-session-home-branch}}` を特定できない場合、またはその local branch が存在しない場合は、エラー終了する。remote-tracking branch から推測して作成しない。session ごとの排他と復旧情報の再確認により、同じ join の同時実行を防ぐ。
 
 ## 実行手順
 
-1. doctor preprocess を呼び出す。
-2. 事前条件を満たしていることを確認する。
-3. `git switch {{cmoc-session-home-branch}}` を実行する。
-4. `git merge --no-ff {{cmoc-session-branch}}` を実行する。conflict が発生した場合は、本書の「`git merge` がコンフリクトした場合」に従って解消する。
+準備、取り込み、失敗時の取消、および再試行の共通処理は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「共通の準備・取り込み・復旧」に従う。
+
+1. 対象 session と復旧情報を確認する。取り込み済みなら、doctor・準備・merge を繰り返さず後処理へ進む。
+2. 事前条件を確認し、準備前の session HEAD を記録する。doctor preprocess を呼び出し、refactor state の entry 同期は統合後まで遅延する。
+3. session branch 上で基準 home HEAD を merge し、必要な競合解消、検証、および管理物の同期を完了する。
+4. 同じ worktree を home branch へ切り替え、準備完了の session を取り込む。未取り込み commit がなければ共通の no-op 条件を適用する。
 5. `{{cmoc-session-state-file}}` の `session.state` を `joined` にする。
-6. 安全に削除できる場合のみ `{{cmoc-session-branch}}` を削除する。
+6. 安全に削除できる場合のみ session branch を削除する。実際の state と cleanup 結果を primary report に保存した後、join の完了を記録する。
 
 ## `{{cmoc-session-home-branch}}` が進んでいた場合
 
-`{{cmoc-session-home-branch}}` が session 作成後に進んでいてもエラーにはせず、実行時点の同 branch の HEAD に `{{cmoc-session-branch}}` を merge する。ここで merge conflict が発生した場合も、通常の conflict として扱う。
+`{{cmoc-session-home-branch}}` が session 作成後に進んでいてもエラーにはせず、その回の基準 home HEAD として session 側で統合する。準備中に home がさらに更新された場合は、その回の取り込みを停止し、共通の復旧と再試行に従う。
 
 ## feedback state との境界
 
@@ -35,25 +37,27 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/s
 
 ## `git merge` がコンフリクトした場合
 
-判断基準、agent と cmoc の責務、受理、および報告は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」に従う。merge 前の source は session branch HEAD、target は home branch HEAD とする。
+判断基準、agent と cmoc の責務、受理、および報告は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」に従う。準備 merge の source は基準 home HEAD、target は home 統合直前の session HEAD とする。
 
-内容の競合を解消できなかった場合は、merge commit の作成、`session.state=joined` への更新、および session branch の削除を行わない。その時点の作業状態を保持して、本書の「その他、コマンドが想定外に失敗した場合」に従い停止する。
+内容の競合を解消できなかった場合は、home への取り込み、`session.state=joined` への更新、および session branch の削除を行わない。共通の復旧処理で準備を取り消し、本書の「その他、コマンドが想定外に失敗した場合」に従い停止する。
 
 ## 競合解消用の agent call
 
-agent は、home branch への merge が進行中の worktree を cwd として、アクセス境界内の oracle file と realization file を編集する。session join のために新しい editing run は作らない。
+agent は、home を session branch へ統合中の worktree を cwd として、decision・reference を読み取り専用で参照し、アクセス境界内の spec file と realization file を編集する。session join のために新しい editing run は作らない。
 
-call 固有の正確な prompt 文面、builder の引数、prompt part の選択、起動パラメータ、および選択理由は、`{{cmoc-root}}/reference/src/oracle/request_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_request` へ委譲する。共通 policy と prompt 構築の委譲先は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「agent への入力と正確な定義の委譲」に従う。
+session 固有の入力対応は、`{{cmoc-root}}/reference/src/oracle/request_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_request` へ委譲する。この builder は共通 request builder を呼び出す。共通 policy、指示文と起動条件の構築は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「agent への入力と正確な定義の委譲」に従う。
 
 ## その他、コマンドが想定外に失敗した場合
 
-- その時点で処理を打ち切り、ロールバック等はしない
-- エラー分類とスタックトレースは、`{{cmoc-root}}/spec/app_spec/error_handling.md` の「エラーハンドリング規則」に従う
-- 手動解決が必要な場合は、実際に必要な操作をエラー terminal result の次の操作として示す
+取り込み前に安全な取消を完了できた場合は、session branch を準備前の成果へ戻し、`session.state=active` として保持する。未解消理由への対応や通常の編集を行った後、`cmoc session join` で新しい試行を開始できる。
+
+復旧を完了できない場合は `session.state=error` として残存状態と復旧情報を保持する。home への取り込み成立後の失敗も `error` とし、確定した home commit を取り消さない。同じ worktree から `cmoc session join` を再実行すると、session branch が削除済みでも未完了の後処理を再開する。`joined` の保存後に停止した場合も、完了記録がなければ復旧対象とする。
+
+未完了の join を通常の doctor、編集 run の開始、session fork、または session abandon で上書きしない。復旧を先に行うよう案内する。エラー分類とスタックトレースは、`{{cmoc-root}}/spec/app_spec/error_handling.md` の「エラーハンドリング規則」に従い、必要な手動操作を terminal result に示す。重要事項確認の未完了は、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「確認結果と終了結果の分離」に従う。
 
 ## `{{cmoc-session-branch}}` 削除の条件
 
-- ブランチを削除しても作業結果が失われないと確認できた場合に限り、`{{cmoc-session-branch}}` を削除する
+- 残存する session branch が準備完了 HEAD を指し、その成果が home から到達可能であると確認できた場合に限り、`{{cmoc-session-branch}}` を削除する
 - 確認に失敗した場合は、`{{cmoc-session-branch}}` を削除せず、warning としてユーザーに通知して続行する
 
 ## primary report
@@ -62,7 +66,7 @@ call 固有の正確な prompt 文面、builder の引数、prompt part の選�
 
 - `natural_completion` と `error` のすべての終了経路で、session join 実行要約を primary report として保存する。doctor preprocess または事前条件で終了した場合も対象とする。
 - report は `{{repo-root}}/.cmoc/gu/report/session/join/{{execution-id}}.md` に保存する。
-- 実行情報には、command、生成日時、repo root、terminal result の共通分類、終了コード、session branch、home branch、merge 前の両 branch の HEAD commit、作成した merge commit、および session state の実行前後の値を含める。確定できなかった値は `null` とする。
-- 詳細結果には、事前検証、branch 切替、merge 結果、conflict path、conflict 解消用 agent call と確定した解消結果、state 遷移、session branch の cleanup、warning またはエラー、および Codex call log を含める。
+- 実行情報には、command、生成日時、repo root、terminal result の共通分類、終了コード、session branch、home branch、準備前の session HEAD、基準 home HEAD、作成した merge commit、および session state の実行前後の値を含める。確定できなかった値は `null` とする。
+- 詳細結果には、事前検証、準備完了 session HEAD、取り込み成立の commit と tree、branch 切替、merge 結果、準備の取消と復旧結果、conflict path、conflict 解消用 agent call と確定した解消結果、state 遷移、session branch の cleanup、warning またはエラー、および Codex call log を含める。
 - 競合解消の内容は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」に従い、採用した判断、付随編集、検証結果、および未解消理由を含める。
 - 実行しなかった merge、conflict 解消、state 更新、または cleanup は未実行として扱う。確定していない解消結果を作ってはならない。

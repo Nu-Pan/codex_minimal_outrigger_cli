@@ -119,21 +119,28 @@ def assert_launch(call, config, parameter):
     )
 
 
+@pytest.mark.parametrize(
+    "shared_kind", ["realization_edit", "build_merge_conflict_resolution_request"]
+)
 def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
-    settings_root, monkeypatch
+    settings_root, monkeypatch, shared_kind
 ):
     root = settings_root
-    parameters = [
-        build_decision_apply_realization_request("base", "head", root),
-        build_realization_refactor_request(root / "src.py", root),
-        build_feedback_issue_remediation_request('{"issue_id":"issue"}', root),
-        build_run_join_conflict_resolution_request("run", "session", root),
-    ]
-    assert {parameter.agent_call_kind for parameter in parameters} == {
-        "realization_edit"
-    }
+    if shared_kind == "realization_edit":
+        parameters = [
+            build_decision_apply_realization_request("base", "head", root),
+            build_realization_refactor_request(root / "src.py", root),
+            build_feedback_issue_remediation_request('{"issue_id":"issue"}', root),
+        ]
+    else:
+        parameters = [
+            build_run_join_conflict_resolution_request("run", "session", root),
+            build_session_join_conflict_resolution_request("session", "home", root),
+        ]
+    assert {parameter.agent_call_kind for parameter in parameters} == {shared_kind}
     config = configured_calls()
-    calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "done")] * 8)
+    call_count = len(parameters) * 2
+    calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "done")] * call_count)
     logs = []
     for version in range(2):
         for parameter in parameters:
@@ -145,24 +152,23 @@ def test_shared_builders_use_one_entry_and_distinct_agent_call_ids(
             )
             assert_launch(calls[-1], config, parameter)
             log = json.loads(result.call_log_path.read_text())
-            assert log["agent_call_kind"] == "realization_edit"
-            assert log["model"] == config.codex.agent_calls["realization_edit"].model
+            assert log["agent_call_kind"] == shared_kind
+            assert log["model"] == config.codex.agent_calls[shared_kind].model
             logs.append(log)
         if version == 0:
             config.codex.model_providers["changed"] = CodexModelProviderConfig(
                 {"base_url": "https://changed.invalid/v1", "env_key": "CHANGED_AUTH"}
             )
-            config.codex.agent_calls["realization_edit"] = CodexCallConfig(
+            config.codex.agent_calls[shared_kind] = CodexCallConfig(
                 "changed", "changed-model", "changed-effort"
             )
-    assert len(calls) == len(logs) == 8
-    assert len({log["agent_call_id"] for log in logs}) == 8
+    assert len(calls) == len(logs) == call_count
+    assert len({log["agent_call_id"] for log in logs}) == call_count
 
 
 def test_individual_builders_select_their_own_entries(settings_root, monkeypatch):
     root = settings_root
     builders_and_args = [
-        (build_session_join_conflict_resolution_request, ("session", "home", root)),
         (build_tui_request, ("task",)),
         (build_decision_plan_request, ("question",)),
         (build_oracle_edit_request, ("edit",)),
@@ -173,7 +179,10 @@ def test_individual_builders_select_their_own_entries(settings_root, monkeypatch
     parameters = [builder(*args) for builder, args in builders_and_args]
     config = configured_calls()
     kinds = {parameter.agent_call_kind for parameter in parameters}
-    assert kinds == config.codex.agent_calls.keys() - {"realization_edit"}
+    assert kinds == config.codex.agent_calls.keys() - {
+        "realization_edit",
+        "build_merge_conflict_resolution_request",
+    }
     calls = script_codex_calls(monkeypatch, [(0, SUCCESS, "done")] * len(parameters))
     for (builder, _args), parameter in zip(builders_and_args, parameters, strict=True):
         assert parameter.agent_call_kind == builder.__name__
@@ -183,7 +192,9 @@ def test_individual_builders_select_their_own_entries(settings_root, monkeypatch
             config=config,
         )
         assert_launch(calls[-1], config, parameter)
-    assert len({codex_arg_value(call["argv"], "--model") for call in calls}) == 7
+    assert len({codex_arg_value(call["argv"], "--model") for call in calls}) == len(
+        parameters
+    )
 
 
 def test_shared_settings_remain_fixed_across_output_corrections(
@@ -199,9 +210,9 @@ def test_shared_settings_remain_fixed_across_output_corrections(
             config.codex.agent_calls["realization_edit"] = CodexCallConfig(
                 "openai", "changed", "low"
             )
-            config.codex.model_providers["provider_0"].settings[
-                "base_url"
-            ] = "https://changed.invalid"
+            config.codex.model_providers["provider_0"].settings["base_url"] = (
+                "https://changed.invalid"
+            )
 
     accepted = {
         "findings": [],

@@ -43,7 +43,10 @@ from _git_support import (
 
 import cmoc_runtime
 import commons.runtime_cli as runtime_cli
+import commons.runtime_doctor as doctor_module
+import commons.runtime_join as merge_module
 import commons.runtime_merge_conflict as merge_conflict_module
+import commons.runtime_primary_report as primary_report_module
 import sub_commands.session.abandon as session_module
 import sub_commands.session.fork as session_fork_module
 import sub_commands.session.join as session_join_module
@@ -51,6 +54,7 @@ from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_override_args
 from commons.runtime_refactor import sync_refactor_state, write_refactor_state
+from commons.runtime_session_join import load_session_join_record, pending_session_join
 from config.cmoc_config import CmocConfig
 from main import app
 
@@ -874,7 +878,7 @@ def test_session_completion_rejects_missing_state_fields(
 
     result = runner.invoke(app, ["session", command])
 
-    assert session_preprocess == [root]
+    assert session_preprocess == ([root] if command == "abandon" else [])
     assert result.exit_code != 0
     assert "session state file が不正です。" in result.stderr
     assert "必須 field" in result.stderr
@@ -889,6 +893,11 @@ def session_preprocess(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
     # test_doctor_cli.py に残す。
     roots: list[Path] = []
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", roots.append)
+    monkeypatch.setattr(
+        session_join_module,
+        "run_doctor_preprocess",
+        lambda root, **_kwargs: roots.append(root),
+    )
     return roots
 
 
@@ -903,9 +912,9 @@ def _session_home_repository_seed(
     init_repo(root)
     (root / ".gitignore").write_text("/.cmoc/gu/\n")
     (root / "README.md").write_text("# repo\n")
-    (root / "oracle").mkdir()
-    (root / "oracle" / "spec.md").write_text("# spec\n")
-    run_git(root, "add", ".gitignore", "README.md", "oracle/spec.md")
+    (root / "spec").mkdir()
+    (root / "spec" / "spec.md").write_text("# spec\n")
+    run_git(root, "add", ".gitignore", "README.md", "spec/spec.md")
     run_git(root, "commit", "-m", "initial")
     return root
 
@@ -975,13 +984,13 @@ def _session_conflict_repository_seed(
     for name in ("modified.py", "deleted.py", "renamed.py"):
         (related / name).write_text("previous implementation\n")
     session_branch = SESSION_BRANCH
-    target = root / "oracle" / "spec.md"
+    target = root / "spec" / "spec.md"
     target.write_text("session change\n")
-    run_git(root, "add", "oracle/spec.md", "src")
+    run_git(root, "add", "spec/spec.md", "src")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
     target.write_text("home change\n")
-    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "add", "spec/spec.md")
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
     return root, home_branch
@@ -1007,11 +1016,11 @@ def session_conflict_parameter(
     session_conflict_repository: tuple[Path, str], monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[AgentCallParameter]:
     """失敗後の状態検査には、完全 prompt を構築せず parameter を渡す。"""
-    # 文面と起動値は test_request_builder_session_join_parameters.py、実 builder と
+    # 文面と起動値は test_request_builder_join_parameters.py、実 builder と
     # linked worktree の結合は merges_conflict_and_incidental_changes に残す。
     parameter = AgentCallParameter(
-        agent_call_kind="build_session_join_conflict_resolution_request",
-        file_access_mode=FileAccessMode.REPO_WRITE,
+        agent_call_kind="build_merge_conflict_resolution_request",
+        file_access_mode=FileAccessMode.SPEC_AND_REALIZATION_WRITE,
         prompt="conflict resolution",
         structured_output_schema_path=None,
         agent_call_cwd=session_conflict_repository[0],
@@ -1025,15 +1034,17 @@ def session_conflict_parameter(
     builder.assert_called_once()
 
 
-def test_session_join_preserves_work_on_incidental_conflict_marker(
+@pytest.mark.parametrize("unresolved", [False, True], ids=["marker", "human_choice"])
+def test_session_join_rolls_back_unresolved_preparation(
     session_conflict_repository: tuple[Path, str],
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
     session_conflict_parameter: AgentCallParameter,
+    unresolved: bool,
 ) -> None:
-    """付随編集先の未解消 marker で停止し、stderr と保持した作業状態を検査する。"""
+    """marker 残存や人間判断が必要な場合は準備だけを戻し、失敗理由を保持する。"""
     root, home_branch = session_conflict_repository
-    target = root / "oracle" / "spec.md"
+    target = root / "spec" / "spec.md"
     related = root / "src"
     added = related / "added.py"
     modified = related / "modified.py"
@@ -1041,11 +1052,16 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
     renamed = related / "renamed.py"
     moved = related / "moved.py"
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
+    session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     class FakeCodexResult:
         """conflict resolution の成功を表す最小 fake result。"""
 
-        output_text = "merge_resolution: resolved\n"
+        output_text = (
+            "merge_resolution: unresolved\n相反する要求の採否には人間判断が必要です。\n"
+            if unresolved
+            else "merge_resolution: resolved\n"
+        )
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
@@ -1063,22 +1079,31 @@ def test_session_join_preserves_work_on_incidental_conflict_marker(
     result = runner.invoke(app, ["session", "join"])
 
     assert session_preprocess == [root]
-    assert current_branch(root) == home_branch
+    assert current_branch(root) == SESSION_BRANCH
     assert result.exit_code != 0
     assert result.stdout == ""
     assert "# 失敗: cmoc session join" in result.stderr
-    assert "conflict marker が残っています。" in result.stderr
-    assert "src/added.py" in result.stderr
+    if unresolved:
+        assert "相反する要求の採否には人間判断が必要です。" in result.stderr
+    else:
+        assert "conflict marker が残っています。" in result.stderr
+        assert "src/added.py" in result.stderr
     assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
     assert run_git(root, "branch", "--list", SESSION_BRANCH).stdout.strip()
     state = json.loads(session_state_path(root, SESSION_BRANCH).read_text())
     assert state["session"]["state"] == "active"
-    assert target.read_text() == "home change\nsession change\n"
-    assert modified.read_text() == "related implementation\n"
-    assert not deleted.exists()
-    assert not renamed.exists()
-    assert moved.read_text() == "previous implementation\n"
-    assert added.read_text().startswith("<<<<<<< HEAD\n")
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_commit
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert target.read_text() == "session change\n"
+    assert modified.read_text() == "previous implementation\n"
+    assert deleted.read_text() == "previous implementation\n"
+    assert renamed.read_text() == "previous implementation\n"
+    assert not moved.exists()
+    assert not added.exists()
+    assert pending_session_join(root, root) is None
+    report = terminal_primary_report(result).read_text()
+    assert 'merge_rollback: "completed"' in report
+    assert "- 確定した解消結果: `未確認`" in report
 
 
 def test_session_join_merges_conflict_and_incidental_changes(
@@ -1090,14 +1115,14 @@ def test_session_join_merges_conflict_and_incidental_changes(
     """linked worktree の起動 context・統合内容・付随編集・report を検証する。"""
     # 一つの linked 成功経路で cwd・sandbox・report と各編集・NUL framing を検証する。
     # 同じ内容解消のための repository・branch・競合履歴を別途準備しない。
-    # marker が残る失敗時の作業保持は専用ケースで検査する。
+    # marker が残る失敗時の準備取消は専用ケースで検査する。
     # {{work-root}}/spec/app_spec/merge_conflict_resolution.md
     repository = shutil.copytree(_session_home_repository_seed, tmp_path / "repo")
     root = repository / ".cmoc" / "gu" / "worktree" / "linked"
     run_git(repository, "worktree", "add", "-b", "linked-home", str(root), "HEAD")
-    context_target = root / "oracle" / "spec.md"
-    mode_target = root / "oracle" / "mode.md"
-    deleted_target = root / "oracle" / "deleted.md"
+    context_target = root / "spec" / "spec.md"
+    mode_target = root / "spec" / "mode.md"
+    deleted_target = root / "spec" / "deleted.md"
     delete_modify_target = root / "README.md"
     newline_target = root / "src" / "line\nbreak.txt"
     newline_target.parent.mkdir()
@@ -1111,7 +1136,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
         target.write_text("previous implementation\n")
     for target in (mode_target, deleted_target):
         target.write_text("# spec\n")
-    run_git(root, "add", "reference", "src")
+    run_git(root, "add", "spec", "src")
     run_git(root, "commit", "-m", "add conflict targets")
     monkeypatch.chdir(root)
     session_branch, home_branch = _seed_session_in_worktree(repository, root)
@@ -1120,7 +1145,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     deleted_target.write_text("session change\n")
     delete_modify_target.unlink()
     newline_target.write_text("session change\n")
-    run_git(root, "add", "reference", "src", "README.md")
+    run_git(root, "add", "spec", "src", "README.md")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
     for target in (context_target, mode_target):
@@ -1128,7 +1153,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     deleted_target.write_text("home change\n")
     delete_modify_target.write_text("home change\n")
     newline_target.write_text("home change\n")
-    run_git(root, "add", "reference", "src", "README.md")
+    run_git(root, "add", "spec", "src", "README.md")
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
     calls: list[str] = []
@@ -1145,7 +1170,8 @@ def test_session_join_merges_conflict_and_incidental_changes(
         assert set(kwargs) == {"root", "purpose"}
         assert kwargs["root"] == repository
         assert parameter.agent_call_cwd == root
-        assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
+        assert parameter.file_access_mode == FileAccessMode.SPEC_AND_REALIZATION_WRITE
+        assert current_branch(root) == session_branch
         assert f"- {{{{repo-root}}}} = {repository}" in parameter.prompt
         assert f"- {{{{work-root}}}} = {root}" in parameter.prompt
         assert "統合対象" in parameter.prompt
@@ -1159,9 +1185,9 @@ def test_session_join_merges_conflict_and_incidental_changes(
         assert all(str(context_target) not in arg for arg in override_args)
         initial_conflicts = {
             "README.md",
-            "oracle/spec.md",
-            "oracle/mode.md",
-            "oracle/deleted.md",
+            "spec/spec.md",
+            "spec/mode.md",
+            "spec/deleted.md",
             "src/line\nbreak.txt",
         }
         assert set(merge_conflict_module.unmerged_paths(root)) == initial_conflicts
@@ -1189,7 +1215,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
 
     assert session_preprocess == [root]
     assert result.exit_code == 0, result.output
-    assert calls == ["session join conflict resolution"]
+    assert calls == ["join conflict resolution"]
     # 同じ最終状態の branch・clean と、mode・削除結果をそれぞれ一度に観測する。
     assert run_git(root, "status", "--porcelain", "--branch").stdout == (
         f"## {home_branch}\n"
@@ -1199,15 +1225,15 @@ def test_session_join_merges_conflict_and_incidental_changes(
         "ls-files",
         "--stage",
         "--",
-        "oracle/mode.md",
-        "oracle/deleted.md",
+        "spec/mode.md",
+        "spec/deleted.md",
         "README.md",
         "src/deleted.py",
         "src/renamed.py",
     ).stdout.splitlines()
     assert len(tracked) == 1
     mode, _object_id, stage, relative = tracked[0].split()
-    assert (mode, stage, relative) == ("100755", "0", "oracle/mode.md")
+    assert (mode, stage, relative) == ("100755", "0", "spec/mode.md")
     assert not deleted_target.exists()
     assert not delete_modify_target.exists()
     assert newline_target.read_text() == "resolved change\n"
@@ -1216,8 +1242,8 @@ def test_session_join_merges_conflict_and_incidental_changes(
     assert "- conflict 解消用 agent call: `resolved`" in rendered_report
     assert "- 確定した解消結果: `confirmed`" in rendered_report
     expected_contents = {
-        "oracle/spec.md": "prefix\nhome change\nsession change\nchanged suffix\nTitle\n=======\n",
-        "oracle/mode.md": "prefix\nresolved change\nsuffix\n",
+        "spec/spec.md": "prefix\nhome change\nsession change\nchanged suffix\nTitle\n=======\n",
+        "spec/mode.md": "prefix\nresolved change\nsuffix\n",
         "src/line\nbreak.txt": "resolved change\n",
         "src/moved.py": "previous implementation\n",
         "src/added.py": "related implementation\n",
@@ -1343,7 +1369,7 @@ def test_session_fork_and_join_repair_linked_worktree_before_failure_and_complet
     feedback_content = '{"repository_local":true}\n'
     feedback.write_text(feedback_content)
 
-    # home branch がなくても先に管理物を修復し、session branch で停止する。
+    # home branch がなければ準備を始めず、session の元の成果を保持する。
     gitignore = break_preprocess_invariants(linked)
     run_git(root, "branch", "-D", home_branch)
 
@@ -1352,14 +1378,14 @@ def test_session_fork_and_join_repair_linked_worktree_before_failure_and_complet
     assert failed.exit_code != 0
     assert current_branch(root) == root_branch
     assert current_branch(linked) == session_branch
-    assert "git コマンドが失敗しました。" in failed.stderr
-    assert "git コマンドが失敗しました。" not in failed.stdout
-    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
+    assert "session home branch が存在しません。" in failed.stderr
+    assert failed.stdout == ""
+    assert "/.cmoc/gu/" not in gitignore.read_text().splitlines()
     assert "/.cmoc/gu/" in (root / ".gitignore").read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == []
-    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
-        ".agents/.gitkeep"
+    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout.splitlines() == [
+        ".cmoc/gu/tracked-probe"
     ]
+    assert run_git(linked, "ls-files", "--", ".agents").stdout == ""
     assert run_git(linked, "status", "--short").stdout.strip() == ""
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["state"] == "active"
@@ -1374,6 +1400,11 @@ def test_session_fork_and_join_repair_linked_worktree_before_failure_and_complet
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0
+    assert "/.cmoc/gu/" in gitignore.read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc/gu").stdout == ""
+    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
     assert current_branch(root) == root_branch
     assert current_branch(linked) == home_branch
     assert (linked / "README.md").read_text() == "linked session change\n"
@@ -1388,7 +1419,7 @@ def test_session_fork_and_join_repair_linked_worktree_before_failure_and_complet
     assert "## 事前検証" in rendered_report
     assert "## branch 切替と merge" in rendered_report
     assert "- merge 結果: `completed`" in rendered_report
-    assert "- conflict 解消用 agent call: `未実行（conflict なし）`" in rendered_report
+    assert "- conflict 解消用 agent call: `未実行（内容競合なし）`" in rendered_report
     assert "- session state: `active` -> `joined`" in rendered_report
     assert "- cleanup: `completed`" in rendered_report
     assert feedback.read_text() == feedback_content
@@ -1456,7 +1487,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
     def fake_run_git(args: list[str], git_cwd: Path, check: bool = True) -> object:
         """reachability確認を失敗させ、他のGit操作は委譲する。"""
         nonlocal delete_calls
-        if args == ["merge-base", "--is-ancestor", session_branch, "HEAD"]:
+        if args == ["merge-base", "--is-ancestor", session_branch, home_branch]:
             return cmoc_runtime.CommandResult(1, "", "")
         if args == ["branch", "-d", session_branch]:
             delete_calls += 1
@@ -1500,12 +1531,11 @@ def test_session_join_rejects_missing_home_branch_before_remote_guess(
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert session_preprocess == [root]
+    assert session_preprocess == []
     assert result.exit_code != 0
     assert current_branch(root) == session_branch
-    assert "git コマンドが失敗しました。" in result.stderr
-    assert "git switch --no-guess" in result.stderr
-    assert "git コマンドが失敗しました。" not in result.stdout
+    assert "session home branch が存在しません。" in result.stderr
+    assert result.stdout == ""
     assert (
         run_git(
             root,
@@ -1530,7 +1560,7 @@ def test_session_join_handled_failure_is_written_to_stderr(
 
     result = runner.invoke(app, ["session", "join"])
 
-    assert session_preprocess == [root]
+    assert session_preprocess == []
     assert result.exit_code != 0
     assert result.stdout == ""
     assert "# 失敗: cmoc session join" in result.stderr
@@ -1547,9 +1577,9 @@ def test_session_join_codex_failure_reports_unresolved_merge(
     session_preprocess: list[Path],
     session_conflict_parameter: AgentCallParameter,
 ) -> None:
-    """Codex失敗時に残ったmerge conflictの手動完了手順をstderrへ示す。"""
+    """Codex 失敗時は準備を戻し、ログと再試行の案内を保持する。"""
     root, home_branch = session_conflict_repository
-    target = root / "oracle" / "spec.md"
+    target = root / "spec" / "spec.md"
 
     def failing_codex_exec(parameter: object, **kwargs: object) -> object:
         """Codex CLIの既知の失敗を再現する。"""
@@ -1566,9 +1596,147 @@ def test_session_join_codex_failure_reports_unresolved_merge(
 
     assert session_preprocess == [root]
     assert result.exit_code != 0
-    assert current_branch(root) == home_branch
+    assert current_branch(root) == SESSION_BRANCH
+    assert target.read_text() == "session change\n"
+    assert run_git(root, "status", "--porcelain").stdout == ""
     assert "Codex CLI 呼び出しが失敗しました。" in result.stderr
     assert "stderr/stdout log を確認して原因を解消してください。" in result.stderr
     rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
     assert f"- `{target}`" in rendered_report
     assert "- 確定した解消結果: `未確認`" in rendered_report
+
+
+@pytest.mark.parametrize("failure_stage", ["import", "cleanup", "report"])
+def test_session_join_resumes_post_join_after_partial_completion(
+    session_completion_repository, session_preprocess, monkeypatch, failure_stage
+):
+    """取り込み直後・branch 削除後・report 保存失敗から後処理だけを再開する。"""
+    root, home = session_completion_repository
+    monkeypatch.chdir(root)
+    (root / "result.txt").write_text("session result\n")
+    run_git(root, "add", "result.txt")
+    run_git(root, "commit", "-m", "session result")
+    source_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    git = merge_module.run_git
+
+    def fail_after_git(args, cwd, **kwargs):
+        result = git(args, cwd, **kwargs)
+        boundary = (
+            args == ["commit", "--no-edit"] and current_branch(cwd) == home
+            if failure_stage == "import"
+            else args == ["branch", "-d", SESSION_BRANCH]
+        )
+        if boundary:
+            raise OSError(f"stop after {failure_stage}")
+        return result
+
+    def fail_report(*_args, **_kwargs):
+        raise OSError("report storage unavailable")
+
+    with monkeypatch.context() as failure:
+        if failure_stage == "report":
+            failure.setattr(
+                primary_report_module, "write_reserved_primary_report", fail_report
+            )
+        else:
+            failure.setattr(
+                merge_module if failure_stage == "import" else session_join_module,
+                "run_git",
+                fail_after_git,
+            )
+        failed = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert failed.exit_code == 1, failed.output
+    assert current_branch(root) == home
+    imported = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    assert (root / "result.txt").read_text() == "session result\n"
+    state_file = session_state_path(root, SESSION_BRANCH)
+    assert json.loads(state_file.read_text())["session"]["state"] == "error"
+    record = pending_session_join(root, root)
+    assert record is not None and record.imported
+    assert record.original_source_head == source_head
+    assert record.target_commit == imported
+    if failure_stage != "import":
+        assert run_git(root, "branch", "--list", SESSION_BRANCH).stdout == ""
+
+    # 未完了の後処理を、新しい編集や別の session 操作で上書きしない。
+    monkeypatch.setattr(
+        runtime_cli, "run_doctor_preprocess", doctor_module.run_doctor_preprocess
+    )
+    for command in (["session", "fork"], ["session", "abandon"], ["run", "join"]):
+        rejected = runner.invoke(app, command)
+        assert rejected.exit_code != 0
+        assert run_git(root, "rev-parse", "HEAD").stdout.strip() == imported
+        assert pending_session_join(root, root) is not None
+
+    def no_preparation(*_args, **_kwargs):
+        pytest.fail("post-join recovery repeated preparation")
+
+    monkeypatch.setattr(session_join_module, "run_doctor_preprocess", no_preparation)
+    monkeypatch.setattr(session_join_module, "run_codex_exec", no_preparation)
+    monkeypatch.setattr(merge_module, "merge_refactor_states", no_preparation)
+    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0, result.output
+    assert session_preprocess == [root]
+    assert current_branch(root) == home
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == imported
+    assert json.loads(state_file.read_text())["session"]["state"] == "joined"
+    assert run_git(root, "branch", "--list", SESSION_BRANCH).stdout == ""
+    assert pending_session_join(root, root) is None
+    completed = load_session_join_record(root, SESSION_ID)
+    assert completed is not None and completed.finished
+    assert completed.target_commit == imported
+
+
+@pytest.mark.parametrize("failure_stage", ["sync", "staged_import"])
+def test_session_join_rolls_back_prepared_and_uncommitted_import(
+    session_completion_repository, session_preprocess, monkeypatch, failure_stage
+):
+    """準備完了後と home 上の commit 前の失敗を元の session 成果へ戻す。"""
+    root, home = session_completion_repository
+    monkeypatch.chdir(root)
+    (root / "result.txt").write_text("session result\n")
+    run_git(root, "add", "result.txt")
+    run_git(root, "commit", "-m", "session result")
+    original = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    baseline = run_git(root, "rev-parse", home).stdout.strip()
+    git = merge_module.run_git
+    commit = merge_module.commit_work_unit
+
+    def fail_after_sync(*args, **kwargs):
+        commit(*args, **kwargs)
+        raise OSError("sync result unavailable")
+
+    def fail_before_import_commit(args, cwd, **kwargs):
+        if args == ["commit", "--no-edit"] and current_branch(cwd) == home:
+            raise OSError("cannot commit import")
+        return git(args, cwd, **kwargs)
+
+    with monkeypatch.context() as failure:
+        failure.setattr(
+            merge_module,
+            "commit_work_unit" if failure_stage == "sync" else "run_git",
+            fail_after_sync if failure_stage == "sync" else fail_before_import_commit,
+        )
+        failed = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert failed.exit_code == 1, failed.output
+    assert current_branch(root) == SESSION_BRANCH
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == original
+    assert run_git(root, "rev-parse", home).stdout.strip() == baseline
+    assert run_git(root, "status", "--porcelain").stdout == ""
+    assert (root / "result.txt").read_text() == "session result\n"
+    assert (
+        json.loads(session_state_path(root, SESSION_BRANCH).read_text())["session"][
+            "state"
+        ]
+        == "active"
+    )
+    assert pending_session_join(root, root) is None
+
+    retried = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+    assert retried.exit_code == 0, retried.output
+    assert current_branch(root) == home
+    assert session_preprocess == [root, root]
+    assert (root / "result.txt").read_text() == "session result\n"

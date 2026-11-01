@@ -45,6 +45,7 @@ from _report_support import (
 
 import commons.runtime_cli as runtime_cli
 import commons.runtime_git as git_module
+import commons.runtime_join as merge_module
 import commons.runtime_logging as logging_module
 import commons.runtime_merge_conflict as merge_conflict_module
 import commons.runtime_primary_report as primary_report_module
@@ -846,11 +847,14 @@ def test_apply_join_hook_selects_diff_base(
     previous = context.session_fork_commit if has_previous_apply else None
     state.session.last_joined_apply_fork_commit = previous
     write_state(context.state_path, state)
-    record = join_state_module.JoinRecord(context, "original-run-head", imported=True)
+    record = join_state_module.JoinRecord(
+        context, original_source_head="original-run-head", imported=True
+    )
     monkeypatch.setattr(run_join_module, "join_record", lambda _context: record)
     # Git による取り込み成立の確認だけを境界で置換し、hook と永続化は実行する。
     confirmed_import = Mock(return_value=True)
     monkeypatch.setattr(run_join_module, "confirm_import", confirmed_import)
+    monkeypatch.setattr(merge_module, "confirm_import", confirmed_import)
 
     _commit, hook, _sync_commit, last_apply, _resolution = run_join_module.merge_run(
         context, state, [], "session-head"
@@ -2186,7 +2190,7 @@ def test_workload_start_failure_does_not_recover_existing_error_run(
     state = SessionState.from_dict(_state(path))
     state.run = RunPart(
         state="error",
-        kind=f"realization_{workload}",
+        kind="decision_apply" if workload == "apply" else "realization_refactor",
         branch=RUN_BRANCH,
         fork_commit=state.session.session_fork_commit,
     )
@@ -2586,7 +2590,7 @@ def test_join_record_reuses_placement_queries_but_refreshes_saved_record_and_wor
             )
         assert record is not None
         assert record.context == context
-        assert record.original_run_head == context.run_fork_commit
+        assert record.original_source_head == context.run_fork_commit
         # 初回保存と直接の読込の双方で、同じ配置照会の再起動を防ぐ。
         assert queries and max(queries.values()) == 1, queries
         return record
@@ -2709,7 +2713,7 @@ def cleanup_ready_report(tmp_path, monkeypatch):
         run_join_module,
         "load_join_record",
         lambda *_args: SimpleNamespace(
-            workload_post_join=True, prepared_run_head="prepared"
+            workload_post_join=True, prepared_head="prepared"
         ),
     )
     monkeypatch.setattr(run_join_module, "confirm_import", lambda _record: True)
@@ -2875,7 +2879,7 @@ def test_run_join_rolls_back_preparation_when_sync_fails(
     (context.run_worktree / "README.md").write_text("realized\n")
     commit_work_unit(context.run_worktree, "run change")
     monkeypatch.setattr(
-        run_join_module,
+        merge_module,
         "merge_refactor_states",
         lambda *_args: (_ for _ in ()).throw(RuntimeError("sync failed")),
     )
@@ -2889,7 +2893,7 @@ def test_run_join_rolls_back_preparation_when_sync_fails(
     assert _state(state_path)["session"]["last_joined_apply_fork_commit"] is None
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
 
-    monkeypatch.setattr(run_join_module, "merge_refactor_states", lambda *_args: None)
+    monkeypatch.setattr(merge_module, "merge_refactor_states", lambda *_args: None)
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert joined.exit_code == 0
@@ -2999,14 +3003,14 @@ def test_run_join_conflict_launch_uses_shared_settings(
     monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", preprocess)
     # 日時統合・entry 同期は test_join_merges_committed_timestamps_before_sync に残し、
     # 起動設定の検査で同じ Git snapshot 取得・全件列挙を繰り返さない。
-    monkeypatch.setattr(run_join_module, "merge_refactor_states", lambda *_args: None)
+    monkeypatch.setattr(merge_module, "merge_refactor_states", lambda *_args: None)
     setup_codex_home(tmp_path, monkeypatch)
     config = load_config(root)
     config.codex.model_providers["shared"] = CodexModelProviderConfig(
         {"base_url": "https://shared.invalid/v1", "env_key": "SHARED_AUTH"}
     )
-    config.codex.agent_calls["realization_edit"] = CodexCallConfig(
-        "shared", "shared-model", "shared-effort"
+    config.codex.agent_calls["build_merge_conflict_resolution_request"] = (
+        CodexCallConfig("shared", "shared-model", "shared-effort")
     )
     write_config(root / ".cmoc/gt/config.json", config)
     commit_work_unit(root, "configure shared editing")
@@ -3045,22 +3049,25 @@ def test_run_join_conflict_launch_uses_shared_settings(
     assert len(calls) == (2 if automatic else 1)
     assert (root / "README.md").read_text() == "session change\nrun change\n"
     assert _state(state_path)["run"]["state"] == "ready"
-    for call in calls:
-        assert codex_arg_value(call["argv"], "--model") == "shared-model"
-        overrides = codex_override_config(call["argv"])
-        assert overrides["model_provider"] == "shared"
-        assert overrides["model_reasoning_effort"] == "shared-effort"
-        assert overrides["model_providers"] == {
-            "shared": {
-                "base_url": "https://shared.invalid/v1",
-                "env_key": "SHARED_AUTH",
-            }
+    call = calls[-1]
+    assert codex_arg_value(call["argv"], "--model") == "shared-model"
+    overrides = codex_override_config(call["argv"])
+    assert overrides["model_provider"] == "shared"
+    assert overrides["model_reasoning_effort"] == "shared-effort"
+    assert overrides["model_providers"] == {
+        "shared": {
+            "base_url": "https://shared.invalid/v1",
+            "env_key": "SHARED_AUTH",
         }
+    }
     logs = [
         json.loads(path.read_text())
         for path in (root / ".cmoc/gu/log/codex").glob("*/*_call.json")
     ]
-    assert {log["agent_call_kind"] for log in logs} == {"realization_edit"}
+    expected_kinds = {"build_merge_conflict_resolution_request"}
+    if automatic:
+        expected_kinds.add("realization_edit")
+    assert {log["agent_call_kind"] for log in logs} == expected_kinds
     assert len({log["agent_call_id"] for log in logs}) == len(calls)
 
 
@@ -3114,7 +3121,7 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     # 保持された run の競合を再び解消し、成功時の cwd・commit 参照も確かめる。
     def resolved_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
         calls.append(parameter)
-        assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
+        assert parameter.file_access_mode == FileAccessMode.SPEC_AND_REALIZATION_WRITE
         assert parameter.agent_call_cwd == context.run_worktree
         assert run_head in parameter.prompt
         assert session_head in parameter.prompt
@@ -4091,7 +4098,7 @@ def test_refactor_interruption_allows_only_join_conflict_call(
     monkeypatch.setattr(merge_conflict_module, "run_codex_exec", resolve)
     result = runner.invoke(app, ["realization", "refactor"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
-    assert conflicts == ["run join conflict resolution"]
+    assert conflicts == ["join conflict resolution"]
     assert (root / "README.md").read_text() == "session result\nrefactor result\n"
     assert _state(state_path)["run"]["state"] == "ready"
     metadata = report_metadata(terminal_primary_report(result).read_text())
@@ -4858,7 +4865,7 @@ def test_join_prepares_and_syncs_run_before_import(
     original = commit_work_unit(context.run_worktree, "workload result")
     (root / "oracle/new.md").write_text("session oracle\n")
     baseline = commit_work_unit(root, "session oracle")
-    sync = run_join_module.merge_refactor_states
+    sync = merge_module.merge_refactor_states
     observed = []
 
     # merge・同期後と取り込み直前の再検査は残し、同じ HEAD の重複照会を制限する。
@@ -4886,20 +4893,21 @@ def test_join_prepares_and_syncs_run_before_import(
         observed.append(worktree)
         return sync(worktree, refs)
 
-    monkeypatch.setattr(run_join_module, "merge_refactor_states", sync_run)
+    monkeypatch.setattr(merge_module, "merge_refactor_states", sync_run)
     monkeypatch.setattr(run_join_module, "merge_run", merge_with_bounded_queries)
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert joined.exit_code == 0, joined.output
-    from commons.runtime_run_join_state import load_join_record, tree_id
+    from commons.runtime_join import tree_id
+    from commons.runtime_run_join_state import load_join_record
 
     record = load_join_record(root, SESSION_ID)
-    assert record.original_run_head == original
-    assert record.session_head == baseline
+    assert record.original_source_head == original
+    assert record.target_head == baseline
     assert record.context.run_fork_commit == context.run_fork_commit
-    assert record.session_tree == tree_id(root, record.prepared_run_head)
+    assert record.target_tree == tree_id(root, record.prepared_head)
     assert run_git(
         root, "show", "-s", "--format=%P", record.join_commit
-    ).stdout.split() == [baseline, record.prepared_run_head]
+    ).stdout.split() == [baseline, record.prepared_head]
     assert observed == [context.run_worktree]
     assert "oracle/new.md" in load_refactor_state(root)
     assert 0 < len(head_queries) <= 5
@@ -4983,17 +4991,17 @@ def test_join_force_and_sync_commits_roll_back_to_original_result(
     (context.run_worktree / "result.txt").write_text("result\n")
     original = commit_work_unit(context.run_worktree, "workload result")
     baseline = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    commit = run_join_module.commit_work_unit
+    commit = merge_module.commit_work_unit
 
     def fail_after_sync(worktree, message):
         result = commit(worktree, message)
-        if "sync before run join" in message:
+        if "sync before join" in message:
             assert result is not None
             raise OSError("stop after synchronization commit")
         return result
 
     with monkeypatch.context() as failure:
-        failure.setattr(run_join_module, "commit_work_unit", fail_after_sync)
+        failure.setattr(merge_module, "commit_work_unit", fail_after_sync)
         failed = runner.invoke(
             app, ["run", "join", "--force-resolve"], catch_exceptions=False
         )
@@ -5019,7 +5027,7 @@ def test_join_preserves_session_updates_during_preparation(
     context = _prepare_run(join_after_preprocess)
     (context.run_worktree / "result.txt").write_text("result\n")
     original = commit_work_unit(context.run_worktree, "workload result")
-    sync = run_join_module.merge_refactor_states
+    sync = merge_module.merge_refactor_states
 
     def concurrent_update(worktree, refs):
         result = sync(worktree, refs)
@@ -5029,7 +5037,7 @@ def test_join_preserves_session_updates_during_preparation(
         return result
 
     with monkeypatch.context() as updating:
-        updating.setattr(run_join_module, "merge_refactor_states", concurrent_update)
+        updating.setattr(merge_module, "merge_refactor_states", concurrent_update)
         failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert failed.exit_code == 1
     assert (root / "human.txt").read_text() == "uncommitted human input\n"
@@ -5058,7 +5066,7 @@ def test_join_recovers_import_after_missing_receipt_and_partial_cleanup(
         return result
 
     with monkeypatch.context() as failure:
-        failure.setattr(run_join_module, "run_git", stop_after_import)
+        failure.setattr(merge_module, "run_git", stop_after_import)
         failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert failed.exit_code == 1
     imported = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -5068,13 +5076,13 @@ def test_join_recovers_import_after_missing_receipt_and_partial_cleanup(
     write_state(state_path, state)
     run_git(root, "worktree", "remove", str(context.run_worktree))
     run_git(root, "branch", "-D", context.run_branch)
-    for name in (
-        "merge_refactor_states",
-        "doctor_preprocess_for_join",
-        "validate_run_join",
+    for module, name in (
+        (merge_module, "merge_refactor_states"),
+        (run_join_module, "doctor_preprocess_for_join"),
+        (run_join_module, "validate_run_join"),
     ):
         monkeypatch.setattr(
-            run_join_module,
+            module,
             name,
             lambda *_args, **_kwargs: pytest.fail(
                 "post-join recovery repeated preparation"
@@ -5110,13 +5118,13 @@ def test_initial_reachable_run_checks_sync_before_noop(
     from commons.runtime_run_join_state import load_join_record
 
     record = load_join_record(root, SESSION_ID)
-    assert record.original_run_head == context.run_fork_commit
+    assert record.original_source_head == context.run_fork_commit
     if needs_sync:
         assert record.join_commit is not None
-        assert record.sync_commit == record.prepared_run_head
+        assert record.sync_commit == record.prepared_head
     else:
         assert record.join_commit is record.sync_commit is None
-        assert record.prepared_run_head == record.session_commit == baseline
+        assert record.prepared_head == record.target_commit == baseline
         assert run_git(root, "rev-parse", "HEAD").stdout.strip() == baseline
 
 
@@ -5129,19 +5137,19 @@ def test_join_preserves_unattributed_run_commit(
     context = _prepare_run(join_after_preprocess)
     (context.run_worktree / "result.txt").write_text("result\n")
     commit_work_unit(context.run_worktree, "workload result")
-    commit = run_join_module.commit_work_unit
+    commit = merge_module.commit_work_unit
     unexpected = []
 
     def foreign_commit(worktree, message):
         result = commit(worktree, message)
-        if "sync before run join" in message:
+        if "sync before join" in message:
             (worktree / "foreign.txt").write_text("unknown owner\n")
             unexpected.append(commit(worktree, "unattributed change"))
             if operation_failed:
                 raise OSError("stop after foreign commit")
         return result
 
-    monkeypatch.setattr(run_join_module, "commit_work_unit", foreign_commit)
+    monkeypatch.setattr(merge_module, "commit_work_unit", foreign_commit)
     failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert failed.exit_code == 1
     assert (
@@ -5162,14 +5170,14 @@ def test_join_identifies_import_before_later_session_commit(
     commit_work_unit(context.run_worktree, "workload result")
     git = run_join_module.run_git
     imported = []
-    confirm_import = run_join_module.confirm_import
+    confirm_import = merge_module.confirm_import
     confirmation_queries = []
 
     def confirm_with_bounded_queries(record):
-        discovering = not record.imported and record.prepared_run_head is not None
+        discovering = not record.imported and record.prepared_head is not None
         with monkeypatch.context() as probe:
-            queries = Mock(wraps=join_state_module.run_git)
-            probe.setattr(join_state_module, "run_git", queries)
+            queries = Mock(wraps=merge_module.run_git)
+            probe.setattr(merge_module, "run_git", queries)
             confirmed = confirm_import(record)
         if discovering:
             confirmation_queries.append(queries.call_count)
@@ -5183,8 +5191,8 @@ def test_join_identifies_import_before_later_session_commit(
             commit_work_unit(root, "later human commit")
         return result
 
-    monkeypatch.setattr(run_join_module, "run_git", later_session_commit)
-    monkeypatch.setattr(run_join_module, "confirm_import", confirm_with_bounded_queries)
+    monkeypatch.setattr(merge_module, "run_git", later_session_commit)
+    monkeypatch.setattr(merge_module, "confirm_import", confirm_with_bounded_queries)
     joined = runner.invoke(app, ["run", "join"], catch_exceptions=False)
     assert joined.exit_code == 0, joined.output
     metadata = report_metadata(terminal_primary_report(joined).read_text())
