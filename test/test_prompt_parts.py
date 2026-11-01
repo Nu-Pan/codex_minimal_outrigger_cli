@@ -10,11 +10,9 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/spec/app_spec/document_search.md
 - {{work-root}}/spec/app_spec/cmoc_basic_instruction.md
 - {{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md
-- {{work-root}}/spec/app_spec/sub_command/session_join.md
 - {{work-root}}/reference/src/oracle/other/struct_doc.py
 - {{work-root}}/reference/src/oracle/prompt_builder/basic.py
 - {{work-root}}/reference/src/oracle/prompt_builder/complete_prompt.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/conflict_resolution.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/editor_input_handoff.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/feedback_reporting.py
 - {{work-root}}/reference/src/oracle/prompt_builder/policy/file_access.py
@@ -37,9 +35,6 @@ from oracle.other.struct_doc import (
 )
 from oracle.prompt_builder.basic import PlaceholderMap
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
-from oracle.prompt_builder.policy.conflict_resolution import (
-    build_conflict_resolution_policy as _build_conflict_resolution_policy,
-)
 from oracle.prompt_builder.policy.editor_input_handoff import (
     build_editor_input_handoff_policy as _build_editor_input_handoff_policy,
 )
@@ -122,7 +117,6 @@ def customized_prompt_markdown(path_context: AgentCallPathContext) -> str:
         spec_policy=True,
         realization_policy=True,
         realization_findings_policy=True,
-        conflict_resolution_policy=True,
     )
     return render_sd_node_as_markdown(*prompt)
 
@@ -160,7 +154,6 @@ _POLICY_FLAG_HEADINGS = (
     ("oracle_policy", "# oracle policy"),
     ("realization_policy", "# realization policy"),
     ("realization_findings_policy", "# realization findings policy"),
-    ("conflict_resolution_policy", "# conflict resolution policy"),
     ("routing_policy", "# routing policy"),
     ("editor_input_handoff_policy", "# editor input handoff"),
 )
@@ -231,18 +224,6 @@ def test_build_realization_findings_policy_renders_core_review_aspects() -> None
     assert "その目的に対応する対象箇所と具体的な改善根拠" in rendered
     assert "この call の目的に含まれない一般的な品質改善" in rendered
     assert "調査開始時点ですでに解消されている問題" in rendered
-
-
-def test_conflict_resolution_policy_renders_merge_result_requirements() -> None:
-    """policy は統合結果の規定を持ち、作業と報告は request builder が担う。"""
-    builder_result = _build_conflict_resolution_policy()
-    rendered_doc = _render_policy(builder_result, ("**必須**", "**禁止**", "**許容**"))
-    assert "両 branch の両立可能な変更" in rendered_doc
-    assert "妥当な解決方法が複数ある場合" in rendered_doc
-    assert "規定に違反する解消結果" in rendered_doc
-    assert "初期の競合一覧にないファイル" in rendered_doc
-    assert "解決不能な場合、未解消のままで良い" in rendered_doc
-    assert "merge_resolution:" not in rendered_doc
 
 
 @pytest.mark.parametrize("enable_document_search_mcp", [False, True])
@@ -560,7 +541,6 @@ def test_complete_prompt_preserves_injected_policy_terms(
     assert "プロンプト > oracle file > installed skill の優先順位" in rendered
     assert "今現在の仕様を満たすために必要な realization file" in rendered
     assert rendered.count("所見に対して適用する基準は常に一貫していること") == 1
-    assert "両 branch の両立する意図と挙動" in rendered
     assert "### 背景" not in rendered
     for forbidden in ["{{cmoc-root}}", "{{run-root}}"]:
         assert forbidden not in rendered
@@ -570,7 +550,6 @@ def test_complete_prompt_preserves_injected_policy_terms(
         "oracle policy",
         "realization policy",
         "realization findings policy",
-        "conflict resolution policy",
         "oracle file",
         "realization file",
     ]:

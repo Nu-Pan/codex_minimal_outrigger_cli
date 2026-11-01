@@ -6,6 +6,7 @@ from oracle.other.path_model import AgentCallPathContext, resolve_real_path
 from oracle.other.struct_doc import (
     SDCodeBlock,
     SDHeader,
+    SDPolicy,
     SDTagBlock,
     render_sd_node_as_markdown,
 )
@@ -31,12 +32,34 @@ def build_merge_conflict_resolution_request(
 
     NOTE
         意味仕様は `{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の
+        「統合の判断基準」「agent と cmoc の責務」「受理と報告」および
         「agent への入力と正確な定義の委譲」に従う。
         branch の決定、Git 操作、結果の受理と復旧は呼び出し元が担当する。
     """
     # process cwd に依存せず、merge の作業場所から入力とアクセス境界をそろえる。
     path_context = AgentCallPathContext(agent_call_cwd=merge_worktree)
     static_prompt: list[SDHeader | SDTagBlock] = [
+        SDHeader(
+            "conflict resolution policy",
+            SDPolicy(
+                what_is_this="2 つの branch をマージした結果に対する規定を以下に示す",
+                require=(
+                    "両 branch の両立可能な変更がマージ結果上保持されていること",
+                    "可能な限り多くの衝突が解決していること",
+                    "可能な限り、検証・テストに合格する状態であること",
+                    "妥当な解決方法が複数ある場合、そのうち 1 つが選択されていること",
+                ),
+                prohibit=(
+                    "衝突解決の過程で発生した事情を、解決結果に残してはいけない",
+                    "各規定に違反する解消結果を conflict 解消完了として扱ってはいけない",
+                ),
+                allow=(
+                    "初期の競合一覧にないファイルも、必要に応じて編集して良い",
+                    "解決のために必要であるならば、両ブランチの内容を保存せずに新しく書き直して良い",
+                    "両 branch に相反する変更が存在し、それが解決不能な場合、未解消のままで良い",
+                ),
+            ),
+        ),
         SDHeader(
             "管理操作との境界",
             """
@@ -143,7 +166,6 @@ def build_merge_conflict_resolution_request(
         cmoc_basic_instruction=True,
         spec_policy=True,
         realization_policy=True,
-        conflict_resolution_policy=True,
         routing_policy=True,
     )
     return AgentCallParameter(

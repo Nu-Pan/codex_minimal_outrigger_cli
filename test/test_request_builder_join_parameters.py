@@ -3,6 +3,7 @@
 対応する正本:
 - {{work-root}}/reference/src/oracle/request_builder/common/conflict_resolution.py
 - {{work-root}}/spec/app_spec/codex_common_rule.md
+- {{work-root}}/spec/app_spec/merge_conflict_resolution.md
 """
 
 from dataclasses import replace
@@ -46,7 +47,7 @@ def test_join_conflict_resolution_passes_inputs_and_shared_launch_parameters(
     merge_worktree: Path,
     join_kind: str,
 ) -> None:
-    """コマンド別の引数を正しく対応付け、同じ編集範囲と設定で起動する。"""
+    """コマンド別の引数を対応付け、共通の規定・編集範囲・設定を渡す。"""
 
     source, target = "c" * 40, "d" * 40
     if join_kind == "run":
@@ -77,7 +78,25 @@ def test_join_conflict_resolution_passes_inputs_and_shared_launch_parameters(
     assert "# task" in objective
     assert "進行中の merge" in objective
     assert parameter.enable_document_search_mcp is True
-    assert "# conflict resolution policy" in parameter.prompt
+    policy_heading = "# conflict resolution policy\n"
+    assert parameter.prompt.count(policy_heading) == 1
+    policy = parameter.prompt.split(policy_heading, 1)[1].split("\n# ", 1)[0]
+    assert [
+        line
+        for line in policy.splitlines()
+        if line in {"**必須**", "**禁止**", "**許容**", "**例外**", "**補足情報**"}
+    ] == ["**必須**", "**禁止**", "**許容**"]
+    assert "両 branch の両立可能な変更" in policy
+    assert "妥当な解決方法が複数ある場合" in policy
+    assert "規定に違反する解消結果" in policy
+    assert "初期の競合一覧にないファイル" in policy
+    assert "解決不能な場合、未解消のままで良い" in policy
+    assert "merge_resolution:" not in policy
+    assert (
+        parameter.prompt.index("# realization policy\n")
+        < parameter.prompt.index(policy_heading)
+        < parameter.prompt.index("# 管理操作との境界\n")
+    )
     assert "# routing policy" in parameter.prompt
     for heading in ("# spec policy", "# realization policy"):
         assert heading in parameter.prompt
@@ -132,6 +151,11 @@ def test_feedback_join_adds_sealed_result_input_without_changing_launch_settings
     )
 
     assert replace(sealed, prompt=plain.prompt) == plain
+    assert sealed.prompt.count("# conflict resolution policy\n") == 1
+    assert (
+        sealed.prompt.split("# 管理操作との境界\n", 1)[0]
+        == plain.prompt.split("# 管理操作との境界\n", 1)[0]
+    )
     assert str(merge_worktree / "sealed/report-cut.json") in sealed.prompt
     assert sealed.prompt.count('<cmoc_block id="sealed_feedback_result">') == 1
     assert "読み取り専用で確認すること" in sealed.prompt

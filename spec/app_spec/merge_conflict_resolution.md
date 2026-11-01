@@ -86,8 +86,7 @@ run join の source は基準 session HEAD、target は差分検査と必要な�
 
 正確な agent 向け表現と構築を次へ委譲する。受信 agent が cmoc の内部仕様を読まなくても作業できる、自己完結した目的、入力、制約、判断基準、および報告事項を渡す。
 
-- `{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/conflict_resolution.py` の `build_conflict_resolution_policy`：統合結果が満たすべき規定。
-- `{{cmoc-root}}/reference/src/oracle/request_builder/common/conflict_resolution.py` の `build_merge_conflict_resolution_request`：共通の objective、commit と封印済み report cut の参照入力、管理操作との境界、未解消時の扱い、完了判定を含む報告、prompt part の選択、および起動パラメータの構築。run/session の各 request builder は、コマンド固有の入力をこの共通 builder に渡す。
+- `{{cmoc-root}}/reference/src/oracle/request_builder/common/conflict_resolution.py` の `build_merge_conflict_resolution_request`：統合結果が満たすべき規定、共通の objective、commit と封印済み report cut の参照入力、管理操作との境界、未解消時の扱い、完了判定を含む報告、prompt part の選択、および起動パラメータの構築。run/session の各 request builder は、コマンド固有の入力をこの共通 builder に渡す。
 - `{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`：完全 prompt への共通規定と追加文面の統合。
 
 競合解消 call の設定選択は、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」に従う。provider、model、および reasoning effort の正確な設定値は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` へ委譲する。
