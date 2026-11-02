@@ -197,7 +197,12 @@ def save_feedback_invocation_report(
         )
     else:
         summary = ReportSummary(
-            terminal_outcome(classification),
+            (
+                "修正の取り込みは完了しました。判定入力が変わったため、feedback の公開は保留しています。"
+                if result.result == "recheck_pending"
+                and classification == "natural_completion"
+                else terminal_outcome(classification)
+            ),
             (
                 f"run state: {fields.get('state_after')}",
                 "publication は行っていません。保持した観測と active record は次回 report で再確認します。",
@@ -1672,7 +1677,9 @@ def _publish_report(
     result = (
         "incomplete"
         if any(verdict["status"] == "inconclusive" for verdict in verdicts.values())
-        else "attention" if unresolved_ids else "ok"
+        else "attention"
+        if unresolved_ids
+        else "ok"
     )
     publication = manifest.get("publication")
     if publication is None:
@@ -2094,7 +2101,11 @@ def _publication_history(
                 "kind": (
                     "updated"
                     if before and after
-                    else "created" if after else "resolved" if before else "result"
+                    else "created"
+                    if after
+                    else "resolved"
+                    if before
+                    else "result"
                 ),
                 "case_id": manifest["run"]["targets"]["case_ids"][identity],
                 "issue_id": identity,
@@ -2365,6 +2376,17 @@ def _update_feedback_progress_fields(manifest: _JsonObject | None) -> None:
         partial_result_count=partial_result_count,
         processing_status=(
             processing.get("status") if isinstance(processing, dict) else None
+        ),
+    )
+
+
+def _recheck_pending_result(issues: list[str]) -> TerminalResult:
+    """公開を保留した対象と、次の新規 report で再確認する操作を返す。"""
+    return TerminalResult(
+        result="recheck_pending",
+        details=(("recheck_pending_issues", issues),),
+        next_actions=(
+            "判定入力が変わったため公開を保留しました。次の `cmoc feedback report` で再確認してください。",
         ),
     )
 

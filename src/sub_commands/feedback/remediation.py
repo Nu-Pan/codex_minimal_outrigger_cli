@@ -88,7 +88,6 @@ from commons.runtime_run_join import (
     validate_run_join,
 )
 from commons.runtime_run_join_state import (
-    JoinRecord,
     join_record,
     load_join_record,
 )
@@ -101,7 +100,6 @@ from commons.runtime_run_lifecycle import (
     rollback_work_unit,
     set_run_state,
     start_editing_run,
-    tree_changes,
     unexpected_agent_paths,
     unexpected_run_paths,
     worktree_change_paths,
@@ -264,20 +262,12 @@ def run_feedback_report() -> TerminalResult:
                         assert manifest is not None
                         _record_merge(context, manifest, commit, resolution)
 
-                    def verify_prepared(prepared: JoinRecord) -> None:
-                        # 取り込み前に、封印済み結果と準備完了 tree を結び付ける。
-                        assert context is not None and manifest is not None
-                        _verify_prepared_feedback(context, manifest, prepared)
-
                     merge_run(
                         context,
                         current,
                         warnings,
                         before,
                         on_merged=merged,
-                        feedback_report_cut_path=context.repo
-                        / manifest["run"]["sealed"]["path"],
-                        verify_prepared=verify_prepared,
                     )
                     update_primary_report_fields(feedback_stage="join verification")
                     _complete_join(context, manifest)
@@ -893,6 +883,8 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
     record = load_join_record(context.repo, context.session_id)
     if record is None or not confirm_import(record) or record.prepared_head is None:
         raise _failure("feedback run の準備・取り込み記録を確認できません。")
+    if record.original_source_head != seal["run_head"]:
+        raise _failure("封印時の成果と join の元の成果が一致しません。")
     # 共通の取り込み確認で準備済み run と session commit の tree 全体を照合済み。
     # 同じ immutable commit の tree ID・path 差分をここで再照会しない。
     if context.run_worktree.exists():
@@ -908,43 +900,19 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
         if not _is_ancestor(context, seal["run_head"]):
             raise _failure("封印時 run HEAD が session から到達できません。")
         reachable_commits.add(seal["run_head"])
-    files = decision.worktree_inputs(context.session_worktree)
     merged_reference = manifest["run"]["merged"]
     merged = (
         read_run_artifact(context.repo, merged_reference)
         if merged_reference is not None
         else {"resolution": {"agent_status": "not_needed"}}
     )
-    adjusted = _verified_merge_adjustment(context, merged)
-    if record.resolution.get("feedback_cut") != manifest["run"][
-        "sealed"
-    ] or decision.state_hash(files) != record.resolution.get(
-        "prepared_feedback_inputs_sha256"
-    ):
-        raise _failure(
-            "feedback join 後の入力が検証済み run の最終状態と一致しません。"
-        )
-    checkpoints = (
-        _validate_selected_basis(
-            context,
-            seal["selected_checkpoints"],
-            seal["candidates"],
-            files,
-        )
-        if not adjusted
-        else {}
-    )
     paths: set[str] = set()
     for reference in manifest["processing"]["remediation_checkpoints"]:
-        # 同じ join 検証内だけ、path と hash が一致する採用結果を監査にも使う。
-        checkpoint = checkpoints.get((reference["path"], reference["sha256"]))
-        if checkpoint is None:
-            checkpoint = read_run_artifact(
-                context.repo, {key: reference[key] for key in ("path", "sha256")}
-            )
-            validate_remediation_checkpoint(
-                checkpoint, context.repo / reference["path"]
-            )
+        # 過去の結果と commit の整合性を検査し、現在の判定有効性は公開時に照合する。
+        checkpoint = read_run_artifact(
+            context.repo, {key: reference[key] for key in ("path", "sha256")}
+        )
+        validate_remediation_checkpoint(checkpoint, context.repo / reference["path"])
         audit = checkpoint["audit"]
         if audit["wave"] not in manifest["run"]["waves"]:
             raise _failure("feedback issue checkpoint の wave が一致しません。")
@@ -986,12 +954,10 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
         "checked_paths": sorted(paths),
         "merged": manifest["run"]["merged"],
         "merge_adjustment": merged["resolution"],
-        "final_decision_inputs_sha256": decision.state_hash(files),
         "checks": {
             "reachability": True,
             "paths": True,
             "clean": True,
-            "decision_basis": True,
         },
     }
     if manifest["run"]["completion"] is None:
@@ -1014,57 +980,6 @@ def _complete_join(context: EditingRunContext, manifest: dict[str, Any]) -> None
             subcommand_log_path=original_log,
         )
         write_report_cut_manifest(context.repo, manifest)
-
-
-def _verify_prepared_feedback(
-    context: EditingRunContext, manifest: dict[str, Any], record: JoinRecord
-) -> None:
-    """封印済み採用結果を run 上で検証し、準備完了 tree と結び付ける。"""
-    seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
-    if record.original_source_head != seal["run_head"]:
-        raise _failure("封印時の成果と join の元の成果が一致しません。")
-    files = decision.worktree_inputs(context.run_worktree)
-    resolution = dict(record.resolution)
-    call_log = resolution.get("call_log")
-    if isinstance(call_log, str):
-        resolution["call_log"] = artifact_reference(context.repo, Path(call_log))
-    if not _verified_merge_adjustment(
-        context, {"resolution": resolution}, record.prepared_head
-    ):
-        _validate_selected_basis(
-            context, seal["selected_checkpoints"], seal["candidates"], files
-        )
-    record.resolution = resolution
-    record.resolution["prepared_feedback_inputs_sha256"] = decision.state_hash(files)
-    record.resolution["feedback_cut"] = manifest["run"]["sealed"]
-
-
-def _verified_merge_adjustment(
-    context: EditingRunContext, merged: dict[str, Any], prepared: str | None = None
-) -> bool:
-    """run 側の検証記録が同期後の準備完了 tree に適用できるか確認する。"""
-    resolution = merged.get("resolution", {})
-    if resolution.get("agent_status") != "resolved":
-        return False
-    call_log = resolution.get("call_log")
-    if (
-        not isinstance(call_log, dict)
-        or not isinstance(call_log.get("path"), str)
-        or artifact_reference(context.repo, context.repo / call_log["path"]) != call_log
-    ):
-        return False
-    verified = resolution.get("verified_commit")
-    if prepared is None:
-        record = load_join_record(context.repo, context.session_id)
-        prepared = record.prepared_head if record else None
-    if not isinstance(verified, str) or prepared is None:
-        return False
-    changes = tree_changes(context.repo, verified, prepared)
-    return all(
-        path == ".cmoc/gt/realization/refactor/state.json"
-        for change in changes
-        for path in change.paths
-    )
 
 
 def _is_ancestor(context: EditingRunContext, commit: str) -> bool:
@@ -1126,15 +1041,28 @@ def _publish(
     manifest_path: Path,
     state: ActiveState,
 ) -> TerminalResult:
-    """join 後の封印済み候補と正式 checkpoint だけを publication に渡す。"""
-    if manifest["processing"]["status"] == "publication_ready":
+    """現在入力に有効な結果だけを公開し、変化した cut は次回の再確認へ回す。"""
+    # publication 成立後の recovery は過去の判定を覆さず、確定済み公開を扱う。
+    if (
+        state.current is not None
+        and state.current["report_cut_id"] == manifest["report_cut_id"]
+    ):
         return report._resume_publication(context.repo, manifest, manifest_path)
     seal = read_run_artifact(context.repo, manifest["run"]["sealed"])
+    if manifest["processing"]["status"] == "recheck_pending":
+        return report._recheck_pending_result(sorted(seal["candidates"]))
+    files = decision.worktree_inputs(context.session_worktree)
     verdicts = {}
+    recheck_pending = False
     for reference in seal["selected_checkpoints"]:
         checkpoint = read_run_artifact(
             context.repo, {key: reference[key] for key in ("path", "sha256")}
         )
+        current = decision.decision_state(
+            files, seal["candidates"][reference["candidate_id"]]
+        )
+        if not decision.basis_is_valid(checkpoint["audit"]["decision_basis"], current):
+            recheck_pending = True
         verdicts[reference["candidate_id"]] = {
             **checkpoint["structured_output"]["result"],
             "decision_basis": decision.compact_basis(
@@ -1143,6 +1071,12 @@ def _publish(
         }
     if set(verdicts) != set(seal["candidates"]):
         raise _failure("feedback report cut に未処理の issue があります。")
+    if recheck_pending:
+        # 公開は cut 単位。入力を消費せず全候補を再確認し、選択した保留は再開時も維持する。
+        report._set_processing_state(context.repo, manifest, "recheck_pending", None)
+        return report._recheck_pending_result(sorted(verdicts))
+    if manifest["processing"]["status"] == "publication_ready":
+        return report._resume_publication(context.repo, manifest, manifest_path)
     return report._publish_report(
         context.repo,
         context.session_worktree,
@@ -1363,6 +1297,7 @@ def _set_feedback_error_state(
         manifest is not None
         and update_processing
         and manifest.get("publication") is None
+        and manifest["processing"]["status"] != "recheck_pending"
     ):
         try:
             report._set_processing_state(
@@ -1400,7 +1335,7 @@ def _set_feedback_error_state(
         update_primary_report_fields(
             recovery_next_actions=(
                 (
-                    "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+                    "`cmoc feedback report` で未完了の公開・再確認待ちの終了処理または cleanup を再開してください。",
                 )
                 if joined
                 else join_recovery_actions(context)

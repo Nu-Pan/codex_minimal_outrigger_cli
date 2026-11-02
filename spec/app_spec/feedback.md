@@ -36,6 +36,7 @@ feedback 全体で使用する用語と issue remediation の結果を次に示�
 | high-watermark | collector が durable に受理済みであることを atomic に確定した observation の上限境界。 |
 | 判定根拠 | issue の結果分類が依存した状態。対象ファイルに加え、依存設定、検査の条件と結果など、判断に必要な根拠を含む。 |
 | 有効な結果 | 現在の状態に対して判定根拠の有効性を確認でき、再確認を必要としない issue の結果。 |
+| 再確認待ち（`recheck_pending`） | join 後または公開前の recovery で判定入力の変化を検出し、その report cut の公開を保留した invocation の結果。過去の issue result は保持し、次回の新しい report で再確認する。 |
 | `fixed` | realization file の修正と必要な検証が完了した。現在の案件一覧へ掲載しない。 |
 | `already_resolved` | 処理時点ですでに問題が存在しない。現在の案件一覧へ掲載しない。 |
 | `not_actionable` | feedback の報告基準を満たさない。現在の案件一覧へ掲載しない。 |
@@ -45,7 +46,7 @@ feedback 全体で使用する用語と issue remediation の結果を次に示�
 
 理論上は realization file だけで修正できる可能性がある問題は、今回の agent call で完了できなかったという理由だけで `human_required` としてはならない。
 
-agent の判定は、その時点の判定根拠に対する結果である。`cmoc feedback report` の後続処理で判定根拠が変わった場合は、結果分類を問わず再確認を必要とする。ファイル内容の変化だけで旧判定の誤りや問題の解消を断定してはならない。また、記載された 1 ファイルが不変であることだけを、判定全体の有効性の証明にしてはならない。
+agent の判定は、その時点の判定根拠に対する結果である。`cmoc feedback report` の後続処理で判定根拠が変わった場合は、結果分類を問わず再確認を必要とする。report cut の封印前は同じ run で再確認し、封印後は cmoc が機械的に再確認待ちとして扱う。ファイル内容の変化だけで旧判定の誤りや問題の解消を断定してはならない。また、記載された 1 ファイルが不変であることだけを、判定全体の有効性の証明にしてはならない。
 
 判定根拠の表現と変更検知の具体的なアルゴリズムは、これらの要求を満たす範囲で実装者へ委ねる。
 
@@ -55,15 +56,17 @@ agent の判定は、その時点の判定根拠に対する結果である。`c
 
 この要約と、状態を更新・確認しようとした invocation の成否は区別する。invocation error によって新たな issue result を作らない。確定点前後の失敗で保持する状態は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「最新状態の atomic publication」に従う。
 
+`recheck_pending` は issue の結果分類や最新状態の要約ではない。今回の公開を保留したことを示し、直前の最新状態を維持する。問題が現在も存在することや、人間対応・判定不能が確認されたことを意味しない。
+
 ## 処理モデル
 
 `cmoc feedback report` は、同一 invocation 内で自己完結する feedback remediation run を使用する。run branch 上で、issue ごとの remediation と commit を逐次実行する。処理中に受理された新しい issue も、immutable な intake wave として可能な限り処理する。
 
 issue の結果分類を確定するための再確認と必要な再修正・判定更新は、同じ invocation 内で report cut の封印前に完了する。wave loop の自然完了の条件は、最終 high-watermark までに新しい未処理 issue identity がなく、run branch の最終状態に対して再確認が必要な判定も残っていないことである。
 
-封印後の自動 join では、封印済み結果を維持するためのマージ調整と検証を認める。調整の範囲、検証記録、publication の停止条件、および join 後の recovery は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」と「join 後の publication failure」を正本とする。report の publication は、join 後の状態に対して有効な結果だけで確定する。
+封印後の自動 join は、通常の内容統合と検証を行う。cmoc は join 後に判定入力を照合し、全結果が有効な場合だけ publication する。入力が変わった場合は取り込み済みの成果を保持し、公開を保留して次回 report で再確認する。判定入力の照合、入力保持、終了処理、および recovery は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「再確認待ち」「join 後の publication failure」を正本とする。
 
-自然完了し、自動 join と必要な検証が成功した report は、`inconclusive` を含む場合も最新状態を publication する。正常なユーザー中断では、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「publication を行わない feedback join」に従う。未終了の案件は次回の report で active の記録から再確認する。手動 close の CLI と対象判定は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_close.md` の「CLI 契約」「対象と理由」を正本とする。
+自然完了し、自動 join と必要な検証が成功し、採用する全結果の判定入力が有効な report は、`inconclusive` を含む場合も最新状態を publication する。正常なユーザー中断では、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「publication を行わない feedback join」に従う。未終了の案件は次回の report で active の記録から再確認する。手動 close の CLI と対象判定は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_close.md` の「CLI 契約」「対象と理由」を正本とする。
 
 ## 正本仕様の分担
 

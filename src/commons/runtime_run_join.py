@@ -3,7 +3,6 @@
 import os
 from collections.abc import Callable, Collection
 from dataclasses import replace
-from functools import partial
 from pathlib import Path
 
 from .runtime_cli import start_subcommand_step
@@ -185,8 +184,6 @@ def merge_run(
     session_head_before_join: str,
     *,
     on_merged: Callable[[str | None, dict[str, object]], None] | None = None,
-    feedback_report_cut_path: Path | None = None,
-    verify_prepared: Callable[[JoinRecord], None] | None = None,
 ) -> tuple[str | None, str, str | None, str | None, dict[str, object]]:
     """run 側で準備を確定してから同じ tree を取り込み、後処理を行う。"""
     # branch の統合と復旧は session join と同じ engine に委ねる。
@@ -199,14 +196,8 @@ def merge_run(
         record.target_head = session_head_before_join
     prepare_and_import(
         record,
-        partial(
-            build_run_join_conflict_resolution_request,
-            feedback_report_cut_path=feedback_report_cut_path,
-        ),
+        build_run_join_conflict_resolution_request,
         warnings=warnings,
-        verify_prepared=(lambda: verify_prepared(record))
-        if verify_prepared is not None
-        else None,
     )
     update_primary_report_fields(**record.report_fields())
     if on_merged is not None:

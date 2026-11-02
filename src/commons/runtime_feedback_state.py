@@ -1901,6 +1901,7 @@ def _validate_report_cut_manifest(
         "failed",
         "staging",
         "publication_ready",
+        "recheck_pending",
     }:
         raise _corruption("report cut processing status が不正です。", path)
     checkpoint_contracts = (
@@ -2089,9 +2090,7 @@ def _validate_report_cut_current_input(
             "generation_id"
         ) == generation_id_value or current_pointer.get(
             "report_cut_id"
-        ) == pointer_value.get(
-            "report_cut_id"
-        ):
+        ) == pointer_value.get("report_cut_id"):
             raise _corruption(
                 "report cut current pointer input が切替前 state ではありません。",
                 path,
@@ -2226,9 +2225,8 @@ def _validate_report_cut_current_input(
                 if identity_name == "issue_id"
                 else f"{machine_aggregate_id(identity)}.json"
             )
-            if (
-                record_path.parent != expected_generation_directory / directory_name
-                or (record_path.name != expected_name)
+            if record_path.parent != expected_generation_directory / directory_name or (
+                record_path.name != expected_name
             ):
                 raise _corruption(
                     f"report cut current {name} path が identity と一致しません。",
@@ -3602,8 +3600,10 @@ def _prune_empty_directories(start: Path, stop: Path) -> None:
             _flush_directory(directory.parent)
 
 
-def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -> None:
-    """raw observation を残し、terminal／obsolete cut の work state を破棄する。"""
+def discard_staged_publication(
+    repo: Path, manifest: _JsonObject, manifest_path: Path
+) -> None:
+    """未公開の生成物だけを破棄し、入力・checkpoint・直前の最新状態を保持する。"""
     # {{work-root}}/spec/app_spec/feedback_state.md
     state = load_active_state(repo)
     if state.current is not None and state.current.get("report_cut_id") == manifest.get(
@@ -3613,36 +3613,6 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
             "current pointer が参照する report cut は discard できません。",
             manifest_path,
         )
-
-    # staging 済み artifact は manifest が明示する path/hash だけを削除する。
-    from .runtime_feedback_run_state import run_artifact_references
-
-    run_references = run_artifact_references(manifest)
-    allowed_work_paths = {manifest_path.resolve(strict=False)}
-    allowed_work_paths.update(
-        (repo / reference["path"]).resolve(strict=False) for reference in run_references
-    )
-    processing = manifest.get("processing")
-    if not isinstance(processing, dict):
-        raise _corruption(
-            "discard 対象 report cut processing が不正です。", manifest_path
-        )
-    for name in ("normalization_checkpoints", "remediation_checkpoints"):
-        references = processing.get(name)
-        if not isinstance(references, list):
-            raise _corruption(f"discard 対象 {name} が不正です。", manifest_path)
-        for reference in references:
-            if not isinstance(reference, dict):
-                raise _corruption(
-                    f"discard 対象 {name} reference が不正です。", manifest_path
-                )
-            target = _resolve_reference_path(
-                repo,
-                reference.get("path"),
-                manifest_path.parent,
-                f"discard {name}",
-            )
-            allowed_work_paths.add(target.resolve(strict=False))
 
     publication = manifest.get("publication")
     if isinstance(publication, dict):
@@ -3706,6 +3676,42 @@ def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -
                 expected_root=feedback_root(repo) / "history",
                 description="discard staged history",
             )
+
+
+def discard_report_cut(repo: Path, manifest: _JsonObject, manifest_path: Path) -> None:
+    """raw observation を残し、terminal／obsolete cut の work state を破棄する。"""
+    discard_staged_publication(repo, manifest, manifest_path)
+
+    # staging 済み artifact は manifest が明示する path/hash だけを削除する。
+    from .runtime_feedback_run_state import run_artifact_references
+
+    run_references = run_artifact_references(manifest)
+    allowed_work_paths = {manifest_path.resolve(strict=False)}
+    allowed_work_paths.update(
+        (repo / reference["path"]).resolve(strict=False) for reference in run_references
+    )
+    processing = manifest.get("processing")
+    if not isinstance(processing, dict):
+        raise _corruption(
+            "discard 対象 report cut processing が不正です。", manifest_path
+        )
+    for name in ("normalization_checkpoints", "remediation_checkpoints"):
+        references = processing.get(name)
+        if not isinstance(references, list):
+            raise _corruption(f"discard 対象 {name} が不正です。", manifest_path)
+        for reference in references:
+            if not isinstance(reference, dict):
+                raise _corruption(
+                    f"discard 対象 {name} reference が不正です。", manifest_path
+                )
+            target = _resolve_reference_path(
+                repo,
+                reference.get("path"),
+                manifest_path.parent,
+                f"discard {name}",
+            )
+            allowed_work_paths.add(target.resolve(strict=False))
+
     # work directory 内に manifest が列挙していない file があれば推測削除しない。
     _require_only_expected_files(
         manifest_path.parent,

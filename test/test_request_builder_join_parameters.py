@@ -136,29 +136,5 @@ def test_join_builders_produce_the_same_request_for_the_same_merge(
     )
 
     assert run == session
-
-
-def test_feedback_join_adds_sealed_result_input_without_changing_launch_settings(
-    merge_worktree: Path,
-) -> None:
-    """封印済み結果を参照入力に加え、通常 join と同じ受理・権限で検証する。"""
-    plain = build_run_join_conflict_resolution_request("run", "session", merge_worktree)
-    sealed = build_run_join_conflict_resolution_request(
-        "run",
-        "session",
-        merge_worktree,
-        feedback_report_cut_path=Path("{{work-root}}/sealed/report-cut.json"),
-    )
-
-    assert replace(sealed, prompt=plain.prompt) == plain
-    assert sealed.prompt.count("# conflict resolution policy\n") == 1
-    assert (
-        sealed.prompt.split("# 管理操作との境界\n", 1)[0]
-        == plain.prompt.split("# 管理操作との境界\n", 1)[0]
-    )
-    assert str(merge_worktree / "sealed/report-cut.json") in sealed.prompt
-    assert sealed.prompt.count('<cmoc_block id="sealed_feedback_result">') == 1
-    assert "読み取り専用で確認すること" in sealed.prompt
-    assert "結果分類そのものの変更が必要な場合" in sealed.prompt
-    assert "未解消として具体的な理由を報告すること" in sealed.prompt
-    assert "issue 処理のやり直しや対象外 issue の探索を行わないこと" in sealed.prompt
+    assert "sealed_feedback_result" not in run.prompt
+    assert "封印済み結果を維持する統合" not in run.prompt

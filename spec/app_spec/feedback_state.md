@@ -12,7 +12,7 @@ feedback state は、通常の確認・操作に使う active と、経緯を確
 - active issue の compact record
 - 更新前の判定、解決・手動クローズの経緯、および入力の消費を追跡できる history
 - recurrence threshold 未満の machine observation の bounded aggregate
-- 正常中断後の次回 report による再確認、失敗後の明示 join・abandon、および自然完了経路の join 後 recovery に必要な run manifest、intake wave、report cut、および正式な checkpoint
+- 正常中断・再確認待ちの終了後に行う次回 report の確認、失敗後の明示 join・abandon、および自然完了経路の join 後 recovery に必要な run manifest、intake wave、report cut、および正式な checkpoint
 - close の確定と recovery に必要な固定入力・進行記録
 - publication 済み report と、最新状態を選ぶ current pointer
 
@@ -39,7 +39,8 @@ feedback state は `{{repo-root}}` が所有する。branch、`{{work-root}}`、
     │   ├── wave/{{wave-sequence}}/...
     │   ├── checkpoint/...
     │   ├── report_cut.json
-    │   └── publication_completion.json
+    │   ├── publication_completion.json
+    │   └── join_result.json
     └── close/...
 
 {{repo-root}}/.cmoc/gu/report/feedback/
@@ -72,7 +73,8 @@ state を構成する artifact の役割を次に示す。
 | intake wave | その wave が処理する observation、active issue、正規化済み issue identity、および根拠の immutable な固定入力 |
 | checkpoint | 受理済み normalization または remediation の入力、結果、検証、および commit を hash で結び付ける記録 |
 | report cut | wave loop の自然完了後に封印する publication 入力。ordered wave、最終 high-watermark、base current pointer、採用する有効な結果、および封印時の run 成果を固定する |
-| publication completion record | report cut の採用結果と、マージ調整・検証を経た最終取り込み結果を結び付ける immutable な記録 |
+| publication completion record | report cut と最終取り込み結果を結び付け、commit・差分・artifact の機械検査の完了を示す immutable な記録 |
+| 未公開での終了記録 | 取り込みを完了し、入力と checkpoint を保持した run を publication recovery 対象から除外する記録。再確認待ちの場合は対象 issue も保持する |
 | close の作業記録 | 対象案件・理由・base current pointer・publication target と未完了処理を結び付け、同じ close を再開するための記録 |
 | `incomplete` 診断 report | `inconclusive` を含む最新状態と、判定不能の具体的な原因を記載した durable な Markdown report |
 
@@ -90,7 +92,7 @@ immutable artifact は、sibling temporary file への write、file flush、atom
 
 run manifest と close の作業記録の進行 state・artifact reference は、先行 state と新しい immutable artifact の hash を検証したうえで atomic に更新する。intake wave の固定入力、正式な checkpoint、封印済み report cut、および close の固定入力を in-place で変更してはならない。
 
-`cmoc feedback report` と `cmoc feedback close` およびその recovery は、`{{repo-root}}` ごとの同じ feedback writer 排他を使用する。排他は、base current pointer と対象を検証する前から、publication と cleanup の完了、再開 state の確定、または失敗終了まで保持する。report では最初の high-watermark の固定より前に取得する。
+`cmoc feedback report` と `cmoc feedback close` およびその recovery は、`{{repo-root}}` ごとの同じ feedback writer 排他を使用する。排他は、base current pointer と対象を検証する前から、公開または再確認待ちの終了処理と cleanup の完了、再開 state の確定、または失敗終了まで保持する。report では最初の high-watermark の固定より前に取得する。
 
 未完了の report または close の固定入力を、別の writer が上書きしてはならない。process 終了で lock が解放されても、未完了操作の recovery 要件は消えない。新規開始・再開の分岐は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「事前条件と run の開始または再開」と、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_close.md` の「事前条件」「保存失敗と recovery」に従う。
 
@@ -236,25 +238,30 @@ report cut は、少なくとも次の入力を固定する。
 
 正常 report または `incomplete` 診断 report の保存先には、固定した時点の実行 ID を `{{execution-id}}` として使用し、最終 path とともに封印する。同じ publication を別のサブコマンド実行から再開する場合も、この target を引き継ぐ。保存先や帰属を再開した実行の ID に合わせて変更してはならない。
 
-封印後に許す調整・検証と停止条件は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。調整によって、封印済み report cut、wave input、issue result、最終 high-watermark、または cleanup target を変更してはならない。
+封印後の統合・機械検査・再確認待ちの条件は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。調整によって、封印済み report cut、wave input、issue result、最終 high-watermark、または cleanup target を変更してはならない。
 
 封印時 run HEAD は採用結果を確定した成果であり、共通 join の準備で進む run branch の現在 HEAD や準備完了 run HEAD へ付け替えない。準備と取り込みの進行は既存の run manifest などの管理記録で対応付ける。共通の記録境界と必要な復旧情報は、`{{cmoc-root}}/spec/app_spec/session_state.md` の「join の復旧情報」に従い、report cut の再封印で代替しない。
 
 ### publication completion record
 
-cmoc は、封印後のマージ調整に関する agent の判断と検証結果を、run 側の merge commit の作成前に既存の Codex call log へ保存する。さらに、同期を含む準備完了 run HEAD と、その tree に適用できる検証記録を session への取り込み前に結び付ける。記録から report cut と検証対象の内容を特定できるようにし、準備途中または取り込み直後に停止した場合も recovery 用の根拠として保持する。
-
-publication completion record は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「join 後の検証と記録」を完了してから、publication 前に保存する。run manifest は、この record と report cut の path および hash を参照する。少なくとも次の対応を確認できる記録とする。
+publication completion record は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「join 後の検証と記録」が定める commit・差分・artifact の検査を完了してから保存する。run manifest は、この record と report cut の path および hash を参照する。少なくとも次の対応を確認できる記録とする。
 
 - 封印済み report cut と採用結果・checkpoint の参照。
 - 封印時 run HEAD、基準 session HEAD、準備完了 run HEAD、成立した `{{cmoc-run-join-commit}}` または no-op、および最終取り込みの session commit と tree。同じ commit は参照を共有して役割を区別する。
-- 準備完了 run HEAD と issue commit の到達可能性。
-- マージ調整の対象、採用した判断と理由、影響を受けた判定、および run 側で保存した検証・同期記録との対応。調整しなかった場合はその旨。
-- その検証記録を最終取り込みの tree に適用できることの確認と、publication 前に全採用結果が有効であることを確認した session 状態および検証結果。
+- 準備完了 run HEAD と issue commit の到達可能性、issue 処理の差分・call log・checkpoint の整合性。
+- 共通 join が記録したマージ調整・検証・同期との対応。
 
-この record は、元の issue result の書き換えや新しい結果分類の保存先にはしない。artifact の不変性・hash 整合性と、調整後の内容に対する検証結果は区別して記録する。結果の有効性を確認できず停止した場合は completion を記録せず、診断情報と recovery 用資源を保持する。
+この record は取り込み済み成果の機械検査の記録であり、現在の session に対する全結果の有効性や publication の成立を示すものではない。公開直前の判定入力照合と current pointer の確認を、この record の存在だけで代替してはならない。元の issue result や結果分類を書き換えず、判定入力が変わった場合も取り込み記録として保持する。
 
-保存済み record は immutable とし、recovery 時にも上書きしない。record が未保存の場合は、同じ封印済み入力と保存済み検証記録を使用し、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」の再開条件を満たす場合だけ確定する。
+保存済み record は immutable とし、recovery 時にも上書きしない。record が未保存の場合は、同じ封印済み artifact と共通 join の復旧情報から取り込み成立を確認し、機械検査を完了して保存する。現在の session への後続変更は、公開前の判定入力照合で別に扱う。
+
+### 再確認待ちの終了記録
+
+再確認待ちを選んだ report cut は、その選択を進行記録へ保存し、公開へ戻さない。公開全体を保留するため、その cut の全候補を次回の再確認対象とする。結果分類や封印済み artifact の書き換えで失効を表現してはならない。
+
+cmoc は、run identity、取り込み済み session commit、保持した manifest の path と hash、および再確認対象の issue identity を含む未公開での終了記録を durable に保存する。この記録で終了済み cut と未完了の publication recovery を区別する。raw observation、直前の active record、report cut と checkpoint を保持し、新しい report は現在の入力から判定し直す。
+
+終了記録の保存、未公開生成物の回収、report 保存、state 初期化、および run 資源 cleanup の途中で停止した場合は、同じ選択と対象で終了処理を再開する。復旧に必要な journal は最外側の invocation report 保存まで保持する。未公開生成物を回収する際は、manifest が特定した generation・history・report の path と hash だけを使用し、raw・旧 active・checkpoint を削除しない。
 
 ## 入力の消費と cleanup
 
@@ -299,10 +306,10 @@ publication point 後の失敗では、確定済み state を巻き戻さない�
 
 recovery は同じ target と固定入力を再利用し、案件の登録・終了、履歴追加、入力消費を重複適用しない。report では、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「join 後の publication failure」「再開時の report と実行記録」、close では、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_close.md` の「保存失敗と recovery」に従う。異なる base、hash 不一致、または確定状況の不明を上書きで解消しない。
 
-処理済み入力と完了済み work artifact の cleanup を確定した後にだけ、feedback run の state と隔離資源を正常終了状態へ戻す。report の publication または cleanup の失敗中は `run.state=error` と隔離資源を維持する。close は編集 run を作らず、その未完了処理を close の作業記録で管理する。
+publication を行う経路では、処理済み入力と完了済み work artifact の cleanup を確定してから feedback run の state と隔離資源を正常終了状態へ戻す。再確認待ちでは本書の「再確認待ちの終了記録」に従って入力保持と終了を確定する。report の公開・終了処理または cleanup の失敗中は `run.state=error` と隔離資源を維持する。close は編集 run を作らず、その未完了処理を close の作業記録で管理する。
 
 ## run lifecycle との整合
 
-自然完了時の自動 join と publication は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「publication」に従う。正常中断時の自動 join と停止 run の明示 join は、同文書の「publication を行わない feedback join」に従い、raw observation、直前の current pointer、および必要な checkpoint を保持する。
+自然完了時の自動 join、publication、または再確認待ちへの移行は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「publication」に従う。正常中断時の自動 join と停止 run の明示 join は、同文書の「publication を行わない feedback join」に従い、raw observation、直前の current pointer、および必要な checkpoint を保持する。
 
 abandon が feedback state に与える影響は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「破棄と cleanup」に従う。破棄した run commit に依存する `fixed` checkpoint を publication 可能な結果として残してはならない。

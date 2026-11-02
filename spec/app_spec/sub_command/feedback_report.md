@@ -1,6 +1,6 @@
 # `cmoc feedback report`
 
-`cmoc feedback report` は、同一 invocation 内で feedback remediation run を作成する。安全な realization file の修正を issue 単位で commit した後、session branch へ自動 join する。自然完了では検証を経て最新状態を publication し、正常なユーザー中断では確定済み commit の取り込みだけを行う。通常の確認対象には、その時点の active の案件を提示する。
+`cmoc feedback report` は、同一 invocation 内で feedback remediation run を作成する。安全な realization file の修正を issue 単位で commit した後、session branch へ自動 join する。自然完了では join 後も判定入力が有効なら最新状態を publication し、入力が変わっていれば再確認待ちとして公開を保留する。正常なユーザー中断では確定済み commit の取り込みだけを行う。通常の確認対象には、その時点の active の案件を提示する。
 
 関連する仕様の正本を次に示す。
 
@@ -27,7 +27,7 @@
 
 未完了の close がある場合は、新しい run を作らず、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_close.md` の「保存失敗と recovery」に従う再実行を案内してエラー終了する。close の固定入力を report で書き換えない。
 
-その後は、既存 run の状態に応じて分岐する。自動 join 済み feedback run の publication または publication 後 cleanup を再開できる場合は、本書の「join 後の publication failure」に従って recovery を完了する。この経路では、新しい run を開始しない。
+その後は、既存 run の状態に応じて分岐する。自動 join 済み feedback run の公開・再確認待ちの終了処理または cleanup を再開できる場合は、本書の「join 後の publication failure」に従って recovery を完了する。この経路では、新しい run を開始しない。
 
 recovery 対象がない場合は、session state の `run.state` が `ready` であることを確認し、次の順序で新しい run を開始する。
 
@@ -224,27 +224,29 @@ quiet period、directory の列挙タイミング、または一定時間 observ
 
 ### 封印後のマージ調整
 
-競合解消には、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」を適用する。競合の発生そのものを publication failure にしてはならない。
+競合解消には、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」を適用する。競合解消 agent は両 branch の内容統合と必要な検証を行い、cmoc が後続の commit として確定する。封印済み report cut や採用結果を agent への参照入力に加えず、feedback の結果分類の維持・再判定を依頼しない。元の issue commit と封印済み artifact は保持する。
 
-競合解消 agent は、封印済みの採用結果を維持するために、session を統合中の run worktree の merge 結果を調整してよい。内容が封印時と異なっても、両側の変更意図と採用結果を維持できる調整を認める。影響を受ける判定を全結果分類から特定し、run 側の merge commit 前に必要な検証を行う。issue 処理をやり直すための新しい wave や、別の remediation・レビュー call は開始しない。
-
-cmoc は、merge 対象 commit の参照に加えて、封印済み report cut の path を agent へ渡す。agent は、そこから採用結果、対応する checkpoint、および判定根拠を読み取り専用で参照し、調整と検証の結果を報告する。封印済み artifact や issue commit は書き換えず、受理した調整を cmoc が run の後続履歴に残す。封印時 run HEAD と準備完了 run HEAD の対応は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「report cut」「publication completion record」に従う。正確な入力と指示文は、`{{cmoc-root}}/reference/src/oracle/request_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_request` へ委譲する。
-
-結果分類そのものの変更が必要な場合、または必要な検証で封印済み結果の維持を確認できない場合は、調整を確定せず、session への取り込みと publication を停止する。この停止を新しい issue result、`human_required`、または `incomplete` へ変換しない。run 側の統合・同期 commit がすでに作成されていても、session への取り込み前なら、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「join の失敗と復旧」に従って準備変更を取り消す。
-
-cmoc は、共通 join の同期まで完了した run tree に対して、保存した検証記録が適用でき、採用する全結果の判定根拠を維持できることを確認してから session へ取り込む。必要な検証は run 側の準備で完了し、最終 session tree との対応の確認を取り込み後に行う。
-
-本節の調整は、本書の「net 差分と機械的受理条件」「issue 単位の commit と rollback」が定める元の issue 処理の受理条件を変更しない。issue の `changed_paths` と issue commit は元の処理単位の記録として保持し、マージ調整に伴う付随編集の記録と区別する。
+封印後は issue 処理の新しい wave、remediation call、または結果分類のためのレビュー call を開始しない。元の issue 処理の差分受理条件と、共通 join の統合・検証・復旧条件は維持する。
 
 ### join 後の検証と記録
 
-session への取り込み成立後、publication に先立ち、issue commit と準備完了 run HEAD の到達可能性、マージ調整を含む変更 path、必要な機械生成物、および採用する全結果の判定根拠を検証する。最終取り込み結果である session commit と tree を特定し、その tree が準備完了時の run tree と一致すること、run 側で保存した検証記録をその tree に適用できることを確認する。publication 前の現在の session 状態についても、保存済み記録から全採用結果の有効性を確認する。検証済みの修正の効果と採用結果の有効性、および publication の整合性を確認できなければ、join 後検査失敗とする。
+session への取り込み成立後、issue commit と準備完了 run HEAD の到達可能性、issue 処理の差分・checkpoint・call log の hash、および共通 join が記録した session commit と tree の対応を機械的に検査する。準備完了時の run tree と取り込み成立時の session tree は一致しなければならない。対応する記録は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「publication completion record」に従って保存する。
 
-この検証段階では新しい Codex call、修正、または refactor state 同期を開始しない。停止後の現在の session 状態に対する publication の再開条件は、本書の「join 後の publication failure」に従い、最終取り込み結果と区別する。終了時の primary report の重要事項確認は、本書の「invocation report」で別に扱う。
+その後、cmoc は公開前の session 状態と、全採用結果の保存済み判定入力を照合する。対象には `fixed` だけでなく全結果分類を含め、対象ファイル・依存設定・検査条件など、判定に必要な入力の変化を検出する。競合解消 agent による追加差分と、通常の自動マージによる変化を同じ基準で扱う。refactor state など、判定に使わない機械生成物だけの変化で失効させない。すべての入力が有効なら publication へ進み、有効性を確認できない入力変化があれば本書の「再確認待ち」に従う。
 
-封印済み artifact の hash 整合性は、その artifact が変わっていないことの検査である。最終取り込み結果が封印時 run HEAD と同一の内容であることや、採用結果の意味的な妥当性の証明として扱ってはならない。調整と検証の記録は、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「publication completion record」に従って最終取り込み結果と結び付ける。
+artifact の hash 一致は記録の不変性を示す検査であり、マージ調整後の判定の妥当性を証明するものではない。競合解消 agent の完了報告を、判定入力の照合の代わりに使用してはならない。この段階で新しい Codex call、修正、または refactor state 同期は開始しない。
 
-初回の正常な finalization では、publication と workload 固有 cleanup が完了するまで `run.state=joinable` と隔離資源を維持する。その後の結果保存、`ready` 初期化、および隔離資源 cleanup は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。未解消競合、差分不整合、結果分類変更の必要、または join 後検査失敗では `run.state=error` とし、publication と observation cleanup を行わない。run branch、run worktree、issue commit、raw observation、直前の current pointer、封印済み artifact、および診断情報を保持する。取り込み確定後の停止は本書の「join 後の publication failure」に従う。
+未解消競合、差分・hash の不整合、または検査・保存の失敗は invocation error とする。取り込み前の失敗は共通 join の復旧条件に従い、取り込み後の失敗は本書の「join 後の publication failure」に従う。判定入力の変化を検出して再確認待ちへ移すこと自体は、検査失敗にしない。
+
+### 再確認待ち
+
+採用結果の判定入力が変わった場合、cmoc は今回の report cut 全体を `recheck_pending` として扱う。取り込み済みのコードと過去の判定記録を保持し、同じ invocation 内での再確認・再修正・判定更新は行わない。再確認待ちは「現在の内容では判定を確認できていない」ことを意味し、問題の存在や修正の失敗を断定しない。
+
+この経路では、current pointer、active、history、および入力の消費状態を更新しない。raw observation と直前の active record を次回 report の入力として保持する。公開の準備中に作成した未公開の generation・history・report は、今回の manifest が特定するものだけ回収する。封印済み report cut と checkpoint、および対象 issue を含む未公開での終了記録は保持する。
+
+再確認待ちの選択と未完了の終了処理を durable に記録してから、invocation report の保存、`ready` 初期化、および使用済み run 資源の cleanup を完了する。終了処理が完了した cut は publication recovery の対象から除外する。次の新しい `cmoc feedback report` は現在の session tree、pending observation、および直前の active record から全候補を再確認する。保留した checkpoint を公開の許可として再利用しない。
+
+終了処理中に失敗した場合は、`run.state=error` と復旧記録を保持し、本書の「join 後の publication failure」に従って残る処理だけを再開する。一度再確認待ちとした cut を、同じ run の recovery で公開へ戻してはならない。再確認待ちの終了処理と次の新規 report は、別の invocation とする。
 
 ## publication
 
@@ -260,21 +262,22 @@ issue commit ID、変更 path、agent verification、および cmoc の機械検
 
 ### `incomplete`
 
-採用する有効な結果に `inconclusive` が 1 件以上ある場合も、残りの issue の処理と必要な再確認を経て wave loop を自然完了し、安全な issue commit を自動 join する。自動 join と join 後検査が成功した後に、`incomplete` 診断 report と、採用結果を反映した active・history・入力消費記録を publication する。`incomplete` を理由に直前の正常 publication へ current を戻したり、更新を凍結したりしない。
+採用する有効な結果に `inconclusive` が 1 件以上ある場合も、残りの issue の処理と必要な再確認を経て wave loop を自然完了し、安全な issue commit を自動 join する。自動 join と join 後検査が成功し、全判定入力の有効性を確認した後に、`incomplete` 診断 report と、採用結果を反映した active・history・入力消費記録を publication する。`incomplete` を理由に直前の正常 publication へ current を戻したり、更新を凍結したりしない。
 
 validation 失敗、agent call failure、Structured Output 受理失敗、差分検査失敗、commit 失敗、state corruption、merge 失敗、または durable report 保存失敗を `incomplete` として扱ってはならない。
 
 ### join 後の publication failure
 
-自然完了経路で session への取り込みが成立した後に、post-join、検証、publication、結果保存、state 更新、または cleanup に失敗した場合は、`run.state=error` とする。取り込み直後で join 結果の保存前に停止した場合も、共通 join の復旧情報から成立を確認できればこの経路とする。取り込み済みの session commit と publication point を巻き戻さず、未 cleanup の raw observation、current pointer、および recovery に必要な run artifact と診断を保持する。共通 join の確定済み処理を重複適用せず、未完了の後処理を特定して再開する。重要事項確認の未完了には、本書の「invocation report」が参照する共通規約の例外を適用する。
+自然完了経路で session への取り込みが成立した後に、post-join、検証、publication、再確認待ちの終了処理、結果保存、state 更新、または cleanup に失敗した場合は、`run.state=error` とする。取り込み直後で join 結果の保存前に停止した場合も、共通 join の復旧情報から成立を確認できればこの経路とする。取り込み済みの session commit と publication point を巻き戻さず、未 cleanup の raw observation、current pointer、および recovery に必要な run artifact と診断を保持する。共通 join の確定済み処理を重複適用せず、未完了の後処理を特定して再開する。重要事項確認の未完了には、本書の「invocation report」が参照する共通規約の例外を適用する。
 
 publication point 前後の state と入力の扱いは、`{{cmoc-root}}/spec/app_spec/feedback_state.md` の「最新状態の atomic publication」に従う。確定後の cleanup 失敗では、新しい current が成立したことを invocation report に明示し、処理済み入力を pending として再取り込みしない。
 
-次回の `cmoc feedback report` は、共通 join の復旧情報・Git と immutable artifact から同じ run の取り込み成立、publication の成立有無、および未完了処理を一意に特定できる場合に限り、次の条件で idempotent に再開する。run 側の準備完了だけを取り込み成立とみなさず、取り込み済みなら再同期・再 merge は行わない。
+次回の `cmoc feedback report` は、共通 join の復旧情報・Git と immutable artifact から同じ run の取り込み成立、publication の成立有無、再確認待ちの選択、および未完了処理を一意に特定できる場合に限り、次の条件で idempotent に再開する。run 側の準備完了だけを取り込み成立とみなさず、取り込み済みなら再同期・再 merge は行わない。
 
 | 確定状況 | 再開条件と処理 |
 |---|---|
-| publication point 前 | 取り込み成立時の tree と現在の session 状態を確認し、保存済みの判定根拠と準備時の検証記録から封印済み結果をそのまま採用できる場合だけ、同じ publication を再開する。同期や追加修正でこの条件を満たそうとしてはならない。 |
+| publication point 前 | 取り込み記録を確認し、現在の session 状態と全結果の判定入力を機械的に照合する。有効なら同じ publication を再開し、入力が変わっていれば再確認待ちの終了処理へ進む。同期・追加修正・再判定は行わない。 |
+| 再確認待ちの選択後 | 未公開生成物の回収、入力保持と終了記録の保存、report 保存、state 初期化、および run 資源 cleanup の未完了分だけを再開する。公開や新規 run は開始しない。 |
 | publication point 後 | 確定済み generation・history・入力消費記録と固定済み cleanup 対象の整合性を検証し、残った後処理だけを再開する。確定済み判定の現在性を再評価して publication をやり直さない。 |
 
 publication point 後に外部状態や session tree が変わっていても、最後に確定した状態を保持して後処理を完了する。変化後の判定は次の新規 report で行う。run の隔離資源を削除する条件は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「使用済み branch と worktree の cleanup」に従う。
@@ -285,7 +288,7 @@ publication point 後に外部状態や session tree が変わっていても、
 
 再開した実行のサブコマンドログには、その実行 ID、report 保存先を固定した実行 ID、feedback run と report cut の識別情報、および引き継ぐ report の path と保存状況を対応付けて記録する。対応付けには、report cut に封印した実行 ID と参照を使用する。
 
-未 publication の結果を採用するために、封印済みの結果分類の変更、新たな意味判断のための agent call、または追加修正を必要とする停止 run は、この recovery の対象外とする。run 側の準備で許されたマージ調整を、取り込み後にも継続できるとは扱わない。封印済み artifact の改変や session 上の直接修正を、暗黙の救済手段にしてはならない。
+recovery で判定入力の変化を検出した場合も、封印済みの結果分類を書き換えず再確認待ちへ移す。artifact の破損や取り込み成立の不明を、再確認待ちへ変換してはならない。
 
 手動 close は、この run の入力・採用結果を書き換える recovery 手段にはしない。close の開始条件は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_close.md` の「事前条件」に従う。
 
@@ -301,7 +304,7 @@ doctor preprocess または共通開始処理の途中では、その準備が�
 
 成立済み run は、整合化後に `run.state=joinable` とし、同じ invocation 内で本書の「publication を行わない feedback join」を実行する。中断後の新しい call と検証は、この join に必要な競合解消と検証、および共通中断契約が定める primary report の重要事項確認に限る。新しい report cut を封印したり、issue 処理を再開したりしない。
 
-自然完了経路では report cut の封印を開始する前に中断要求を確認し、受理済みなら中断経路へ移る。封印の開始から自動 join・join 後検査・publication・cleanup までは、不可分な finalization とする。中断経路でも、整合化後の自動 join 開始から必要な後処理・cleanup までは不可分な finalization とし、途中の停止要求は整合した境界まで保留する。
+自然完了経路では report cut の封印を開始する前に中断要求を確認し、受理済みなら中断経路へ移る。封印の開始から自動 join・join 後検査・公開または再確認待ちの終了処理・cleanup までは、不可分な finalization とする。中断経路でも、整合化後の自動 join 開始から必要な後処理・cleanup までは不可分な finalization とし、途中の停止要求は整合した境界まで保留する。
 
 finalization 中の process interruption、取消、または操作失敗は、正常な `user_interruption` へ変換しない。自然完了経路で取り込み済みなら本書の「join 後の publication failure」、それ以外は `{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「join の失敗と復旧」に従う。
 
@@ -333,7 +336,7 @@ quota と一時障害の分類・回復待ち・再開は、`{{cmoc-root}}/spec/
 
 実行 ID と、本節の各 report の共通表示契約は、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」に従う。最外側の実行結果を示す invocation report を primary report とし、publication で current pointer に結び付ける immutable な report とは役割を分ける。共通掲載内容の実行記録は、以下の issue 一覧とは区別する。
 
-自動 join の競合解消については、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める判断、付随編集、検証、および未解消理由を実行記録に含める。封印済み結果への影響と検証結果、publication completion record との対応、または publication を停止した理由も判別可能にする。自動修正済み issue を人間向け issue 一覧に再掲載するためには用いない。
+自動 join の競合解消については、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める判断、付随編集、検証、および未解消理由を実行記録に含める。判定入力の照合結果、publication completion record との対応、および再確認待ちまたは invocation error によって公開しなかった理由も判別可能にする。自動修正済み issue を人間向け issue 一覧に再掲載するためには用いない。
 
 ### publication report と終了時の記録
 
@@ -354,6 +357,8 @@ current evidence には、人間が report から確認できる path、subject�
 generation ID、確定日時と作成元、入力の確認境界、および history の保存先・該当履歴への参照を示す。未取り込みの観測や確定後の変化まで確認済みとは表示しない。旧判定や終了案件は現在の一覧へ混在させず、経緯は history から確認できるようにする。
 
 ### 再開時の report と実行記録
+
+再確認待ちの終了処理を再開する場合は、今回の invocation report に保持した cut と元の実行を対応付ける。公開を保留した report の再利用や新規 publication は行わない。
 
 publication または cleanup の再開で引き継ぐ正常 report と `incomplete` 診断 report の実行情報は、report cut で保存先を固定した実行に帰属させる。再開した実行の ID に付け替えず、掲載する個々の呼び出しや observation も実際に属する実行に対応付ける。
 
@@ -404,7 +409,7 @@ publication report の保存段階では、未保存なら固定済み target �
 
 - command、生成日時、repo root、session branch、および terminal result
 - run kind、run branch、run fork commit、run worktree、state before、および state after
-- 自然完了またはその recovery で確定した場合は、publication の `result: ok | attention | incomplete`
+- 自然完了またはその recovery で公開した場合は `result: ok | attention | incomplete`、公開を保留して終了した場合は `result: recheck_pending`
 
 詳細結果には、次の内容を含める。
 
@@ -417,6 +422,8 @@ invocation report は feedback publication または active state の一部で�
 
 上記の確定結果を掲載した機械生成版について、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従う確認工程を行う。確認未完了と必要な保存・終了処理の失敗は、同文書の「確認結果と終了結果の分離」に従って区別する。recovery でも今回の invocation report を確認し、引き継いだ publication artifact の再判定・追記・上書きは行わない。重要事項の確認状態と、publication の `result: incomplete` は別の意味として表示する。
 
+`recheck_pending` では、成果の取り込み、公開の保留、再確認する issue、保持した入力・checkpoint、および次回の新規 report による再確認を明示する。結果は invocation report と terminal result に示し、publication report や現在の案件一覧を新しく作らない。
+
 `user_interruption` では publication 未実施と保持した観測・checkpoint を明記する。自動 join に成功した場合は、成果の取り込みと最新状態の未 publication を区別し、次回 report で再確認することを示す。run 成立前なら、自動 join は未実行とする。
 
 `error` では、今回完了できなかった処理と、最後に確定した generation・report を区別して示す。publication 前に失敗した場合は、今回の最新状態の確認・確定が成立していないことを示す。publication 後に失敗した場合は、成立済みの更新と残った処理を示す。未確定の結果を `incomplete` や解決済みへ変換しない。
@@ -426,6 +433,7 @@ invocation report は feedback publication または active state の一部で�
 以下は本命処理と必要な確定・保存処理の結果を表す。重要事項確認自体の未完了には、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「確認結果と終了結果の分離」の例外を適用する。
 
 - `ok`、`attention`、`incomplete` は、自然完了の自動 join・publication と必要な終了処理まで成功した場合に終了コード 0 とする。正常なユーザー中断も、成立済み run の自動 join と必要な終了処理を完了した場合、または run 成立前に整合して終了した場合に 0 とする。
+- `recheck_pending` は、取り込み、入力保持と終了記録の保存、invocation report の保存、state 初期化、および run 資源 cleanup を完了した場合に終了コード 0 とする。最新状態の公開が成立したことは意味しない。
 - validation 失敗、agent call failure、Structured Output 受理失敗、差分検査失敗、commit 失敗、state corruption、merge 失敗、required recovery 失敗、および durable report・publication・cleanup の失敗は終了コード 1 とする。
 
 終了コードは、今回の invocation が利用可能な終端結果を確定できたかを表す。直前の最新状態が残っていること、または一般的なエラー説明を出力できたことだけでは、今回の invocation が report result を確定したとはみなさない。

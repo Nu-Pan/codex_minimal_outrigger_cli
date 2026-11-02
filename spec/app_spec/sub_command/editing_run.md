@@ -225,7 +225,7 @@ join の事前検査で停止した場合は、取り込みを開始せず、既
 
 active workload が `feedback_report` の場合は、abandon する commit に依存する `fixed` result を publication 可能な state から除外する。raw observation と直前の current pointer を保持し、破棄済み修正を適用済みとして扱ってはならない。
 
-封印済み report cut を持つ自動 join 済み `feedback_report` は、`cmoc run abandon` の対象にしない。publication または cleanup が未完了であれば、`cmoc feedback report` recovery を要求する。publication を行わない中断経路の失敗では、共通の「join の失敗と復旧」に従う。
+封印済み report cut を持つ自動 join 済み `feedback_report` は、`cmoc run abandon` の対象にしない。公開・再確認待ちの終了処理または cleanup が未完了であれば、`cmoc feedback report` recovery を要求する。publication を行わない中断経路の失敗では、共通の「join の失敗と復旧」に従う。
 
 ## report と terminal result
 

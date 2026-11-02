@@ -1,9 +1,10 @@
-"""Feedback publication 後の cleanup と明示 join/abandon の境界を扱う。
+"""Feedback の公開・再確認待ちの終了処理と明示 join/abandon の境界を扱う。
 
 根拠: {{work-root}}/spec/app_spec/feedback_state.md の
 「最新状態の atomic publication」と「run lifecycle との整合」。
 """
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,11 @@ from cmoc_runtime import (
     require_clean_worktree,
     write_state,
 )
-from commons.runtime_feedback_run_state import new_run_identity, read_run_artifact
+from commons.runtime_feedback_run_state import (
+    new_run_identity,
+    read_run_artifact,
+    unpublished_join_record,
+)
 from commons.runtime_feedback_state import (
     _durable_unlink,
     _read_canonical_object,
@@ -26,6 +31,7 @@ from commons.runtime_feedback_state import (
     cleanup_published_report,
     current_pointer_path,
     discard_report_cut,
+    discard_staged_publication,
     feedback_writer_lock,
     load_report_cut,
     recover_report_cut_checkpoint_references,
@@ -62,11 +68,12 @@ def finish_feedback_run(
     """work artifact を削除する前に最小の recovery journal を durable 保存する。"""
     from .remediation import _failure
 
-    if result.primary_report is None:
+    if result.primary_report is None and result.result != "recheck_pending":
         raise _failure("feedback finalization に durable report がありません。")
     completion = read_run_artifact(context.repo, manifest["run"]["completion"])
     merged = read_run_artifact(context.repo, manifest["run"]["merged"])
     path = feedback_root(context.repo) / "finalization.json"
+    pointer_path = current_pointer_path(context.repo)
     # journal には pointer だけを固定し、参照先の検証は lifecycle lock 内で一度行う。
     journal = {
         "schema_version": 1,
@@ -74,20 +81,29 @@ def finish_feedback_run(
         "report_execution_id": manifest["run"]["targets"]["execution_id"],
         "identity": manifest["run"]["identity"],
         "report_cut_id": manifest["report_cut_id"],
-        "report": artifact_reference(context.repo, result.primary_report),
-        "current": _read_canonical_object(
-            current_pointer_path(context.repo), "feedback current pointer"
+        "report": (
+            artifact_reference(context.repo, result.primary_report)
+            if result.primary_report is not None
+            else None
+        ),
+        "current": (
+            _read_canonical_object(pointer_path, "feedback current pointer")
+            if pointer_path.exists() or pointer_path.is_symlink()
+            else None
         ),
         "completion": completion,
         "merged": merged,
         "result": result.result,
+        "recheck_pending_issues": dict(result.details).get(
+            "recheck_pending_issues", []
+        ),
     }
     write_immutable_json(path, journal)
     return _finish_from_journal(context, journal, path)
 
 
 def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | None:
-    """publication 後の cleanup を同じ報告書と join tree から再開する。"""
+    """公開または再確認待ちの終了処理だけを再開し、新しい判定は開始しない。"""
     path = feedback_root(repo) / "finalization.json"
     if not path.exists() and not path.is_symlink():
         return None
@@ -112,7 +128,9 @@ def recover_finalization(repo: Path, session_branch: str) -> TerminalResult | No
                 feedback_run_id=journal["feedback_run_id"],
                 report_cut_id=journal["report_cut_id"],
                 report_execution_id=journal["report_execution_id"],
-                report_path=str(repo / journal["report"]["path"]),
+                report_path=(
+                    str(repo / journal["report"]["path"]) if journal["report"] else None
+                ),
                 publication_status="cleanup",
             )
         return _finish_from_journal(context, journal, path)
@@ -138,6 +156,7 @@ def _journal_context(
             "completion",
             "merged",
             "result",
+            "recheck_pending_issues",
         },
         path,
         "feedback finalization journal",
@@ -147,9 +166,17 @@ def _journal_context(
         or journal["schema_version"] != 1
         or not is_common_id(journal["feedback_run_id"], "fbr")
         or not is_common_id(journal["report_execution_id"], "exec")
-        or journal["result"] not in {"ok", "attention", "incomplete"}
+        or journal["result"] not in {"ok", "attention", "incomplete", "recheck_pending"}
     ):
         raise _failure("feedback finalization journal の version/result が不正です。")
+    pending = journal["recheck_pending_issues"]
+    if (
+        not isinstance(pending, list)
+        or any(not isinstance(item, str) for item in pending)
+        or pending != sorted(set(pending))
+        or bool(pending) != (journal["result"] == "recheck_pending")
+    ):
+        raise _failure("feedback finalization journal の再確認対象が不正です。")
     identity = _require_exact_fields(
         journal["identity"],
         set(EditingRunContext.__dataclass_fields__),
@@ -190,14 +217,16 @@ def _journal_context(
     return context, session
 
 
-def _finish_from_journal(
-    context: EditingRunContext, journal: dict[str, Any], path: Path
-) -> TerminalResult:
-    """raw/work cleanup、ready 遷移、隔離資源回収を idempotent に確定する。"""
+def _finalization_report_path(repo: Path, journal: dict[str, Any]) -> Path | None:
+    """公開済み report を検証し、再確認待ちには公開 report を割り当てない。"""
     from .remediation import _failure
 
-    # 呼び出し元の session を排他対象とし、journal は lock 内で最新状態と照合する。
-    repo = context.repo
+    if journal["result"] == "recheck_pending":
+        if journal["report"] is not None:
+            raise _failure(
+                "再確認待ちの feedback finalization に公開 report があります。"
+            )
+        return None
     report_reference = journal["report"]
     if not isinstance(report_reference, dict) or set(report_reference) != {
         "path",
@@ -222,11 +251,31 @@ def _finish_from_journal(
         or artifact_reference(repo, report_path) != report_reference
     ):
         raise _failure("feedback finalization report の path/hash が不正です。")
+    return report_path
+
+
+def _finish_from_journal(
+    context: EditingRunContext, journal: dict[str, Any], path: Path
+) -> TerminalResult:
+    """raw/work cleanup、ready 遷移、隔離資源回収を idempotent に確定する。"""
+    from .remediation import _failure
+    from .report import _recheck_pending_result, save_feedback_invocation_report
+
+    # 呼び出し元の session を排他対象とし、journal は lock 内で最新状態と照合する。
+    repo = context.repo
+    report_reference = journal["report"]
+    report_path = _finalization_report_path(repo, journal)
+    published = journal["result"] != "recheck_pending"
+    terminal = (
+        TerminalResult(result=journal["result"])
+        if published
+        else _recheck_pending_result(journal["recheck_pending_issues"])
+    )
     completion = journal["completion"]
     if (
         completion.get("report_cut_id") != journal["report_cut_id"]
         or completion.get("checks")
-        != {"reachability": True, "paths": True, "clean": True, "decision_basis": True}
+        != {"reachability": True, "paths": True, "clean": True}
         or journal["merged"].get("sealed") != completion.get("sealed")
     ):
         raise _failure("feedback finalization の join evidence が不正です。")
@@ -246,7 +295,7 @@ def _finish_from_journal(
             restore_run_error(context)
             update_primary_report_fields(
                 recovery_next_actions=(
-                    "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+                    "`cmoc feedback report` で未完了の公開・再確認待ちの終了処理または cleanup を再開してください。",
                 )
             )
 
@@ -265,33 +314,35 @@ def _finish_from_journal(
                     raise _failure(
                         "feedback finalization の run tree が変更されています。"
                     )
-            if (
-                state.current is None
-                or state.current["report_cut_id"] != journal["report_cut_id"]
-                or state.current["report_path"] != report_reference["path"]
-                or state.current["report_sha256"] != report_reference["sha256"]
-            ):
-                raise _failure("feedback publication point を確認できません。")
-            # 同じ排他区間で検証した cleanup manifest を再読・再検証しない。
-            manifest = state.cleanup_manifest
-            if manifest is None:
-                # cleanup 完了後も、別の未完了 cut を見逃さず identity を検査する。
-                work = load_report_cut(repo)
-                manifest = work[0] if work is not None else None
-            if manifest is not None:
+            if published:
                 if (
-                    manifest["report_cut_id"] != journal["report_cut_id"]
-                    or manifest["run"]["identity"] != journal["identity"]
+                    state.current is None
+                    or state.current["report_cut_id"] != journal["report_cut_id"]
+                    or state.current["report_path"] != report_reference["path"]
+                    or state.current["report_sha256"] != report_reference["sha256"]
                 ):
-                    raise _failure(
-                        "feedback finalization の cleanup 対象が一致しません。"
-                    )
-                phase = "publication cleanup"
-                update_primary_report_fields(feedback_stage=phase)
-                cleanup_published_report(repo, state)
+                    raise _failure("feedback publication point を確認できません。")
+                # 同じ排他区間で検証した cleanup manifest を再読・再検証しない。
+                manifest = state.cleanup_manifest
+                if manifest is None:
+                    # cleanup 完了後も、別の未完了 cut を見逃さず identity を検査する。
+                    work = load_report_cut(repo)
+                    manifest = work[0] if work is not None else None
+                if manifest is not None:
+                    if (
+                        manifest["report_cut_id"] != journal["report_cut_id"]
+                        or manifest["run"]["identity"] != journal["identity"]
+                    ):
+                        raise _failure(
+                            "feedback finalization の cleanup 対象が一致しません。"
+                        )
+                    phase = "publication cleanup"
+                    update_primary_report_fields(feedback_stage=phase)
+                    cleanup_published_report(repo, state)
+            else:
+                phase = "retain recheck inputs"
+                _retain_for_recheck(context, journal)
             # work artifact の cleanup と結果保存の後に state と隔離資源を回収する。
-            from .report import save_feedback_invocation_report
-
             update_primary_report_fields(
                 run_kind=context.kind,
                 session_branch=context.session_branch,
@@ -301,9 +352,13 @@ def _finish_from_journal(
                 run_worktree=context.run_worktree,
                 state_before=state_before,
                 state_after="joinable",
-                publication_established=True,
-                publication_report=str(report_path),
-                publication_result=journal["result"],
+                publication_established=published,
+                publication_report=str(report_path)
+                if report_path is not None
+                else None,
+                publication_result=journal["result"] if published else None,
+                recheck_pending_issues=journal["recheck_pending_issues"],
+                processing_status="completed" if published else "recheck_pending",
                 feedback_run_id=journal["feedback_run_id"],
                 report_cut_id=journal["report_cut_id"],
                 publication_execution_id=journal["report_execution_id"],
@@ -331,7 +386,7 @@ def _finish_from_journal(
             invocation_report = save_feedback_invocation_report(
                 repo,
                 "natural_completion",
-                TerminalResult(result=journal["result"]),
+                terminal,
                 publication_report=report_path,
             )
             _, _, session = load_state_for_branch(repo, context.session_branch)
@@ -367,7 +422,7 @@ def _finish_from_journal(
             invocation_report = save_feedback_invocation_report(
                 repo,
                 "natural_completion",
-                TerminalResult(result=journal["result"], warnings=tuple(warnings)),
+                replace(terminal, warnings=tuple(warnings)),
                 publication_report=report_path,
             )
 
@@ -394,7 +449,7 @@ def _finish_from_journal(
                 failure_stage=phase,
                 remaining_resources=remaining_run_resources(context),
                 recovery_next_actions=(
-                    "`cmoc feedback report` で未完了の publication または cleanup を再開してください。",
+                    "`cmoc feedback report` で未完了の公開・再確認待ちの終了処理または cleanup を再開してください。",
                 ),
             )
             raise
@@ -410,7 +465,7 @@ def _finish_from_journal(
             feedback_run_id=journal["feedback_run_id"],
             report_cut_id=journal["report_cut_id"],
             report_execution_id=journal["report_execution_id"],
-            report_path=str(report_path),
+            report_path=str(report_path) if report_path is not None else None,
             state_after="ready",
             cleanup=cleanup,
             result=journal["result"],
@@ -419,6 +474,7 @@ def _finish_from_journal(
         primary_report=invocation_report,
         primary_report_role="feedback invocation report",
         result=journal["result"],
+        next_actions=terminal.next_actions,
         details=(
             ("run_kind", "feedback_report"),
             ("run_join_commit", journal["merged"]["run_join_commit"]),
@@ -427,6 +483,82 @@ def _finish_from_journal(
             ("cleanup", cleanup),
         ),
         warnings=tuple(warnings),
+    )
+
+
+def _retain_for_recheck(context: EditingRunContext, journal: dict[str, Any]) -> None:
+    """公開を保留した入力を残し、この run を次回の新規処理から区別する。"""
+    from .remediation import _failure, _validate_context
+
+    directory = feedback_root(context.repo) / "work" / journal["report_cut_id"]
+    record = load_join_record(context.repo, context.session_id)
+    if (
+        record is None
+        or not confirm_import(record)
+        or record.target_commit != journal["completion"]["session_commit"]
+        or record.prepared_head != journal["completion"]["run_head"]
+    ):
+        raise _failure("feedback 再確認待ちの取り込み結果を確認できません。")
+    receipt = unpublished_join_record(context.repo, directory)
+    if receipt is not None:
+        if (
+            receipt["identity"] != journal["identity"]
+            or receipt["session_commit"] != journal["completion"]["session_commit"]
+            or receipt["recheck_pending_issues"] != journal["recheck_pending_issues"]
+        ):
+            raise _failure("feedback 再確認待ちの終了記録が一致しません。")
+        return
+    work = load_report_cut(context.repo)
+    if work is None or work[1] != directory / "manifest.json":
+        raise _failure("feedback 再確認待ちの入力を確認できません。")
+    manifest, path = work
+    _validate_context(context, manifest)
+    if (
+        manifest["processing"]["status"] != "recheck_pending"
+        or read_run_artifact(context.repo, manifest["run"]["completion"])
+        != journal["completion"]
+        or sorted(
+            {
+                item["candidate_id"]
+                for item in manifest["processing"]["remediation_checkpoints"]
+            }
+        )
+        != journal["recheck_pending_issues"]
+    ):
+        raise _failure("feedback 再確認待ちの入力と終了記録が一致しません。")
+    # pointer 切替前に保存していた生成物だけを回収する。raw と旧 active は消費しない。
+    discard_staged_publication(context.repo, manifest, path)
+    _record_unpublished_join(
+        context,
+        manifest,
+        path,
+        journal["completion"]["session_commit"],
+        journal["recheck_pending_issues"],
+    )
+
+
+def _record_unpublished_join(
+    context: EditingRunContext,
+    manifest: dict[str, Any],
+    path: Path,
+    session_commit: str,
+    recheck_pending_issues: list[str],
+) -> None:
+    """未公開のまま取り込んだ run と再確認対象を immutable な記録に残す。"""
+    result_path = path.parent / "join_result.json"
+    write_immutable_json(
+        result_path,
+        {
+            "schema_version": 1,
+            "publication": False,
+            "identity": manifest["run"]["identity"],
+            "session_commit": session_commit,
+            "manifest": artifact_reference(context.repo, path),
+            "recheck_pending_issues": recheck_pending_issues,
+        },
+    )
+    update_primary_report_fields(
+        publication_established=False, feedback_work_state=str(result_path)
     )
 
 
@@ -441,7 +573,7 @@ def require_manual_feedback_run(context: EditingRunContext) -> None:
         raise _failure(
             "feedback run は自動 join 済みです。",
             [
-                "`cmoc feedback report` で publication または cleanup を再開してください。"
+                "`cmoc feedback report` で公開・再確認待ちの終了処理または cleanup を再開してください。"
             ],
         )
     work = load_report_cut(context.repo)
@@ -458,7 +590,7 @@ def require_manual_feedback_run(context: EditingRunContext) -> None:
         raise _failure(
             "feedback run は自動 join 済みです。",
             [
-                "`cmoc feedback report` で publication または cleanup を再開してください。"
+                "`cmoc feedback report` で公開・再確認待ちの終了処理または cleanup を再開してください。"
             ],
         )
 
@@ -478,19 +610,8 @@ def finish_manual_feedback_run(context: EditingRunContext, operation: str) -> No
         recover_report_cut_checkpoint_references(context.repo, manifest, path)
         if operation == "joined":
             # 次回の新規 report からは除外し、checkpoint の再利用で publication しない。
-            result_path = path.parent / "join_result.json"
-            write_immutable_json(
-                result_path,
-                {
-                    "schema_version": 1,
-                    "publication": False,
-                    "identity": manifest["run"]["identity"],
-                    "session_commit": head_commit(context.session_worktree),
-                    "manifest": artifact_reference(context.repo, path),
-                },
-            )
-            update_primary_report_fields(
-                publication_established=False, feedback_work_state=str(result_path)
+            _record_unpublished_join(
+                context, manifest, path, head_commit(context.session_worktree), []
             )
             return
         logger = current_subcommand_logger()

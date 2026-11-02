@@ -210,10 +210,6 @@ def feedback_run(tmp_path, monkeypatch, feedback_remediation_request_stub):
         record.imported = True
         record.resolution = {
             "agent_status": "not_needed",
-            "prepared_feedback_inputs_sha256": decision.state_hash(
-                decision.worktree_inputs(worktree)
-            ),
-            "feedback_cut": harness.manifest["run"]["sealed"],
         }
 
     monkeypatch.setattr(remediation, "_seal", seal)
@@ -337,7 +333,6 @@ def test_run_artifact_validation_reads_once_and_checks_cleanup(
     for source in h.context.run_worktree.iterdir():
         (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
     monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
-    monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
     remediation._record_merge(h.context, h.manifest, None)
     remediation._complete_join(h.context, h.manifest)
     paths = {
@@ -919,17 +914,14 @@ def test_later_dependency_change_rechecks_every_result(feedback_run, monkeypatch
     read_checkpoint = Mock(wraps=remediation.read_run_artifact)
     validate_checkpoint = Mock(wraps=remediation.validate_remediation_checkpoint)
     confirm_import = Mock(wraps=remediation.confirm_import)
-    redundant_tree_diff = Mock(side_effect=AssertionError("trees already confirmed"))
     with monkeypatch.context() as audit_patch:
         audit_patch.setattr(remediation, "read_run_artifact", read_checkpoint)
         audit_patch.setattr(
             remediation, "validate_remediation_checkpoint", validate_checkpoint
         )
         audit_patch.setattr(remediation, "confirm_import", confirm_import)
-        audit_patch.setattr(remediation, "tree_changes", redundant_tree_diff)
         result = _join_and_publish(h, monkeypatch)
         confirm_import.assert_called_once_with(h.join)
-        redundant_tree_diff.assert_not_called()
         # 共通照合が不一致を返す場合は、保存済み結果だけで publication を進めない。
         # 実 tree・親・到達可能性の拒否条件は test_runtime_run_join_state.py で検査する。
         confirm_import.return_value = False
@@ -1187,14 +1179,23 @@ def test_checkpoint_reference_recovery_keeps_rechecks(feedback_run, monkeypatch)
 
 
 @pytest.mark.parametrize(
-    "status", ["already_resolved", "not_actionable", "human_required", "inconclusive"]
+    "status",
+    ["fixed", "already_resolved", "not_actionable", "human_required", "inconclusive"],
 )
-def test_sealed_result_cannot_publish_or_recover_with_changed_basis(
+def test_sealed_result_defers_publication_and_recovery_with_changed_basis(
     feedback_run, monkeypatch, status
 ):
     h = feedback_run
     identity = _add_candidate(h, "a")
-    h.handler = lambda _issue: _remediation_output(identity, status)
+
+    def handle(_issue):
+        result = _remediation_output(identity, status)
+        if status == "fixed":
+            (h.context.run_worktree / "README.md").write_text("fixed\n")
+            result["result"]["changed_paths"] = ["README.md"]
+        return result
+
+    h.handler = handle
     candidates, aggregates = _run(h)
     # 封印時の分類には根拠検証で読んだ checkpoint を使い、再読しない。
     read_checkpoint = Mock(wraps=remediation.read_run_artifact)
@@ -1221,8 +1222,8 @@ def test_sealed_result_cannot_publish_or_recover_with_changed_basis(
         (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
     (h.context.session_worktree / "dependency.conf").write_text("post-join change\n")
     monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
-    with pytest.raises(CmocError, match="最終状態"):
-        remediation._complete_join(h.context, h.manifest)
+    remediation._record_merge(h.context, h.manifest, None)
+    remediation._complete_join(h.context, h.manifest)
     monkeypatch.setattr(
         remediation,
         "sync_refactor_state",
@@ -1230,54 +1231,15 @@ def test_sealed_result_cannot_publish_or_recover_with_changed_basis(
             "invalid sealed results must not be repaired during recovery"
         ),
     )
-    with pytest.raises(CmocError, match="最終状態"):
-        remediation._recover_join(h.context, h.manifest)
-    assert h.manifest["run"]["completion"] is None
+    remediation._recover_join(h.context, h.manifest)
+    result = remediation._publish(h.context, h.manifest, h.path, h.state)
+    assert result.result == "recheck_pending"
+    assert dict(result.details)["recheck_pending_issues"] == [identity]
+    assert h.manifest["run"]["completion"] is not None
     assert h.manifest["publication"] is None
     assert seal_path.read_bytes() == sealed_bytes
     assert len(h.calls) == 1
     assert artifact_reference(h.context.repo, seal_path) == h.manifest["run"]["sealed"]
-
-
-def test_verified_merge_adjustment_keeps_sealed_result_without_run_tree_equality(
-    feedback_run, monkeypatch
-):
-    """agent 検証済み調整なら封印結果と最終 tree の対応を別に記録する。"""
-    h = feedback_run
-    identity = _add_candidate(h, "a")
-    h.handler = lambda _issue: _remediation_output(identity, "already_resolved")
-    candidates, aggregates = _run(h)
-    remediation._seal(h.context, h.manifest, candidates, aggregates)
-    seal = read_json_object(h.context.repo / h.manifest["run"]["sealed"]["path"])
-    for source in h.context.run_worktree.iterdir():
-        (h.context.session_worktree / source.name).write_bytes(source.read_bytes())
-    (h.context.session_worktree / "dependency.conf").write_text("joined adjustment\n")
-    log_path = h.context.repo / h.manifest["run"]["invocation_log"]
-    log_path.write_text(json.dumps({"event": "agent_verification"}) + "\n")
-    (h.context.run_worktree / "dependency.conf").write_text("joined adjustment\n")
-    h.join.resolution = {
-        "agent_status": "resolved",
-        "agent_report": "merge_resolution: resolved\n検証: 採用結果を維持。",
-        "call_log": str(log_path),
-        "verified_commit": h.head,
-        "initial_conflicts": ["dependency.conf"],
-    }
-    monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
-    remediation._verify_prepared_feedback(h.context, h.manifest, h.join)
-    remediation._record_merge(h.context, h.manifest, "merge-commit", h.join.resolution)
-    monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
-    remediation._complete_join(h.context, h.manifest)
-    completion = read_json_object(
-        h.context.repo / h.manifest["run"]["completion"]["path"]
-    )
-
-    assert completion["merge_adjustment"]["agent_status"] == "resolved"
-    assert completion["final_decision_inputs_sha256"] != seal["decision_inputs_sha256"]
-    assert completion["merged"] == h.manifest["run"]["merged"]
-    assert completion["checks"]["decision_basis"] is True
-    log_path.write_text(json.dumps({"event": "tampered"}) + "\n")
-    with pytest.raises(CmocError, match="判定根拠"):
-        remediation._complete_join(h.context, h.manifest)
 
 
 def test_recovery_uses_prepared_join_record_without_new_calls(
@@ -1293,7 +1255,6 @@ def test_recovery_uses_prepared_join_record_without_new_calls(
     h.join.target_commit = h.join.join_commit = "c" * 40
     monkeypatch.setattr(remediation, "_is_ancestor", lambda *_args: True)
     monkeypatch.setattr(remediation, "head_commit", lambda _root: "b" * 40)
-    monkeypatch.setattr(remediation, "tree_changes", lambda *_args: [])
     calls_before = len(h.calls)
     remediation._recover_join(h.context, h.manifest)
     merged = read_json_object(h.context.repo / h.manifest["run"]["merged"]["path"])

@@ -120,7 +120,14 @@ def unpublished_join_record(repo: Path, directory: Path) -> dict[str, Any] | Non
     record = _read_canonical_object(path, "unpublished feedback join")
     _require_exact_fields(
         record,
-        {"schema_version", "publication", "identity", "session_commit", "manifest"},
+        {
+            "schema_version",
+            "publication",
+            "identity",
+            "session_commit",
+            "manifest",
+            "recheck_pending_issues",
+        },
         path,
         "unpublished feedback join",
     )
@@ -147,6 +154,19 @@ def unpublished_join_record(repo: Path, directory: Path) -> dict[str, Any] | Non
         or re.fullmatch(r"[0-9a-f]{40}", record["session_commit"]) is None
     ):
         raise _corruption("非 publication join の identity/commit が不正です。", path)
+    pending = record["recheck_pending_issues"]
+    candidates = {
+        item["candidate_id"]
+        for item in manifest["processing"]["remediation_checkpoints"]
+    }
+    if (
+        not isinstance(pending, list)
+        or any(not isinstance(item, str) for item in pending)
+        or pending != sorted(set(pending))
+        or (pending and set(pending) != candidates)
+        or bool(pending) != (manifest["processing"]["status"] == "recheck_pending")
+    ):
+        raise _corruption("非 publication join の再確認対象が不正です。", path)
     return record
 
 

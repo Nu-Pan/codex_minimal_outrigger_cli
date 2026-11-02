@@ -7,7 +7,7 @@
 本書は、join の準備・取り込み・復旧、および競合解消の共通判断基準と責務を所有する。両 join はこれらを一つの共通実装で扱い、コマンド側は対象の決定、固有の事前条件、state 更新、post-join、および資源回収を担当する。汎用 Git merge wrapper、新しい人間意図の決定、または元の workload の権限拡大を目的としない。コマンド固有の契約は次の正本に従う。
 
 - `{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「正常終了時の自動 join」「cmoc run join」：自動・明示 join の差分検査、編集範囲、取り込み、失敗時の復旧、post-join、および cleanup。
-- `{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「join 後の publication failure」：封印後の調整・検証と publication の境界。
+- `{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」「join 後の publication failure」：統合後の判定入力照合、公開・再確認待ち、および復旧の境界。
 - `{{cmoc-root}}/spec/app_spec/sub_command/session_join.md` の「git merge がコンフリクトした場合」「その他、コマンドが想定外に失敗した場合」：session の編集範囲と失敗時の扱い。
 
 ## 共通の準備・取り込み・復旧
@@ -86,12 +86,12 @@ run join の source は基準 session HEAD、target は差分検査と必要な�
 
 正確な agent 向け表現と構築を次へ委譲する。受信 agent が cmoc の内部仕様を読まなくても作業できる、自己完結した目的、入力、制約、判断基準、および報告事項を渡す。
 
-- `{{cmoc-root}}/reference/src/oracle/request_builder/common/conflict_resolution.py` の `build_merge_conflict_resolution_request`：統合結果が満たすべき規定、共通の objective、commit と封印済み report cut の参照入力、管理操作との境界、未解消時の扱い、完了判定を含む報告、prompt part の選択、および起動パラメータの構築。run/session の各 request builder は、コマンド固有の入力をこの共通 builder に渡す。
+- `{{cmoc-root}}/reference/src/oracle/request_builder/common/conflict_resolution.py` の `build_merge_conflict_resolution_request`：統合結果が満たすべき規定、共通の objective、commit の参照入力、管理操作との境界、未解消時の扱い、完了判定を含む報告、prompt part の選択、および起動パラメータの構築。run/session の各 request builder は、コマンド固有の入力をこの共通 builder に渡す。
 - `{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`：完全 prompt への共通規定と追加文面の統合。
 
 競合解消 call の設定選択は、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」に従う。provider、model、および reasoning effort の正確な設定値は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` へ委譲する。
 
-両 join の競合解消 call は、同じ `agent_call_kind`、編集範囲、prompt 構築、および起動設定を共用する。正確な値は共通 request builder を正本とする。コマンドごとの commit と worktree の対応、および feedback の封印済み report cut の有無は各 join の仕様に従う。競合解消専用の新しい Structured Output schema、解消作業を再開するための独立した永続 state、または解消内容を再審査する追加レビュー call は設けない。共通 join の復旧情報と検証記録は、`{{cmoc-root}}/spec/app_spec/session_state.md` の「join の復旧情報」に従う。最外側の primary report の重要事項確認は、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従い、競合解消の検証・受理とは分ける。
+両 join の競合解消 call は、同じ `agent_call_kind`、編集範囲、prompt 構築、および起動設定を共用する。正確な値は共通 request builder を正本とする。コマンドごとの commit と worktree の対応は各 join の仕様に従う。feedback の判定入力の照合と再確認待ちへの移行は cmoc の後処理が担当し、競合解消 call へ専用の入力・指示を追加しない。競合解消専用の新しい Structured Output schema、解消作業を再開するための独立した永続 state、または解消内容を再審査する追加レビュー call は設けない。共通 join の復旧情報と検証記録は、`{{cmoc-root}}/spec/app_spec/session_state.md` の「join の復旧情報」に従う。最外側の primary report の重要事項確認は、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「重要事項確認用 call」に従い、競合解消の検証・受理とは分ける。
 
 ## 確認ケース
 
@@ -104,8 +104,7 @@ run join の source は基準 session HEAD、target は差分検査と必要な�
 | 初期の競合一覧外に必要な修正がある | アクセス境界内の付随編集を行い、対象と必要性を報告する。一覧外という理由だけで拒否しない。 |
 | 内容の解消後に管理物の競合や staging 待ちの unmerged entry が残る | agent は内容と必要な検証に基づいて完了を判断し、残る管理処理を報告する。cmoc が管理物と staging を処理し、未解消競合を確認する。 |
 | run 開始後に session 側の decision・reference・spec または realization が commit 済みである | run 側で統合し、session 由来の変更を workload の想定外差分として拒否・revert しない。元の workload の禁止対象検査と、競合解消 agent のアクセス境界は維持する。 |
-| feedback 修正の内容が変わっても封印済みの結果を維持できる | 影響を受ける判定を run 側で検証し、封印済み artifact を変えず、準備完了成果と最終取り込み結果の対応を publication completion record に残す。 |
-| feedback のマージ調整中に、封印済み結果分類を変更する必要が判明する | session への取り込みと publication を停止し、封印済み artifact、観測データ、および recovery 用資源を保持する。 |
+| feedback の判定入力が統合で変わる | 共通の内容統合と取り込みを完了する。cmoc が入力変化を検出し、当該 report cut の公開を保留する。判定記録と入力を保持して次回 report の再確認へ回す。 |
 | decision・reference の要求が相反し、人間意図の選択が必要である | agent が推測で採否を決めず、未解消の理由を報告し、merge を成立させない。 |
 | 解消または必要な検証に失敗する | 両 join とも、安全な復旧を確認して準備変更だけを取り消し、元の成果と取り込み先の既存変更を保持する。取り込み確定後は結果を保持し、後処理だけを再開する。 |
 

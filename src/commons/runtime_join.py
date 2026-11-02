@@ -235,7 +235,6 @@ def prepare_and_import(
     *,
     warnings: list[str],
     codex_exec: CodexExecCallable | None = None,
-    verify_prepared: Callable[[], None] | None = None,
 ) -> None:
     """取り込み元で統合・検証し、その tree を取り込み先へ確定する。"""
     context = record.endpoints
@@ -301,8 +300,6 @@ def prepare_and_import(
         record.owned_source_head = record.prepared_head
         record.pending_action = None
         require_clean_worktree(source)
-        if verify_prepared is not None:
-            verify_prepared()
         record.save()
         # branch 切替や取り込みを開始する前に、停止後の復旧に必要な境界を保存する。
         if branch_head(context.repo, context.target_branch) != baseline:

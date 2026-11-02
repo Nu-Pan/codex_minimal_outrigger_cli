@@ -699,6 +699,16 @@ def feedback_invocation_lines(
         "- remediation checkpoint: "
         f"`{_field_status(fields.get('remediation_checkpoint_count'))}`",
         f"- 確定済み部分結果: `{_field_status(fields.get('partial_result_count'))}`",
+        *(
+            [
+                "## 再確認待ち",
+                "- 判定入力が変わったため、今回の結果は公開していません。修正の取り込みは保持しています。",
+                f"- 対象 issue: `{_field_status(fields['recheck_pending_issues'])}`",
+                "- 観測と直前の active record を保持し、次回 report で全候補を再確認します。",
+            ]
+            if fields.get("recheck_pending_issues")
+            else []
+        ),
         "## 維持した state と未実行処理",
         f"- 最後に確定した generation/report: `{_field_status(fields.get('last_confirmed_generation'))}`",
         f"- 今回の publication 成立: `{_field_status(fields.get('publication_established'))}`",
