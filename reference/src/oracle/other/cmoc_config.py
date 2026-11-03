@@ -143,12 +143,6 @@ class CmocConfigCodex:
                 model="gpt-6-astra",
                 reasoning_effort="max",
             ),
-            # NOTE oracle file に影響を与えるので品質が至上命題
-            "build_oracle_edit_request": CodexCallConfig(
-                model_provider="openai",
-                model="gpt-6-astra",
-                reasoning_effort="max",
-            ),
             # NOTE
             #   feedback report の整理作業が反復的かつ機械的検証不能なので、モデルがアホだと暴走しやすい
             #   怖すぎるので Astra しか選べない

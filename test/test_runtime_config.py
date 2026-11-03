@@ -51,7 +51,7 @@ def config_data():
 
 
 def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
-    """共有設定と7種の個別設定の正本既定値を JSON 変換で保持する。"""
+    """共有設定と6種の個別設定の正本既定値を JSON 変換で保持する。"""
     config = CmocConfig()
 
     assert config.num_parallel == 8
@@ -61,7 +61,6 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
         "build_merge_conflict_resolution_request",
         "build_tui_request",
         "build_decision_plan_request",
-        "build_oracle_edit_request",
         "build_feedback_issue_normalization_request",
         "build_primary_report_review_request",
         "build_quota_availability_probe_request",
