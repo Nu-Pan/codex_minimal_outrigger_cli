@@ -72,7 +72,7 @@ def build_merge_conflict_resolution_request(
     file_access_mode = FileAccessMode.SPEC_AND_REALIZATION_WRITE
     prompt = build_complete_prompt(
         task="""
-        {{source_commit}}` を `{{target_commit}}` にマージする際に発生した衝突を解決すること
+        `{{source_commit}}` を `{{target_commit}}` にマージする際に発生した衝突を解決すること
         """,
         scope="""
         - 両 commit の共通祖先以降の変更、進行中の競合状態を基本的な根拠とすること
