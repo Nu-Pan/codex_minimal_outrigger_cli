@@ -22,7 +22,7 @@ merge source、merge target、および `{{repository-default-branch}}` の扱�
 
 1. 対象 session と復旧情報を確認する。取り込み済みなら、doctor・準備・merge を繰り返さず後処理へ進む。
 2. 事前条件を確認し、準備前の session HEAD を記録する。doctor preprocess を呼び出し、refactor state の entry 同期は統合後まで遅延する。
-3. session branch 上で基準 home HEAD を merge し、必要な競合解消、検証、および管理物の同期を完了する。
+3. session branch 上で基準 home HEAD を merge し、競合解消後の機械検査、および管理物の同期を完了する。
 4. 同じ worktree を home branch へ切り替え、準備完了の session を取り込む。未取り込み commit がなければ共通の no-op 条件を適用する。
 5. `{{cmoc-session-state-file}}` の `session.state` を `joined` にする。
 6. 安全に削除できる場合のみ session branch を削除する。実際の state と cleanup 結果を primary report に保存した後、join の完了を記録する。
@@ -39,7 +39,7 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/s
 
 判断基準、agent と cmoc の責務、受理、および報告は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」に従う。準備 merge の source は基準 home HEAD、target は home 統合直前の session HEAD とする。
 
-内容の競合を解消できなかった場合は、home への取り込み、`session.state=joined` への更新、および session branch の削除を行わない。共通の復旧処理で準備を取り消し、本書の「その他、コマンドが想定外に失敗した場合」に従い停止する。
+競合解消 call または機械検査が失敗した場合は、home への取り込み、`session.state=joined` への更新、および session branch の削除を行わない。共通の復旧処理で準備を取り消し、本書の「その他、コマンドが想定外に失敗した場合」に従い停止する。
 
 ## 競合解消用の agent call
 
@@ -67,6 +67,6 @@ session 固有の入力対応は、`{{cmoc-root}}/reference/src/oracle/request_b
 - `natural_completion` と `error` のすべての終了経路で、session join 実行要約を primary report として保存する。doctor preprocess または事前条件で終了した場合も対象とする。
 - report は `{{repo-root}}/.cmoc/gu/report/session/join/{{execution-id}}.md` に保存する。
 - 実行情報には、command、生成日時、repo root、terminal result の共通分類、終了コード、session branch、home branch、準備前の session HEAD、基準 home HEAD、作成した merge commit、および session state の実行前後の値を含める。確定できなかった値は `null` とする。
-- 詳細結果には、事前検証、準備完了 session HEAD、取り込み成立の commit と tree、branch 切替、merge 結果、準備の取消と復旧結果、conflict path、conflict 解消用 agent call と確定した解消結果、state 遷移、session branch の cleanup、warning またはエラー、および Codex call log を含める。
-- 競合解消の内容は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」に従い、採用した判断、付随編集、検証結果、および未解消理由を含める。
+- 詳細結果には、事前検証、準備完了 session HEAD、取り込み成立の commit と tree、branch 切替、merge 結果、準備の取消と復旧結果、conflict path、conflict 解消用 agent call の実行状態と機械検査後の merge の確定、state 遷移、session branch の cleanup、warning またはエラー、および Codex call log を含める。
+- 競合解消 call の回答原文と cmoc が観測した付随編集・処理結果は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」に従って記録する。
 - 実行しなかった merge、conflict 解消、state 更新、または cleanup は未実行として扱う。確定していない解消結果を作ってはならない。

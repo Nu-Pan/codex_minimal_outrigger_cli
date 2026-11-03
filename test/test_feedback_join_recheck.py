@@ -48,7 +48,7 @@ def _change_session_after_seal(root, monkeypatch, *, conflict):
         assert "封印済み結果を維持する統合" not in parameter.prompt
         (parameter.agent_call_cwd / "README.md").write_text("integrated repair\n")
         result = _fake_result(root, {})
-        result.output_text = "merge_resolution: resolved\ncontent verified"
+        result.output_text = "content verified"
         return result
 
     monkeypatch.setattr(remediation, "_seal", change)

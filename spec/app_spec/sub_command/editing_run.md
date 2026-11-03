@@ -128,7 +128,7 @@ workload または join の停止失敗後は、書き込み得る process の�
 |---|---|
 | 統合前 run HEAD | join 準備による変更を加える前の、元の workload の確定済み成果。差分検査の終点と、取り込み前の rollback の基準。 |
 | 基準 session HEAD | その回の準備で run へ統合する、commit 済みの session HEAD。最終取り込みの前提。 |
-| 準備完了 run HEAD | session の統合、競合解消、必要な検証、および refactor state 同期を完了して確定した run HEAD。session へ取り込む成果。 |
+| 準備完了 run HEAD | session の統合、競合解消後の機械検査、および refactor state 同期を完了して確定した run HEAD。session へ取り込む成果。 |
 
 基準と処理結果の永続化は、`{{cmoc-root}}/spec/app_spec/session_state.md` の「join の復旧情報」に従う。`run.fork_commit` はこれらの HEAD で置き換えない。
 
@@ -139,7 +139,7 @@ workload または join の停止失敗後は、書き込み得る process の�
 1. 既存の復旧情報を照合し、取り込み済みなら準備を繰り返さず後処理へ進む。未取り込みなら残る準備を安全に復旧する。
 2. 元の確定済み成果を統合前 run HEAD として記録する。join 前の doctor が run に管理更新を加える場合も、その更新より先に記録し、再試行では前回の統合前 run HEAD を保持する。
 3. doctor preprocess と事前条件を検査し、対象 run と今回の開始時の state を確定する。基準 session HEAD を記録し、「差分検査」と必要な `--force-resolve` の取消を終える。doctor の同期境界は、`{{cmoc-root}}/spec/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」に従う。
-4. 共通処理で session を run へ統合し、必要な競合解消、検証、および refactor state の同期を完了する。準備完了 run HEAD とその検証結果を保存する。
+4. 共通処理で session を run へ統合し、競合解消後の機械検査、および refactor state の同期を完了する。準備完了 run HEAD とその検査結果を保存する。
 
 #### session への取り込み
 
@@ -160,7 +160,7 @@ refactor state の同期保証は、取り込み成立時の tree に対する�
 
 判断基準、agent と cmoc の責務、受理、および報告は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」に従う。
 
-競合解消 agent は、session を source、run を target とする準備中の run worktree で作業する。decision・reference を判断根拠として読み、spec file と realization file を統合に必要な範囲で編集する。decision・reference は変更しない。元の workload の commit や feedback の issue commit を書き換えず、進行中の merge 結果へ調整を加える。refactor state の競合解消と同期は cmoc が担当する。
+競合解消 agent は、session を source、run を target とする準備中の run worktree で作業する。decision・reference を読み取り専用で参照し、spec file と realization file を統合に必要な範囲で編集する。元の workload の commit や feedback の issue commit を書き換えず、進行中の merge 結果へ調整を加える。refactor state の競合解消と同期は cmoc が担当する。
 
 run 固有の入力対応は、`{{cmoc-root}}/reference/src/oracle/request_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_request` へ委譲する。この builder は「join の競合解消」で定める共通 request builder を呼び出す。すべての自動 join と明示 join で同じ call を使用する。feedback の封印後の入力・調整範囲は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。
 
@@ -240,7 +240,7 @@ workload、明示 join、および abandon の report から、run kind、branch
 自動 join を含む workload と明示 join の primary report は、次を判別可能にする。
 
 - 事前条件の検査結果、統合前 run HEAD、基準 session HEAD、準備完了 run HEAD、および差分検査の範囲と結果。
-- 想定外差分と `--force-resolve` の扱い、session → run の統合、競合解消、必要な検証、run 側の refactor state 同期と commit の結果。
+- 想定外差分と `--force-resolve` の扱い、session → run の統合、競合解消 call、機械検査、run 側の refactor state 同期と commit の結果。
 - session への取り込み成立の有無、`{{cmoc-run-join-commit}}` または no-op、および成立時の session commit と tree。no-op の join commit は `null` とする。
 - 初回の準備・取り込みと、取り込み済みの復旧の区別。復旧で merge を省略しても、元の取り込み commit を `null` や新しい no-op に置き換えない。
 - post-join hook、workload 固有の確定処理、state 初期化、および cleanup の実際の結果。
@@ -248,7 +248,7 @@ workload、明示 join、および abandon の report から、run kind、branch
 
 元の workload の成果と準備による変更を区別する。確定できない値は `null` とし、未実行・失敗・完了・以前の完了結果の再利用を区別する。複数の役割を持つ同じ commit は一度掲載して役割を対応付ける。記録の具体的な field 名や保存形式は固定しない。
 
-競合解消の判断・付随編集・検証・未解消理由は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」に従う。競合解消を行わなかった場合は、その旨を示す。
+競合解消 call の回答原文と cmoc が観測した付随編集・処理結果は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」に従って記録する。競合解消を行わなかった場合は、その旨を示す。
 
 ### workload の report
 

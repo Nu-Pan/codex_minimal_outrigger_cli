@@ -224,7 +224,7 @@ quiet period、directory の列挙タイミング、または一定時間 observ
 
 ### 封印後のマージ調整
 
-競合解消には、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」を適用する。競合解消 agent は両 branch の内容統合と必要な検証を行い、cmoc が後続の commit として確定する。封印済み report cut や採用結果を agent への参照入力に加えず、feedback の結果分類の維持・再判定を依頼しない。元の issue commit と封印済み artifact は保持する。
+競合解消には、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「join の競合解消」を適用する。agent による内容統合と可能な範囲の検証の後、cmoc が機械検査を行い、後続の commit として確定する。封印済み report cut や採用結果を agent への参照入力に加えず、feedback の結果分類の維持・再判定を依頼しない。元の issue commit と封印済み artifact は保持する。
 
 封印後は issue 処理の新しい wave、remediation call、または結果分類のためのレビュー call を開始しない。元の issue 処理の差分受理条件と、共通 join の統合・検証・復旧条件は維持する。
 
@@ -234,7 +234,7 @@ session への取り込み成立後、issue commit と準備完了 run HEAD の�
 
 その後、cmoc は公開前の session 状態と、全採用結果の保存済み判定入力を照合する。対象には `fixed` だけでなく全結果分類を含め、対象ファイル・依存設定・検査条件など、判定に必要な入力の変化を検出する。競合解消 agent による追加差分と、通常の自動マージによる変化を同じ基準で扱う。refactor state など、判定に使わない機械生成物だけの変化で失効させない。すべての入力が有効なら publication へ進み、有効性を確認できない入力変化があれば本書の「再確認待ち」に従う。
 
-artifact の hash 一致は記録の不変性を示す検査であり、マージ調整後の判定の妥当性を証明するものではない。競合解消 agent の完了報告を、判定入力の照合の代わりに使用してはならない。この段階で新しい Codex call、修正、または refactor state 同期は開始しない。
+artifact の hash 一致は記録の不変性を示す検査であり、マージ調整後の判定の妥当性を証明するものではない。競合解消 agent の回答を、判定入力の照合の代わりに使用してはならない。この段階で新しい Codex call、修正、または refactor state 同期は開始しない。
 
 未解消競合、差分・hash の不整合、または検査・保存の失敗は invocation error とする。取り込み前の失敗は共通 join の復旧条件に従い、取り込み後の失敗は本書の「join 後の publication failure」に従う。判定入力の変化を検出して再確認待ちへ移すこと自体は、検査失敗にしない。
 
@@ -336,7 +336,7 @@ quota と一時障害の分類・回復待ち・再開は、`{{cmoc-root}}/spec/
 
 実行 ID と、本節の各 report の共通表示契約は、`{{cmoc-root}}/spec/app_spec/console_and_file_log.md` の「実行 ID の開始表示」「primary report」に従う。最外側の実行結果を示す invocation report を primary report とし、publication で current pointer に結び付ける immutable な report とは役割を分ける。共通掲載内容の実行記録は、以下の issue 一覧とは区別する。
 
-自動 join の競合解消については、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」が定める判断、付随編集、検証、および未解消理由を実行記録に含める。判定入力の照合結果、publication completion record との対応、および再確認待ちまたは invocation error によって公開しなかった理由も判別可能にする。自動修正済み issue を人間向け issue 一覧に再掲載するためには用いない。
+自動 join の競合解消については、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「受理と報告」に従い、call の回答原文と cmoc が観測した付随編集・処理結果を実行記録に含める。判定入力の照合結果、publication completion record との対応、および再確認待ちまたは invocation error によって公開しなかった理由も判別可能にする。自動修正済み issue を人間向け issue 一覧に再掲載するためには用いない。
 
 ### publication report と終了時の記録
 

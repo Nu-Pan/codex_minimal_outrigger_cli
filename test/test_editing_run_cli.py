@@ -2904,17 +2904,17 @@ def test_run_join_rolls_back_preparation_when_sync_fails(
 
 
 @pytest.mark.parametrize(
-    ("incidental", "already_modified"),
+    ("incidental", "already_modified", "agent_report"),
     [
-        ("oracle/spec.md", False),
-        (".cmoc/gt/realization/refactor/state.json", False),
-        ("oracle/spec.md", True),
+        ("decision/spec.md", False, "統合しました。\n"),
+        (".cmoc/gt/realization/refactor/state.json", False, ""),
+        ("decision/spec.md", True, "未解消が残っています。テストに失敗しました。\n"),
     ],
 )
-def test_merge_resolution_does_not_add_file_access_postvalidation(
-    tmp_path, monkeypatch, incidental, already_modified
+def test_merge_resolution_accepts_reports_without_extra_postvalidation(
+    tmp_path, monkeypatch, incidental, already_modified, agent_report
 ):
-    """応答後の差分は記録し、file access policy だけによる受理拒否を加えない。"""
+    """自由文と差分を記録し、回答解析や file access 違反による受理拒否を加えない。"""
     # {{work-root}}/spec/app_spec/codex_common_rule.md の「agent call の差分検証」
     # Fake の違反編集で cmoc の検証境界を確認する。agent の編集権限は拡張しない。
     # Git 境界は double にし、snapshot の実際の本文比較と marker 検査を通す。
@@ -2941,7 +2941,9 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
     def resolved_codex(_parameter, **_kwargs):
         conflict.write_text("resolved\n")
         changed.write_text("{}\n")
-        return SimpleNamespace(output_text="merge_resolution: resolved\n")
+        return SimpleNamespace(
+            output_text=agent_report, call_log_path=root / "call.json"
+        )
 
     commands = []
 
@@ -2981,7 +2983,9 @@ def test_merge_resolution_does_not_add_file_access_postvalidation(
         initial_conflicts=[conflict_relative],
     )
 
-    assert result["agent_status"] == "resolved"
+    assert result["agent_status"] == "completed"
+    assert result["agent_report"] == agent_report
+    assert result["call_log"] == str(root / "call.json")
     assert result["incidental_paths"] == [incidental]
     # 初期競合は報告対象外なので snapshot 用には読まず、marker 検査は実行する。
     assert reads[conflict] == 0
@@ -3035,7 +3039,7 @@ def test_run_join_conflict_launch_uses_shared_settings(
 
     completed = '{"type":"turn.completed"}\n'
     replies = [(0, completed, "done")] if automatic else []
-    replies.append((0, completed, "merge_resolution: resolved\nverified"))
+    replies.append((0, completed, "両側の変更を統合しました。"))
     calls = script_codex_calls(monkeypatch, replies, on_call=during_call)
     command = ["realization", "apply"] if automatic else ["run", "join"]
 
@@ -3088,28 +3092,24 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     run_head = run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip()
     session_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     calls: list[AgentCallParameter] = []
-    status_checks = Mock(wraps=merge_conflict_module.status_path_statuses)
-    monkeypatch.setattr(merge_conflict_module, "status_path_statuses", status_checks)
 
     def unresolved_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
         calls.append(parameter)
         (context.run_worktree / "src" / "incidental.py").parent.mkdir(exist_ok=True)
         (context.run_worktree / "src" / "incidental.py").write_text("value = 1\n")
         return SimpleNamespace(
-            output_text="merge_resolution: unresolved\n検証不足: 人間意図を確認できません。\n"
+            output_text="検証不足: 人間意図を確認できず、未解消が残っています。\n"
         )
 
     monkeypatch.setattr(merge_conflict_module, "run_codex_exec", unresolved_codex)
     failed = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert len(calls) == 1
-    # 未解消後に返さない付随編集一覧を再走査しない。
-    assert status_checks.call_count == 1
     assert failed.exit_code == 1
-    assert (
-        "検証不足: 人間意図を確認できません。"
-        in terminal_primary_report(failed).read_text()
-    )
+    failed_report = terminal_primary_report(failed).read_text()
+    assert "検証不足: 人間意図を確認できず、未解消が残っています。" in failed_report
+    assert "conflict marker が残っています。" in failed_report
+    assert "src/incidental.py" in failed_report
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == session_head
     assert (root / "README.md").read_text() == "session change\n"
     assert not (root / "src" / "incidental.py").exists()
@@ -3117,6 +3117,9 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
     assert _state(state_path)["run"]["state"] == "error"
     assert run_git(root, "branch", "--list", context.run_branch).stdout.strip()
     assert context.run_worktree.is_dir()
+    assert run_git(context.run_worktree, "rev-parse", "HEAD").stdout.strip() == run_head
+    assert run_git(context.run_worktree, "status", "--porcelain").stdout == ""
+    assert not (context.run_worktree / "src" / "incidental.py").exists()
 
     # 保持された run の競合を再び解消し、成功時の cwd・commit 参照も確かめる。
     def resolved_codex(parameter: AgentCallParameter, **_kwargs: object) -> object:
@@ -3128,17 +3131,12 @@ def test_run_join_rolls_back_unresolved_content_conflict_and_accepts_retry(
         (context.run_worktree / "README.md").write_text("session change\nrun change\n")
         (context.run_worktree / "src" / "related.py").parent.mkdir(exist_ok=True)
         (context.run_worktree / "src" / "related.py").write_text("value = 1\n")
-        return SimpleNamespace(
-            output_text="merge_resolution: resolved\n検証: 両側の内容を確認しました。\n"
-        )
+        return SimpleNamespace(output_text="検証: 両側の内容を確認しました。\n")
 
     monkeypatch.setattr(merge_conflict_module, "run_codex_exec", resolved_codex)
-    status_checks.reset_mock()
     result = runner.invoke(app, ["run", "join"], catch_exceptions=False)
 
     assert len(calls) == 2
-    # 成功時は前後を比較し、付随編集を report に残す。
-    assert status_checks.call_count == 2
     assert result.exit_code == 0, result.output
     assert (root / "README.md").read_text() == "session change\nrun change\n"
     assert (root / "src" / "related.py").read_text() == "value = 1\n"
@@ -4084,7 +4082,7 @@ def test_refactor_interruption_allows_only_join_conflict_call(
         )
         return SimpleNamespace(
             returncode=0,
-            output_text="merge_resolution: resolved\nBoth intents retained; verification passed.",
+            output_text="Both intents retained; verification passed.",
         )
 
     monkeypatch.setattr(refactor_module, "run_codex_exec", review)
@@ -4102,7 +4100,7 @@ def test_refactor_interruption_allows_only_join_conflict_call(
     assert (root / "README.md").read_text() == "session result\nrefactor result\n"
     assert _state(state_path)["run"]["state"] == "ready"
     metadata = report_metadata(terminal_primary_report(result).read_text())
-    assert metadata["conflict_resolution"]["agent_status"] == "resolved"
+    assert metadata["conflict_resolution"]["agent_status"] == "completed"
     assert not (root / ".cmoc/gu/report/run/join").exists()
 
 

@@ -34,7 +34,7 @@ class SessionJoinRecord(MergeRecord):
         )
 
     def report_fields(self) -> dict[str, object]:
-        """未解消による rollback 後も、その試行の判断と基準を報告する。"""
+        """rollback 後も、その試行の call と機械検査の結果・基準を報告する。"""
         attempt = (
             self.attempts[-1] if self.target_head is None and self.attempts else {}
         )
@@ -57,12 +57,11 @@ class SessionJoinRecord(MergeRecord):
                 for path in resolution.get("initial_conflicts", [])
             ],
             "conflict_resolution_status": resolution.get("agent_status"),
-            "conflict_resolution_result": "confirmed"
-            if resolution.get("verified_commit")
-            and resolution.get("agent_status") == "resolved"
-            else None
-            if resolution.get("agent_status") == "not_needed"
-            else "not_confirmed",
+            "conflict_resolution_result": (
+                "confirmed" if resolution.get("verified_commit") else "not_confirmed"
+            )
+            if resolution.get("initial_conflicts")
+            else None,
             "conflict_agent_report": resolution.get("agent_report"),
             "conflict_incidental_paths": resolution.get("incidental_paths", []),
             "conflict_call_log": resolution.get("call_log"),

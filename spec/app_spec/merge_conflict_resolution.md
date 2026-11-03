@@ -2,7 +2,7 @@
 
 ## 目的と適用範囲
 
-`cmoc run join`、編集 run を作る workload の自動 join、および `cmoc session join` は、取り込み元で統合・検証を終えてから、完成した結果を取り込み先へ確定する。通常の Git merge を先に試み、内容の競合があれば追加フラグなしで agent に統合を委ねる。目的は、関連する decision・reference・spec と両 branch の変更意図を踏まえ、必要な付随修正と検証を含む整合したマージ結果を完成させることである。
+`cmoc run join`、編集 run を作る workload の自動 join、および `cmoc session join` は、取り込み元で統合と本書に定める機械検査を終えてから、その結果を取り込み先へ確定する。通常の Git merge を先に試み、内容の競合があれば追加フラグなしで agent に統合を委ねる。agent は両 branch の両立可能な変更を保持し、必要な付随修正を含め、可能な限り競合を解消して検証・テストに合格する状態を目指す。
 
 本書は、join の準備・取り込み・復旧、および競合解消の共通判断基準と責務を所有する。両 join はこれらを一つの共通実装で扱い、コマンド側は対象の決定、固有の事前条件、state 更新、post-join、および資源回収を担当する。汎用 Git merge wrapper、新しい人間意図の決定、または元の workload の権限拡大を目的としない。コマンド固有の契約は次の正本に従う。
 
@@ -19,14 +19,14 @@
 | run join（自動・明示） | run branch と run worktree | session branch と session worktree |
 | session join | session branch と現在の session worktree | session home branch。同じ worktree を取り込み時に切り替える |
 
-取り込み元の準備前の HEAD を「元の成果」、その回に統合する取り込み先の HEAD を「基準 HEAD」、統合・検証・管理物の同期を終えた取り込み元の HEAD を「準備完了 HEAD」とする。join が加える管理更新より先に元の成果を記録し、再試行でも準備変更と混同しない。復旧情報は `{{cmoc-root}}/spec/app_spec/session_state.md` の「join の復旧情報」に従って保持する。
+取り込み元の準備前の HEAD を「元の成果」、その回に統合する取り込み先の HEAD を「基準 HEAD」、統合・機械検査・管理物の同期を終えた取り込み元の HEAD を「準備完了 HEAD」とする。join が加える管理更新より先に元の成果を記録し、再試行でも準備変更と混同しない。復旧情報は `{{cmoc-root}}/spec/app_spec/session_state.md` の「join の復旧情報」に従って保持する。
 
 ### 準備と取り込み
 
 1. 対象と復旧情報を確認する。取り込み済みなら準備を繰り返さず、未完了の後処理へ進む。未取り込みなら残る準備を復旧し、コマンド固有の事前条件と差分検査を満たすことを確認する。
-2. 取り込み元で基準 HEAD を merge し、競合があれば本書に従って内容を解消・検証する。元の成果の commit は書き換えず、準備変更を後続の履歴として扱う。
+2. 取り込み元で基準 HEAD を merge し、競合があれば本書の責務分担に従って内容の解消と機械検査を行う。元の成果の commit は書き換えず、準備変更を後続の履歴として扱う。
 3. 統合後の tree で refactor state の値を統合し、entry 集合を同期する。tracked 差分があれば取り込み元で commit する。同期内容は `{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md` の「join での統合」「entry 集合の同期」に従う。
-4. 必要な検証を完了し、取り込み元の worktree と staging area を clean にする。準備完了 HEAD と検証・同期結果を、取り込みを始める前に保存する。先行する検証記録を使う場合も、その tree に適用できることを確認する。
+4. cmoc が担当する機械検査を完了し、取り込み元の worktree と staging area を clean にする。準備完了 HEAD と検査・同期結果を、取り込みを始める前に保存する。先行する検査記録を使う場合も、その tree に適用できることを確認する。
 5. 取り込み元が準備完了 HEAD を指し、取り込み先が基準 HEAD を指し、両 worktree と staging area が clean であることを確認する。確認から取り込み成立までこの条件を保つ。取り込み先が途中で更新されていれば、その回は停止する。最新の取り込み先を統合し直すのは次の試行とする。
 6. 未取り込み commit があれば取り込み先で `--no-ff` による merge commit を作成し、準備完了時と同じ tree であることを確認する。同期差分も未取り込み commit もなければ no-op とし、基準 HEAD と準備完了 HEAD の対応を記録する。この記録だけを目的とする空 commit や agent call は作らない。
 
@@ -34,7 +34,7 @@ merge commit の確定、または no-op 成立の記録が、取り込み前後
 
 ### 失敗と再試行
 
-取り込み前に解消・検証・準備・取り込み操作が失敗または取消になった場合は、書き込み得る process の停止と変更の帰属を確認してから、cmoc が進行中の merge を中止し、今回の準備が加えた commit と未確定差分だけを取り消す。doctor の準備更新、run の `--force-resolve` による取消、内容統合、付随編集、および refactor state 同期も対象とする。取り込み元の branch・worktree・staging area を元の成果の clean な状態へ戻し、元の確定済み成果と取り込み先の既存変更を保持する。取り込み先に操作途中の差分が残る場合も、その操作が加えたものだけを戻す。途中で加わった commit や人間の差分は取り消さない。
+取り込み前に競合解消 call・機械検査・準備・取り込み操作が失敗または取消になった場合は、書き込み得る process の停止と変更の帰属を確認してから、cmoc が進行中の merge を中止し、今回の準備が加えた commit と未確定差分だけを取り消す。doctor の準備更新、run の `--force-resolve` による取消、内容統合、付随編集、および refactor state 同期も対象とする。取り込み元の branch・worktree・staging area を元の成果の clean な状態へ戻し、元の確定済み成果と取り込み先の既存変更を保持する。取り込み先に操作途中の差分が残る場合も、その操作が加えたものだけを戻す。途中で加わった commit や人間の差分は取り消さない。
 
 停止または変更の帰属を確認できない場合は rollback しない。復旧を完了できない場合も資源を削除せず、残存状態と必要な操作を報告する。report、ログ、復旧情報、および repository-local feedback state は作業差分の rollback 対象にしない。
 
@@ -44,39 +44,46 @@ merge commit の確定、または no-op 成立の記録が、取り込み前後
 
 ## 統合の判断基準
 
-agent は競合の両側と関連する decision・reference・spec を調査し、両立する意図と挙動を保持する。競合箇所の選択だけでなく、関連ファイルの組み直し、rename・削除、テストの調整、および初期の競合一覧にないファイルの付随編集も、統合に必要な範囲で自律的に判断する。複数の妥当な実装方法があることや、両側を組み直す必要があることだけを理由に、人間へ判断を戻さない。
+agent は両 commit の共通祖先以降の変更と進行中の競合状態を基本的な根拠とし、解消の過程で必要と判断した変更・ファイルを追加の根拠にしてよい。両 branch の両立可能な変更をマージ結果に保持し、可能な限り多くの競合を解消する。
 
-関連する decision・reference・spec と変更意図からも決められない相反する要求の採否など、新しい人間意図の選択が必要な場合は、推測で一方を破棄せず未解消として報告する。実装都合から decision・reference の意味を逆算・変更してはならない。
+妥当な解決方法が複数ある場合は一つを選ぶ。解消に必要なら、両 branch の元の内容をそのまま残さずに書き直してよい。関連ファイルの組み直し、rename・削除、テストの調整、および初期の競合一覧にないファイルの付随編集も、必要に応じて行ってよい。
+
+可能な限り検証・テストに合格する状態にし、衝突解決の過程で発生した事情を解消結果に残さない。適用される規定に違反する結果を解消完了として扱ってはならない。両 branch に解決不能な相反する変更がある場合は、未解消のまま返してよい。
 
 編集と検証は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「詳細なファイルアクセス制限」「書き込み主体の責任分界」と各 join の編集範囲内で行う。アクセス禁止の情報を Git 履歴経由で参照したり、禁止対象を付随編集したりする権限は与えない。
 
 ## agent と cmoc の責務
 
-agent は、調査、内容の統合、必要な検証、および根拠を伴う完了判断を担当する。検証には対象リポジトリの手順を用い、実行できなかった検証を成功として扱わない。編集可能な対象の内容上の競合が解消され、必要な検証により統合結果の妥当性を確認できた場合に解消完了を報告する。未解消事項や必要な検証の不足があれば、その理由を報告する。
+agent は、調査、内容の統合、および可能な範囲での検証を担当し、作業結果を未コミット差分として残す。Git 操作は状態の参照に限る。未解消が残る場合は最終回答でそのことを報告し、その場合も可能な範囲で作業を尽くして部分成果を残す。
+
+部分成果を残すのは agent が cmoc へ処理を返す時点の責務とする。その後に join が失敗した場合の準備差分は、本書の「失敗と再試行」に従って cmoc が取り消す。
 
 cmoc は次の管理処理を担当する。
 
 - 各 join の事前条件を検査し、merge 前の両 branch の HEAD と初期の競合状態を把握する。
-- 内容の競合を解消する agent call を直列に実行し、その完了判断、検証結果、および未解消事項を確認する。文書検索の提供は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「文書検索 MCP」に従う。
+- 内容の競合を解消する agent call を直列に実行し、call の終了状態を確認して回答を保存する。文書検索の提供は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「文書検索 MCP」に従う。
 - refactor state の競合を解消する。refactor state は agent の直接編集対象にせず、この管理物だけが競合した場合は内容解消用 agent call を必要としない。
-- 解消後の内容と管理物について、未解消の conflict marker がないことを確認する。初期の競合 path に限定せず、付随する追加・変更・rename・削除も staging し、unmerged entry が残っていないことを確認して merge commit を作成する。
+- 初期の競合 path に限定せず、付随する追加・変更・rename・削除も staging する。staging 後に unmerged entry と変更されたテキストの conflict marker が残っていないことを確認して merge commit を作成する。
 - 各 join の state 更新、生成物の同期、report、および cleanup を行う。
 
-agent は staging、commit、merge の開始・中止、branch・worktree 操作、または cmoc の管理 state の直接更新を行わない。agent の編集だけでは Git index の unmerged entry は解消されないため、内容の解消完了と cmoc による staging 後の確認を区別する。管理物の競合や staging 待ちの unmerged entry が残ることだけを agent の未解消理由にしない。ただし、それらにより必要な検証ができなければ、その不足を報告する。cmoc が更新する管理物以外のアクセス禁止対象に内容の競合が残る場合は、merge を成立させない。agent を呼び出した場合は、その明示的な解消完了も確認できなければならない。
+staging、commit、merge の開始・中止、branch・worktree 操作、および cmoc の管理 state の更新は cmoc が担当する。agent のファイル編集だけでは Git index の unmerged entry は解消されないため、内容の編集と cmoc による staging 後の確認を区別する。
 
 refactor state の値の統合と同期内容は、`{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md` の「join での統合」「entry 集合の同期」を正本とし、cmoc が管理する最終調査日時の扱いを競合解消 agent に委ねない。join の同期時点は、本書の「共通の準備・取り込み・復旧」、`{{cmoc-root}}/spec/app_spec/doctor_preprocess.md` の「editing run の join での同期時点」と、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「merge と post-join」に従う。
 
 ## 受理と報告
 
+競合解消 call の正常終了後、cmoc は管理物の統合、staging、および本書に定める機械検査を行う。それらと各 join の事前条件を満たした結果を commit・取り込みの対象とする。回答本文は記録用の自由文として扱い、固定形式の完了通知を要求しない。空回答や、未解消・検証不足・テスト失敗を述べる回答も、それだけを理由に受理拒否しない。回答の意味を解析する判定や、検証・テストの成否による追加の受理条件は設けない。
+
 cmoc の差分検証は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「agent call の差分検証」に従う。マージ結果が片側の内容と一致すること、または編集 path が初期の競合 path 集合と一致することを受理条件にしない。元の workload の差分受理条件は維持し、マージ調整の受理条件と混同しない。機械検査に意味的な正しさの証明を要求せず、agent の判断と検証記録を、cmoc の機械検査結果と区別して扱う。
 
-各 join を行った最外側の invocation の primary report から、次を読み取れるようにする。自動 join 用の primary report は別に作らない。agent は内容判断に関する情報を返し、cmoc は実際の commit、state、復旧、および cleanup の結果と結び付ける。
+各 join を行った最外側の invocation の primary report から、次を読み取れるようにする。自動 join 用の primary report は別に作らない。
 
 - 統合した両 commit と初期の競合。
-- 採用した判断、その根拠となる decision・reference・spec と両側の変更意図。
-- 付随編集の対象と必要性。rename・削除と、初期の競合一覧外の編集を含む。
-- 実行した検証、その対象と結果、および未実行・失敗の理由。
-- 解消完了か、未解消か。未解消の場合は、残る要求、アクセス境界、人間意図の選択、または検証不足などの具体的な理由。
+- agent call の実行状態、回答原文、および call log。未実行や出力がない場合はその状態。
+- cmoc が観測した付随編集の対象。rename・削除と、初期の競合一覧外の編集を含む。
+- cmoc の機械検査、commit、取り込み、state、復旧、および cleanup の結果と、失敗時に確認できた理由。
+
+agent の判断、検証結果、および未解消事項は回答に含まれる範囲で記録し、述べられていない内容を補わない。call の正常終了と、機械検査後の merge の確定を区別して表示し、いずれも内容の意味的な解消を保証するものとして扱わない。
 
 ## agent への入力と正確な定義の委譲
 
@@ -84,9 +91,9 @@ cmoc は merge を行っている worktree を call の cwd とし、merge 前�
 
 run join の source は基準 session HEAD、target は差分検査と必要な取消を終えた session 統合直前の run HEAD とする。cwd と path context は run worktree から決める。共通 lifecycle の基準と call 固有の委譲先は、`{{cmoc-root}}/spec/app_spec/sub_command/editing_run.md` の「merge と post-join」「競合解消」に従う。session join の source は基準 home HEAD、target は home 統合直前の session HEAD とし、cwd と path context は session worktree から決める。
 
-正確な agent 向け表現と構築を次へ委譲する。受信 agent が cmoc の内部仕様を読まなくても作業できる、自己完結した目的、入力、制約、判断基準、および報告事項を渡す。
+正確な agent 向け表現と構築を次へ委譲する。受信 agent が cmoc の内部仕様を読まなくても作業できる、自己完結した目的、入力、制約、判断基準、および未解消時の報告義務を渡す。
 
-- `{{cmoc-root}}/reference/src/oracle/request_builder/common/conflict_resolution.py` の `build_merge_conflict_resolution_request`：統合結果が満たすべき規定、共通の objective、commit の参照入力、管理操作との境界、未解消時の扱い、完了判定を含む報告、prompt part の選択、および起動パラメータの構築。run/session の各 request builder は、コマンド固有の入力をこの共通 builder に渡す。
+- `{{cmoc-root}}/reference/src/oracle/request_builder/common/conflict_resolution.py` の `build_merge_conflict_resolution_request`：統合結果が満たすべき規定、共通の objective、source・target commit の placeholder 定義、Git 操作との境界、未解消時の作業・報告、prompt part の選択、および起動パラメータの構築。run/session の各 request builder は、コマンド固有の入力をこの共通 builder に渡す。
 - `{{cmoc-root}}/reference/src/oracle/prompt_builder/complete_prompt.py` の `build_complete_prompt`：完全 prompt への共通規定と追加文面の統合。
 
 競合解消 call の設定選択は、`{{cmoc-root}}/spec/app_spec/codex_model_provider.md` の「agent call ごとの直接設定」に従う。provider、model、および reasoning effort の正確な設定値は、`{{cmoc-root}}/reference/src/oracle/other/cmoc_config.py` の `CmocConfigCodex.agent_calls` へ委譲する。
@@ -99,13 +106,14 @@ run join の source は基準 session HEAD、target は差分検査と必要な�
 
 | 状況 | 確認する結果 |
 |---|---|
-| 通常の内容競合 | 追加フラグなしで agent が両側の意図を統合し、検証と判断根拠を報告する。 |
-| rename・削除を伴う競合 | marker の有無だけで完了とせず、参照先と関連挙動も整合させ、cmoc が rename・削除を含め staging する。 |
-| 初期の競合一覧外に必要な修正がある | アクセス境界内の付随編集を行い、対象と必要性を報告する。一覧外という理由だけで拒否しない。 |
-| 内容の解消後に管理物の競合や staging 待ちの unmerged entry が残る | agent は内容と必要な検証に基づいて完了を判断し、残る管理処理を報告する。cmoc が管理物と staging を処理し、未解消競合を確認する。 |
+| 通常の内容競合 | 追加フラグなしで agent が両立可能な変更を統合し、可能な範囲で検証する。cmoc は固定回答形式を要求せず、機械検査後に確定する。 |
+| rename・削除を伴う競合 | agent は関連内容を含めて統合し、cmoc が rename・削除を含め staging する。 |
+| 初期の競合一覧外に必要な修正がある | agent がアクセス境界内で付随編集し、cmoc が観測した対象を記録する。一覧外という理由だけで拒否しない。 |
+| 内容の編集後に管理物の競合や staging 待ちの unmerged entry が残る | cmoc が管理物と staging を処理し、その後に残る unmerged entry と conflict marker を検査する。 |
 | run 開始後に session 側の decision・reference・spec または realization が commit 済みである | run 側で統合し、session 由来の変更を workload の想定外差分として拒否・revert しない。元の workload の禁止対象検査と、競合解消 agent のアクセス境界は維持する。 |
 | feedback の判定入力が統合で変わる | 共通の内容統合と取り込みを完了する。cmoc が入力変化を検出し、当該 report cut の公開を保留する。判定記録と入力を保持して次回 report の再確認へ回す。 |
-| decision・reference の要求が相反し、人間意図の選択が必要である | agent が推測で採否を決めず、未解消の理由を報告し、merge を成立させない。 |
-| 解消または必要な検証に失敗する | 両 join とも、安全な復旧を確認して準備変更だけを取り消し、元の成果と取り込み先の既存変更を保持する。取り込み確定後は結果を保持し、後処理だけを再開する。 |
+| 両 branch の相反する変更を解決できない | agent は未解消を最終回答で報告し、可能な範囲の部分成果を未コミットで残す。 |
+| 回答に未解消・検証不足が記載されている、または回答が空である | 回答本文から受理可否を判定しない。call が正常終了し、機械検査に合格した場合は取り込む。 |
+| call、機械検査、または取り込み前の管理操作が失敗する | 両 join とも、安全な復旧を確認して準備変更だけを取り消し、元の成果と取り込み先の既存変更を保持する。取り込み確定後は結果を保持し、後処理だけを再開する。 |
 
 仕様の照合や reference の prompt 構築確認だけを、realization の動作検証済みとして扱ってはならない。

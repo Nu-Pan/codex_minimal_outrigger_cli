@@ -68,17 +68,12 @@ def resolve_merge_conflicts(
         output = (codex_exec or run_codex_exec)(
             parameter, root=repo_root(root), purpose=purpose
         )
-        if before_commit is not None:
-            before_commit()
         report = getattr(output, "output_text", "")
         result["agent_report"] = report
         log = getattr(output, "call_log_path", None)
         result["call_log"] = str(log) if log is not None else None
-        result["agent_status"] = (
-            "resolved"
-            if report.splitlines()[:1] == ["merge_resolution: resolved"]
-            else "unresolved"
-        )
+        # 自由文は報告用に保存する。call の終了と Git の機械検査を区別する。
+        result["agent_status"] = "completed"
         if record_result is not None:
             record_result(result)
         update_primary_report_fields(
@@ -86,12 +81,8 @@ def resolve_merge_conflicts(
             conflict_agent_report=report,
             conflict_call_log=result["call_log"],
         )
-        if result["agent_status"] != "resolved":
-            raise CmocError(
-                "競合解消 agent が完了を確認できませんでした。",
-                ["Codex call log の未解消理由と検証結果を確認してください。"],
-                report,
-            )
+        if before_commit is not None:
+            before_commit()
         after = _status_snapshot(root, conflict_paths)
         changed = {
             path

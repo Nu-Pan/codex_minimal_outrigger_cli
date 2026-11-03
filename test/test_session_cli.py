@@ -1034,15 +1034,19 @@ def session_conflict_parameter(
     builder.assert_called_once()
 
 
-@pytest.mark.parametrize("unresolved", [False, True], ids=["marker", "human_choice"])
+@pytest.mark.parametrize(
+    "agent_report",
+    ["統合しました。\n", "相反する要求を解決できず、未解消が残っています。\n"],
+    ids=["reported_completion", "reported_unresolved"],
+)
 def test_session_join_rolls_back_unresolved_preparation(
     session_conflict_repository: tuple[Path, str],
     monkeypatch: pytest.MonkeyPatch,
     session_preprocess: list[Path],
     session_conflict_parameter: AgentCallParameter,
-    unresolved: bool,
+    agent_report: str,
 ) -> None:
-    """marker 残存や人間判断が必要な場合は準備だけを戻し、失敗理由を保持する。"""
+    """回答の内容によらず残存 marker を拒否し、準備だけを戻して記録を保持する。"""
     root, home_branch = session_conflict_repository
     target = root / "spec" / "spec.md"
     related = root / "src"
@@ -1055,13 +1059,9 @@ def test_session_join_rolls_back_unresolved_preparation(
     session_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     class FakeCodexResult:
-        """conflict resolution の成功を表す最小 fake result。"""
+        """正常終了した call の自由文を返す。"""
 
-        output_text = (
-            "merge_resolution: unresolved\n相反する要求の採否には人間判断が必要です。\n"
-            if unresolved
-            else "merge_resolution: resolved\n"
-        )
+        output_text = agent_report
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
@@ -1083,11 +1083,8 @@ def test_session_join_rolls_back_unresolved_preparation(
     assert result.exit_code != 0
     assert result.stdout == ""
     assert "# 失敗: cmoc session join" in result.stderr
-    if unresolved:
-        assert "相反する要求の採否には人間判断が必要です。" in result.stderr
-    else:
-        assert "conflict marker が残っています。" in result.stderr
-        assert "src/added.py" in result.stderr
+    assert "conflict marker が残っています。" in result.stderr
+    assert "src/added.py" in result.stderr
     assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
     assert run_git(root, "branch", "--list", SESSION_BRANCH).stdout.strip()
     state = json.loads(session_state_path(root, SESSION_BRANCH).read_text())
@@ -1103,7 +1100,9 @@ def test_session_join_rolls_back_unresolved_preparation(
     assert pending_session_join(root, root) is None
     report = terminal_primary_report(result).read_text()
     assert 'merge_rollback: "completed"' in report
-    assert "- 確定した解消結果: `未確認`" in report
+    assert agent_report in report
+    assert "- conflict 解消用 agent call: `completed`" in report
+    assert "- 機械検査後の merge 確定: `未確認`" in report
 
 
 def test_session_join_merges_conflict_and_incidental_changes(
@@ -1161,7 +1160,7 @@ def test_session_join_merges_conflict_and_incidental_changes(
     class FakeCodexResult:
         """conflict resolution の成功を表す最小 fake result。"""
 
-        output_text = "merge_resolution: resolved\n"
+        output_text = "両 branch の変更を統合し、関連ファイルを調整しました。\n"
         output_json = None
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
@@ -1174,7 +1173,8 @@ def test_session_join_merges_conflict_and_incidental_changes(
         assert current_branch(root) == session_branch
         assert f"- {{{{repo-root}}}} = {repository}" in parameter.prompt
         assert f"- {{{{work-root}}}} = {root}" in parameter.prompt
-        assert "統合対象" in parameter.prompt
+        assert "{{source_commit}}" in parameter.prompt
+        assert "{{target_commit}}" in parameter.prompt
         assert str(context_target) not in parameter.prompt
         assert str(newline_target) not in parameter.prompt
         override_args = build_codex_override_args(parameter, CmocConfig())
@@ -1239,8 +1239,9 @@ def test_session_join_merges_conflict_and_incidental_changes(
     assert newline_target.read_text() == "resolved change\n"
     rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
     assert f"- `{context_target}`" in rendered_report
-    assert "- conflict 解消用 agent call: `resolved`" in rendered_report
-    assert "- 確定した解消結果: `confirmed`" in rendered_report
+    assert "- conflict 解消用 agent call: `completed`" in rendered_report
+    assert "- 機械検査後の merge 確定: `confirmed`" in rendered_report
+    assert FakeCodexResult.output_text in rendered_report
     expected_contents = {
         "spec/spec.md": "prefix\nhome change\nsession change\nchanged suffix\nTitle\n=======\n",
         "spec/mode.md": "prefix\nresolved change\nsuffix\n",
@@ -1603,7 +1604,7 @@ def test_session_join_codex_failure_reports_unresolved_merge(
     assert "stderr/stdout log を確認して原因を解消してください。" in result.stderr
     rendered_report = terminal_primary_report(result).read_text(encoding="utf-8")
     assert f"- `{target}`" in rendered_report
-    assert "- 確定した解消結果: `未確認`" in rendered_report
+    assert "- 機械検査後の merge 確定: `未確認`" in rendered_report
 
 
 @pytest.mark.parametrize("failure_stage", ["import", "cleanup", "report"])

@@ -67,46 +67,31 @@ def test_join_conflict_resolution_passes_inputs_and_shared_launch_parameters(
         f"- {{{{repo-root}}}} = {merge_worktree.parent.resolve()}" in parameter.prompt
     )
     assert f"- {{{{work-root}}}} = {merge_worktree.resolve()}" in parameter.prompt
-    assert f"- source（取り込む側）: `{source}`" in parameter.prompt
-    assert f"- target（取り込み先の merge 前）: `{target}`" in parameter.prompt
-    assert "共通祖先" in parameter.prompt
-    assert "進行中の merge の Git index" in parameter.prompt
-    assert "conflict 対象ファイル" not in parameter.prompt
+    assert f"- {{{{source_commit}}}} = {source}" in parameter.prompt
+    assert f"- {{{{target_commit}}}} = {target}" in parameter.prompt
     objective = parameter.prompt.split('<cmoc_block id="objective">', 1)[1].split(
         "</cmoc_block>", 1
     )[0]
     assert "# task" in objective
-    assert "進行中の merge" in objective
+    assert "`{{source_commit}}` を `{{target_commit}}` にマージ" in objective
+    assert "共通祖先以降の変更" in objective
+    assert "進行中の競合状態" in objective
     assert parameter.enable_document_search_mcp is True
     policy_heading = "# conflict resolution policy\n"
     assert parameter.prompt.count(policy_heading) == 1
     policy = parameter.prompt.split(policy_heading, 1)[1].split("\n# ", 1)[0]
-    assert [
-        line
-        for line in policy.splitlines()
-        if line in {"**必須**", "**禁止**", "**許容**", "**例外**", "**補足情報**"}
-    ] == ["**必須**", "**禁止**", "**許容**"]
     assert "両 branch の両立可能な変更" in policy
-    assert "妥当な解決方法が複数ある場合" in policy
-    assert "規定に違反する解消結果" in policy
+    assert "git 操作は状態の参照にのみ使用" in policy
+    assert "解決済みの状態を未コミット差分として残す" in policy
+    assert "未解決が残る場合、そのことを最終回答で報告" in policy
+    assert "未解決が残る場合も、可能な範囲内で出来る限りの作業" in policy
     assert "初期の競合一覧にないファイル" in policy
     assert "解決不能な場合、未解消のままで良い" in policy
-    assert "merge_resolution:" not in policy
-    assert (
-        parameter.prompt.index("# realization policy\n")
-        < parameter.prompt.index(policy_heading)
-        < parameter.prompt.index("# 管理操作との境界\n")
-    )
+    assert "merge_resolution:" not in parameter.prompt
     assert "# routing policy" in parameter.prompt
     for heading in ("# spec policy", "# realization policy"):
         assert heading in parameter.prompt
     assert "# realization findings policy" not in parameter.prompt
-    assert "merge_resolution: resolved" in parameter.prompt
-    assert "merge_resolution: unresolved" in parameter.prompt
-    assert "新しい人間意図の選択が必要な場合" in parameter.prompt
-    assert (
-        "未解消の場合も merge の中止や作業状態の復旧を自分で行わず" in parameter.prompt
-    )
     assert 'target="sealed_feedback_result"' not in parameter.prompt
     # source/target の対応は上で検査済み。argv の prompt 非依存性には
     # prompt の参照入力だけを変え、完全 prompt を再構築しない。
