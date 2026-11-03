@@ -36,9 +36,8 @@ def build_file_access_policy(
         case FileAccessMode.REPO_WRITE:
             # NOTE
             #   リポジトリ書き込み可能
-            #   `cmoc tui` みたいな、何の仮定も置けないタスクで使われる想定
+            #   git merge の衝突解決時に使われる想定
             mode_prohibit = [
-                "decision, reference は書き込み禁止"
                 # decision, reference, spec, realization (つまり全部) が読み書き許可
             ]
         case FileAccessMode.DECISION_PLAN:

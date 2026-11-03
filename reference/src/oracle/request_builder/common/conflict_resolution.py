@@ -69,7 +69,7 @@ def build_merge_conflict_resolution_request(
         )
     ]
     # 指示文、設定 key、編集範囲、MCP の有効化を両 join で共用する。
-    file_access_mode = FileAccessMode.SPEC_AND_REALIZATION_WRITE
+    file_access_mode = FileAccessMode.REPO_WRITE
     prompt = build_complete_prompt(
         task="""
         `{{source_commit}}` を `{{target_commit}}` にマージする際に発生した衝突を解決すること
