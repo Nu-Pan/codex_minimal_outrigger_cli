@@ -22,10 +22,9 @@ def build_realization_policy(
                     "検証・テストに合格する状態であること",
                 ),
                 prohibit=(
-                    "realization file を根拠に oracle file に変更を加えてはいけない",
-                    "oracle file の正本仕様断片を realization file へ複製してはいけない",
                     "YAGNI 原則 : 現在の decision, reference, spec から見て不要な realization を残してはいけない",
                     "YAGNI 原則 : 「将来必要になる」は realization の根拠として認められない",
+                    "realization 上の致命的な問題を残してはいけない",
                 ),
                 allow=(
                     "「decision, spec で明示されている仕様」の間に存在する欠損は、実装者の裁量において realization 上で補完して良い",

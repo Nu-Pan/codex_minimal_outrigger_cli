@@ -29,6 +29,9 @@ def build_spec_policy() -> tuple[PlaceholderMap, SDHeader]:
                     # NOTE spec の肥大化を抑制したい
                     "仕様の隙間を埋めることだけを目的として spec を修正してはいけない",
                     "同じ意味の記述を複数箇所へ重複させてはいけない",
+                    # NOTE 情報の逆流を防止したい
+                    "realization を spec の根拠にしてはいけない",
+                    "realization への参照を spec に書いてはいけない",
                 ),
             ),
         ),
