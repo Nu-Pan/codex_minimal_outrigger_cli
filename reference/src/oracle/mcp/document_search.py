@@ -49,7 +49,8 @@ SEARCH_TOOL_INPUT_SCHEMA: dict[str, object] = {
             "minLength": 1,
             "pattern": "\\S",
             "description": (
-                "spec の原文候補を探す検索文。空文字・空白だけの文字列は不可。"
+                "decision, reference, spec の原文候補を探す検索文。"
+                "空文字・空白だけの文字列は不可。"
             ),
         },
         "limit": {
@@ -84,7 +85,7 @@ def build_search_tool_description(work_root: Path) -> str:
         「stdio MCP と失敗の公開」を参照。
     """
     # 引数・結果の構造や値の意味は入出力 schema に置き、ここでは検索機能の概要を伝える。
-    return "oracle doc を意味検索し、候補の位置情報と類似度を返す。"
+    return "decision, reference, spec を意味検索し、候補の位置情報と類似度を返す。"
 
 
 type SearchErrorCode = Literal[
