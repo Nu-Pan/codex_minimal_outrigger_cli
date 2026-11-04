@@ -92,7 +92,6 @@ def build_realization_refactor_request(
         },
         cmoc_basic_instruction=True,
         realization_policy=True,
-        realization_findings_policy=True,
         routing_policy=True,
     )
     return AgentCallParameter(

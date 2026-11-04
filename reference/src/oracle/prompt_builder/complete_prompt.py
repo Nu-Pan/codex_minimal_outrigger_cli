@@ -12,7 +12,6 @@ from .policy.editor_input_handoff import build_editor_input_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
 from .policy.file_access import build_file_access_policy
 from .policy.realization import build_realization_policy
-from .policy.realization_findings import build_realization_findings_policy
 from .policy.routing import build_routing_policy
 from .policy.spec import build_spec_policy
 
@@ -50,7 +49,6 @@ def build_complete_prompt(
     cmoc_basic_instruction: bool = False,
     spec_policy: bool = True,
     realization_policy: bool = False,
-    realization_findings_policy: bool = False,
     routing_policy: bool = False,
     enable_document_search_mcp: bool = False,
     editor_input_handoff_policy: bool = False,
@@ -158,11 +156,6 @@ def build_complete_prompt(
         _append(
             full_prompt,
             build_realization_policy(path_context),
-        )
-    if realization_findings_policy:
-        _append(
-            full_prompt,
-            build_realization_findings_policy(),
         )
     # caller 指定の追加プロンプト (static)
     if aux_static_prompt:

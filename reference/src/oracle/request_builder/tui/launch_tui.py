@@ -59,7 +59,6 @@ def build_tui_request(
             cmoc_basic_instruction=True,
             spec_policy=True,
             realization_policy=True,
-            realization_findings_policy=True,
             routing_policy=True,
             editor_input_handoff_policy=True,
         )

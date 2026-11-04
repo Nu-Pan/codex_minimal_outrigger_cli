@@ -85,7 +85,6 @@ def _build_decision_apply_request_impl(
             file_access_mode = FileAccessMode.SPEC_WRITE
             spec_policy = True
             realization_policy = False
-            realization_findings_policy = False
             agent_call_kind = "spec_edit"
         case "to_realization":
             apply_from = "decision, reference, spec"
@@ -93,7 +92,6 @@ def _build_decision_apply_request_impl(
             file_access_mode = FileAccessMode.REALIZATION_WRITE
             spec_policy = False
             realization_policy = True
-            realization_findings_policy = True
             agent_call_kind = "realization_edit"
         case _:
             raise ValueError(f"Invalid `step_name`(actual=`{step_name}`)")
@@ -142,7 +140,6 @@ def _build_decision_apply_request_impl(
         cmoc_basic_instruction=True,
         spec_policy=spec_policy,
         realization_policy=realization_policy,
-        realization_findings_policy=realization_findings_policy,
         routing_policy=True,
     )
     return AgentCallParameter(
