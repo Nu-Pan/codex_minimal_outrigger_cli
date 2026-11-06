@@ -61,6 +61,7 @@ def build_tui_request(
             realization_policy=True,
             routing_policy=True,
             editor_input_handoff_policy=True,
+            enable_feedback_reporting=True,
         )
         prompt = render_sd_node_as_markdown(*complete_prompt)
     else:

@@ -82,6 +82,7 @@ def default_prompt_markdown(path_context: AgentCallPathContext) -> str:
         task="- {{repo-root}} ツリー内の realization file を修正すること",
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
+        enable_feedback_reporting=True,
         aux_dynamic_prompt=[
             SDHeader(
                 "aux realization file",
@@ -110,6 +111,7 @@ def customized_prompt_markdown(path_context: AgentCallPathContext) -> str:
         non_goals="- prompt を変更しないこと",
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
+        enable_feedback_reporting=True,
         aux_static_prompt=[SDHeader("caller static", "- static")],
         aux_dynamic_prompt=[SDHeader("caller dynamic", "- dynamic")],
         aux_placeholder_def={"work-root": path_context.work_root},
@@ -178,6 +180,7 @@ def test_each_policy_flag_adds_only_its_block_once(
         task="- task",
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
+        enable_feedback_reporting=True,
         **{selected_flag: True},
     )
 
@@ -238,6 +241,7 @@ def test_complete_prompt_renders_search_routing_for_call_availability(
         path_context=path_context,
         routing_policy=True,
         enable_document_search_mcp=enable_document_search_mcp,
+        enable_feedback_reporting=True,
     )
     rendered = render_sd_node_as_markdown(*prompt)
     for flag, heading in _POLICY_FLAG_HEADINGS:
@@ -353,6 +357,7 @@ def test_complete_prompt_renders_file_classification_boundaries(
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         cmoc_basic_instruction=True,
+        enable_feedback_reporting=True,
     )
 
     rendered = render_sd_node_as_markdown(*prompt)
@@ -393,6 +398,7 @@ def test_complete_prompt_merges_equal_root_definitions_and_rejects_conflicts(
             file_access_mode=FileAccessMode.READONLY,
             path_context=context,
             aux_placeholder_def={"work-root": context.work_root / "other-worktree"},
+            enable_feedback_reporting=True,
         )
 
 
@@ -526,6 +532,7 @@ def test_no_policy_complete_prompt_omits_file_access_policy(
         task="task",
         file_access_mode=FileAccessMode.NO_POLICY,
         path_context=path_context,
+        enable_feedback_reporting=True,
     )
     rendered = render_sd_node_as_markdown(*prompt)
 

@@ -90,6 +90,7 @@ def build_merge_conflict_resolution_request(
         spec_policy=True,
         realization_policy=True,
         routing_policy=True,
+        enable_feedback_reporting=True,
     )
     return AgentCallParameter(
         agent_call_kind=build_merge_conflict_resolution_request.__name__,

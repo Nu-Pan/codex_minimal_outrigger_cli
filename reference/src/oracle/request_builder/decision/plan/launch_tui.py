@@ -79,6 +79,7 @@ def build_decision_plan_request(
             cmoc_basic_instruction=True,
             routing_policy=True,
             editor_input_handoff_policy=True,
+            enable_feedback_reporting=True,
         )
         prompt = render_sd_node_as_markdown(*complete_prompt)
     elif resume is not None:

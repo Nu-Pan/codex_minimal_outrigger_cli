@@ -25,6 +25,7 @@ def build_quota_availability_probe_request(
         """,
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
+        enable_feedback_reporting=True,
         # NOTE 利用可否の観測だけが目的なので調査用の policy は含めない
     )
     return AgentCallParameter(

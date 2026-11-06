@@ -142,6 +142,7 @@ def _build_decision_apply_request_impl(
         spec_policy=spec_policy,
         realization_policy=realization_policy,
         routing_policy=True,
+        enable_feedback_reporting=True,
     )
     return AgentCallParameter(
         agent_call_kind=agent_call_kind,

@@ -52,7 +52,7 @@ def build_complete_prompt(
     routing_policy: bool = False,
     enable_document_search_mcp: bool = False,
     editor_input_handoff_policy: bool = False,
-    enable_feedback_reporting: bool = True,
+    enable_feedback_reporting: bool = False,
 ) -> list[SDHeader | SDTagBlock]:
     """選択された agent 向け文面を完全 prompt として構築する。
 
