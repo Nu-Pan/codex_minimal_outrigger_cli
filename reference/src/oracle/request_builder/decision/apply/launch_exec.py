@@ -20,8 +20,8 @@ from oracle.request_builder.basic import (
 
 
 def build_decision_apply_spec_request(
-    diff_base_commit: str,
-    run_fork_commit: str,
+    diff_begin_commit: str,
+    diff_end_commit: str,
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """`cmoc decision apply` の spec 同期ステップ用の agent call リクエストを構築する
@@ -29,16 +29,16 @@ def build_decision_apply_spec_request(
     詳細は `_build_decision_apply_request_impl` を参照。
     """
     return _build_decision_apply_request_impl(
-        diff_base_commit,
-        run_fork_commit,
+        diff_begin_commit,
+        diff_end_commit,
         agent_call_cwd,
         "to_spec",
     )
 
 
 def build_decision_apply_realization_request(
-    diff_base_commit: str,
-    run_fork_commit: str,
+    diff_begin_commit: str,
+    diff_end_commit: str,
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
     """`cmoc decision apply` の realization 同期ステップ用の agent call リクエストを構築する
@@ -46,8 +46,8 @@ def build_decision_apply_realization_request(
     詳細は `_build_decision_apply_request_impl` を参照。
     """
     return _build_decision_apply_request_impl(
-        diff_base_commit,
-        run_fork_commit,
+        diff_begin_commit,
+        diff_end_commit,
         agent_call_cwd,
         "to_realization",
     )
@@ -62,13 +62,13 @@ def _build_decision_apply_request_impl(
     """`cmoc decision apply` の各同期ステップ用の agent call リクエストを構築する
 
     Args:
-        diff_base_commit:
+        diff_begin_commit:
             追従対象差分の始点 commit のハッシュ値
             典型的には、前回の `cmoc decision apply` と対応する run fork commit が渡されるはず
-        run_fork_commit:
+        diff_end_commit:
             追従対象差分の終点 commit のハッシュ値
             `step_name=="to_spec"`: 典型的には、今回の `cmoc decision apply` と対応する run fork commit が渡されるはず
-            `step_name=="to_realization"`: 典型的には、直前の `to_spec` が正常終了したお時点の commit が渡されるはず
+            `step_name=="to_realization"`: 典型的には、直前の `to_spec` が正常終了した時点の commit が渡されるはず
         agent_call_cwd:
             エージェントに設定するカレントディレクトリパス
         step_name:
