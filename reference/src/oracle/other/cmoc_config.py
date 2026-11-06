@@ -112,6 +112,14 @@ class CmocConfigCodex:
     agent_calls: dict[str, CodexCallConfig] = field(
         default_factory=lambda: {
             # NOTE
+            #   spec 編集のエージェント呼び出しの範囲内では機械的検証ができないので、モデルの一発出しの品質が重要
+            #   よって gpt-6-astra を使う
+            "spec_edit": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6-astra",
+                reasoning_effort="max",
+            ),
+            # NOTE
             #   realization file の編集を主目的とする agent call で使用する共有設定。
             #   realization file を編集する知能を単一にすることで、編集合戦の回避を狙う。
             # NOTE
@@ -119,7 +127,7 @@ class CmocConfigCodex:
             #   実装失敗は後で人間が尻を拭くことになるので避けてほしい。
             #   一度 xhigh で様子見。
             # NOTE
-            #   自然言語文章の品質は気にする必要がないので、Astra は間違いなく不要。
+            #   realization の編集結果はテストによる機械的検証が可能なので Astra は間違いなく不要
             #   長時間反復実行でも使われるので、コスパは気にしておきたい
             #   よって gpt-6.1-sol が一番良い
             "realization_edit": CodexCallConfig(
@@ -136,8 +144,7 @@ class CmocConfigCodex:
                 reasoning_effort="max",
             ),
             # NOTE
-            #   oracle file に影響を与えるので品質が至上命題
-            #   TUI で人間とターンを回すので品質が至上命題
+            #   人間が直接読む文章を出すので、品質が至上命題
             "build_decision_plan_request": CodexCallConfig(
                 model_provider="openai",
                 model="gpt-6-astra",

@@ -57,6 +57,7 @@ def test_config_defaults_define_direct_settings_for_every_agent_call() -> None:
     assert config.num_parallel == 8
     assert config.codex.model_providers == {"openai": CodexModelProviderConfig()}
     assert set(config.codex.agent_calls) == {
+        "spec_edit",
         "realization_edit",
         "build_merge_conflict_resolution_request",
         "build_tui_request",
