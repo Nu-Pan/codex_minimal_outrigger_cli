@@ -40,7 +40,7 @@ from .runtime_ids import is_common_id, new_id
 OBSERVATION_SCHEMA_VERSION = 1
 REPORTER_VERSION = "1"
 _MAX_PAYLOAD_BYTES = 32 * 1024
-_PATH_EVIDENCE_KINDS = {"file", "oracle", "log"}
+PATH_EVIDENCE_KINDS = frozenset({"file", "log"})
 _UUID7_BODY_PATTERN = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
 )
@@ -599,12 +599,12 @@ def validate_agent_payload(
     # 変形されても、入力時点の repository 境界を迂回できないよう先に検査する。
     # capability の root は共有し、evidence の symlink は検査のたびに解決する。
     if any(
-        isinstance(item, dict) and item.get("kind") in _PATH_EVIDENCE_KINDS
+        isinstance(item, dict) and item.get("kind") in PATH_EVIDENCE_KINDS
         for item in evidence
     ):
         repo = repo.resolve()
     for item in evidence:
-        if not isinstance(item, dict) or item.get("kind") not in _PATH_EVIDENCE_KINDS:
+        if not isinstance(item, dict) or item.get("kind") not in PATH_EVIDENCE_KINDS:
             continue
         raw_path = item.get("path")
         if not isinstance(raw_path, str):
@@ -643,7 +643,7 @@ def validate_agent_payload(
         if isinstance(text, str) and redaction_marker.sub("", text).strip():
             meaningful_evidence = True
         path = item.get("path")
-        if item.get("kind") in _PATH_EVIDENCE_KINDS and isinstance(path, str):
+        if item.get("kind") in PATH_EVIDENCE_KINDS and isinstance(path, str):
             if redaction_marker.sub("", path).strip():
                 meaningful_evidence = True
     if not meaningful_evidence:
@@ -657,7 +657,7 @@ def validate_agent_payload(
     for index, item in enumerate(masked_evidence):
         if not isinstance(item, dict):
             continue
-        if item.get("kind") not in _PATH_EVIDENCE_KINDS:
+        if item.get("kind") not in PATH_EVIDENCE_KINDS:
             continue
         raw_path = item.get("path")
         if not isinstance(raw_path, str):

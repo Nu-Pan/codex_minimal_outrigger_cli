@@ -32,6 +32,7 @@ from jsonschema.protocols import Validator
 
 from .runtime_errors import CmocError
 from .runtime_feedback_store import (
+    PATH_EVIDENCE_KINDS,
     _has_symlink_component,
     canonical_json_bytes,
     feedback_root,
@@ -301,7 +302,7 @@ def validate_observation_envelope(
                     index
                     for index, item in enumerate(payload.get("evidence", []))
                     if isinstance(item, dict)
-                    and item.get("kind") in {"file", "oracle", "log"}
+                    and item.get("kind") in PATH_EVIDENCE_KINDS
                 }
                 actual_indexes = {
                     item.get("evidence_index")

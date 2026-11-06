@@ -83,7 +83,7 @@ reporter と collector は、安全に保存できるかだけを検査する。
 
 - input schema に適合する。
 - payload 全体が UTF-8 で 32 KiB 以下である。
-- `file | oracle | log` evidence の path が正規化後も capability に拘束された `{{repo-root}}` 内にある。
+- `file | log` evidence の path が正規化後も capability に拘束された `{{repo-root}}` 内にある。
 - evidence が空ではない。
 - accepted observation は 1 Codex call あたり 8 件以下である。
 - accepted observation は同じ Codex call から 60 秒以内に 3 件以下である。

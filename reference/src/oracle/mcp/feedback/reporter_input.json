@@ -25,12 +25,12 @@
         "environment",
         "tooling",
         "configuration",
-        "oracle",
+        "specification",
         "workflow",
         "external_dependency",
         "other"
       ],
-      "description": "問題の分類。"
+      "description": "問題の性質による分類。specification は仕様に関する問題を表す。"
     },
     "severity": {
       "type": "string",
@@ -105,11 +105,10 @@
               "command",
               "error",
               "file",
-              "oracle",
               "log",
               "other"
             ],
-            "description": "根拠の種類。"
+            "description": "根拠の形式。仕様文書を含むファイルを根拠にする場合は file を使う。"
           },
           "text": {
             "type": "string",
@@ -121,7 +120,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 1024,
-            "description": "file、oracle、log の repository 内 path。"
+            "description": "file、log の repository 内 path。"
           },
           "location": {
             "type": "string",
@@ -137,7 +136,6 @@
                 "kind": {
                   "enum": [
                     "file",
-                    "oracle",
                     "log"
                   ]
                 }

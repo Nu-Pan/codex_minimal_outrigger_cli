@@ -1075,12 +1075,12 @@ def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
         "context": {"repo_root": "/repo"},
         "payload": {
             "category": "tooling",
-            "evidence": [{"kind": "oracle", "path": "README.md"}],
+            "evidence": [{"kind": "log", "path": "build.log"}],
         },
         "evidence_fingerprints": [
             {
                 "evidence_index": 0,
-                "normalized_path": "/repo/README.md",
+                "normalized_path": "/repo/build.log",
                 "state": "hashed",
                 "sha256": "a" * 64,
             }
@@ -1090,7 +1090,7 @@ def test_agent_candidate_comparison_requires_evidence_subject_type() -> None:
         "candidate_id": "fbi_" + "b" * 26,
         "category": "tooling",
         "latest_fingerprints": observation["evidence_fingerprints"],
-        "reference_targets": [{"path": "README.md", "kind": "file", "location": None}],
+        "reference_targets": [{"path": "build.log", "kind": "file", "location": None}],
         "deduplication_hints": [],
     }
 
@@ -1109,7 +1109,7 @@ def test_agent_candidate_exact_match_requires_report_cut_fingerprint() -> None:
         "context": {"repo_root": "/repo"},
         "payload": {
             "category": "tooling",
-            "evidence": [{"kind": "oracle", "path": "README.md"}],
+            "evidence": [{"kind": "file", "path": "README.md"}],
         },
         "evidence_fingerprints": [
             {
@@ -1124,9 +1124,7 @@ def test_agent_candidate_exact_match_requires_report_cut_fingerprint() -> None:
         "candidate_id": "fbi_" + "b" * 26,
         "category": "tooling",
         "latest_fingerprints": observation["evidence_fingerprints"],
-        "reference_targets": [
-            {"path": "README.md", "kind": "oracle", "location": None}
-        ],
+        "reference_targets": [{"path": "README.md", "kind": "file", "location": None}],
         "deduplication_hints": [],
     }
     references = [
@@ -1311,13 +1309,15 @@ def test_collector_validates_context_rate_and_durable_observation(
         for name, value in reporter_environment.items():
             monkeypatch.setenv(name, value)
 
-        accepted = [reporter_module._submit(_payload()) for _index in range(3)]
+        payload = {**_payload(), "category": "specification"}
+        accepted = [reporter_module._submit(payload) for _index in range(3)]
 
         assert all(result["status"] == "accepted" for result in accepted)
         paths = iter_observation_paths(root)
         assert len(paths) == 3
         envelope = read_json_object(paths[0])
         assert validate_observation_envelope(envelope) == []
+        assert envelope["payload"] == payload
         assert envelope["context"]["repo_root"] == str(root)
         assert envelope["context"]["work_root"] == str(root)
         assert (
@@ -1326,11 +1326,11 @@ def test_collector_validates_context_rate_and_durable_observation(
         )
         assert envelope["context"]["subcommand_invocation_id"] == logger.execution_id
         assert envelope["context"]["agent_call_id"] == "ac_000005_2026-09-29_15-04"
-        assert reporter_module._submit(_payload())["code"] == "rate_limited"
+        assert reporter_module._submit(payload)["code"] == "rate_limited"
         feedback_call.close()
-        assert reporter_module._submit(_payload())["code"] == "context_invalid"
+        assert reporter_module._submit(payload)["code"] == "context_invalid"
         invocation.stop()
-        assert reporter_module._submit(_payload())["code"] == "collector_unavailable"
+        assert reporter_module._submit(payload)["code"] == "collector_unavailable"
     finally:
         invocation.stop()
 
@@ -1977,10 +1977,7 @@ def test_agent_payload_shares_repository_resolution(
     payload = {
         **_payload(),
         "evidence": [{"kind": "command", "text": "failed command"}]
-        + [
-            {"kind": kind, "text": text, "path": raw_path}
-            for kind in ("file", "oracle", "log")
-        ],
+        + [{"kind": kind, "text": text, "path": raw_path} for kind in ("file", "log")],
     }
     original = canonical_json_bytes(payload)
     resolve = Path.resolve
@@ -2001,7 +1998,7 @@ def test_agent_payload_shares_repository_resolution(
             "text": "failure [REDACTED:authorization]" if redaction == "text" else text,
             "path": masked_path,
         }
-        for kind in ("file", "oracle", "log")
+        for kind in ("file", "log")
     ]
     assert fingerprints == [
         {
@@ -2010,9 +2007,9 @@ def test_agent_payload_shares_repository_resolution(
             "state": "hashed",
             "sha256": sha256_bytes(target.read_bytes()),
         }
-        for index in (1, 2, 3)
+        for index in (1, 2)
     ]
-    assert count == 3 * int(redaction != "none")
+    assert count == 2 * int(redaction != "none")
     assert canonical_json_bytes(payload) == original
     # evidence ごとの root 解決による filesystem 読み取りの性能回帰を検出する。
     assert len(root_resolutions) == 1
@@ -2084,7 +2081,7 @@ def test_agent_payload_shares_fingerprints_only_within_submission(
             {"kind": kind, "text": "observed failure", "path": path}
             for kind, path in (
                 ("file", "evidence.txt"),
-                ("oracle", "./evidence.txt"),
+                ("file", "./evidence.txt"),
                 ("log", "alias"),
                 ("file", "other.txt"),
             )
@@ -2856,22 +2853,38 @@ def test_agent_payload_requires_meaningful_evidence(
     assert error.value.code == "suspected_secret"
 
 
+@pytest.mark.parametrize(
+    "field, value, error_path",
+    [
+        ("schema_version", 1, "/schema_version"),
+        ("category", "oracle", "/category"),
+        (
+            "evidence",
+            [{"kind": "oracle", "text": "仕様の問題", "path": "README.md"}],
+            "/evidence/0/kind",
+        ),
+    ],
+)
 def test_stored_invalid_reporter_schema_is_rejected_without_rewriting(
-    feedback_directory: Path, stored_feedback_context: dict[str, object]
+    feedback_directory: Path,
+    stored_feedback_context: dict[str, object],
+    field: str,
+    value: object,
+    error_path: str,
 ) -> None:
-    """旧 input version の raw を intake で拒否し、元の byte 列を保持する。"""
+    """現行 schema に適合しない raw を intake で拒否し、元の byte 列を保持する。"""
     # CLI の publication 阻止・エラー report は invalid raw のケースで検証する。
     root = feedback_directory
     _, raw = store_agent_observation(root, stored_feedback_context, _payload())
     invalid = read_json_object(raw)
-    invalid["payload"]["schema_version"] = 1
+    invalid["payload"][field] = value
     content = canonical_json_bytes(invalid)
     raw.write_bytes(content)
     (feedback_root(root) / "intake.json").unlink()
     with pytest.raises(CmocError, match="raw observation validation") as error:
         feedback_report_module._pending_observations(root)
     assert str(raw) in error.value.detail
-    assert "/schema_version" in error.value.detail
+    assert error_path in error.value.detail
     assert raw.read_bytes() == content
     assert load_active_state(root).current is None
 
@@ -3303,9 +3316,9 @@ def test_feedback_preconditions_preserve_existing_changes_and_raw(
         )
         assert expected_error in result.output, (condition, result.output)
         assert run_git(root, "rev-parse", "HEAD").stdout == original_head, condition
-        assert (
-            run_git(root, "status", "--porcelain").stdout == original_status
-        ), condition
+        assert run_git(root, "status", "--porcelain").stdout == original_status, (
+            condition
+        )
         assert {
             path: path.read_bytes() for path in iter_observation_paths(root)
         } == original_raw, condition
@@ -3899,14 +3912,14 @@ def test_agent_issues_are_compacted_then_removed_for_terminal_verdicts(
     # 異なる subject の案件を同時に用意し、Git/session と二回の publication を共有する。
     root = feedback_fixed_input_session
     cases = {}
-    for terminal_verdict, kind, reference_path in (
-        ("already_resolved", "file", "README.md"),
-        ("not_actionable", "oracle", "oracle/spec.md"),
+    for terminal_verdict, reference_path in (
+        ("already_resolved", "README.md"),
+        ("not_actionable", "oracle/spec.md"),
     ):
         accepted, raw_path = store_agent_observation(
             root,
             _context(root, session_id=SESSION_ID),
-            _payload(kind=kind, path=reference_path),
+            _payload(path=reference_path),
         )
         identity = issue_id(f"agent\0{accepted['observation_id']}")
         cases[identity] = {
