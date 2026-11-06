@@ -1219,7 +1219,7 @@ def test_tui_leaf_commands_and_resume_use_real_codex_response_over_production_pt
         "cmoc_editor_input.overwrite を使って一度 handoff してください。\n"
         f"target ID: {target.target_id}\n"
         "goal と instructions は CMOC_HANDOFF_REQUEST、background は受け渡しの動作確認、"
-        "decisions と open_questions は該当なし、oracle_references は空配列です。\n"
+        "decisions と open_questions は該当なし、references は空配列です。\n"
         "instructions にはガイドが指定する受信側の識別子も含めてください。\n"
         "handoff 後に cmoc_document_search.search を query『期限の動作確認』で一度呼び、"
         "期限超過の結果も短く報告してください。\n"

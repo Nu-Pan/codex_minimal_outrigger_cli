@@ -46,7 +46,7 @@ def build_editor_input_handoff_body(
     background: str,
     decisions: str,
     open_questions: str,
-    oracle_references: list[DocRef],
+    references: list[DocRef],
     source: EditorInputHandoffSource,
 ) -> str:
     """MCP が検証した項目と実際の送信元情報を本文へ配置する。
@@ -57,7 +57,7 @@ def build_editor_input_handoff_body(
         background: 依頼の意図・背景。
         decisions: 決定事項とその理由。
         open_questions: 未確定事項。
-        oracle_references: 入力から変換・検証した oracle の文書参照。
+        references: 入力から変換・検証した、依頼に関係する文書・ファイルへの参照。
         source: 送信側 Codex process の呼び出し元コンテキストから取得した値。
 
     Returns:
@@ -101,11 +101,11 @@ def build_editor_input_handoff_body(
         ),
     ]
     # 参照
-    if oracle_references:
+    if references:
         sections.append(
             SDHeader(
                 "参照ファイル",
-                render_doc_ref_as_multiline_md(oracle_references),
+                render_doc_ref_as_multiline_md(references),
             )
         )
     # 機械的な値

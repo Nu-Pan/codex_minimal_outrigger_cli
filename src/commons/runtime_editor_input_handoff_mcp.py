@@ -173,7 +173,7 @@ def _call_target(payload: object, *, tool_name: str) -> dict[str, object]:
         try:
             references = [
                 DocRef(Path(reference["file_path"]), reference["loc_desc"])
-                for reference in payload["oracle_references"]
+                for reference in payload["references"]
             ]
             content = build_editor_input_handoff_body(
                 goal=payload["goal"],
@@ -181,7 +181,7 @@ def _call_target(payload: object, *, tool_name: str) -> dict[str, object]:
                 background=payload["background"],
                 decisions=payload["decisions"],
                 open_questions=payload["open_questions"],
-                oracle_references=references,
+                references=references,
                 source=source,
             )
             content.encode("utf-8")

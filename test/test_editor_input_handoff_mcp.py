@@ -497,10 +497,10 @@ def test_handoff_mcp_strips_unexpected_target_result_fields(
         {"background": ""},
         {"decisions": []},
         {"open_questions": "\t"},
-        {"oracle_references": None},
-        {"oracle_references": [{"file_path": "relative.md", "loc_desc": None}]},
-        {"oracle_references": [{"file_path": "/oracle.md", "loc_desc": ""}]},
-        {"oracle_references": [{"file_path": "/oracle.md"}]},
+        {"references": None},
+        {"references": [{"file_path": "relative.md", "loc_desc": None}]},
+        {"references": [{"file_path": "/document.md", "loc_desc": ""}]},
+        {"references": [{"file_path": "/document.md"}]},
         {"source": {"execution_id": "forged"}},
         {"content": "private input"},
     ],
@@ -554,26 +554,30 @@ def test_missing_or_invalid_source_refuses_handoff(
 def test_handoff_uses_canonical_body_and_typed_references(
     tmp_path, handoff_transport, handoff_source
 ):
-    """本文・参照の構築を送信境界で検証し、実書き込みは lifecycle test に委ねる。"""
+    """文書区分や repository 境界で参照を絞らず、正本 builder で本文へ組み込む。"""
     from oracle.mcp.editor_input_handoff.body import build_editor_input_handoff_body
     from oracle.other.doc_ref_model import DocRef
 
     target_id, connection = handoff_transport
-    reference_path = tmp_path / "spec/spec.md"
+    # realization のコードと repository 外の資料も位置情報として引き渡す。
+    reference_path = tmp_path / "src/worker.py"
+    external_path = tmp_path.parent / "related-notes.md"
     fields = handoff_input(target_id, "本文を保持する <!-- コメント -->\n続き")
-    fields["oracle_references"] = [
+    fields["references"] = [
         {"file_path": str(reference_path), "loc_desc": None},
-        {"file_path": str(reference_path), "loc_desc": "対象の見出し"},
+        {"file_path": str(reference_path), "loc_desc": "Worker.run"},
+        {"file_path": str(external_path), "loc_desc": "背景"},
     ]
     expected = build_editor_input_handoff_body(
         **{
             key: value
             for key, value in fields.items()
-            if key not in {"target_id", "oracle_references"}
+            if key not in {"target_id", "references"}
         },
-        oracle_references=[
+        references=[
             DocRef(reference_path, None),
-            DocRef(reference_path, "対象の見出し"),
+            DocRef(reference_path, "Worker.run"),
+            DocRef(external_path, "背景"),
         ],
         source=handoff_source,
     )
@@ -585,6 +589,8 @@ def test_handoff_uses_canonical_body_and_typed_references(
         assert request["payload"] == {"target_id": target_id, "content": expected}
     assert "<!-- コメント -->" in expected
     assert str(reference_path) in expected
+    assert "Worker.run" in expected
+    assert str(external_path) in expected
     assert handoff_source.codex_call_id in expected
     assert target_id not in expected
 

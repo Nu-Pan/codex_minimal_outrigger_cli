@@ -11,7 +11,7 @@
     "background",
     "decisions",
     "open_questions",
-    "oracle_references"
+    "references"
   ],
   "properties": {
     "target_id": {
@@ -38,9 +38,9 @@
       "$ref": "#/$defs/nonblank_text",
       "description": "未確定事項。"
     },
-    "oracle_references": {
+    "references": {
       "type": "array",
-      "description": "作業に必要な oracle の参照。参照がなければ空配列にする。参照先の簡潔な内容と参照理由は instructions または background に含める。",
+      "description": "依頼に関係する文書・ファイルへの参照。参照がなければ空配列にする。参照先の簡潔な内容と参照理由は instructions または background に含める。参照先の読み取りは受信側のアクセス規定に従う。",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -51,7 +51,7 @@
         "properties": {
           "file_path": {
             "$ref": "#/$defs/nonblank_text",
-            "description": "参照先の oracle file の絶対パス。"
+            "description": "参照先ファイルの絶対パス。"
           },
           "loc_desc": {
             "anyOf": [

@@ -17,7 +17,7 @@
     - `build_realization_refactor_request` で Strcutured Output を返す意味はもうない (`codex resume 01a18e12-9b7a-7370-9cdc-c647b4ac0c55`)
     - config が追従できてない
     - build request 系の関数の戻り値が、リクエストとプレースホルダ定義のタプルに統一されていない？
-    - build request 系関数で受け取ってる `agent_call_cwd` って、取る意味なくない？
+    - 参照の記述方法の指定があちこちに散ってたような気がする
 
 ## サンドボックスシステムを考え直す
 

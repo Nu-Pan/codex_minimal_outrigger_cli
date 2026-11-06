@@ -11,7 +11,7 @@ def handoff_input(target_id, instructions):
         "background": "入力の受け渡しを検証する",
         "decisions": "追加の決定なし",
         "open_questions": "未確定事項なし",
-        "oracle_references": [],
+        "references": [],
     }
 
 
