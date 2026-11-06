@@ -47,7 +47,7 @@ def build_complete_prompt(
     aux_dynamic_prompt: list[SDHeader | SDTagBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
     cmoc_basic_instruction: bool = False,
-    spec_policy: bool = True,
+    spec_policy: bool = False,
     realization_policy: bool = False,
     routing_policy: bool = False,
     enable_document_search_mcp: bool = False,
