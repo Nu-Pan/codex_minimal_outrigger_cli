@@ -18,7 +18,7 @@ def build_decision_plan_request(
 ) -> AgentCallParameter:
     """`cmoc decision plan` 用の agent call リクエストを構築する
 
-    1 ターン目の exec リクエストと、2 ターン目移行用の TUI resume リクエスト両方をこの関数で構築する。
+    1 ターン目の exec リクエストと、2 ターン目以降用の TUI resume リクエスト両方をこの関数で構築する。
 
     Args:
         user_instruction:
@@ -48,14 +48,21 @@ def build_decision_plan_request(
         path_context = AgentCallPathContext(agent_call_cwd=resolve_repo_root())
         complete_prompt = build_complete_prompt(
             task="""
-            - オリジナルのユーザー指示 <cmoc_ref target="original_user_instruction"/> が要求する事項を調査し、結果を回答すること
+            - <cmoc_ref target="original_user_instruction"/> でユーザーの要求が述べられているはずです
+            - このユーザー要求を実現するには、decision, reference をどのように編集するのが良いか、プランを提案して下さい
             """,
             scope="""
-            - `{{work-root}}/oracle` ツリー内の関連する oracle file を根拠とすること
+            - decision, reference をどのように編集するべきか？　の手順がレポートに必要です
+            - それによって spec がどうなるか？　の説明がレポートに必要です
             """,
             completion_criteria="""
-            - ユーザー指示が要求する調査結果がユーザーへ回答されていること
-            - 調査結果の根拠となる oracle file を回答から特定できること
+            - 実際に decision, reference を編集するのは人間ですから、人間が理解するのにかかる認知コストが安く済むようなプランが望ましいです
+            - 人間がインタラクティブに質問する形で問題点・疑問点を導けるように、質問の出発点となる全体像を把握できるようなプランが望ましいです
+            - 第一原理思考に基づて既存の前提を問い直し、decision, reference をよりシンプルに保てるプランが望ましいです
+            """,
+            non_goals="""
+            - プランに関する全ての詳細を網羅的にユーザーに伝える事はプランの目的ではありません
+            - 既存の decision, reference, spec を保守的に維持することはプランの目的ではありません
             """,
             file_access_mode=FileAccessMode.DECISION_PLAN,
             path_context=path_context,
