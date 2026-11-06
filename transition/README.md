@@ -130,7 +130,6 @@ Git 操作は人間が行い、スクリプトは commit、stash、branch 切替
 
 - `reference` の読み取り範囲と、decision が参照した資料の拘束範囲。reference 全体の編集者が人間であることは確定済み。
 - `decision plan` と apply の各段階の読み書き範囲、および汎用 TUI・join・feedback 等の権限。
-- 任意のプランを apply へ渡す方法。プランなし・古いプランと現在の decision が食い違う場合の扱い。
 - spec 同期と realization 追従の入力 commit、初回適用、途中失敗、再実行、join、適用済み基点の更新条件。
 - ID の書式・一意性・移動時の保持・削除時の参照の扱い。以下の採番器は移行用の補助であり、製品の ID 仕様の正本ではない。
 - 旧 session・設定・保存データをどう扱うか。引き継いだ既存要求と、工程 4 で抽出する decision に対する整合を確認する範囲、新しい差分追従の基点。
