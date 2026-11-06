@@ -54,8 +54,8 @@ def build_decision_apply_realization_request(
 
 
 def _build_decision_apply_request_impl(
-    diff_base_commit: str,
-    run_fork_commit: str,
+    diff_begin_commit: str,
+    diff_end_commit: str,
     agent_call_cwd: Path,
     step_name: Literal["to_spec", "to_realization"],
 ) -> AgentCallParameter:
@@ -63,11 +63,12 @@ def _build_decision_apply_request_impl(
 
     Args:
         diff_base_commit:
-            追従対象差分の始点 commit
+            追従対象差分の始点 commit のハッシュ値
             典型的には、前回の `cmoc decision apply` と対応する run fork commit が渡されるはず
         run_fork_commit:
-            追従対象差分の終点 commit
-            典型的には、今回の `cmoc decision apply` と対応する run fork commit が渡されるはず
+            追従対象差分の終点 commit のハッシュ値
+            `step_name=="to_spec"`: 典型的には、今回の `cmoc decision apply` と対応する run fork commit が渡されるはず
+            `step_name=="to_realization"`: 典型的には、直前の `to_spec` が正常終了したお時点の commit が渡されるはず
         agent_call_cwd:
             エージェントに設定するカレントディレクトリパス
         step_name:
@@ -131,8 +132,8 @@ def _build_decision_apply_request_impl(
                 SDHeader(
                     "追従対象 git commit",
                     f"""
-                    - 始点: `{diff_base_commit}`
-                    - 終点: `{run_fork_commit}`
+                    - 始点: `{diff_begin_commit}`
+                    - 終点: `{diff_end_commit}`
                     """,
                 ),
             )
