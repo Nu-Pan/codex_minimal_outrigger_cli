@@ -9,7 +9,7 @@
 - {{work-root}}/spec/app_spec/codex_tui_rule.md
 - {{work-root}}/spec/app_spec/timestamp.md
 - {{work-root}}/spec/app_spec/windows_toast_notification.md
-- {{work-root}}/reference/src/oracle/other/path_model.py
+- {{work-root}}/reference/src/reference/other/path_model.py
 
 CLI lifecycle の error、log、preflight、completion は同じ runner、work root、
 subcommand event を共有する一つの外部契約として一箇所で検証する。
@@ -967,7 +967,7 @@ import sys
 
 def reject_command_runtime(event, arguments):
     if event == "import" and arguments[0].split(".", 1)[0] in {
-        "cmoc_runtime", "sub_commands", "acp", "oracle"
+        "cmoc_runtime", "sub_commands", "acp", "reference"
     }:
         raise AssertionError(f"completion loaded command runtime: {arguments[0]}")
 

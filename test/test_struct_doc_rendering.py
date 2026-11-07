@@ -1,13 +1,13 @@
 """構造化文書の Markdown renderer 単体の整形挙動を検証する。
 
 根拠:
-- {{work-root}}/reference/src/oracle/other/struct_doc.py
+- {{work-root}}/reference/src/reference/other/struct_doc.py
 """
 
 from collections.abc import Callable
 
 import pytest
-from oracle.other.struct_doc import (
+from reference.other.struct_doc import (
     SDCodeBlock,
     SDHeader,
     SDPolicy,

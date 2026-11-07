@@ -23,8 +23,8 @@ from _codex_support import (
     codex_parameter,
     setup_codex_home,
 )
-from oracle.other import path_model as path_model_module
-from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
+from reference.other import path_model as path_model_module
+from reference.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_profile as runtime_codex_profile
 from basic.acp import AgentCallParameter, FileAccessMode

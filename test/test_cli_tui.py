@@ -3,7 +3,7 @@
 正本仕様:
 - {{work-root}}/spec/app_spec/sub_command/tui.md
 - {{work-root}}/spec/app_spec/prompt_editor_input.md
-- {{work-root}}/reference/src/oracle/prompt_builder/editor_input.py
+- {{work-root}}/reference/src/reference/prompt_builder/editor_input.py
 """
 
 import json
@@ -12,8 +12,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-import oracle.other.path_model as path_model_module
 import pytest
+import reference.other.path_model as path_model_module
 from _cli_support import runner, terminal_primary_report
 from _git_support import make_repo, run_git
 from _report_support import original_report_input, report_metadata

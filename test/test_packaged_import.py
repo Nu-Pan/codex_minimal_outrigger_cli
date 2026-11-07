@@ -60,7 +60,7 @@ def packaged_sources(tmp_path_factory: pytest.TempPathFactory) -> Path:
         "src/basic",
         "src/commons",
         "src/config",
-        "reference/src/oracle",
+        "reference/src/reference",
     ):
         source = root / relative_path
         shutil.copytree(
@@ -89,19 +89,19 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
     """quota probe と ACP basic の正本参照を同じ packaged process で検証する。
 
     acp の型再公開と正本 builder の完全 prompt を、basic・commons を含まない配置で
-    確認する。共通の oracle import を一つの独立 process で検証する。
-    根拠: {{work-root}}/reference/src/oracle/request_builder/common/quota_probe.py
-    {{work-root}}/reference/src/oracle/request_builder/basic.py
+    確認する。共通の reference import を一つの独立 process で検証する。
+    根拠: {{work-root}}/reference/src/reference/request_builder/common/quota_probe.py
+    {{work-root}}/reference/src/reference/request_builder/basic.py
     {{work-root}}/spec/dev_rule/test_rule.md
     """
     root = Path(__file__).parents[1]
     pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     setuptools_config = pyproject["tool"]["setuptools"]
-    assert "oracle" not in setuptools_config["py-modules"]
-    assert setuptools_config["package-dir"]["oracle"] == "reference/src/oracle"
+    assert "reference" not in setuptools_config["py-modules"]
+    assert setuptools_config["package-dir"]["reference"] == "reference/src/reference"
     assert "reference/src" in setuptools_config["packages"]["find"]["where"]
 
-    target = _packaged_layout(packaged_sources, tmp_path, "acp", "oracle")
+    target = _packaged_layout(packaged_sources, tmp_path, "acp", "reference")
 
     # Git metadata の導出は test_basic_runtime.py と quota の polls_and_resumes に残す。
     # ここでは探索結果だけを置換し、packaged builder と prompt の参照を実行する。
@@ -114,16 +114,16 @@ def test_quota_probe_and_acp_basic_import_from_packaged_layout(
             "assert str(Path.cwd()) not in sys.path; "
             "import acp.builder; "
             "from acp.builder.basic import AgentCallParameter, FileAccessMode; "
-            "from oracle.request_builder.basic import AgentCallParameter as Canonical; "
+            "from reference.request_builder.basic import AgentCallParameter as Canonical; "
             "assert acp.builder.__all__ == ['basic']; "
             "assert sorted(n for n in vars(acp.builder) if not n.startswith('_')) == ['basic']; "
             "assert acp.builder.basic.AgentCallParameter is Canonical; "
             "assert AgentCallParameter is Canonical; "
             "assert FileAccessMode.READONLY.value == 'readonly'; "
-            "import oracle.other.path_model as path_model; "
+            "import reference.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
-            "from oracle.request_builder.common.quota_probe import "
+            "from reference.request_builder.common.quota_probe import "
             "build_quota_availability_probe_request as build_probe; "
             "probe = build_probe(Path.cwd()); "
             "assert probe.agent_call_cwd == Path.cwd(); "
@@ -144,10 +144,12 @@ def test_decision_builders_and_prompt_editor_import_from_packaged_layout(
     """decision の builder と editor 入力境界が packaged layout で正本を参照する。
 
     根拠: {{work-root}}/spec/app_spec/prompt_editor_input.md
-    {{work-root}}/reference/src/oracle/request_builder/decision/apply/launch_exec.py
-    {{work-root}}/reference/src/oracle/request_builder/decision/plan/launch_tui.py
+    {{work-root}}/reference/src/reference/request_builder/decision/apply/launch_exec.py
+    {{work-root}}/reference/src/reference/request_builder/decision/plan/launch_tui.py
     """
-    target = _packaged_layout(packaged_sources, tmp_path, "basic", "commons", "oracle")
+    target = _packaged_layout(
+        packaged_sources, tmp_path, "basic", "commons", "reference"
+    )
 
     # root 探索の実 Git 境界は test_basic_runtime.py と調査 TUI の結合 test に残す。
     # builder・正本 schema・editor input・handoff guide は packaged module の実経路を通す。
@@ -162,17 +164,17 @@ def test_decision_builders_and_prompt_editor_import_from_packaged_layout(
             "import commons.runtime_editor_input_handoff_mcp as handoff_mcp; "
             "from pathlib import Path; "
             "from types import SimpleNamespace; "
-            "from oracle.mcp.editor_input_handoff.guide import "
+            "from reference.mcp.editor_input_handoff.guide import "
             "build_editor_input_handoff_guide; "
-            "import oracle.other.path_model as path_model; "
+            "import reference.other.path_model as path_model; "
             "path_model._resolve_git_worktree_roots = "
             "lambda start_path=None: (Path.cwd(), Path.cwd()); "
-            "from oracle.request_builder.decision.apply.launch_exec import "
+            "from reference.request_builder.decision.apply.launch_exec import "
             "build_decision_apply_spec_request, "
             "build_decision_apply_realization_request; "
             "assert callable(build_decision_apply_spec_request); "
             "assert callable(build_decision_apply_realization_request); "
-            "from oracle.request_builder.decision.plan.launch_tui import "
+            "from reference.request_builder.decision.plan.launch_tui import "
             "build_decision_plan_request as build_plan; "
             "investigation = build_plan('investigate decision'); "
             "assert investigation.file_access_mode.value == 'decision_plan'; "
@@ -236,10 +238,10 @@ def test_cmoc_config_reexports_only_config_definitions(
 
     `__all__` と module namespace の両方を確認し、packaged layout で内部実装が
     意図せず公開されないことを確認する。
-    根拠: {{work-root}}/reference/src/oracle/other/cmoc_config.py
+    根拠: {{work-root}}/reference/src/reference/other/cmoc_config.py
     {{work-root}}/spec/dev_rule/test_rule.md
     """
-    target = _packaged_layout(packaged_sources, tmp_path, "config", "oracle")
+    target = _packaged_layout(packaged_sources, tmp_path, "config", "reference")
 
     result = _run_from_packaged_layout(
         target,

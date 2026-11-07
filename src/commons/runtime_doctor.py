@@ -24,7 +24,7 @@ from contextlib import ExitStack, contextmanager, nullcontext
 from dataclasses import asdict
 from pathlib import Path
 
-from oracle.other.cmoc_config import DocumentSearchConfig
+from reference.other.cmoc_config import DocumentSearchConfig
 
 from .runtime_codex_recovery import (
     check_recovery_interruption,
@@ -688,7 +688,7 @@ def _preexisting_repair_paths(
     root: Path, index_path: Path, *, include_config: bool = True
 ) -> set[str]:
     """開始前の runtime 差分と .gitignore の staged deletion を一括で保存対象にする。"""
-    # {{work-root}}/reference/src/oracle/other/cmoc_config.py
+    # {{work-root}}/reference/src/reference/other/cmoc_config.py
     # config は人間が編集するため、既存の staged/unstaged 変更を doctor の
     # repair commit に混ぜない。state も同じ一時 index で扱うため同じ境界にする。
     paths = (

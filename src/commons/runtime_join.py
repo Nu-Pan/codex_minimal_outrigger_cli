@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from oracle.request_builder.basic import AgentCallParameter
+from reference.request_builder.basic import AgentCallParameter
 
 from .runtime_errors import CmocError
 from .runtime_git import (

@@ -2,7 +2,7 @@
 
 正本仕様:
 - {{work-root}}/spec/app_spec/prompt_editor_input.md
-- {{work-root}}/reference/src/oracle/prompt_builder/editor_input.py
+- {{work-root}}/reference/src/reference/prompt_builder/editor_input.py
 """
 
 import os
@@ -11,7 +11,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from oracle.prompt_builder.editor_input import (
+from reference.prompt_builder.editor_input import (
     build_prompt_editor_input_console_guidance,
 )
 

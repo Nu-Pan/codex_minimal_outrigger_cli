@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from oracle.mcp.editor_input_handoff.body import EditorInputHandoffSource
-from oracle.request_builder.decision.plan.launch_tui import (
+from reference.mcp.editor_input_handoff.body import EditorInputHandoffSource
+from reference.request_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
 )
-from oracle.request_builder.tui.launch_tui import build_tui_request
+from reference.request_builder.tui.launch_tui import build_tui_request
 
 from basic.acp import AgentCallParameter, TuiResumeTarget
 from basic.path_model import AgentCallPathContext

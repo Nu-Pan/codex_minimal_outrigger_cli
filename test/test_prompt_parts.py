@@ -10,47 +10,47 @@ SDHeader 出力を共有する一つの責務であるため、prompt builder �
 - {{work-root}}/spec/app_spec/document_search.md
 - {{work-root}}/spec/app_spec/cmoc_basic_instruction.md
 - {{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md
-- {{work-root}}/reference/src/oracle/other/struct_doc.py
-- {{work-root}}/reference/src/oracle/prompt_builder/basic.py
-- {{work-root}}/reference/src/oracle/prompt_builder/complete_prompt.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/editor_input_handoff.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/feedback_reporting.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/file_access.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/cmoc_basic.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/oracle.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/realization_findings.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/realization.py
-- {{work-root}}/reference/src/oracle/prompt_builder/policy/routing.py
+- {{work-root}}/reference/src/reference/other/struct_doc.py
+- {{work-root}}/reference/src/reference/prompt_builder/basic.py
+- {{work-root}}/reference/src/reference/prompt_builder/complete_prompt.py
+- {{work-root}}/reference/src/reference/prompt_builder/policy/editor_input_handoff.py
+- {{work-root}}/reference/src/reference/prompt_builder/policy/feedback_reporting.py
+- {{work-root}}/reference/src/reference/prompt_builder/policy/file_access.py
+- {{work-root}}/reference/src/reference/prompt_builder/policy/cmoc_basic.py
+- {{work-root}}/reference/src/reference/prompt_builder/policy/oracle.py
+- {{work-root}}/reference/src/reference/prompt_builder/policy/realization_findings.py
+- {{work-root}}/reference/src/reference/prompt_builder/policy/realization.py
+- {{work-root}}/reference/src/reference/prompt_builder/policy/routing.py
 """
 
 from pathlib import Path
 
-import oracle.other.path_model as path_model_module
 import pytest
-from oracle.other.struct_doc import (
+import reference.other.path_model as path_model_module
+from reference.other.struct_doc import (
     SDCodeBlock,
     SDHeader,
     SDPolicy,
     render_sd_node_as_markdown,
 )
-from oracle.prompt_builder.basic import PlaceholderMap
-from oracle.prompt_builder.complete_prompt import build_complete_prompt
-from oracle.prompt_builder.policy.editor_input_handoff import (
+from reference.prompt_builder.basic import PlaceholderMap
+from reference.prompt_builder.complete_prompt import build_complete_prompt
+from reference.prompt_builder.policy.editor_input_handoff import (
     build_editor_input_handoff_policy as _build_editor_input_handoff_policy,
 )
-from oracle.prompt_builder.policy.feedback_reporting import (
+from reference.prompt_builder.policy.feedback_reporting import (
     build_feedback_reporting_policy as _build_feedback_reporting_policy,
 )
-from oracle.prompt_builder.policy.file_access import (
+from reference.prompt_builder.policy.file_access import (
     build_file_access_policy as _build_file_access_policy,
 )
-from oracle.prompt_builder.policy.oracle import (
+from reference.prompt_builder.policy.oracle import (
     build_oracle_policy as _build_oracle_policy,
 )
-from oracle.prompt_builder.policy.realization import (
+from reference.prompt_builder.policy.realization import (
     build_realization_policy as _build_realization_policy,
 )
-from oracle.prompt_builder.policy.realization_findings import (
+from reference.prompt_builder.policy.realization_findings import (
     build_realization_findings_policy as _build_realization_findings_policy,
 )
 

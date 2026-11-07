@@ -162,7 +162,7 @@ refactor state の同期保証は、取り込み成立時の tree に対する�
 
 競合解消 agent は、session を source、run を target とする準備中の run worktree で作業する。decision・reference を読み取り専用で参照し、spec file と realization file を統合に必要な範囲で編集する。元の workload の commit や feedback の issue commit を書き換えず、進行中の merge 結果へ調整を加える。refactor state の競合解消と同期は cmoc が担当する。
 
-run 固有の入力対応は、`{{cmoc-root}}/reference/src/oracle/request_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_request` へ委譲する。この builder は「join の競合解消」で定める共通 request builder を呼び出す。すべての自動 join と明示 join で同じ call を使用する。feedback の封印後の入力・調整範囲は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。
+run 固有の入力対応は、`{{cmoc-root}}/reference/src/reference/request_builder/run/join/conflict_resolution.py` の `build_run_join_conflict_resolution_request` へ委譲する。この builder は「join の競合解消」で定める共通 request builder を呼び出す。すべての自動 join と明示 join で同じ call を使用する。feedback の封印後の入力・調整範囲は、`{{cmoc-root}}/spec/app_spec/sub_command/feedback_report.md` の「自動 join と join 後の確定」に従う。
 
 ### join の失敗と復旧
 

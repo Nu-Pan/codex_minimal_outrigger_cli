@@ -187,7 +187,7 @@ def merge_run(
 ) -> tuple[str | None, str, str | None, str | None, dict[str, object]]:
     """run 側で準備を確定してから同じ tree を取り込み、後処理を行う。"""
     # branch の統合と復旧は session join と同じ engine に委ねる。
-    from oracle.request_builder.run.join.conflict_resolution import (
+    from reference.request_builder.run.join.conflict_resolution import (
         build_run_join_conflict_resolution_request,
     )
 

@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema.exceptions import SchemaError
-from oracle.other.struct_doc import render_sd_node_as_markdown
+from reference.other.struct_doc import render_sd_node_as_markdown
 
 from acp.builder.feedback.normalize_issue import (
     build_feedback_issue_normalization_request,

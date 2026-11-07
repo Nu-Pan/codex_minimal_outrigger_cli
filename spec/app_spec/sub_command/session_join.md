@@ -45,7 +45,7 @@ session join と repository-local feedback state の境界は、`{{cmoc-root}}/s
 
 agent は、home を session branch へ統合中の worktree を cwd として、decision・reference を読み取り専用で参照し、アクセス境界内の spec file と realization file を編集する。session join のために新しい editing run は作らない。
 
-session 固有の入力対応は、`{{cmoc-root}}/reference/src/oracle/request_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_request` へ委譲する。この builder は共通 request builder を呼び出す。共通 policy、指示文と起動条件の構築は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「agent への入力と正確な定義の委譲」に従う。
+session 固有の入力対応は、`{{cmoc-root}}/reference/src/reference/request_builder/session/join/conflict_resolution.py` の `build_session_join_conflict_resolution_request` へ委譲する。この builder は共通 request builder を呼び出す。共通 policy、指示文と起動条件の構築は、`{{cmoc-root}}/spec/app_spec/merge_conflict_resolution.md` の「agent への入力と正確な定義の委譲」に従う。
 
 ## その他、コマンドが想定外に失敗した場合
 

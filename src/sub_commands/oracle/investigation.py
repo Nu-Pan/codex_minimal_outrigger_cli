@@ -1,5 +1,9 @@
 """`cmoc oracle investigation` の read-only TUI workload。"""
 
+from reference.request_builder.decision.plan.launch_tui import (
+    build_decision_plan_request,
+)
+
 from cmoc_runtime import (
     load_config,
     repo_root,
@@ -16,9 +20,6 @@ from commons.prompt_editor_input import (
     reserve_prompt_editor_input,
 )
 from commons.runtime_paths import reuse_root_queries
-from oracle.request_builder.decision.plan.launch_tui import (
-    build_decision_plan_request,
-)
 
 
 def cmoc_decision_plan_impl() -> None:

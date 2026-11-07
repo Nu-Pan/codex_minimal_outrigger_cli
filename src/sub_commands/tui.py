@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from oracle.request_builder.tui.launch_tui import build_tui_request
+from reference.request_builder.tui.launch_tui import build_tui_request
 
 from cmoc_runtime import (
     load_config,

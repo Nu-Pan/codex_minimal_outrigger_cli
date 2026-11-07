@@ -11,8 +11,8 @@ from _codex_support import (
     setup_codex_home,
 )
 from _command_support import write_python_executable
-from oracle.other import path_model as path_model_module
-from oracle.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
+from reference.other import path_model as path_model_module
+from reference.other.cmoc_config import CodexCallConfig, CodexModelProviderConfig
 
 import commons.runtime_codex_exec as exec_module
 from basic.acp import FileAccessMode

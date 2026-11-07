@@ -7,45 +7,45 @@ import json
 from copy import deepcopy
 from dataclasses import replace
 
-import oracle.other.path_model as path_model
 import pytest
+import reference.other.path_model as path_model
 from _codex_support import (
     codex_arg_value,
     codex_override_config,
     script_codex_calls,
     setup_codex_home,
 )
-from oracle.request_builder.common.primary_report_review import (
+from reference.request_builder.common.primary_report_review import (
     build_primary_report_review_request,
 )
-from oracle.request_builder.common.quota_probe import (
+from reference.request_builder.common.quota_probe import (
     build_quota_availability_probe_request,
 )
-from oracle.request_builder.decision.apply.launch_exec import (
+from reference.request_builder.decision.apply.launch_exec import (
     build_decision_apply_realization_request,
 )
-from oracle.request_builder.decision.plan.launch_tui import (
+from reference.request_builder.decision.plan.launch_tui import (
     build_decision_plan_request,
 )
-from oracle.request_builder.feedback.report.normalize_issue import (
+from reference.request_builder.feedback.report.normalize_issue import (
     build_feedback_issue_normalization_request,
 )
-from oracle.request_builder.feedback.report.remediate_issue import (
+from reference.request_builder.feedback.report.remediate_issue import (
     build_feedback_issue_remediation_request,
 )
-from oracle.request_builder.oracle.edit.launch_exec import (
+from reference.request_builder.oracle.edit.launch_exec import (
     build_oracle_edit_request,
 )
-from oracle.request_builder.realization.refactor.file_review_and_fix import (
+from reference.request_builder.realization.refactor.file_review_and_fix import (
     build_realization_refactor_request,
 )
-from oracle.request_builder.run.join.conflict_resolution import (
+from reference.request_builder.run.join.conflict_resolution import (
     build_run_join_conflict_resolution_request,
 )
-from oracle.request_builder.session.join.conflict_resolution import (
+from reference.request_builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_request,
 )
-from oracle.request_builder.tui.launch_tui import build_tui_request
+from reference.request_builder.tui.launch_tui import build_tui_request
 
 from commons.runtime_codex_exec import run_codex_exec
 from commons.runtime_config import config_from_dict, config_to_dict

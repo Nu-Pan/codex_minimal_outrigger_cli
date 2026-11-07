@@ -5,7 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from oracle.request_builder.basic import AgentCallParameter
+from reference.request_builder.basic import AgentCallParameter
 
 from .runtime_codex import run_codex_exec
 from .runtime_errors import CmocError

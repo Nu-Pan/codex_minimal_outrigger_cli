@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from oracle.request_builder.session.join.conflict_resolution import (
+from reference.request_builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_request,
 )
 

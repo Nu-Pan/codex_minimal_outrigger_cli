@@ -8,8 +8,8 @@ from threading import Event, Lock
 from typing import TextIO, cast
 from unittest.mock import Mock
 
-import oracle.other.path_model as path_model_module
 import pytest
+import reference.other.path_model as path_model_module
 from _codex_support import (
     codex_arg_value,
     codex_override_config,
@@ -17,7 +17,7 @@ from _codex_support import (
     setup_codex_home,
     stub_codex_overrides,
 )
-from oracle.request_builder.common.quota_probe import (
+from reference.request_builder.common.quota_probe import (
     build_quota_availability_probe_request as build_canonical_quota_probe_parameter,
 )
 
@@ -370,7 +370,7 @@ def test_quota_probe_uses_canonical_complete_prompt(
     # 正本の生成結果を一度だけ作り、runtime が cwd を渡してそのまま返すことを確かめる。
     builder = Mock(return_value=build_canonical_quota_probe_parameter(root))
     monkeypatch.setattr(
-        "oracle.request_builder.common.quota_probe.build_quota_availability_probe_request",
+        "reference.request_builder.common.quota_probe.build_quota_availability_probe_request",
         builder,
     )
     probe = runtime_codex_exec._quota_availability_probe_parameter(base)

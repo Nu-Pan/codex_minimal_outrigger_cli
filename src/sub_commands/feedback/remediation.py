@@ -15,7 +15,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, NoReturn
 
-from oracle.request_builder.feedback.report.remediate_issue import (
+from reference.request_builder.feedback.report.remediate_issue import (
     build_feedback_issue_remediation_request,
 )
 

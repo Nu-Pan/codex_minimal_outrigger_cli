@@ -10,7 +10,7 @@ from typing import Any
 
 from jsonschema import SchemaError
 from jsonschema.protocols import Validator
-from oracle.mcp.editor_input_handoff.body import EditorInputHandoffSource
+from reference.mcp.editor_input_handoff.body import EditorInputHandoffSource
 
 from basic.acp import AgentCallParameter
 from basic.path_model import AgentCallPathContext
@@ -271,7 +271,7 @@ def _quota_availability_probe_parameter(
 ) -> AgentCallParameter:
     """quota判定用のprobe parameterをcanonical builderから作る。"""
     try:
-        from oracle.request_builder.common.quota_probe import (
+        from reference.request_builder.common.quota_probe import (
             build_quota_availability_probe_request,
         )
 

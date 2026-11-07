@@ -16,7 +16,7 @@ lock・CLI/config・Git index はテスト観点としては分かれるが、�
 - `{{work-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md`
 - `{{work-root}}/spec/app_spec/sub_command/doctor.md`
 - `{{work-root}}/spec/app_spec/sub_command/realization_refactor.md`
-- `{{work-root}}/reference/src/oracle/other/cmoc_config.py`
+- `{{work-root}}/reference/src/reference/other/cmoc_config.py`
 """
 
 import json

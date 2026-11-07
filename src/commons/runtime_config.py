@@ -7,11 +7,11 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, NoReturn
 
-from oracle.mcp.document_search import (
+from reference.mcp.document_search import (
     SEARCH_CANDIDATE_COUNT_MAX,
     SEARCH_CANDIDATE_COUNT_MIN,
 )
-from oracle.other.cmoc_config import (
+from reference.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
     DocumentSearchConfig,
@@ -415,7 +415,7 @@ def _config_from_dict(
 
 def _reject_symlinked_config_path(path: Path) -> None:
     """config path の symlink 経由アクセスを拒否する。"""
-    # {{work-root}}/reference/src/oracle/other/cmoc_config.py
+    # {{work-root}}/reference/src/reference/other/cmoc_config.py
     # config は work-root 内の tracked file なので、link 先の設定を読み書きしない。
     current = path.absolute()
     while (parent := current.parent) != current:

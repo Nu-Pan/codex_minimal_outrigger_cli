@@ -7,7 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from oracle.prompt_builder.editor_input import (
+from reference.prompt_builder.editor_input import (
     build_prompt_editor_input_console_guidance,
 )
 

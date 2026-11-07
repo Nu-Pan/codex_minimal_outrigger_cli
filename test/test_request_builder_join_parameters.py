@@ -1,7 +1,7 @@
 """両 join の統合対象と共通の競合解消 call の契約を検証する。
 
 対応する正本:
-- {{work-root}}/reference/src/oracle/request_builder/common/conflict_resolution.py
+- {{work-root}}/reference/src/reference/request_builder/common/conflict_resolution.py
 - {{work-root}}/spec/app_spec/codex_common_rule.md
 - {{work-root}}/spec/app_spec/merge_conflict_resolution.md
 """
@@ -9,14 +9,14 @@
 from dataclasses import replace
 from pathlib import Path
 
-import oracle.other.path_model as path_model_module
 import pytest
+import reference.other.path_model as path_model_module
 from _codex_support import codex_arg_value, codex_override_config
-from oracle.request_builder.basic import FileAccessMode
-from oracle.request_builder.run.join.conflict_resolution import (
+from reference.request_builder.basic import FileAccessMode
+from reference.request_builder.run.join.conflict_resolution import (
     build_run_join_conflict_resolution_request,
 )
-from oracle.request_builder.session.join.conflict_resolution import (
+from reference.request_builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_request,
 )
 

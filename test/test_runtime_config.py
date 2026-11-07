@@ -7,7 +7,7 @@
 受理条件と永続化結果が複数 file に分散するため、一つの config 回帰として保つ。
 
 根拠:
-- {{work-root}}/reference/src/oracle/other/cmoc_config.py
+- {{work-root}}/reference/src/reference/other/cmoc_config.py
 - {{work-root}}/spec/app_spec/codex_model_provider.md
 - {{work-root}}/spec/app_spec/error_handling.md
 """
@@ -20,11 +20,11 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-from oracle.mcp.document_search import (
+from reference.mcp.document_search import (
     SEARCH_CANDIDATE_COUNT_MAX,
     SEARCH_CANDIDATE_COUNT_MIN,
 )
-from oracle.other.cmoc_config import (
+from reference.other.cmoc_config import (
     CodexCallConfig,
     CodexModelProviderConfig,
     DocumentSearchConfig,

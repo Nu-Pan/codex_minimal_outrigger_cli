@@ -7,8 +7,8 @@ import threading
 from functools import partial
 from pathlib import Path
 
-import oracle.other.path_model as path_model_module
 import pytest
+import reference.other.path_model as path_model_module
 import typer
 from _cli_support import terminal_primary_report
 from _codex_support import (

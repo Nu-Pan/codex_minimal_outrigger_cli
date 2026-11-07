@@ -92,7 +92,7 @@ def _resolve_root(placeholder: RootPathPlaceHolder, root_anchor: Path | None) ->
         if queries is not None:
             key = (start_dir, tuple(sorted(os.environ.items())))
             context = queries.get(key)
-        # {{work-root}}/reference/src/oracle/other/path_model.py
+        # {{work-root}}/reference/src/reference/other/path_model.py
         # 正本 context が同じ metadata から導出した両 root を再利用する。
         if context is None:
             try:
@@ -210,7 +210,7 @@ def untracked_data_dir(root: Path) -> Path:
 
 def _tracked_data_dir(root: Path) -> Path:
     """git 追跡する cmoc 管理 directory を返す。"""
-    # {{work-root}}/reference/src/oracle/other/cmoc_config.py
+    # {{work-root}}/reference/src/reference/other/cmoc_config.py
     return root / ".cmoc" / "gt"
 
 

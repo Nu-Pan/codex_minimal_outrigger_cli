@@ -14,8 +14,8 @@ TCP と実 fsync を繰り返さない。
 - `{{work-root}}/spec/app_spec/console_and_file_log.md`
 - `{{work-root}}/spec/app_spec/feedback_state.md`
 - `{{work-root}}/spec/app_spec/sub_command/feedback_report.md`
-- `{{work-root}}/reference/src/oracle/request_builder/feedback/report/normalize_issue.json`
-- `{{work-root}}/reference/src/oracle/request_builder/feedback/report/remediate_issue.json`
+- `{{work-root}}/reference/src/reference/request_builder/feedback/report/normalize_issue.json`
+- `{{work-root}}/reference/src/reference/request_builder/feedback/report/remediate_issue.json`
 """
 
 import errno
@@ -33,16 +33,16 @@ from types import SimpleNamespace
 from typing import Any, NoReturn
 from unittest.mock import Mock
 
-import oracle.other.path_model as path_model_module
 import pytest
+import reference.other.path_model as path_model_module
 from _cli_support import runner, seed_search_config, terminal_primary_report
 from _git_support import SESSION_ID, current_branch, make_repo, run_git
 from _report_support import assert_report_layout, report_metadata, report_section
 from _request_builder_support import oracle_schema_path
-from oracle.request_builder.feedback.report.normalize_issue import (
+from reference.request_builder.feedback.report.normalize_issue import (
     build_feedback_issue_normalization_request as _build_canonical_normalize_parameter,
 )
-from oracle.request_builder.feedback.report.remediate_issue import (
+from reference.request_builder.feedback.report.remediate_issue import (
     build_feedback_issue_remediation_request as _build_canonical_remediate_parameter,
 )
 
@@ -444,7 +444,7 @@ def test_reporter_discovery_supports_editable_namespace_package(
     original_files = feedback_protocol_module.resources.files
 
     def raise_namespace_resource_error(package: str):
-        if package == "oracle.mcp.feedback":
+        if package == "reference.mcp.feedback":
             raise NotADirectoryError(package)
         return original_files(package)
 
@@ -2955,7 +2955,7 @@ def test_normalization_schema_supports_editable_namespace_package(
     original_files = feedback_state_module.resources.files
 
     def raise_namespace_resource_error(package: str):
-        if package == "oracle.request_builder.feedback.report":
+        if package == "reference.request_builder.feedback.report":
             raise NotADirectoryError(package)
         return original_files(package)
 

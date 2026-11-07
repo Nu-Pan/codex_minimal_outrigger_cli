@@ -15,8 +15,8 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from oracle.mcp.document_search import EMBEDDING_QUERY_TEMPLATE
-from oracle.other.cmoc_config import DocumentSearchConfig
+from reference.mcp.document_search import EMBEDDING_QUERY_TEMPLATE
+from reference.other.cmoc_config import DocumentSearchConfig
 
 import commons.runtime_document_search_setup as setup
 import commons.runtime_document_search_worker as worker

@@ -14,7 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from oracle.other.cmoc_config import DocumentSearchConfig
+from reference.other.cmoc_config import DocumentSearchConfig
 from test_document_search import _InferenceDouble, _test_node_runtime, _tuning
 
 from commons import runtime_document_search as search_module

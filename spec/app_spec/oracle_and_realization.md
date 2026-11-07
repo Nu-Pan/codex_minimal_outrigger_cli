@@ -18,10 +18,10 @@ oracle file の下位概念は、正本として所有する事項で区別す�
 
 | 意味仕様 | 委譲先 |
 |---|---|
-| oracle file、realization file、および uncategorised file の役割・分類。本書と `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md` の「分類結果」を意味仕様の正本とする | `{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/cmoc_basic.py` の `build_cmoc_basic_policy` |
-| 本書の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までと「oracle file を扱う判断基準」 | `{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/oracle.py` の `build_oracle_policy` |
-| realization file を扱う判断基準 | `{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/realization.py` の `build_realization_policy` |
-| oracle file に対する realization file の適合性の共通基準 | `{{cmoc-root}}/reference/src/oracle/prompt_builder/policy/realization_findings.py` の `build_realization_findings_policy` |
+| oracle file、realization file、および uncategorised file の役割・分類。本書と `{{cmoc-root}}/spec/app_spec/cmoc_basic_instruction_file_enumeration.md` の「分類結果」を意味仕様の正本とする | `{{cmoc-root}}/reference/src/reference/prompt_builder/policy/cmoc_basic.py` の `build_cmoc_basic_policy` |
+| 本書の「oracle doc と oracle src の正本責務」から「正本責務に基づく優先関係」までと「oracle file を扱う判断基準」 | `{{cmoc-root}}/reference/src/reference/prompt_builder/policy/oracle.py` の `build_oracle_policy` |
+| realization file を扱う判断基準 | `{{cmoc-root}}/reference/src/reference/prompt_builder/policy/realization.py` の `build_realization_policy` |
+| oracle file に対する realization file の適合性の共通基準 | `{{cmoc-root}}/reference/src/reference/prompt_builder/policy/realization_findings.py` の `build_realization_findings_policy` |
 
 prompt literal に固有の役割、制限、および call 固有の実行時指示の優先関係は、`{{cmoc-root}}/spec/app_spec/codex_common_rule.md` の「prompt literal の役割と制限」「call 固有の実行時指示の優先関係」を参照する。
 
@@ -101,4 +101,4 @@ realization refactor では、適合する実装にも、テストと実装の�
 
 根拠のある改善が見つからなければ変更なしを認める。好みや一般論による変更、無関係な機能の再設計、将来用の汎用化、数値目標のための検証能力低下は目的に含めない。期待する効果と実測した効果は区別し、計測の契約は `{{cmoc-root}}/spec/app_spec/sub_command/realization_refactor.md` の「改善の計測」に従う。
 
-この改善基準の agent 向け文面は、`{{cmoc-root}}/reference/src/oracle/request_builder/realization/refactor/file_review_and_fix.py` の `build_realization_refactor_request` へ委譲する。
+この改善基準の agent 向け文面は、`{{cmoc-root}}/reference/src/reference/request_builder/realization/refactor/file_review_and_fix.py` の `build_realization_refactor_request` へ委譲する。

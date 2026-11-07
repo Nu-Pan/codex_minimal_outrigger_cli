@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import Any, Literal, TypedDict
 
-from oracle.mcp.document_search import EMBEDDING_MODEL, SearchErrorCode
+from reference.mcp.document_search import EMBEDDING_MODEL, SearchErrorCode
 
 
 @dataclass(frozen=True)

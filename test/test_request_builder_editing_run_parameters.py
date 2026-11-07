@@ -1,21 +1,21 @@
 """editing run workload の正本 builder と残る adapter を検証する。
 
 対応する oracle file:
-- `{{work-root}}/reference/src/oracle/request_builder/decision/apply/launch_exec.py`
-- `{{work-root}}/reference/src/oracle/request_builder/realization/refactor/file_review_and_fix.py`
-- `{{work-root}}/reference/src/oracle/request_builder/realization/refactor/file_review_and_fix.json`
+- `{{work-root}}/reference/src/reference/request_builder/decision/apply/launch_exec.py`
+- `{{work-root}}/reference/src/reference/request_builder/realization/refactor/file_review_and_fix.py`
+- `{{work-root}}/reference/src/reference/request_builder/realization/refactor/file_review_and_fix.json`
 """
 
 import json
 from pathlib import Path
 
-import oracle.other.path_model as path_model_module
 import pytest
+import reference.other.path_model as path_model_module
 from _request_builder_support import oracle_schema_path
-from oracle.request_builder.decision.apply.launch_exec import (
+from reference.request_builder.decision.apply.launch_exec import (
     build_decision_apply_realization_request,
 )
-from oracle.request_builder.realization.refactor.file_review_and_fix import (
+from reference.request_builder.realization.refactor.file_review_and_fix import (
     build_realization_refactor_request as build_canonical_review_parameter,
 )
 

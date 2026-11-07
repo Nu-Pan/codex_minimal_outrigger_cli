@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from oracle.other.doc_ref_model import (
+from reference.other.doc_ref_model import (
     DocRef,
     render_doc_ref_as_inline_md,
     render_doc_ref_as_multiline_md,

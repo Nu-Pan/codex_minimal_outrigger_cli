@@ -4954,7 +4954,7 @@ def test_join_merges_committed_timestamps_before_sync(
         lambda *_args, **_kwargs: pytest.fail("managed state needs no agent call"),
     )
     monkeypatch.setattr(
-        "oracle.request_builder.run.join.conflict_resolution.build_run_join_conflict_resolution_request",
+        "reference.request_builder.run.join.conflict_resolution.build_run_join_conflict_resolution_request",
         lambda *_args, **_kwargs: pytest.fail("managed state needs no agent parameter"),
     )
 
