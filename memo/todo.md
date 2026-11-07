@@ -16,7 +16,6 @@
     - `build_realization_refactor_request` で Strcutured Output を返す意味はもうない (`codex resume 01a18e12-9b7a-7370-9cdc-c647b4ac0c55`)
     - config が追従できてない
     - build request 系の関数の戻り値が、リクエストとプレースホルダ定義のタプルに統一されていない？
-    - `cmoc decision apply` の decision 形式修正ステップは、先に cmoc 側で機械的検証をして必要な場合だけエージェントを起動し、エージェントからも機械的検証を呼べるようにしたうえで、機械的検証通過を合格条件とする
 
 ## サンドボックスシステムを考え直す
 

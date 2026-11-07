@@ -90,20 +90,25 @@ def test_reference_policy_is_selected_independently(
 
 
 @pytest.mark.parametrize(
-    ("build_request", "reference_enabled"),
+    ("build_request", "reference_enabled", "decision_validation_enabled"),
     [
-        pytest.param(lambda root: build_tui_request("task"), True, id="tui"),
+        pytest.param(lambda root: build_tui_request("task"), True, False, id="tui"),
         pytest.param(
-            lambda root: build_decision_plan_request("task"), True, id="decision-plan"
+            lambda root: build_decision_plan_request("task"),
+            True,
+            False,
+            id="decision-plan",
         ),
         pytest.param(
             build_decision_apply_decision_request,
             False,
+            True,
             id="decision-apply-decision",
         ),
         pytest.param(
             lambda root: build_decision_apply_spec_request("before", "after", root),
             True,
+            False,
             id="decision-apply-spec",
         ),
         pytest.param(
@@ -111,6 +116,7 @@ def test_reference_policy_is_selected_independently(
                 "before", "after", root
             ),
             True,
+            False,
             id="decision-apply-realization",
         ),
         pytest.param(
@@ -118,6 +124,7 @@ def test_reference_policy_is_selected_independently(
                 root / "src/example.py", root
             ),
             True,
+            False,
             id="realization-refactor",
         ),
         pytest.param(
@@ -125,30 +132,37 @@ def test_reference_policy_is_selected_independently(
                 source_commit="source", target_commit="target", merge_worktree=root
             ),
             True,
+            False,
             id="merge-conflict",
         ),
         pytest.param(
             lambda root: build_primary_report_review_request(root / "report.md", root),
             True,
+            False,
             id="primary-report-review",
         ),
         pytest.param(
             lambda root: build_feedback_issue_normalization_request("{}", "[]", root),
             True,
+            False,
             id="feedback-normalize",
         ),
         pytest.param(
             lambda root: build_feedback_issue_remediation_request("{}", root),
             True,
+            False,
             id="feedback-remediate",
         ),
-        pytest.param(build_quota_availability_probe_request, False, id="quota-probe"),
+        pytest.param(
+            build_quota_availability_probe_request, False, False, id="quota-probe"
+        ),
     ],
 )
-def test_request_builders_select_reference_policy(
-    prompt_repository, build_request, reference_enabled
+def test_request_builders_select_reference_policy_and_decision_validation(
+    prompt_repository, build_request, reference_enabled, decision_validation_enabled
 ):
-    """参照規定を使う各 call は一度だけ注入し、利用可否 probe は省略する。"""
+    """参照規定を重複なく選択し、decision 形式修正だけに検証 MCP を提供する。"""
     request = build_request(prompt_repository)
     assert request.prompt.count("# reference policy\n") == reference_enabled
     assert "referenece format" not in request.prompt
+    assert request.enable_decision_validation_mcp is decision_validation_enabled

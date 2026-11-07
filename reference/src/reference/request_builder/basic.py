@@ -75,6 +75,9 @@ class AgentCallParameter:
     # 完全 prompt を構築する場合も同じ有効化状態を渡す。
     enable_document_search_mcp: bool = False
 
+    # decision 形式修正 call に cmoc_decision_validation MCP server を提供する。
+    enable_decision_validation_mcp: bool = False
+
     # feedback reporter の提供判断。完全 prompt を構築する場合も同じ値を渡す。
     enable_feedback_reporting: bool = True
 

@@ -4,11 +4,15 @@
 from pathlib import Path
 from typing import Literal
 
+from reference.mcp.decision_validation import (
+    VALIDATION_MCP_SERVER,
+    VALIDATION_TOOL_NAME,
+)
 from reference.other.path_model import AgentCallPathContext
 from reference.other.struct_doc import (
     SDHeader,
-    SDPolicy,
     SDTagBlock,
+    SDPolicy,
     render_sd_node_as_markdown,
 )
 from reference.prompt_builder.complete_prompt import build_complete_prompt
@@ -23,34 +27,35 @@ from reference.request_builder.basic import (
 def build_decision_apply_decision_request(
     agent_call_cwd: Path,
 ) -> AgentCallParameter:
-    """decision の形式検証と自動修正を依頼するリクエストを構築する。
+    """decision のフォーマット的な問題を修正するリクエストを構築する
 
     Args:
-        agent_call_cwd: 検証・修正する worktree 内の agent call の cwd。
+        agent_call_cwd: 検証・修正する worktree 内の agent call の cwd
 
     Returns:
         decision の決定内容を保って形式だけを修正する非対話 call の入力。
-        機械検証・修正・再検証は、この入力を受け取った agent が行う。
+        機械検証は MCP tool、修正と再検証の呼び出しは agent が行う。
     """
     # decision 全体の検査が必要なので、差分や文書検索による対象の絞り込みはしない。
     path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
+    validation_tool = f"{VALIDATION_MCP_SERVER}.{VALIDATION_TOOL_NAME}"
     complete_prompt = build_complete_prompt(
-        task="""
-        decision の形式を機械的に検証し、違反がある場合は決定内容を変えずに自動修正すること
+        task=f"""
+        MCP tool `{validation_tool}` による検証が正常終了し、問題を報告しない状態になるよう decision を修正すること
         """,
         scope="""
         - 対象は `{{work-root}}` ツリー内の decision file すべて
-        - 修正は、見出しの ID の不足・形式違反・重複と、それに伴う decision 内の参照表記の修正に限定すること
+        - 修正は、検証 MCP が指摘した形式違反と、それに関連する decision 内の参照に限定すること
         """,
         completion_criteria="""
-        - 対象全体をコマンドまたはスクリプトで機械的に検証していること
-        - 修正した場合は同じ検証を再実行し、形式違反が残っていないことを確認していること
+        - 最後の修正後に検証 MCP を実行し、`status` が `ok` かつ `problems` が空配列であることを確認していること
+        - 変更が不要な場合も検証 MCP を実行していること
         - decision の決定内容と意味、および一意で形式が正しい既存 ID を保持していること
-        - 最終応答に、検証方法・結果、修正したファイルと ID、未解消の違反があればその場所と理由を記載すること
+        - 最終応答に、検証 MCP の結果、修正したファイルと ID、未解消の問題があればその場所と理由を記載すること
         """,
         non_goals="""
         - 決定事項の追加・削除、内容の補完、矛盾の解消、文章の推敲
-        - reference, spec, realization の調査・同期・編集
+        - decision 以外の調査・同期・編集
         """,
         file_access_mode=FileAccessMode.DECISION_WRITE,
         path_context=path_context,
@@ -84,6 +89,7 @@ def build_decision_apply_decision_request(
         prompt=render_sd_node_as_markdown(*complete_prompt),
         structured_output_schema_path=None,
         agent_call_cwd=path_context.agent_call_cwd,
+        enable_decision_validation_mcp=True,
     )
 
 

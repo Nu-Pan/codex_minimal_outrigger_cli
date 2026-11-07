@@ -12,6 +12,10 @@ from pathlib import Path
 import pytest
 import reference.other.path_model as path_model_module
 from _request_builder_support import oracle_schema_path
+from reference.mcp.decision_validation import (
+    VALIDATION_MCP_SERVER,
+    VALIDATION_TOOL_NAME,
+)
 from reference.request_builder.decision.apply.launch_exec import (
     build_decision_apply_decision_request,
     build_decision_apply_realization_request,
@@ -64,7 +68,7 @@ def test_refactor_compatibility_builder_reexports_canonical_function() -> None:
 def test_decision_format_builder_limits_access_and_preserves_decisions(
     editing_run_paths: tuple[Path, Path],
 ) -> None:
-    """形式検証の完全 prompt に、機械検証と意味を保つ修正の条件がそろう。"""
+    """検証 MCP を提供し、完全 prompt に再検証と意味を保つ修正の条件がそろう。"""
     root, run_worktree = editing_run_paths
     parameter = build_decision_apply_decision_request(run_worktree)
 
@@ -74,6 +78,7 @@ def test_decision_format_builder_limits_access_and_preserves_decisions(
     assert parameter.structured_output_schema_path is None
     assert parameter.enable_document_search_mcp is False
     assert parameter.enable_editor_input_handoff_mcp is False
+    assert parameter.enable_decision_validation_mcp is True
     assert parameter.enable_feedback_reporting is True
     assert parameter.tui_resume_session_id is None
     prompt = parameter.prompt
@@ -84,23 +89,27 @@ def test_decision_format_builder_limits_access_and_preserves_decisions(
     assert "reference, spec, realization は読み書き禁止" in prompt
     assert "Git metadata は配置先によらず変更禁止" in prompt
     assert "`{{work-root}}/decision/**/*.md`" in prompt
-    assert r"\[DEC-\d{6}\]" in prompt
-    assert "decision 全体での ID の一意性" in prompt
-    assert "コードブロック内の見出しや ID の記述例" in prompt
-    assert "decision 全体で未使用の ID" in prompt
-    assert "一意で形式が正しい既存 ID を振り直してはいけない" in prompt
-    assert "参照先を特定できる場合だけ同じ決定事項を指す" in prompt
+    validation_tool = f"{VALIDATION_MCP_SERVER}.{VALIDATION_TOOL_NAME}"
+    assert f"`{validation_tool}` を引数 `{{}}` で呼び" in prompt
+    assert "修正をファイルへ保存してから" in prompt
+    assert "参照先や決定内容の推測が必要な問題" in prompt
     assert "その箇所を変更せず未解消として報告" in prompt
-    assert "違反がなければファイルを変更しない" in prompt
-    assert "decision file がない場合も決定事項を作らず" in prompt
-    assert "検証成功として報告してはいけない" in prompt
+    assert "問題がなければファイルを変更しない" in prompt
+    assert "decision file がない場合も決定事項を作らない" in prompt
+    assert "tool を利用できない場合、検証が失敗した場合、または問題が残る場合" in prompt
+    assert "完了として報告してはいけない" in prompt
     objective = _objective_section(prompt)
     assert "decision file すべて" in objective
-    assert "コマンドまたはスクリプトで機械的に検証" in objective
-    assert "同じ検証を再実行" in objective
+    assert validation_tool in objective
+    assert "最後の修正後に検証 MCP を実行" in objective
+    assert "`status` が `ok` かつ `problems` が空配列" in objective
+    assert "変更が不要な場合も検証 MCP を実行" in objective
     assert "決定内容と意味" in objective
-    assert "未解消の違反があればその場所と理由" in objective
+    assert "一意で形式が正しい既存 ID を保持" in objective
+    assert "未解消の問題があればその場所と理由" in objective
+    assert "コマンドまたはスクリプトで機械的に検証" not in prompt
     for heading in (
+        "# decision policy",
         "# reference policy",
         "# spec policy",
         "# realization policy",
