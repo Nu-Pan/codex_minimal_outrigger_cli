@@ -10,14 +10,12 @@
     現在のリポジトリの状態から、次にやるべき作業を提案して下さい。
     ```
 - 後回しにしている TODO
-    - `reference/src/oracle` の oracle はリネームしたい (旧仕様と紛らわしい)
     - `launch_exec`, `launch_tui` じゃなくて `build_request` に統一したい
     - `build_complete_prompt` の引数 `task` は `goal` の方が適切かも
     - feedback remediation は、structured output で操作を返すのではなく、stdin MCP server として issue に対するを公開する方式にしたい
     - `build_realization_refactor_request` で Strcutured Output を返す意味はもうない (`codex resume 01a18e12-9b7a-7370-9cdc-c647b4ac0c55`)
     - config が追従できてない
     - build request 系の関数の戻り値が、リクエストとプレースホルダ定義のタプルに統一されていない？
-    - 参照の記述方法の指定があちこちに散ってたような気がする
 
 ## サンドボックスシステムを考え直す
 
