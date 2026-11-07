@@ -18,7 +18,6 @@
     - build request 系の関数の戻り値が、リクエストとプレースホルダ定義のタプルに統一されていない？
     - `cmoc_basic.py` の参照用 ID の書き方のルールを、各 policy に移設する
     - decision の機械的整形 (参照用 ID の自動修正、参照情報の末尾への移動) はコマンド化する。その前提で decision policy を定義する
-    - `referenece format` は `reference policy` として独立させて、他の規定と同様に `build_complete_prompt` で有効化する形式にする
 
 ## サンドボックスシステムを考え直す
 

@@ -110,9 +110,10 @@ decision, spec 上の特定の記述を参照する場合、「何を参照す�
     - ある意味「AI が提案するクソ冗長なプラン」を「人間フィルター」を通して「疎な decision リスト」に変換していることになる
 2. 人間が decision を編集して git commit
 3. 人間が `cmoc decision apply` を実行する
-    1. エージェントが decision, reference の git 差分を元に spec を同期させる
-    2. エージェントが decision, spec, reference の git 差分を元に realization を追従させる
-    3. エージェントが、作業結果を報告
+    1. decision が所定のフォーマットに従っているか機械的に検証を行い、違反がある場合はエージェントが自動的に修正する
+    2. エージェントが decision, reference の git 差分を元に spec を同期させる
+    3. エージェントが decision, spec, reference の git 差分を元に realization を追従させる
+    4. エージェントが、作業結果を報告
 4. 作業結果に期待しない物があるか、feedback issue が発生しているかすれば 1. に戻る
 5. 完了
 
@@ -134,6 +135,7 @@ decision, spec 上の特定の記述を参照する場合、「何を参照す�
 | サブコマンド | ステップ | decision | spec | realization |
 | :--: | :--: | :--: | :--: | :--: |
 | `cmoc decision plan` | - | R | R | - |
+| `cmoc decision apply` | decision | RW | - | - |
 | `cmoc decision apply` | spec | R | RW | - |
 | `cmoc decision apply` | realization | R | R | RW |
 
