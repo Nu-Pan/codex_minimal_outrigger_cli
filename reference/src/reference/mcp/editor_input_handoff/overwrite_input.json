@@ -67,7 +67,7 @@
               { "$ref": "#/$defs/nonblank_text" },
               { "type": "null" }
             ],
-            "description": "decision または spec の参照先 ID。角括弧を含まない DECI-000000 または SPEC-000000 の形式で、数字は6桁。file_path を指定する場合は null。"
+            "description": "decision または spec の参照先 ID。角括弧を含まない DEC-000000 または SPC-000000 の形式で、数字は6桁。file_path を指定する場合は null。"
           }
         },
         "oneOf": [

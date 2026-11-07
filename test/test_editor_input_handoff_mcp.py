@@ -523,9 +523,9 @@ def test_invalid_handoff_fields_leave_target_untouched(handoff_transport, change
         {"description": "private\rreference"},
         {"file_path": "relative.md"},
         {"file_path": None},
-        {"id": "DECI-000001"},
-        {"file_path": None, "id": "[SPEC-000001]"},
-        {"file_path": None, "id": "SPEC-000001\n"},
+        {"id": "DEC-000001"},
+        {"file_path": None, "id": "[SPC-000001]"},
+        {"file_path": None, "id": "SPC-000001\n"},
         {"file_path": None, "id": 1},
     ],
 )
@@ -616,8 +616,8 @@ def test_handoff_uses_canonical_body_and_typed_references(
             "file_path": str(external_path),
             "id": None,
         },
-        {"description": "ログの決定事項", "file_path": None, "id": "DECI-000001"},
-        {"description": "ログの仕様", "file_path": None, "id": "SPEC-000002"},
+        {"description": "ログの決定事項", "file_path": None, "id": "DEC-000001"},
+        {"description": "ログの仕様", "file_path": None, "id": "SPC-000002"},
     ]
     expected = build_editor_input_handoff_body(
         **{
@@ -629,8 +629,8 @@ def test_handoff_uses_canonical_body_and_typed_references(
             DocRef("処理本体", reference_path, None),
             DocRef("Worker.run", reference_path, None),
             DocRef("背景資料", external_path, None),
-            DocRef("ログの決定事項", None, "DECI-000001"),
-            DocRef("ログの仕様", None, "SPEC-000002"),
+            DocRef("ログの決定事項", None, "DEC-000001"),
+            DocRef("ログの仕様", None, "SPC-000002"),
         ],
         source=handoff_source,
     )
@@ -644,8 +644,8 @@ def test_handoff_uses_canonical_body_and_typed_references(
     assert str(reference_path) in expected
     assert "Worker.run" in expected
     assert str(external_path) in expected
-    assert "DECI-000001" in expected
-    assert "SPEC-000002" in expected
+    assert "DEC-000001" in expected
+    assert "SPC-000002" in expected
     assert handoff_source.codex_call_id in expected
     assert target_id not in expected
 

@@ -78,8 +78,8 @@ def test_reference_policy_is_selected_independently(
     }
     assert "referenece format" not in rendered
     for requirement in (
-        "decision への参照は「◯◯◯については [DECI-XXXXXX] を参照すること」",
-        "spec への参照は「◯◯◯については [SPEC-XXXXXX] を参照すること」",
+        "decision への参照は「◯◯◯については [DEC-XXXXXX] を参照すること」",
+        "spec への参照は「◯◯◯については [SPC-XXXXXX] を参照すること」",
         "その他の情報源への参照は「◯◯◯については `<major-location>` の `<minor-location>` を参照すること」",
         "「ファイルパス」「URL」などの、読むべきファイルのパス情報",
         "「見出し名」「参照先の記述の一部」",

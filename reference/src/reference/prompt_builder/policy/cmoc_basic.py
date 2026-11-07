@@ -39,7 +39,7 @@ def build_cmoc_basic_policy(
                 SDHeader(
                     "ID の形式",
                     """
-                    - decision の見出しの先頭には `\\[DECI-\\d{6}\\]` の形式で ID が付与される
+                    - decision の見出しの先頭には `\\[DEC-\\d{6}\\]` の形式で ID が付与される
                     """,
                 ),
             ),
@@ -88,7 +88,7 @@ def build_cmoc_basic_policy(
                 SDHeader(
                     "ID の形式",
                     """
-                    - spec の見出しの先頭には `\\[SPEC-\\d{6}\\]` の形式で ID が付与される
+                    - spec の見出しの先頭には `\\[SPC-\\d{6}\\]` の形式で ID が付与される
                     """,
                 ),
             ),

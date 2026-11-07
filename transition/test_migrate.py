@@ -360,15 +360,15 @@ def test_number_specs_preserves_existing_ids_and_code_examples(
     migrate._move(repository)
     path = repository / "spec/example.md"
     source = (
-        "# [SPEC-000000] 既存\r\n\r\n"
+        "# [SPC-000000] 既存\r\n\r\n"
         "## 新規\r\n\r\n"
         "Setext\r\n======\r\n\r\n"
-        "```markdown\r\n# [SPEC-000001] 例\r\n```\r\n"
+        "```markdown\r\n# [SPC-000001] 例\r\n```\r\n"
     )
     path.write_bytes(source.encode("utf-8"))
     migrate._number_specs(repository)
-    expected = source.replace("## 新規", "## [SPEC-000001] 新規").replace(
-        "Setext\r\n", "[SPEC-000002] Setext\r\n"
+    expected = source.replace("## 新規", "## [SPC-000001] 新規").replace(
+        "Setext\r\n", "[SPC-000002] Setext\r\n"
     )
     assert path.read_bytes() == expected.encode("utf-8")
     migrate._number_specs(repository)
@@ -377,7 +377,7 @@ def test_number_specs_preserves_existing_ids_and_code_examples(
 
 
 @pytest.mark.parametrize(
-    "invalid", ["# [SPEC-000000] 重複\n", "> # ネスト\n", "# [DECI-000001] 違う区分\n"]
+    "invalid", ["# [SPC-000000] 重複\n", "> # ネスト\n", "# [DEC-000001] 違う区分\n"]
 )
 def test_numbering_validates_all_documents_before_writing(
     repository: Path, invalid: str
@@ -385,7 +385,7 @@ def test_numbering_validates_all_documents_before_writing(
     """後ろの文書が不正なら、先に読んだ文書にも採番を書き込まない。"""
     migrate._move(repository)
     first = repository / "spec/example.md"
-    original = "# [SPEC-000000] 既存\n\n## 未採番\n"
+    original = "# [SPC-000000] 既存\n\n## 未採番\n"
     first.write_text(original, encoding="utf-8")
     (repository / "spec/z.md").write_text(invalid, encoding="utf-8")
     with pytest.raises(migrate.MigrationError):
@@ -411,19 +411,19 @@ def test_numbering_write_failure_preserves_document(
     assert path.read_bytes() == before
     assert list(path.parent.iterdir()) == [path]
     migrate._number_specs(repository)
-    assert path.read_text(encoding="utf-8").startswith("# [SPEC-000000]")
+    assert path.read_text(encoding="utf-8").startswith("# [SPC-000000]")
 
 
 def _write_documents(repository: Path) -> Path:
     (repository / "decision").mkdir()
     (repository / "decision/intent.md").write_text(
-        "# [DECI-000000] 人間意図\n", encoding="utf-8"
+        "# [DEC-000000] 人間意図\n", encoding="utf-8"
     )
     (repository / "spec").mkdir()
     spec = repository / "spec/generated.md"
     spec.write_text(
-        "# [SPEC-000000] 仕様\n\n意図は [DECI-000000] に従う。\n\n"
-        "`[DECI-example]` はコード例。\n\n```markdown\n# [SPEC-example] 例\n```\n",
+        "# [SPC-000000] 仕様\n\n意図は [DEC-000000] に従う。\n\n"
+        "`[DEC-example]` はコード例。\n\n```markdown\n# [SPC-example] 例\n```\n",
         encoding="utf-8",
     )
     return spec
@@ -448,12 +448,12 @@ def test_doc_check_allows_empty_decision_but_rejects_missing_references(
     if state == "blank_file":
         (repository / "decision/intent.md").write_text(" \n\t\n", encoding="utf-8")
     (repository / "spec").mkdir()
-    content = "# [SPEC-000000] 既存仕様\n"
+    content = "# [SPC-000000] 既存仕様\n"
     if missing_reference:
-        content += "\n決定は [DECI-000000] に従う。\n"
+        content += "\n決定は [DEC-000000] に従う。\n"
     (repository / "spec/initial.md").write_text(content, encoding="utf-8")
     if missing_reference:
-        with pytest.raises(migrate.MigrationError, match=r"Unresolved \[DECI-000000\]"):
+        with pytest.raises(migrate.MigrationError, match=r"Unresolved \[DEC-000000\]"):
             migrate._check_docs(repository)
     else:
         migrate._check_docs(repository)
@@ -470,8 +470,8 @@ def test_doc_check_still_requires_spec_documents(repository: Path) -> None:
     "addition, error",
     [
         ("\n## 見出し\n", "Expected a leading"),
-        ("\n## [SPEC-000000] 重複\n", "Duplicate"),
-        ("\n参照は [DECI-missing]。\n", "Unresolved"),
+        ("\n## [SPC-000000] 重複\n", "Duplicate"),
+        ("\n参照は [DEC-missing]。\n", "Unresolved"),
     ],
 )
 def test_doc_check_reports_invalid_definitions_and_references(

@@ -44,12 +44,9 @@ class DocRef:
             raise ValueError("Provide either 'file_path' or 'id', but not both.")
         if self.file_path is not None and not self.file_path.is_absolute():
             raise ValueError("The file path must be absolute.")
-        if (
-            self.id is not None
-            and re.fullmatch(r"(?:DECI|SPEC)-\d{6}", self.id) is None
-        ):
+        if self.id is not None and re.fullmatch(r"(?:DEC|SPC)-\d{6}", self.id) is None:
             raise ValueError(
-                "The reference ID must be 'DECI-' or 'SPEC-' followed by exactly six digits."
+                "The reference ID must be 'DEC-' or 'SPC-' followed by exactly six digits."
             )
 
     @property

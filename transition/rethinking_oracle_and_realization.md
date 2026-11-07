@@ -71,8 +71,8 @@ decision spec は基本的に GitHub Flavored Markdown で記述する。
 ただし、
 
 - decision, spec 固有のルールとして「見出しの先頭に参照用の ID を付与する」こととする
-- ID は decision なら `[DECI-XXXXXX]`
-- ID は spec なら `[SPEC-XXXXXX]` とする。
+- ID は decision なら `[DEC-XXXXXX]`
+- ID は spec なら `[SPC-XXXXXX]` とする。
 - decision ファイルは `{{work-root}}/decision/**/*.md` として配置される
 - spec ファイルは `{{work-root}}/spec/**/*.md` として配置される
 - decision ファイルは複数存在してよいし、1 つの decision ファイル内に複数の decision が記述されていても良い
@@ -81,11 +81,11 @@ decision spec は基本的に GitHub Flavored Markdown で記述する。
 例えば、decision なら以下のように記述する。
 
 ```markdown
-# [DECI-000000] 決定事項（あ）
+# [DEC-000000] 決定事項（あ）
 
 ほげほげ
 
-# [DECI-000001] 決定事項（い）
+# [DEC-000001] 決定事項（い）
 
 ぴよぴよ
 ```
@@ -97,7 +97,7 @@ decision, spec 上の特定の記述を参照する場合、「何を参照す�
 例えば以下の通り
 
 ```markdown
-このログは所定のフォーマットに従う [DECI-000154]
+このログは所定のフォーマットに従う [DEC-000154]
 ```
 
 ## 想定ワークフロー

@@ -19,8 +19,8 @@ from markdown_it.token import Token
 # receipt と旧パスの解釈に使うため、移設後も移設元の名前を保持する。
 _MOVES = {"oracle/src": "reference/src", "oracle/doc": "spec"}
 _RECEIPT = "transition/work/move.json"
-_ID = re.compile(r"\[(DECI|SPEC)-([^\]\s]+)\]")
-_HEADING_ID = re.compile(r"^\[(DECI|SPEC)-([^\]\s]+)\](?:\s|$)")
+_ID = re.compile(r"\[(DEC|SPC)-([^\]\s]+)\]")
+_HEADING_ID = re.compile(r"^\[(DEC|SPC)-([^\]\s]+)\](?:\s|$)")
 _ATX = re.compile(r"^( {0,3}#{1,6})([ \t]+|$)")
 _PROTECTED = {".git", ".agents", ".codex", ".cmoc", "AGENTS.md"}
 _PATH_TARGETS = (
@@ -431,12 +431,12 @@ def _number_specs(root: Path) -> None:
             match = _HEADING_ID.match(heading)
             if match:
                 identifier = f"{match[1]}-{match[2]}"
-                if match[1] != "SPEC" or identifier in used:
+                if match[1] != "SPC" or identifier in used:
                     raise MigrationError(
                         f"Wrong or duplicate heading ID: {path}:{line + 1}"
                     )
                 used.add(identifier)
-            elif heading.startswith(("[SPEC-", "[DECI-")):
+            elif heading.startswith(("[SPC-", "[DEC-")):
                 raise MigrationError(f"Malformed heading ID: {path}:{line + 1}")
     updates: list[tuple[Path, str]] = []
     next_number = 0
@@ -445,11 +445,11 @@ def _number_specs(root: Path) -> None:
         for line, heading in _heading_ids(tokens):
             if _HEADING_ID.match(heading):
                 continue
-            while f"SPEC-{next_number:06d}" in used:
+            while f"SPC-{next_number:06d}" in used:
                 next_number += 1
             if next_number > 999999:
-                raise MigrationError("SPEC ID space exhausted.")
-            identifier = f"SPEC-{next_number:06d}"
+                raise MigrationError("SPC ID space exhausted.")
+            identifier = f"SPC-{next_number:06d}"
             used.add(identifier)
             source = lines[line]
             match = _ATX.match(source.rstrip("\r\n"))
@@ -493,7 +493,7 @@ def _check_docs(root: Path) -> None:
     definitions: dict[str, str] = {}
     references: list[tuple[Path, str]] = []
     errors: list[str] = []
-    for kind, prefix in (("decision", "DECI"), ("spec", "SPEC")):
+    for kind, prefix in (("decision", "DEC"), ("spec", "SPC")):
         for path in _documents(root, kind):
             content, tokens = _parse(path)
             if kind == "decision" and not content.strip():
