@@ -64,6 +64,7 @@ def build_merge_conflict_resolution_request(
                 ),
                 supplemental=(
                     "git の編集的な操作はこのセッションの外で機械的に行われる",
+                    "realization policy と競合した場合、この規定の方が優越する",
                 ),
             ),
         )

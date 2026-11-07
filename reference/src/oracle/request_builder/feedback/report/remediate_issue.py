@@ -45,6 +45,7 @@ def build_feedback_issue_remediation_request(
                 - `human_required` は、問題が現在も存在し、spec file・realization file の編集だけでは満たせない具体的な対応を確認できた場合だけ使用する
                 - 許可された情報では判定できない場合、または再確認・再修正が同じ状態を往復して収束できないことが確認された場合は `inconclusive` とし、`human_required` へ変換しない
                 - agent call、tool、validation、または作業の失敗だけを理由に `human_required` としてはならない
+                - この規則は realization policy よりも優越する
                 """,
             ),
             SDHeader(
