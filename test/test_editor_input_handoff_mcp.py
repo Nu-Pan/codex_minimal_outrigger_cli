@@ -498,8 +498,6 @@ def test_handoff_mcp_strips_unexpected_target_result_fields(
         {"decisions": []},
         {"open_questions": "\t"},
         {"references": None},
-        {"references": [{"file_path": "relative.md", "loc_desc": None}]},
-        {"references": [{"file_path": "/document.md", "loc_desc": ""}]},
         {"references": [{"file_path": "/document.md"}]},
         {"source": {"execution_id": "forged"}},
         {"content": "private input"},
@@ -513,6 +511,45 @@ def test_invalid_handoff_fields_leave_target_untouched(handoff_transport, change
     )
     assert result["code"] == "invalid_input"
     assert "private input" not in json.dumps(result)
+    connection.sendall.assert_not_called()
+
+
+@pytest.mark.usefixtures("handoff_source")
+@pytest.mark.parametrize(
+    "reference_change",
+    [
+        {"description": ""},
+        {"description": "private\nreference"},
+        {"description": "private\rreference"},
+        {"file_path": "relative.md"},
+        {"file_path": None},
+        {"id": "DECI-000001"},
+        {"file_path": None, "id": "[SPEC-000001]"},
+        {"file_path": None, "id": "SPEC-000001\n"},
+        {"file_path": None, "id": 1},
+    ],
+)
+def test_invalid_handoff_references_leave_target_untouched(
+    handoff_transport, reference_change
+):
+    """参照の構造・値が不正なら、本文や参照情報を漏らさず送信前に拒否する。"""
+    target_id, connection = handoff_transport
+    fields = handoff_input(target_id, "private input")
+    fields["references"] = [
+        {
+            "description": "private reference",
+            "file_path": "/document.md",
+            "id": None,
+            **reference_change,
+        }
+    ]
+
+    result = handoff_mcp._submit(fields)
+
+    assert result["status"] == "rejected"
+    assert result["code"] == "invalid_input"
+    assert "private" not in json.dumps(result)
+    connection.connect.assert_not_called()
     connection.sendall.assert_not_called()
 
 
@@ -554,19 +591,33 @@ def test_missing_or_invalid_source_refuses_handoff(
 def test_handoff_uses_canonical_body_and_typed_references(
     tmp_path, handoff_transport, handoff_source
 ):
-    """文書区分や repository 境界で参照を絞らず、正本 builder で本文へ組み込む。"""
+    """ファイル参照と ID 参照を型付きの値へ変換し、正本 builder で本文へ組み込む。"""
     from oracle.mcp.editor_input_handoff.body import build_editor_input_handoff_body
     from oracle.other.doc_ref_model import DocRef
 
     target_id, connection = handoff_transport
-    # realization のコードと repository 外の資料も位置情報として引き渡す。
+    # 同じファイルへの複数の説明、repository 外の資料、両区分の ID を引き渡す。
     reference_path = tmp_path / "src/worker.py"
     external_path = tmp_path.parent / "related-notes.md"
     fields = handoff_input(target_id, "本文を保持する <!-- コメント -->\n続き")
     fields["references"] = [
-        {"file_path": str(reference_path), "loc_desc": None},
-        {"file_path": str(reference_path), "loc_desc": "Worker.run"},
-        {"file_path": str(external_path), "loc_desc": "背景"},
+        {
+            "description": "処理本体",
+            "file_path": str(reference_path),
+            "id": None,
+        },
+        {
+            "description": "Worker.run",
+            "file_path": str(reference_path),
+            "id": None,
+        },
+        {
+            "description": "背景資料",
+            "file_path": str(external_path),
+            "id": None,
+        },
+        {"description": "ログの決定事項", "file_path": None, "id": "DECI-000001"},
+        {"description": "ログの仕様", "file_path": None, "id": "SPEC-000002"},
     ]
     expected = build_editor_input_handoff_body(
         **{
@@ -575,9 +626,11 @@ def test_handoff_uses_canonical_body_and_typed_references(
             if key not in {"target_id", "references"}
         },
         references=[
-            DocRef(reference_path, None),
-            DocRef(reference_path, "Worker.run"),
-            DocRef(external_path, "背景"),
+            DocRef("処理本体", reference_path, None),
+            DocRef("Worker.run", reference_path, None),
+            DocRef("背景資料", external_path, None),
+            DocRef("ログの決定事項", None, "DECI-000001"),
+            DocRef("ログの仕様", None, "SPEC-000002"),
         ],
         source=handoff_source,
     )
@@ -591,6 +644,8 @@ def test_handoff_uses_canonical_body_and_typed_references(
     assert str(reference_path) in expected
     assert "Worker.run" in expected
     assert str(external_path) in expected
+    assert "DECI-000001" in expected
+    assert "SPEC-000002" in expected
     assert handoff_source.codex_call_id in expected
     assert target_id not in expected
 

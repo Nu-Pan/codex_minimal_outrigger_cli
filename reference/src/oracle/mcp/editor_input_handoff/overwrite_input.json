@@ -40,27 +40,50 @@
     },
     "references": {
       "type": "array",
-      "description": "依頼に関係する文書・ファイルへの参照。参照がなければ空配列にする。参照先の簡潔な内容と参照理由は instructions または background に含める。参照先の読み取りは受信側のアクセス規定に従う。",
+      "description": "依頼に関係する文書・ファイルへの参照。参照がなければ空配列にする。参照先の短い説明は各要素の description に記述し、参照理由や詳しい背景は instructions または background に含める。参照先の読み取りは受信側のアクセス規定に従う。",
       "items": {
         "type": "object",
+        "description": "説明と、ファイルパスまたは ID による参照。file_path と id の一方だけを指定し、もう一方は null にする。",
         "additionalProperties": false,
         "required": [
+          "description",
           "file_path",
-          "loc_desc"
+          "id"
         ],
         "properties": {
-          "file_path": {
+          "description": {
             "$ref": "#/$defs/nonblank_text",
-            "description": "参照先ファイルの絶対パス。"
+            "description": "参照先が何であるかを示す短い説明。空白だけの文字列や改行を含む文字列は不可。"
           },
-          "loc_desc": {
+          "file_path": {
             "anyOf": [
               { "$ref": "#/$defs/nonblank_text" },
               { "type": "null" }
             ],
-            "description": "参照箇所を示す見出し、識別子、JSON Pointer などの安定した locator。行番号を使わない。ファイル全体を参照する場合は null。"
+            "description": "参照先ファイルの絶対パス。id を指定する場合は null。"
+          },
+          "id": {
+            "anyOf": [
+              { "$ref": "#/$defs/nonblank_text" },
+              { "type": "null" }
+            ],
+            "description": "decision または spec の参照先 ID。角括弧を含まない DECI-000000 または SPEC-000000 の形式で、数字は6桁。file_path を指定する場合は null。"
           }
-        }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "file_path": { "type": "string" },
+              "id": { "type": "null" }
+            }
+          },
+          {
+            "properties": {
+              "file_path": { "type": "null" },
+              "id": { "type": "string" }
+            }
+          }
+        ]
       }
     }
   },

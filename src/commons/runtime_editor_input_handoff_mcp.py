@@ -172,7 +172,15 @@ def _call_target(payload: object, *, tool_name: str) -> dict[str, object]:
             )
         try:
             references = [
-                DocRef(Path(reference["file_path"]), reference["loc_desc"])
+                DocRef(
+                    description=reference["description"],
+                    file_path=(
+                        Path(reference["file_path"])
+                        if reference["file_path"] is not None
+                        else None
+                    ),
+                    id=reference["id"],
+                )
                 for reference in payload["references"]
             ]
             content = build_editor_input_handoff_body(

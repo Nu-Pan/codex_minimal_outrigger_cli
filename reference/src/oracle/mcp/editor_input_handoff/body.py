@@ -57,7 +57,7 @@ def build_editor_input_handoff_body(
         background: 依頼の意図・背景。
         decisions: 決定事項とその理由。
         open_questions: 未確定事項。
-        references: 入力から変換・検証した、依頼に関係する文書・ファイルへの参照。
+        references: 入力から変換・検証した、説明付きのファイル参照・ID 参照。
         source: 送信側 Codex process の呼び出し元コンテキストから取得した値。
 
     Returns:
@@ -104,7 +104,7 @@ def build_editor_input_handoff_body(
     if references:
         sections.append(
             SDHeader(
-                "参照ファイル",
+                "参照情報",
                 render_doc_ref_as_multiline_md(references),
             )
         )
