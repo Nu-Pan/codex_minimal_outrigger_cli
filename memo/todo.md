@@ -16,10 +16,10 @@
     - `build_realization_refactor_request` で Strcutured Output を返す意味はもうない (`codex resume 01a18e12-9b7a-7370-9cdc-c647b4ac0c55`)
     - config が追従できてない
     - build request 系の関数の戻り値が、リクエストとプレースホルダ定義のタプルに統一されていない？
-    - `DECI-XXXXXX` --> `DECISION-XXXXXX`
-    - `cmoc_basic.py`:
+    - `DECI-XXXXXX` --> `DEC-XXXXXX`, `SPEC-XXXXXX` --> `SPC-XXXXXX`
+    - `cmoc_basic.py` の参照用 ID の書き方のルールを、各 policy に移設する
     - decision の機械的整形 (参照用 ID の自動修正、参照情報の末尾への移動) はコマンド化する。その前提で decision policy を定義する
-    - `referenece format` は reference policy として独立させて、他の規定と同様に `build_complete_prompt` で有効化する形式にする
+    - `referenece format` は `reference policy` として独立させて、他の規定と同様に `build_complete_prompt` で有効化する形式にする
 
 ## サンドボックスシステムを考え直す
 
