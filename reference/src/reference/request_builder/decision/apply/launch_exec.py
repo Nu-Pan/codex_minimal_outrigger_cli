@@ -7,6 +7,7 @@ from typing import Literal
 from reference.other.path_model import AgentCallPathContext
 from reference.other.struct_doc import (
     SDHeader,
+    SDPolicy,
     SDTagBlock,
     render_sd_node_as_markdown,
 )
@@ -39,7 +40,6 @@ def build_decision_apply_decision_request(
         """,
         scope="""
         - 対象は `{{work-root}}` ツリー内の decision file すべて
-        - decision file の分類と ID の形式は、このプロンプト内の cmoc basic instruction に従うこと
         - 修正は、見出しの ID の不足・形式違反・重複と、それに伴う decision 内の参照表記の修正に限定すること
         """,
         completion_criteria="""
@@ -56,17 +56,24 @@ def build_decision_apply_decision_request(
         path_context=path_context,
         aux_static_prompt=[
             SDHeader(
-                "decision の形式検証と修正手順",
-                """
-                - GitHub Flavored Markdown の構造として見出しを抽出し、見出し先頭の ID の形式と、decision 全体での ID の一意性を検証すること
-                - コードブロック内の見出しや ID の記述例を、検証・修正対象に含めてはいけない
-                - ID を補う・付け替える場合は、decision 全体で未使用の ID を使うこと。一意で形式が正しい既存 ID を振り直してはいけない
-                - ID の変更に伴う decision 内の参照は、参照先を特定できる場合だけ同じ決定事項を指すように更新すること
-                - 決定内容や参照先を推測しないと修正できない違反は、その箇所を変更せず未解消として報告すること
-                - 違反がなければファイルを変更しないこと。decision file がない場合も決定事項を作らず、検証対象がないことを報告すること
-                - 検証を実行できない場合や未解消の違反がある場合は、検証成功として報告してはいけない
-                """,
-            ),
+                "decision policy",
+                SDPolicy(
+                    what_is_this="decision が満たすべき規定を以下に示す",
+                    require=(
+                        # NOTE 参照システムを確実に機能させたい
+                        r"decision の見出しの先頭には `\[DEC-\d{6}\]` の形式で参照用 ID を付与する事",
+                        "参照用 ID は decision 全体で一意であること",
+                    ),
+                    allow=(
+                        # NOTE 参照システムを確実に機能させたい
+                        "参照用 ID に欠番は存在してよい",
+                    ),
+                    exception=(
+                        # NOTE 参照システムを確実に機能させたい
+                        "コードブロック内の見出しは、参照用 ID 付与の対象ではない",
+                    ),
+                ),
+            )
         ],
         cmoc_basic_instruction=True,
         enable_feedback_reporting=True,

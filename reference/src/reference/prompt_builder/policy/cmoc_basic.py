@@ -36,12 +36,6 @@ def build_cmoc_basic_policy(
                     decision file 内の、見出し 1 件を decision 1 件とする
                     """,
                 ),
-                SDHeader(
-                    "ID の形式",
-                    """
-                    - decision の見出しの先頭には `\\[DEC-\\d{6}\\]` の形式で ID が付与される
-                    """,
-                ),
             ),
             SDHeader(
                 "reference",
@@ -83,12 +77,6 @@ def build_cmoc_basic_policy(
                     - `{{work-root}}/spec/**/*.md` とマッチする
 
                     spec file 内の、見出し 1 件を spec 1 件とする
-                    """,
-                ),
-                SDHeader(
-                    "ID の形式",
-                    """
-                    - spec の見出しの先頭には `\\[SPC-\\d{6}\\]` の形式で ID が付与される
                     """,
                 ),
             ),

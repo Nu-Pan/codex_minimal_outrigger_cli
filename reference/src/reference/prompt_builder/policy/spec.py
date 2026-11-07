@@ -17,6 +17,8 @@ def build_spec_policy() -> tuple[PlaceholderMap, SDHeader]:
             SDPolicy(
                 what_is_this="spec が満たすべき規定を以下に示す",
                 require=(
+                    # NOTE 参照システムを確実に機能させたい
+                    r"spec の見出しの先頭には `\[SPC-\d{6}\]` の形式で ID を付与する事",
                     # NOTE 実装差≒未定義を最大化して、spec の肥大化を抑制したい
                     "spec から、実装差を許容する・しないの境界が読み取れる事",
                     "実装差を許容する余地を最大限尊重する事",
@@ -32,6 +34,14 @@ def build_spec_policy() -> tuple[PlaceholderMap, SDHeader]:
                     # NOTE 情報の逆流を防止したい
                     "realization を spec の根拠にしてはいけない",
                     "realization への参照を spec に書いてはいけない",
+                ),
+                allow=(
+                    # NOTE 参照システムを確実に機能させたい
+                    "参照用 ID に欠番は存在してよい",
+                ),
+                exception=(
+                    # NOTE 参照システムを確実に機能させたい
+                    "コードブロック内の見出しは、参照用 ID 付与の対象ではない",
                 ),
             ),
         ),
