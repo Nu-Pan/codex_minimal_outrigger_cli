@@ -40,7 +40,6 @@ def build_cmoc_basic_policy(
                     "ID の形式",
                     """
                     - decision の見出しの先頭には `\\[DECI-\\d{6}\\]` の形式で ID が付与される
-                    - decision に対する参照は `何を参照するかの説明 [DECI-XXXXXX]` の形式で記述すること
                     """,
                 ),
             ),
@@ -90,7 +89,6 @@ def build_cmoc_basic_policy(
                     "ID の形式",
                     """
                     - spec の見出しの先頭には `\\[SPEC-\\d{6}\\]` の形式で ID が付与される
-                    - spec に対する参照は `何を参照するかの説明 [SPEC-XXXXXX]` の形式で記述すること
                     """,
                 ),
             ),
@@ -192,6 +190,17 @@ def build_cmoc_basic_policy(
                         """,
                     ),
                 ),
+            ),
+            SDHeader(
+                "referenece format",
+                """
+                - decision への参照は「◯◯◯については [DECI-XXXXXX] を参照すること」の形式で記述すること
+                - spec への参照は「◯◯◯については [SPEC-XXXXXX] を参照すること」の形式で記述すること
+                - その他の情報源への参照は…
+                    - 「◯◯◯については `<major-location>` の `<minor-location>` を参照すること」の形式で記述すること
+                    - `<major-location>` には、「ファイルパス」「URL」などの、読むべきファイルのパス情報を書くこと
+                    - `<minor-location>` には、「見出し名」「参照先の記述の一部」などの、`<major-location>` 内の詳細位置を特定出来る短いヒントを書くこと
+                """,
             ),
         ),
     )
