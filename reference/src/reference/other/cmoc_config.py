@@ -151,6 +151,13 @@ class CmocConfigCodex:
                 reasoning_effort="max",
             ),
             # NOTE
+            #   decision の形式修正は、半分機械的な修正なので、性能は妥協可能
+            "build_decision_apply_decision_request": CodexCallConfig(
+                model_provider="openai",
+                model="gpt-6.1-sol",
+                reasoning_effort="max",
+            ),
+            # NOTE
             #   feedback report の整理作業が反復的かつ機械的検証不能なので、モデルがアホだと暴走しやすい
             #   怖すぎるので Astra しか選べない
             "build_feedback_issue_normalization_request": CodexCallConfig(

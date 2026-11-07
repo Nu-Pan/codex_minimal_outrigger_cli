@@ -47,6 +47,12 @@ def build_file_access_policy(
                 "decision, reference, spec は書き込み禁止",
                 "realization は読み書き禁止",
             ]
+        case FileAccessMode.DECISION_WRITE:
+            # decision の形式検証・修正ステップだけで使う。
+            mode_prohibit = [
+                # decision は読み書き許可
+                "reference, spec, realization は読み書き禁止",
+            ]
         case FileAccessMode.SPEC_WRITE:
             # NOTE
             #   spec に対する編集操作用

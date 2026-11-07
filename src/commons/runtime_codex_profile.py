@@ -558,6 +558,7 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             FileAccessMode.READONLY
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.DECISION_PLAN
+            | FileAccessMode.DECISION_WRITE
             | FileAccessMode.SPEC_WRITE
             | FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.SPEC_AND_REALIZATION_WRITE

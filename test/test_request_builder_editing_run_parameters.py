@@ -13,6 +13,7 @@ import pytest
 import reference.other.path_model as path_model_module
 from _request_builder_support import oracle_schema_path
 from reference.request_builder.decision.apply.launch_exec import (
+    build_decision_apply_decision_request,
     build_decision_apply_realization_request,
 )
 from reference.request_builder.realization.refactor.file_review_and_fix import (
@@ -58,6 +59,55 @@ def editing_run_paths(
 def test_refactor_compatibility_builder_reexports_canonical_function() -> None:
     """互換 import 経路が prompt を加工せず正本 builder を再公開する。"""
     assert build_realization_refactor_request is build_canonical_review_parameter
+
+
+def test_decision_format_builder_limits_access_and_preserves_decisions(
+    editing_run_paths: tuple[Path, Path],
+) -> None:
+    """形式検証の完全 prompt に、機械検証と意味を保つ修正の条件がそろう。"""
+    root, run_worktree = editing_run_paths
+    parameter = build_decision_apply_decision_request(run_worktree)
+
+    assert parameter.agent_call_kind == "build_decision_apply_decision_request"
+    assert parameter.file_access_mode == FileAccessMode.DECISION_WRITE
+    assert parameter.agent_call_cwd == run_worktree.resolve()
+    assert parameter.structured_output_schema_path is None
+    assert parameter.enable_document_search_mcp is False
+    assert parameter.enable_editor_input_handoff_mcp is False
+    assert parameter.enable_feedback_reporting is True
+    assert parameter.tui_resume_session_id is None
+    prompt = parameter.prompt
+    assert prompt is not None
+    assert f"- {{{{repo-root}}}} = {root.resolve()}" in prompt
+    assert f"- {{{{work-root}}}} = {run_worktree.resolve()}" in prompt
+    assert "# file access policy (decision_write)" in prompt
+    assert "reference, spec, realization は読み書き禁止" in prompt
+    assert "Git metadata は配置先によらず変更禁止" in prompt
+    assert "`{{work-root}}/decision/**/*.md`" in prompt
+    assert r"\[DEC-\d{6}\]" in prompt
+    assert "decision 全体での ID の一意性" in prompt
+    assert "コードブロック内の見出しや ID の記述例" in prompt
+    assert "decision 全体で未使用の ID" in prompt
+    assert "一意で形式が正しい既存 ID を振り直してはいけない" in prompt
+    assert "参照先を特定できる場合だけ同じ決定事項を指す" in prompt
+    assert "その箇所を変更せず未解消として報告" in prompt
+    assert "違反がなければファイルを変更しない" in prompt
+    assert "decision file がない場合も決定事項を作らず" in prompt
+    assert "検証成功として報告してはいけない" in prompt
+    objective = _objective_section(prompt)
+    assert "decision file すべて" in objective
+    assert "コマンドまたはスクリプトで機械的に検証" in objective
+    assert "同じ検証を再実行" in objective
+    assert "決定内容と意味" in objective
+    assert "未解消の違反があればその場所と理由" in objective
+    for heading in (
+        "# reference policy",
+        "# spec policy",
+        "# realization policy",
+        "# routing policy",
+        "# editor input handoff",
+    ):
+        assert heading not in prompt
 
 
 def test_decision_apply_builder_passes_commit_references(

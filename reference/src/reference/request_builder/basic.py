@@ -17,6 +17,7 @@ class FileAccessMode(StrEnum):
     READONLY = auto()
     REPO_WRITE = auto()
     DECISION_PLAN = auto()
+    DECISION_WRITE = auto()
     SPEC_WRITE = auto()
     REALIZATION_WRITE = auto()
     SPEC_AND_REALIZATION_WRITE = auto()

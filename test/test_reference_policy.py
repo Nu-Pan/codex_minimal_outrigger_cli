@@ -21,6 +21,7 @@ from reference.request_builder.common.quota_probe import (
     build_quota_availability_probe_request,
 )
 from reference.request_builder.decision.apply.launch_exec import (
+    build_decision_apply_decision_request,
     build_decision_apply_realization_request,
     build_decision_apply_spec_request,
 )
@@ -94,6 +95,11 @@ def test_reference_policy_is_selected_independently(
         pytest.param(lambda root: build_tui_request("task"), True, id="tui"),
         pytest.param(
             lambda root: build_decision_plan_request("task"), True, id="decision-plan"
+        ),
+        pytest.param(
+            build_decision_apply_decision_request,
+            False,
+            id="decision-apply-decision",
         ),
         pytest.param(
             lambda root: build_decision_apply_spec_request("before", "after", root),

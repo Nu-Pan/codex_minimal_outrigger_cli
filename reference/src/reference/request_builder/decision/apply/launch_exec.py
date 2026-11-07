@@ -1,4 +1,4 @@
-"""`cmoc realization apply` の追従作業用 prompt と起動パラメータの構築定義。"""
+"""`cmoc decision apply` の各ステップ用 prompt と起動パラメータの構築定義。"""
 
 # std
 from pathlib import Path
@@ -17,6 +17,67 @@ from reference.request_builder.basic import (
     AgentCallParameter,
     FileAccessMode,
 )
+
+
+def build_decision_apply_decision_request(
+    agent_call_cwd: Path,
+) -> AgentCallParameter:
+    """decision の形式検証と自動修正を依頼するリクエストを構築する。
+
+    Args:
+        agent_call_cwd: 検証・修正する worktree 内の agent call の cwd。
+
+    Returns:
+        decision の決定内容を保って形式だけを修正する非対話 call の入力。
+        機械検証・修正・再検証は、この入力を受け取った agent が行う。
+    """
+    # decision 全体の検査が必要なので、差分や文書検索による対象の絞り込みはしない。
+    path_context = AgentCallPathContext(agent_call_cwd=agent_call_cwd)
+    complete_prompt = build_complete_prompt(
+        task="""
+        decision の形式を機械的に検証し、違反がある場合は決定内容を変えずに自動修正すること
+        """,
+        scope="""
+        - 対象は `{{work-root}}` ツリー内の decision file すべて
+        - decision file の分類と ID の形式は、このプロンプト内の cmoc basic instruction に従うこと
+        - 修正は、見出しの ID の不足・形式違反・重複と、それに伴う decision 内の参照表記の修正に限定すること
+        """,
+        completion_criteria="""
+        - 対象全体をコマンドまたはスクリプトで機械的に検証していること
+        - 修正した場合は同じ検証を再実行し、形式違反が残っていないことを確認していること
+        - decision の決定内容と意味、および一意で形式が正しい既存 ID を保持していること
+        - 最終応答に、検証方法・結果、修正したファイルと ID、未解消の違反があればその場所と理由を記載すること
+        """,
+        non_goals="""
+        - 決定事項の追加・削除、内容の補完、矛盾の解消、文章の推敲
+        - reference, spec, realization の調査・同期・編集
+        """,
+        file_access_mode=FileAccessMode.DECISION_WRITE,
+        path_context=path_context,
+        aux_static_prompt=[
+            SDHeader(
+                "decision の形式検証と修正手順",
+                """
+                - GitHub Flavored Markdown の構造として見出しを抽出し、見出し先頭の ID の形式と、decision 全体での ID の一意性を検証すること
+                - コードブロック内の見出しや ID の記述例を、検証・修正対象に含めてはいけない
+                - ID を補う・付け替える場合は、decision 全体で未使用の ID を使うこと。一意で形式が正しい既存 ID を振り直してはいけない
+                - ID の変更に伴う decision 内の参照は、参照先を特定できる場合だけ同じ決定事項を指すように更新すること
+                - 決定内容や参照先を推測しないと修正できない違反は、その箇所を変更せず未解消として報告すること
+                - 違反がなければファイルを変更しないこと。decision file がない場合も決定事項を作らず、検証対象がないことを報告すること
+                - 検証を実行できない場合や未解消の違反がある場合は、検証成功として報告してはいけない
+                """,
+            ),
+        ],
+        cmoc_basic_instruction=True,
+        enable_feedback_reporting=True,
+    )
+    return AgentCallParameter(
+        agent_call_kind=build_decision_apply_decision_request.__name__,
+        file_access_mode=FileAccessMode.DECISION_WRITE,
+        prompt=render_sd_node_as_markdown(*complete_prompt),
+        structured_output_schema_path=None,
+        agent_call_cwd=path_context.agent_call_cwd,
+    )
 
 
 def build_decision_apply_spec_request(
