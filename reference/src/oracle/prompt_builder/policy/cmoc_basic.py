@@ -40,7 +40,7 @@ def build_cmoc_basic_policy(
                     "ID の形式",
                     """
                     - decision の見出しの先頭には `\\[DECI-\\d{6}\\]` の形式で ID が付与される
-                    - decision に対する参照は「... については [DECI-XXXXXX] を参照」の形式で記述すること
+                    - decision に対する参照は `何を参照するかの説明 (`DECI-XXXXXX`)` の形式で記述すること
                     """,
                 ),
             ),
@@ -90,7 +90,7 @@ def build_cmoc_basic_policy(
                     "ID の形式",
                     """
                     - spec の見出しの先頭には `\\[SPEC-\\d{6}\\]` の形式で ID が付与される
-                    - spec に対する参照は「... については [SPEC-XXXXXX] を参照」の形式で記述すること
+                    - spec に対する参照は `何を参照するかの説明 (`SPEC-XXXXXX`)` の形式で記述すること
                     """,
                 ),
             ),
