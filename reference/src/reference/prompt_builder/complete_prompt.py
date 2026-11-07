@@ -12,6 +12,7 @@ from .policy.editor_input_handoff import build_editor_input_handoff_policy
 from .policy.feedback_reporting import build_feedback_reporting_policy
 from .policy.file_access import build_file_access_policy
 from .policy.realization import build_realization_policy
+from .policy.reference import build_reference_policy
 from .policy.routing import build_routing_policy
 from .policy.spec import build_spec_policy
 
@@ -47,6 +48,7 @@ def build_complete_prompt(
     aux_dynamic_prompt: list[SDHeader | SDTagBlock] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
     cmoc_basic_instruction: bool = False,
+    reference_policy: bool = False,
     spec_policy: bool = False,
     realization_policy: bool = False,
     routing_policy: bool = False,
@@ -61,6 +63,7 @@ def build_complete_prompt(
         scope: 対象、根拠、起点、および作業範囲。
         completion_criteria: agent call 終了後に検証可能な call 固有の状態。
         non_goals: 逸脱が予想される隣接作業のうち call 固有の対象外。
+        reference_policy: 情報源への参照形式を定める文面を含めるか。
         routing_policy: repository 内の参照先を選ぶ routing 文面を含めるか。
         enable_document_search_mcp: その call で文書検索 MCP を有効にするか。
         editor_input_handoff_policy: editor input handoff 文面を含めるか。
@@ -138,6 +141,11 @@ def build_complete_prompt(
         _append(
             fundamental_policy_prompt,
             build_cmoc_basic_policy(path_context),
+        )
+    if reference_policy:
+        _append(
+            fundamental_policy_prompt,
+            build_reference_policy(),
         )
     full_prompt.append(SDTagBlock("fundamental_policy", *fundamental_policy_prompt))
 

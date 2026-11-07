@@ -91,6 +91,7 @@ def build_realization_refactor_request(
             "target-path": resolve_real_path(target_path, path_context),
         },
         cmoc_basic_instruction=True,
+        reference_policy=True,
         realization_policy=True,
         routing_policy=True,
         enable_feedback_reporting=True,

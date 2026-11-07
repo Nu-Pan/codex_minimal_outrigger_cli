@@ -63,6 +63,7 @@ def build_feedback_issue_normalization_request(
             known_issue_block,
         ],
         cmoc_basic_instruction=True,
+        reference_policy=True,
         routing_policy=True,
     )
     return AgentCallParameter(

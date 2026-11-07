@@ -55,6 +55,7 @@ def build_primary_report_review_request(
         file_access_mode=FileAccessMode.READONLY,
         path_context=path_context,
         cmoc_basic_instruction=True,
+        reference_policy=True,
         enable_feedback_reporting=enable_feedback_reporting,
         aux_static_prompt=[
             SDHeader(

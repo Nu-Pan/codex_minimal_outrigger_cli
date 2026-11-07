@@ -75,6 +75,7 @@ def build_feedback_issue_remediation_request(
             ),
         ],
         cmoc_basic_instruction=True,
+        reference_policy=True,
         spec_policy=True,
         realization_policy=True,
         routing_policy=True,

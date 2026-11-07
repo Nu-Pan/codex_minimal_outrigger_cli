@@ -57,6 +57,7 @@ def build_tui_request(
             enable_document_search_mcp=True,
             aux_dynamic_prompt=[original_prompt_block],
             cmoc_basic_instruction=True,
+            reference_policy=True,
             spec_policy=True,
             realization_policy=True,
             routing_policy=True,

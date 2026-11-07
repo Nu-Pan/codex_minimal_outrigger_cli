@@ -139,6 +139,7 @@ def _build_decision_apply_request_impl(
             )
         ],
         cmoc_basic_instruction=True,
+        reference_policy=True,
         spec_policy=spec_policy,
         realization_policy=realization_policy,
         routing_policy=True,

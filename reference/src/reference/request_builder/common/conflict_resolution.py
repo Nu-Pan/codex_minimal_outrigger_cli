@@ -88,6 +88,7 @@ def build_merge_conflict_resolution_request(
             "target_commit": target_commit,
         },
         cmoc_basic_instruction=True,
+        reference_policy=True,
         spec_policy=True,
         realization_policy=True,
         routing_policy=True,

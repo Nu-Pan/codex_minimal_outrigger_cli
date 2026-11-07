@@ -77,6 +77,7 @@ def build_decision_plan_request(
                 )
             ],
             cmoc_basic_instruction=True,
+            reference_policy=True,
             routing_policy=True,
             editor_input_handoff_policy=True,
             enable_feedback_reporting=True,
