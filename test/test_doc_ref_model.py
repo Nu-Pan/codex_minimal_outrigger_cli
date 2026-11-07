@@ -14,8 +14,8 @@ from reference.other.doc_ref_model import (
     ("file_path", "identifier", "expected"),
     [
         (Path("/reference/guide.md"), None, "参照内容 (`/reference/guide.md`)"),
-        (None, "DECI-000001", "参照内容 (`DECI-000001`)"),
-        (None, "SPEC-000002", "参照内容 (`SPEC-000002`)"),
+        (None, "DECI-000001", "参照内容 [DECI-000001]"),
+        (None, "SPEC-000002", "参照内容 [SPEC-000002]"),
     ],
 )
 def test_inline_reference_preserves_description_and_location(
@@ -44,9 +44,9 @@ def test_inline_reference_preserves_description_and_location(
             "- `/reference/guide.md`\n"
             "    - 資料 A\n"
             "    - 資料 B\n"
-            "- `DECI-000001`\n"
+            "- [DECI-000001]\n"
             "    - 決定事項\n"
-            "- `SPEC-000002`\n"
+            "- [SPEC-000002]\n"
             "    - 仕様 A\n"
             "    - 仕様 B",
         ),

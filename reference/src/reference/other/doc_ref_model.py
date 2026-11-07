@@ -65,6 +65,8 @@ class DocRef:
 
 def render_doc_ref_as_inline_md(doc_ref: DocRef) -> str:
     """単一の文書参照を Markdown のインライン形式へ変換する。"""
+    if doc_ref.id is not None:
+        return f"{doc_ref.description} [{doc_ref.id}]"
     return f"{doc_ref.description} (`{doc_ref.location_info}`)"
 
 
@@ -81,7 +83,10 @@ def render_doc_ref_as_multiline_md(doc_refs: Iterable[DocRef]) -> str:
     # テキストに変換する
     lines: list[str] = list()
     for location_info in sorted(doc_ref_tree, key=str):
-        lines.append(f"- `{location_info}`")
+        if isinstance(location_info, Path):
+            lines.append(f"- `{location_info}`")
+        else:
+            lines.append(f"- [{location_info}]")
         for description in sorted(doc_ref_tree[location_info]):
             lines.append(f"    - {description}")
     # 正常終了
