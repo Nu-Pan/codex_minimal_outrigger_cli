@@ -1,4 +1,0 @@
-interface:
-  display_name: "簡潔で有効なテストを維持"
-  short_description: "回帰検出能力を保ち、検証の意図を読み取りやすいテストへ整理する"
-  default_prompt: "$maintain-lean-tests を使って、回帰検出能力を保ちながら、テストと fixture を整理してください。"

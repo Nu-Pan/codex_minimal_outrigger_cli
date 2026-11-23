@@ -1,4 +1,0 @@
-interface:
-  display_name: "ソフトウェア正本仕様を作成・改訂"
-  short_description: "正本仕様の作成・改訂・推敲を通じて、要求と設計意図に基づいて判断できる説明に整える"
-  default_prompt: "$maintain-software-specifications を使って、ソフトウェアの正本仕様を作成・改訂・推敲し、必要な要件と設計意図が伝わる説明に整えてください。"
