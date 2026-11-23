@@ -16,6 +16,7 @@
     - `build_realization_refactor_request` で Strcutured Output を返す意味はもうない (`codex resume 01a18e12-9b7a-7370-9cdc-c647b4ac0c55`)
     - config が追従できてない
     - build request 系の関数の戻り値が、リクエストとプレースホルダ定義のタプルに統一されていない？
+    - `build_decision_apply_decision_request` に渡す commit の素性の説明は decision に書く方針にした
 
 ## サンドボックスシステムを考え直す
 

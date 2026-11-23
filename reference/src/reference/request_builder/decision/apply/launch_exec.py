@@ -138,11 +138,8 @@ def _build_decision_apply_request_impl(
     Args:
         diff_begin_commit:
             追従対象差分の始点 commit のハッシュ値
-            典型的には、前回の `cmoc decision apply` と対応する run fork commit が渡されるはず
         diff_end_commit:
             追従対象差分の終点 commit のハッシュ値
-            `step_name=="to_spec"`: 典型的には、今回の `cmoc decision apply` と対応する run fork commit が渡されるはず
-            `step_name=="to_realization"`: 典型的には、直前の `to_spec` が正常終了した時点の commit が渡されるはず
         agent_call_cwd:
             エージェントに設定するカレントディレクトリパス
         step_name:
