@@ -151,6 +151,17 @@ def _build_decision_apply_request_impl(
     Returns:
         構築された agent call リクエスト
     """
+    # 追従対象の差分を示すタグブロックを生成する
+    decision_apply_change = SDTagBlock(
+        "decision_apply_change",
+        SDHeader(
+            "追従対象 git commit",
+            f"""
+            - 始点: `{diff_begin_commit}`
+            - 終点: `{diff_end_commit}`
+            """,
+        ),
+    )
     # 同期元・同期先の名前を解決する
     match step_name:
         case "to_spec":
@@ -176,40 +187,22 @@ def _build_decision_apply_request_impl(
         {apply_from} の変更を {apply_to} に反映し、矛盾がない状態にすること
         """,
         scope=f"""
-        - 修正対象は `{{{{work-root}}}}` ツリー内の {apply_to} すべて
-        - <cmoc_ref target="decision_apply_change"/> は追従対象を特定するためのヒントであり、編集対象の制限ではない
-        - 目的達成のために必要であれば、<cmoc_ref target="decision_apply_change"/> と直接関係のない {apply_to} も編集して良い
+        - {apply_to} すべてが修正対象である
+        - 「{apply_from} の今回の変更箇所」と直接対応しない {apply_to} も、同期に必要であれば修正してよい
+        - reference の差分のうち decision から委ねられていない箇所は {apply_to} に反映する対象ではない
         """,
         completion_criteria=f"""
-        - <cmoc_ref target="decision_apply_change"/> を根拠として {apply_from} の変更内容を読み取っていること
-        - 終点の {apply_from} と作業結果の {apply_to} との間に齟齬がないこと
+        - {decision_apply_change.ref_tag} が示す始点と終点の commit を Git で比較し、どちらかの時点で {apply_from} に属していたファイルの差分を確認していること
+        - 反映対象とした範囲内について、終点の {apply_from} と作業結果の {apply_to} との間に齟齬がないこと
         - 変更への追従によって発生する周辺への影響についても整合性が取れていること
+        - 差分を取得できない場合は失敗として報告し、正常に取得できた空差分とは区別すること
         """,
         non_goals=None,
         file_access_mode=file_access_mode,
         path_context=path_context,
         enable_document_search_mcp=True,
-        aux_static_prompt=[
-            SDHeader(
-                "追従対象の解決方法",
-                f"""
-                - `{{{{work-root}}}}` ツリー内で、<cmoc_ref target="decision_apply_change"/>　が示す始点・終点 commit 間の差分を Git から取得すること
-                - 始点・終点のいずれかで {apply_from} だったファイルは対象に含めること
-                - 差分を取得できない場合は失敗として報告し、正常に取得できた空差分とは区別すること
-                """,
-            ),
-        ],
         aux_dynamic_prompt=[
-            SDTagBlock(
-                "decision_apply_change",
-                SDHeader(
-                    "追従対象 git commit",
-                    f"""
-                    - 始点: `{diff_begin_commit}`
-                    - 終点: `{diff_end_commit}`
-                    """,
-                ),
-            )
+            decision_apply_change
         ],
         cmoc_basic_instruction=True,
         reference_policy=True,
