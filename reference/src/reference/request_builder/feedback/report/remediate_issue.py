@@ -39,7 +39,7 @@ def build_feedback_issue_remediation_request(
                 "結果分類の規則",
                 """
                 - 入力 issue の報告基準への適合は、観測元の workload の規定範囲内では解決できない、具体的な根拠のある明確な問題であるかで判断する。
-                - decision, reference で明示された仕様どおりの制約は報告対象の問題に含めない
+                - decision の要求どおりの制約は報告対象の問題に含めない
                 - 報告対象の問題は、後続の対応で再発防止、反復的な浪費の削減、または外部挙動を左右する人間意図の確定が可能になるものに限る
                 - この call で追加 observation を報告できないことを、入力 issue の結果分類の理由にしない
                 - `human_required` は、問題が現在も存在し、spec file・realization file の編集だけでは満たせない具体的な対応を確認できた場合だけ使用する

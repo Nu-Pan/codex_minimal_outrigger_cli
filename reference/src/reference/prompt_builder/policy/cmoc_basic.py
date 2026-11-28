@@ -43,6 +43,7 @@ def build_cmoc_basic_policy(
                     "説明",
                     """
                     - reference は decision から参照される補足資料である
+                    - reference の各記述は、decision がその記述に委ねた事項の範囲でのみ、その decision の要求として扱う
                     """,
                 ),
                 SDHeader(
@@ -63,7 +64,7 @@ def build_cmoc_basic_policy(
                 SDHeader(
                     "説明",
                     """
-                    - spec は decision, reference を正本として AI エージェントが生成する仕様文章である
+                    - spec は decision の要求に基づいて AI エージェントが生成する仕様文章である
                     - GitHub Flavored Markdown で記述する
                     """,
                 ),
@@ -85,7 +86,7 @@ def build_cmoc_basic_policy(
                 SDHeader(
                     "役割",
                     """
-                    - realization は decision, reference, spec を正本として AI エージェントが生成する実体 (実装、テスト、補助ファイル) である
+                    - realization は decision の要求と spec に基づいて AI エージェントが生成する実体 (実装、テスト、補助ファイル) である
                     """,
                 ),
                 SDHeader(
